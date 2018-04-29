@@ -1,49 +1,48 @@
 'use babel';
 
-import XnodeView from './xnode-view';
-import { CompositeDisposable } from 'atom';
+import XnodeDashboard from './xnode-dashboard';
+import {CompositeDisposable, Disposable} from 'atom';
 
 export default {
 
-  xnodeView: null,
-  modalPanel: null,
-  subscriptions: null,
+    subscriptions: null,
 
-  activate(state) {
-    this.xnodeView = new XnodeView(state.xnodeViewState);
-    this.modalPanel = atom.workspace.addModalPanel({
-      item: this.xnodeView.getElement(),
-      visible: false
-    });
+    activate(state) {
+        // Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
+        this.subscriptions = new CompositeDisposable(
+            atom.workspace.addOpener(uri => {
+                if (uri === 'atom://xnode-dashboard') {
+                    return new XnodeDashboard();
+                }
+            }),
 
-    // Events subscribed to in atom's system can be easily cleaned up with a CompositeDisposable
-    this.subscriptions = new CompositeDisposable();
+            atom.commands.add('atom-workspace', {
+                'xnode:toggle': () => this.toggle()
+            }),
 
-    // Register command that toggles this view
-    this.subscriptions.add(atom.commands.add('atom-workspace', {
-      'xnode:toggle': () => this.toggle()
-    }));
-  },
+            new Disposable(() => {
+                atom.workspace.getPaneItems().forEach(item => {
+                    if (item instanceof XnodeDashboard) {
+                        item.destroy();
+                    }
+                });
+            })
+        );
+    },
 
-  deactivate() {
-    this.modalPanel.destroy();
-    this.subscriptions.dispose();
-    this.xnodeView.destroy();
-  },
+    deactivate() {
+        this.subscriptions.dispose();
+    },
 
-  serialize() {
-    return {
-      xnodeViewState: this.xnodeView.serialize()
-    };
-  },
+    // From flight manual: with workspace items, it's possible to have more than one instance
+    // of a given view, and each can have its own state, so each should do its own serialization.
+    // serialize() {
+    //   return {
+    //     xnodeViewState: this.xnodeView.serialize()
+    //   };
+    // },
 
-  toggle() {
-    console.log('Xnode was toggled!');
-    return (
-      this.modalPanel.isVisible() ?
-      this.modalPanel.hide() :
-      this.modalPanel.show()
-    );
-  }
-
+    toggle() {
+        atom.workspace.toggle('atom://xnode-dashboard');
+    }
 };

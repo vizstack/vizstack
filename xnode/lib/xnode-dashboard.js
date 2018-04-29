@@ -1,6 +1,8 @@
 'use babel';
 
-export default class XnodeView {
+import PythonShell from 'python-shell';
+
+export default class XnodeDashboard {
 
   constructor(serializedState) {
     // Create root element
@@ -12,6 +14,30 @@ export default class XnodeView {
     message.textContent = 'The Xnode package is Alive! It\'s ALIVE!';
     message.classList.add('message');
     this.element.appendChild(message);
+
+    // Path is from the package root
+    PythonShell.run('./lib/dummy.py', (err, results) => {
+        if (err) throw err;
+        message.textContent = results;
+    })
+  }
+
+  getTitle() {
+      // Title shown in Atom tab
+      return 'Xnode Dashboard';
+  }
+
+  getURI() {
+      // Used by Atom to identify the view when opening
+      return 'atom://xnode-dashboard';
+  }
+
+  getDefaultLocation() {
+      return 'right';
+  }
+
+  getAllowedLocations() {
+      return ['left', 'right', 'bottom'];
   }
 
   // Returns an object that can be retrieved when package is activated
