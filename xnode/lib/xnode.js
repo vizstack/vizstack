@@ -1,10 +1,9 @@
 'use babel';
 
-import XnodeDashboard from './xnode-dashboard';
+import XnodeDashboardView from './xnode-dashboard-view';
 import {CompositeDisposable, Disposable} from 'atom';
 
 export default {
-
     subscriptions: null,
 
     activate(state) {
@@ -12,7 +11,7 @@ export default {
         this.subscriptions = new CompositeDisposable(
             atom.workspace.addOpener(uri => {
                 if (uri === 'atom://xnode-dashboard') {
-                    return new XnodeDashboard();
+                    return new XnodeDashboardView();
                 }
             }),
 

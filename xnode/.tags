@@ -1,0 +1,42 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.8	//
+activationCommands	.\package.json	/^  "activationCommands": {$/;"	f
+atom	.\package.json	/^    "atom": ">=1.0.0 <2.0.0"$/;"	f
+atom-text-editor	.\menus\xnode.json	/^    "atom-text-editor": [$/;"	f
+atom-workspace	.\keymaps\xnode.json	/^  "atom-workspace": {$/;"	f
+atom-workspace	.\package.json	/^    "atom-workspace": "xnode:toggle"$/;"	f
+command	.\menus\xnode.json	/^              "command": "xnode:toggle"$/;"	f
+command	.\menus\xnode.json	/^        "command": "xnode:toggle"$/;"	f
+context-menu	.\menus\xnode.json	/^  "context-menu": {$/;"	f
+ctrl-alt-o	.\keymaps\xnode.json	/^    "ctrl-alt-o": "xnode:toggle"$/;"	f
+dependencies	.\package-lock.json	/^  "dependencies": {$/;"	f
+dependencies	.\package.json	/^  "dependencies": {$/;"	f
+description	.\package.json	/^  "description": "A short description of your package",$/;"	f
+engines	.\package.json	/^  "engines": {$/;"	f
+integrity	.\package-lock.json	/^      "integrity": "sha512-+jgmFZvwk1yMBBDisDlkXXMYv1eEJKbGCtwHLppGIyEV83cKeX9hjOjfR2yONWK3yQFhum0M2r7UE0U\/\/hiK9w=="$/;"	f
+keywords	.\package.json	/^  "keywords": [],$/;"	f
+label	.\menus\xnode.json	/^              "label": "Toggle",$/;"	f
+label	.\menus\xnode.json	/^          "label": "xnode",$/;"	f
+label	.\menus\xnode.json	/^        "label": "Toggle xnode",$/;"	f
+label	.\menus\xnode.json	/^      "label": "Packages",$/;"	f
+license	.\package.json	/^  "license": "MIT",$/;"	f
+lockfileVersion	.\package-lock.json	/^  "lockfileVersion": 1,$/;"	f
+main	.\package.json	/^  "main": ".\/lib\/xnode",$/;"	f
+menu	.\menus\xnode.json	/^  "menu": [$/;"	f
+name	.\package-lock.json	/^  "name": "xnode",$/;"	f
+name	.\package.json	/^  "name": "xnode",$/;"	f
+python-shell	.\package-lock.json	/^    "python-shell": {$/;"	f
+python-shell	.\package.json	/^    "python-shell": "^0.5.0"$/;"	f
+random	.\lib\dummy.py	/^import random$/;"	i
+repository	.\package.json	/^  "repository": "https:\/\/github.com\/atom\/xnode",$/;"	f
+requires	.\package-lock.json	/^  "requires": true,$/;"	f
+resolved	.\package-lock.json	/^      "resolved": "https:\/\/registry.npmjs.org\/python-shell\/-\/python-shell-0.5.0.tgz",$/;"	f
+submenu	.\menus\xnode.json	/^          "submenu": [$/;"	f
+submenu	.\menus\xnode.json	/^      "submenu": [$/;"	f
+version	.\package-lock.json	/^      "version": "0.5.0",$/;"	f
+version	.\package-lock.json	/^  "version": "0.0.0",$/;"	f
+version	.\package.json	/^  "version": "0.0.0",$/;"	f
