@@ -2,6 +2,7 @@
 
 import XnodeDashboardView from './xnode-dashboard-view';
 import {CompositeDisposable, Disposable} from 'atom';
+import ExecutionEngine from './execution-engine';
 
 export default {
     subscriptions: null,
@@ -42,6 +43,8 @@ export default {
     // },
 
     toggle() {
+        // As a test, let's just create an arbitrary engine
+        let engine = new ExecutionEngine(null, null, null);
         atom.workspace.toggle('atom://xnode-dashboard');
     }
 };

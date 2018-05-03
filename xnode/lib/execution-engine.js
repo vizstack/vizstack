@@ -1,20 +1,54 @@
 'use babel';
 
 import PythonShell from 'python-shell';
+import { spawn } from 'child_process';
+
+const EXECUTE_PATH = './resources/execute.py';
 
 export default class ExecutionEngine{
 
-    constructor() {}
+    /**
+     * Constructor.
+     * @param {string} scriptPath      the path to the script that the engine should execute. The engine remains
+     *                                 associated with this script, rerunning if needed after every file edit.
+     * @param {Object} watchStatements a collection of statements which indicate which variables in the Python program
+     *                                 should be evaluated and at which line evaluation should take place.
+     * @param {Function} onUpdate      a function of signature `(symbolData)` to be called whenever a variable is
+     *                                 evaluated in the Python program.
+     */
+    constructor(scriptPath, watchStatements, onUpdate) {
+        this.scriptPath = scriptPath;
+        this.watchStatements = watchStatements;
+        this.onUpdate = onUpdate;
+        this.onFileChanged();
+    }
 
     /**
-     * Executes a Python script.
-     * @param  {string}   scriptPath        the path to the Python script
-     * @param  {Object}   watchStatements   which variables should have their values watched and returned; has form TODO
-     * @param  {?Object}  diff              changes since the last call to run; has form TODO
-     * @param  {function} callback          a `(results, err)` function where `results` are the values of watched
-     *                                          variables, in Xnode symbol schema format? TODO
+     * Called by the package whenever a file is updated.
+     *
+     * The engine should determine whether or not the change requires a re-run of the Python script, and which parts
+     * of the script must be run.
+     * @param  {string} filePath path to the file that was changed.
+     * @param  {Object} diff     indicates what part of the file changed.
      */
-    run(scriptPath, watchStatements, diff, callback) {
-        PythonShell.run(scriptPath, (err, results) => callback(results, err));
+    onFileChanged(filePath, diff) {
+        // TODO check file to see if relevant, caching
+        this.run();
+    }
+
+    /**
+     * Runs the entirety of the associated Python script.
+     *
+     * This function should be changed or removed as caching is added.
+     */
+    run() {
+        let options = {
+            args: ['c:\\users\\ryan holmdahl\\documents\\github\\xnode\\xnode\\xnode\\lib\\dummy.py:10', '--script', './lib/dummy.py'],
+        }
+        let shell = new PythonShell(EXECUTE_PATH, options);
+        shell.on('message', (message) => {
+            console.log(message);
+            onUpdate(JSON.parse(message));
+        });
     }
 }
