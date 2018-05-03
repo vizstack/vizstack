@@ -2,7 +2,7 @@
   "context-menu": {
     "atom-text-editor": [
       {
-        "label": "Toggle xnode",
+        "label": "Toggle Xnode",
         "command": "xnode:toggle"
       }
     ]
@@ -12,7 +12,7 @@
       "label": "Packages",
       "submenu": [
         {
-          "label": "xnode",
+          "label": "Xnode",
           "submenu": [
             {
               "label": "Toggle",

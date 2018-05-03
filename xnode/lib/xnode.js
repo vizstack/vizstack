@@ -1,7 +1,8 @@
 'use babel';
 
+import { CompositeDisposable, Disposable } from 'atom';
+
 import XnodeDashboardView from './xnode-dashboard-view';
-import {CompositeDisposable, Disposable} from 'atom';
 import ExecutionEngine from './execution-engine';
 
 export default {

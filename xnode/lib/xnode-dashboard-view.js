@@ -4,12 +4,50 @@ import PythonShell from 'python-shell';
 import ExecutionEngine from './execution-engine';
 
 // TODO find a better way to build views than using DOM API
+
+/**
+ * This class ...
+ */
 export default class XnodeDashboardView {
 
+    /** Constructor. */
     constructor(serializedState) {
         this.buildElement();
         this.engine = new ExecutionEngine();
         this.subscriptions = this.buildEditorListener();
+    }
+
+    /** Returns an object that can be retrieved when package is activated. */
+    serialize() {}
+
+    /** Tear down any state and detach from DOM. */
+    destroy() {
+        this.element.remove();
+        this.subscriptions.dispose();
+    }
+
+    // Atom getter methods
+    // ------------------
+
+    getTitle() {
+        // Used by Atom to show title in a tab
+        return 'Xnode Dashboard';
+    }
+    getURI() {
+        // Used by Atom to identify the view when opening
+        return 'atom://xnode-dashboard';
+    }
+    getDefaultLocation() {
+        // Used by Atom to place the pane in the window
+        return 'right';
+    }
+    getAllowedLocations() {
+        // Used by Atom to place the pane in the window
+        return ['left', 'right', 'bottom'];
+    }
+    getElement() {
+        // Used by Atom to get the DOM element to be rendered
+        return this.element;
     }
 
     /**
@@ -46,38 +84,7 @@ export default class XnodeDashboardView {
         this.engine.run(this.input.value, {}, null, (results, err) => this.message.innerHTML = results);
     }
 
-    getTitle() {
-      // Title shown in Atom tab
-      return 'Xnode Dashboard';
-    }
 
-    getURI() {
-      // Used by Atom to identify the view when opening
-      return 'atom://xnode-dashboard';
-    }
 
-    getDefaultLocation() {
-        // Used by Atom to place the pane in the window
-        return 'right';
-    }
-
-    getAllowedLocations() {
-        // Used by Atom to place the pane in the window
-        return ['left', 'right', 'bottom'];
-    }
-
-    // Returns an object that can be retrieved when package is activated
-    serialize() {}
-
-    // Tear down any state and detach
-    destroy() {
-        this.element.remove();
-        this.subscriptions.dispose();
-    }
-
-    getElement() {
-        // Returns the DOM element to be rendered
-        return this.element;
-    }
 
 }
