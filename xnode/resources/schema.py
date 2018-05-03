@@ -305,6 +305,7 @@ class VisualizationEngine:
     def _load_symbol_data(self, obj):
         symbol_type_info = self._get_type_info(obj)
         data, refs = symbol_type_info.data_fn(self, obj)
+        refs[self._get_symbol_id(obj)] = obj
         return data, refs
 
     # ==================================================================================================================
@@ -316,6 +317,20 @@ class VisualizationEngine:
     # which exposes more data-heavy properties of the object needed for visualization, as well as debugging-useful
     # attributes of the Python object itself.
     # ==================================================================================================================
+
+    def get_schema(self, obj):
+        data, refs = self._load_symbol_data(obj)
+        shells = {ref_id: self.get_symbol_shell(ref) for ref_id, ref in refs.items()}
+        return self.to_json({'data': data, 'shells': shells}), refs
+
+    def get_symbol_shell(self, obj):
+        symbol_type_info = self._get_type_info(obj)
+        return {
+            'type': symbol_type_info.type_name,
+            'str': symbol_type_info.str_fn(obj),
+            'name': None,
+            'data': None,
+        }
 
     def get_symbol_data(self, obj):
         return self._load_symbol_data(obj)

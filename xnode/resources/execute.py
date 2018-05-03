@@ -18,7 +18,7 @@ class AtomPDB(pdb.Pdb):
         self.viz_engine = schema.VisualizationEngine()
         # The name of a variable whose value should be evaluated and transmitted at the next breakpoint.
         self.var_to_eval = None
-        # Mapping of symbol IDs to Python objects for every object referenced by yielded variables.
+        # Mapping of symbol IDs to Python objects for every yielded object and their references.
         self.refs = {}
 
     def user_return(self, frame, return_value):
@@ -107,9 +107,9 @@ class AtomPDB(pdb.Pdb):
         elif var_name in frame.f_globals:
             obj = frame.f_globals[var_name]
         if obj:
-            data_obj, new_refs = self.viz_engine.get_symbol_data(obj)
+            schema_str, new_refs = self.viz_engine.get_schema(obj)
             self.refs.update(new_refs)
-            return data_obj
+            return schema_str
         else:
             raise ValueError
 

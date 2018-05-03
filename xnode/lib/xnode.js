@@ -44,7 +44,7 @@ export default {
 
     toggle() {
         // As a test, let's just create an arbitrary engine
-        let engine = new ExecutionEngine(null, null, null);
+        let engine = new ExecutionEngine(null, null, (data) => {console.log(data)});
         atom.workspace.toggle('atom://xnode-dashboard');
     }
 };

@@ -20,6 +20,8 @@ export default class ExecutionEngine{
         this.scriptPath = scriptPath;
         this.watchStatements = watchStatements;
         this.onUpdate = onUpdate;
+        this.shell = null;
+        // just for testing purposes
         this.onFileChanged();
     }
 
@@ -33,7 +35,17 @@ export default class ExecutionEngine{
      */
     onFileChanged(filePath, diff) {
         // TODO check file to see if relevant, caching
+        this.endExistingShell();
         this.run();
+    }
+
+    endExistingShell() {
+        // TODO test this; could be that shell might have already ended? also, does this kill the shell immediately?
+        //
+        if (this.shell !== null) {
+            this.shell.end();
+            this.shell = null;
+        }
     }
 
     /**
@@ -45,10 +57,13 @@ export default class ExecutionEngine{
         let options = {
             args: ['c:\\users\\ryan holmdahl\\documents\\github\\xnode\\xnode\\xnode\\lib\\dummy.py:10', '--script', './lib/dummy.py'],
         }
-        let shell = new PythonShell(EXECUTE_PATH, options);
-        shell.on('message', (message) => {
+        this.shell = new PythonShell(EXECUTE_PATH, options);
+        let onUpdate = this.onUpdate;
+        this.shell.on('message', (message) => {
             console.log(message);
-            onUpdate(JSON.parse(message));
+            let { data, shells } = JSON.parse(message);
+            // TODO store data and shells locally
+            onUpdate(data);
         });
     }
 }

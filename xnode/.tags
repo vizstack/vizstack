@@ -33,9 +33,9 @@ _generate_data_instance	.\resources\schema.py	/^    def _generate_data_instance(
 _generate_data_module	.\resources\schema.py	/^    def _generate_data_module(self, obj):$/;"	m	class:VisualizationEngine
 _generate_data_primitive	.\resources\schema.py	/^    def _generate_data_primitive(self, obj):$/;"	m	class:VisualizationEngine
 _generate_data_sequence	.\resources\schema.py	/^    def _generate_data_sequence(self, obj):$/;"	m	class:VisualizationEngine
-_get_data_obj	.\resources\execute.py	/^    def _get_data_obj(self, var_name, frame):$/;"	m	class:AtomPDB
 _get_data_object_attributes	.\resources\schema.py	/^    def _get_data_object_attributes(self, obj, refs, exclude_fns=True):$/;"	m	class:VisualizationEngine
 _get_line_from_frame	.\resources\execute.py	/^    def _get_line_from_frame(self, frame):$/;"	m	class:AtomPDB
+_get_schema_obj	.\resources\execute.py	/^    def _get_schema_obj(self, var_name, frame):$/;"	m	class:AtomPDB
 _get_symbol_id	.\resources\schema.py	/^    def _get_symbol_id(self, obj):$/;"	m	class:VisualizationEngine
 _get_type_info	.\resources\schema.py	/^    def _get_type_info(self, obj):$/;"	m	class:VisualizationEngine
 _get_var_from_frame	.\resources\execute.py	/^    def _get_var_from_frame(self, frame):$/;"	m	class:AtomPDB
@@ -60,7 +60,9 @@ do_continue	.\resources\execute.py	/^    def do_continue(self, arg):$/;"	m	class
 engines	.\package.json	/^  "engines": {$/;"	f
 error	.\resources\execute.py	/^    def error(self, msg):$/;"	m	class:AtomPDB
 fn	.\lib\dummy.py	/^def fn():$/;"	f
+get_schema	.\resources\schema.py	/^    def get_schema(self, obj):$/;"	m	class:VisualizationEngine
 get_symbol_data	.\resources\schema.py	/^    def get_symbol_data(self, obj):$/;"	m	class:VisualizationEngine
+get_symbol_shell	.\resources\schema.py	/^    def get_symbol_shell(self, obj):$/;"	m	class:VisualizationEngine
 inspect	.\resources\schema.py	/^import inspect$/;"	i
 integrity	.\package-lock.json	/^      "integrity": "sha512-+jgmFZvwk1yMBBDisDlkXXMYv1eEJKbGCtwHLppGIyEV83cKeX9hjOjfR2yONWK3yQFhum0M2r7UE0U\/\/hiK9w=="$/;"	f
 json	.\resources\schema.py	/^import json$/;"	i
