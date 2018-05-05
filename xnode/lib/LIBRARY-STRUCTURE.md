@@ -1,5 +1,6 @@
 # Library Structure
 **This document provides an overview of how the main Xnode source library is structured.**
+
 ![Alt text](https://g.gravizo.com/svg?
   digraph G {
     aize ="4,4";
