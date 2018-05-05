@@ -7,7 +7,7 @@ The overall structure is standard for an Atom package. For detailed information 
 - `package.json`: Metadata about the package, such as the path to its "main" module, library dependencies, and
 manifests specifying the order in which its resources should be loaded.
 - `lib/`: Main source code providing the package functionality. Exports a single top-level module object
-(in `xnode.js`), which manages the lifecycle of the package when activated by Atom, including the usage of other
+(in `main.js`), which manages the lifecycle of the package when activated by Atom, including the usage of other
 services, creation/destruction of the views, and state serialization. For more details, refer to `LIBRARY-STRUCTURE.md`
 in the directory.
 - `keymaps/`: Keyboard shortcuts for common actions.

@@ -92,7 +92,7 @@ read_args	.\resources\execute.py	/^def read_args():$/;"	f
 repository	.\package.json	/^  "repository": "https:\/\/github.com\/atom\/xnode",$/;"	f
 requires	.\package-lock.json	/^  "requires": true,$/;"	f
 resolved	.\package-lock.json	/^      "resolved": "https:\/\/registry.npmjs.org\/python-shell\/-\/python-shell-0.5.0.tgz",$/;"	f
-run.args	.\lib\execution-engine.js	/^            args: ['c:\\\\users\\\\ryan holmdahl\\\\documents\\\\github\\\\xnode\\\\xnode\\\\xnode\\\\lib\\\\dummy.py:10', '--script', '.\/lib\/dummy.py'],$/;"	p
+run.args	.\lib\repl.js	/^            args: ['c:\\\\users\\\\ryan holmdahl\\\\documents\\\\github\\\\xnode\\\\xnode\\\\xnode\\\\lib\\\\dummy.py:10', '--script', '.\/lib\/dummy.py'],$/;"	p
 schema	.\resources\execute.py	/^import schema$/;"	i
 submenu	.\menus\xnode.json	/^          "submenu": [$/;"	f
 submenu	.\menus\xnode.json	/^      "submenu": [$/;"	f

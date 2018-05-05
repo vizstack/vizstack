@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * Short description of file/module.
  *
@@ -41,11 +39,10 @@ var dummyVar = 0;
  * Longer description of function. Class aptent taciti sociosqu ad litora torquent per conubia stra, per inceptos
  * himenaeos. Nam pretium ipsum ex, ac aliquet lectus ultrices a.
  *
- * Args:
- *     arg1 (int): Description of argument 1.
- * 
- * Return:
- *     (bool): Description of return 1.
+ * @param {number/boolean/string/object/function} arg1
+ *     Description of argument 1.
+ * @return {number/...}
+ *     Description of return 1.
  */
  function func1(arg1) {
     // This is how to write longer style comments within method bodies.
