@@ -1,13 +1,13 @@
 {
   "name": "xnode",
-  "main": "./lib/xnode",
+  "main": "./lib/main",
   "version": "0.0.0",
-  "description": "A short description of your package",
+  "description": "Quick and painless prototyping, experimenting, and sharing for neural network research.",
   "keywords": [],
   "activationCommands": {
     "atom-workspace": "xnode:toggle"
   },
-  "repository": "https://github.com/atom/xnode",
+  "repository": "https://github.com/nikhilxb/xnode",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
