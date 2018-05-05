@@ -1,10 +1,10 @@
 # Library Structure
 **This document provides an overview of how the main Xnode source library is structured.**
 
-![Alt text](https://g.gravizo.com/source/diagram_1?https%3A%2F%2Fraw.githubusercontent.com%2Fnikhilxb%2Fxnode%2Flibrary-structure-docs%2Fxnode%2Flib%2FLIBRARY-STRUCTURE.md)
+![Alt text](https://g.gravizo.com/source/custom_mark10?https%3A%2F%2Fraw.githubusercontent.com%2Fnikhilxb%2Fxnode%2Flibrary-structure-docs%2Fxnode%2Flib%2FLIBRARY-STRUCTURE.md)
 <details> 
 <summary></summary>
-diagram_1
+custom_mark10
   digraph G {
     size ="4,4";
     main [shape=box];
@@ -20,19 +20,8 @@ diagram_1
     node [shape=box,style=filled,color=".7 .3 1.0"];
     execute -> compare;
   }
-diagram_1
+custom_mark10
 </details>
 
 <h1>Test heading</h1>
-<img src='https://g.gravizo.com/svg?
- digraph G {
-   main -> parse -> execute;
-   main -> init;
-   main -> cleanup;
-   execute -> make_string;
-   execute -> printf
-   init -> make_string;
-   main -> printf;
-   execute -> compare;
- }
-'/>
+<img src='https://g.gravizo.com/svg? digraph G { main -> parse -> execute; main -> init; main -> cleanup; execute -> make_string; execute -> printf init -> make_string; main -> printf; execute -> compare; }'/>
