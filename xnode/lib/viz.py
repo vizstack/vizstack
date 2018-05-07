@@ -1,8 +1,8 @@
 import json
+from collections import defaultdict
 import types
 import inspect
 
-# TODO clean all this up; it's just copy-pasted from viz/engine.py
 
 class VisualizationType:
     """Encapsulates the visualization-relevant properties of a specific object type.
@@ -41,6 +41,51 @@ class VisualizationType:
 
 
 class VisualizationEngine:
+    """Encapsulates the translation of Python variable symbols into visualization schema. It is stateful, so it may
+    implement caching in the future to improve performance.
+    """
+    def __init__(self):
+        """Constructor. Initializes symbol cache to store and efficient serve generated data schemas and references.
+        See "Symbol cache keys" section for more details.
+        """
+        self.cache = defaultdict(dict)
+
+    # ==================================================================================================================
+    # Symbol cache.
+    # -------------
+    # The `VisualizationEngine` cache is of the form {symbol_id -> {key -> value}}. Each `symbol_id` is mapped to a dict
+    # of stored information, the keys for which are defined below.
+    # ==================================================================================================================
+
+    # Key for a symbol's shell representation, which is a dict of the form:
+    # {
+    #   'type': The type of the symbol; this matches the `VisualizationType.type_name` field and must be understood by
+    #           the client. Any change to the type_name must be reflected in the client.
+    #   'str': A string representation of the symbol that can be showed in the client, particularly in the variable list
+    #           and when the object has not been expanded.
+    #   'name': A string name, possibly null, for the object, to be shown in the client.
+    #   'data': Either the value of the object (for primitives) or None (for non-primitives). When the client seeks
+    #           to "fill" a schema shell, they will have to request that data from the debugger first. See
+    #           VIZ-SCHEMA.js for more info about what these data objects will look like.
+    # }
+    SHELL = 'shell'
+
+    # Key for a symbol's data schema. Undefined (not in the dict) until `get_symbol_data` has populated it. This lazy
+    # population prevents extraneous work of generating a symbol's data schema (often a highly nested structure) until
+    # it is specifically requested.
+    DATA = 'data'
+
+    # Key for a `set` of IDs for all symbols referenced in this symbol's data schema. Each symbol ID is a string of the
+    # form "{REF_PREFIX}{id}", where id is a unique number for the symbol. Undefined (not in the dict) until
+    # `get_symbol_data` has populated it.
+    REFS = 'refs'
+
+    # Key for this symbol's Python object handle, so that the object can manipulated and indexed when requested.
+    OBJ = 'obj'
+
+    # Key for this symbol's `VisualizationType` instance. There exists only one `VisualizationType` for each type, so
+    # two symbols of the same type reference the same `VisualizationType`.
+    TYPE_INFO = 'type-info'
 
     # ==================================================================================================================
     # Schema generation.
@@ -55,7 +100,7 @@ class VisualizationEngine:
 
     def _generate_data_primitive(self, obj):
         """Data generation function for primitives."""
-        refs = dict()
+        refs = set()
         return {
             self.VIEWER_KEY: {
                 'contents': obj,
@@ -66,7 +111,7 @@ class VisualizationEngine:
     def _generate_data_dict(self, obj):
         """Data generation function for dicts."""
         contents = dict()
-        refs = dict()
+        refs = set()
         for key, value in obj.items():
             contents[self._sanitize_for_data_object(key, refs)] = self._sanitize_for_data_object(value, refs)
         return {
@@ -80,7 +125,7 @@ class VisualizationEngine:
     def _generate_data_sequence(self, obj):
         """Data generation function for sequential objects (list, tuple, set)."""
         contents = list()
-        refs = dict()
+        refs = set()
         for item in obj:
             contents.append(self._sanitize_for_data_object(item, refs))
         return {
@@ -93,7 +138,7 @@ class VisualizationEngine:
 
     def _generate_data_function(self, obj):
         """Data generation function for functions."""
-        refs = dict()
+        refs = set()
         viewer_data = {
             'filename': self._sanitize_for_data_object(obj.__code__.co_filename, refs),
             'lineno': self._sanitize_for_data_object(obj.__code__.co_firstlineno, refs),
@@ -112,7 +157,7 @@ class VisualizationEngine:
 
     def _generate_data_module(self, obj):
         """Data generation function for modules."""
-        refs = dict()
+        refs = set()
         contents = self._get_data_object_attributes(obj, refs, exclude_fns=False)
         return {
             self.VIEWER_KEY: {
@@ -127,7 +172,7 @@ class VisualizationEngine:
             'staticfields': dict(),
             'functions': dict(),
         }
-        refs = dict()
+        refs = set()
         for attr in dir(obj):
             value = getattr(obj, attr)
             if self.FUNCTION.test_fn(value):
@@ -148,7 +193,7 @@ class VisualizationEngine:
         instance_class = type(obj)
         instance_class_attrs = dir(instance_class)
         contents = dict()
-        refs = dict()
+        refs = set()
         for attr in dir(obj):
             value = getattr(obj, attr)
             if not self.FUNCTION.test_fn(value) and (
@@ -245,7 +290,7 @@ class VisualizationEngine:
 
         Args:
             key_or_value (object): An object to make safe for inclusion in the data object.
-            refs (dict): A set to save new symbol ID reference strings created during generation.
+            refs (set): A set to save new symbol ID reference strings created during generation.
 
         Returns:
             (str or int or float): Serializable-safe representation of obj, possibly as a symbol ID reference.
@@ -254,7 +299,8 @@ class VisualizationEngine:
             return self._escape_str(key_or_value) if self.STRING.test_fn(key_or_value) else key_or_value
         else:
             symbol_id = self._get_symbol_id(key_or_value)
-            refs[symbol_id] = key_or_value
+            self.cache[symbol_id][self.OBJ] = key_or_value
+            refs.add(symbol_id)
             return self.REF_PREFIX + symbol_id
 
     # Schema constants.
@@ -297,16 +343,42 @@ class VisualizationEngine:
         """
         return str(id(obj))
 
-    def _get_type_info(self, obj):
-        for type_info in self.TYPES:
-            if type_info.test_fn(obj):
-                return type_info
+    def _get_type_info(self, symbol_id):
+        """Returns the `VisualizationType` object associated with a particular symbol ID.
 
-    def _load_symbol_data(self, obj):
-        symbol_type_info = self._get_type_info(obj)
-        data, refs = symbol_type_info.data_fn(self, obj)
-        refs[self._get_symbol_id(obj)] = obj
-        return data, refs
+        If the symbol ID has not yet been associated with a `VisualizationType` object in the cache, the association is made
+        here. Otherwise, the cached value is returned.
+        Args:
+            symbol_id (str): ID for a symbol, as defined by self._get_symbol_id.
+
+        Returns:
+            (VisualizationType): the `VisualizationType` object associated with the symbol's type.
+        """
+        if symbol_id not in self.cache:
+            raise KeyError('Symbol id {} not found in cache.'.format(symbol_id))
+        if self.TYPE_INFO not in self.cache[symbol_id]:
+            obj = self.cache[symbol_id][self.OBJ]
+            for type_info in self.TYPES:
+                if type_info.test_fn(obj):
+                    self.cache[symbol_id][self.TYPE_INFO] = type_info
+                    break
+        return self.cache[symbol_id][self.TYPE_INFO]
+
+    def _load_symbol_data(self, symbol_id):
+        """Builds the data object for a symbol.
+
+        Used in `get_symbol_data` to build a symbol's data object if none was already cached. This function does not
+        cache its output and will not check the cache before generating.
+
+        Args:
+            symbol_id (str): A string ID for the requested symbol, as defined by self._get_symbol_id.
+
+        Returns:
+            (object): The symbol's data object.
+        """
+        symbol_type_info = self._get_type_info(symbol_id)
+        symbol_obj = self.cache[symbol_id][self.OBJ]
+        return symbol_type_info.data_fn(self, symbol_obj)
 
     # ==================================================================================================================
     # Public functions.
@@ -318,22 +390,112 @@ class VisualizationEngine:
     # attributes of the Python object itself.
     # ==================================================================================================================
 
-    def get_schema(self, obj):
-        data, refs = self._load_symbol_data(obj)
-        shells = {ref_id: self.get_symbol_shell(ref) for ref_id, ref in refs.items()}
-        return self.to_json({'data': data, 'shells': shells}), refs
+    def get_symbol_shell(self, symbol_id, name=None):
+        """Builds the lightweight shell dict representation of a given symbol for visualization.
 
-    def get_symbol_shell(self, obj):
-        symbol_type_info = self._get_type_info(obj)
-        return {
-            'type': symbol_type_info.type_name,
-            'str': symbol_type_info.str_fn(obj),
-            'name': None,
-            'data': None,
-        }
+        The shell dict (described in "Symbol cache" above and in VIZ-SCHEMA.js) is used to store lightweight information
+        about an object. Except for primitives, the data of the object are not generally reflected in the shell
+        representation (though some may be present in the 'str' field).
 
-    def get_symbol_data(self, obj):
-        return self._load_symbol_data(obj)
+        The function assumes that `symbol_id` exists already within the `cache` (added via `get_symbol_data()` or
+        or `_get_namespace_shells()`) and that `cache[symbol_id][OBJ]` points to the symbol's associated Python
+        object. If the shell has already been cached, it is simply returned; otherwise, this function will fill the
+        cache[symbol_id][SHELL] field.
+
+        The returned dict is a Python object, which needs conversion via `to_json()` for sending to a Javascript server.
+
+        Args:
+            symbol_id (str): A unique identifier for the symbol, as defined by `_get_symbol_id()`.
+            name (str): Optional, a name for the symbol if defined, e.g. "myVar".
+
+        Returns:
+            (dict): The symbol's shell dict.
+        """
+        if symbol_id not in self.cache:
+            symbol_id = self._get_symbol_id(obj)
+            self.cache[symbol_id][self.OBJ] = obj
+        if self.OBJ not in self.cache[symbol_id]:
+            raise KeyError('No object reference found for symbol {}'.format(symbol_id))
+        if self.SHELL not in self.cache[symbol_id]:
+            symbol_type_info = self._get_type_info(symbol_id)
+            symbol_obj = self.cache[symbol_id][self.OBJ]
+            self.cache[symbol_id][self.SHELL] = {
+                'type': symbol_type_info.type_name,
+                'str': symbol_type_info.str_fn(symbol_obj),
+                'name': name,
+                'data': None,
+            }
+        return self.cache[symbol_id][self.SHELL]
+
+    def get_namespace_shells(self, namespace):
+        """Get lightweight shell representations for all objects defined in the given namespace dict.
+
+        This function should generally be used when the state of the runtime has changed. The cache is updated to
+        associate the objects in the given namespace with their symbol IDs. Future implementations may
+        retain information from step to step, but currently the cache is wiped when this function is called to
+        prevent accidental ID collisions between destroyed objects and new objects with the same ID.
+
+        Args:
+            namespace (dict): A mapping of string names to Python objects.
+
+        Returns:
+            (dict): A dict mapping symbol ID strings to shell dictionaries (see get_symbol_shell and above
+                documentation for more info).
+        """
+        self.reset_cache()
+        namespace_shells = dict()
+        for obj_name, obj in namespace.items():
+            symbol_id = self._get_symbol_id(obj)
+            self.cache[symbol_id][self.OBJ] = obj
+            namespace_shells[symbol_id] = self.get_symbol_shell(symbol_id, name=obj_name)
+            if self._is_primitive(obj):
+                data_obj, new_shells = self.get_symbol_data(symbol_id)
+                self.cache[symbol_id][self.SHELL]['data'] = data_obj
+                namespace_shells.update(new_shells)
+        return namespace_shells
+
+    # TODO: factor this out and rename it
+    def whatever_execute_needs(self, obj):
+        symbol_id = self._get_symbol_id(obj)
+        self.cache[symbol_id][self.OBJ] = obj
+        shell = self.get_symbol_shell(symbol_id)
+        data, refs = self.get_symbol_data(symbol_id)
+        full = dict()
+        full.update(shell)
+        full['data'] = data
+        return self.to_json({
+            'data': full,
+            'shells': refs,
+        })
+
+    def get_symbol_data(self, symbol_id):
+        """Returns the symbol data object for a particular symbol, as well as the shells of any referenced symbols.
+
+        The data object encapsulates all potentially useful information about a symbol. For a dict, this would
+        be its contents; for a class, this might be its static fields and functions. Regardless, the data object
+        should be serializable, such that it can be sent via socket to clients, who can decide how to process the
+        given information.
+
+        This function requires a shell to have already been generated for symbol_id and stored at
+        cache[symbol_id][SHELL]. It uses, and fills if empty, cache[symbol_id][DATA] and cache[symbol_id][REFS]. REFS
+        stores all symbol IDs referenced by the data object, and the shells of each such symbol are returned along
+        with the data object.
+
+        Args:
+            symbol_id (str): The requested symbol's ID, as defined by self._get_symbol_id.
+
+        Returns:
+            (object): A serializable representation of the given symbol.
+            (dict): A dict mapping symbol IDs (particuarly, those found in the data object) to shells.
+        """
+        if self.SHELL not in self.cache[symbol_id]:
+            raise KeyError('Attempted to load data for {} before shell loaded.'.format(symbol_id))
+        if self.DATA not in self.cache[symbol_id]:
+            self.cache[symbol_id][self.DATA], self.cache[symbol_id][self.REFS] = self._load_symbol_data(symbol_id)
+        shells = dict()
+        for ref in self.cache[symbol_id][self.REFS]:
+            shells[ref] = self.get_symbol_shell(ref)
+        return self.cache[symbol_id][self.DATA], shells
 
     def to_json(self, obj):
         """Converts a visualization dict to its corresponding JSON string.
@@ -353,3 +515,7 @@ class VisualizationEngine:
             (str): The JSON representation of the input object.
         """
         return json.dumps(obj)
+
+    def reset_cache(self):
+        """Clear the cache completely, resetting the engine to its starting state."""
+        self.cache.clear()
