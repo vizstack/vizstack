@@ -1,7 +1,8 @@
+'use babel';
+
 import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
 import { SymbolTableActions } from '../actions/program';
-
 /**
  * State slice structure for `program`: {
  *     symbolTable: {

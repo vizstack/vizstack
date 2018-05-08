@@ -1,3 +1,5 @@
+'use babel';
+
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
@@ -14,7 +16,7 @@ import TensorViewer from './viewers/TensorViewer';
 import GraphViewer  from './viewers/GraphViewer';
 import ListViewer   from './viewers/ListViewer';
 
-import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../../../actions/canvas";
+import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../actions/canvas";
 
 
 const FlexibleGridLayout = WidthProvider(GridLayout);

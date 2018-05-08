@@ -1,3 +1,5 @@
+'use babel';
+
 import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from '../actions/canvas';

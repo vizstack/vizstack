@@ -1,3 +1,5 @@
+'use babel';
+
 import { ensureSymbolDataLoadedActionThunk } from "./program";
 
 /** Action type definitions. */

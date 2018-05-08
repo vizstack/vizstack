@@ -1,4 +1,4 @@
-"use strict";
+'use babel';
 
 /**
  * This script exports some sample JSON data that conforms to the `VIZ-SCHEMA.js` specification. This data is

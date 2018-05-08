@@ -1,3 +1,5 @@
+'use babel';
+
 import { createSelector } from "reselect";
 
 

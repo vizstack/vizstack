@@ -1,6 +1,7 @@
+'use babel';
+
 import { REF } from '../services/mockdata.js';
 
-import { resetVarListAction } from './varlist.js';
 import { setInViewerPayloadAction } from './canvas.js';
 
 /** Action type definitions. */
@@ -132,7 +133,6 @@ export function updateNamespaceActionThunk() {
             resp => resp.json().then(
                 ({ context, namespace }) => {
                     dispatch(updateNamespaceAction('waiting', context, namespace));
-                    dispatch(resetVarListAction(namespace));
                 }
             )
         ).catch(

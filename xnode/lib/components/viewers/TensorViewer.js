@@ -1,3 +1,5 @@
+'use babel';
+
 import React, { Component, PureComponent } from 'react';
 import { withStyles } from 'material-ui/styles';
 import Icon from 'material-ui/Icon';
