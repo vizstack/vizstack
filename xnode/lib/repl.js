@@ -2,7 +2,7 @@
 
 // Python services
 import PythonShell from 'python-shell';
-import { spawn } from 'child_process';
+import path from 'path';
 
 // React + Redux services
 import React from 'react';
@@ -17,7 +17,7 @@ import mainReducer from './reducers';
 import Canvas from './components/Canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTE_PATH = './engine.py';
+const EXECUTE_PATH = path.join(__dirname, 'engine.py');
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
