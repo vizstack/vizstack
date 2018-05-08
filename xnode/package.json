@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "description": "Quick and painless prototyping, experimenting, and sharing for neural network research.",
   "keywords": [],
-  "activationCommands": {
-  },
+  "activationCommands": {},
   "repository": "https://github.com/nikhilxb/xnode",
   "license": "MIT",
   "engines": {
@@ -14,6 +13,7 @@
   "dependencies": {
     "atom": "^1.1.0",
     "classnames": "^2.2.5",
+    "d3": "^5.2.0",
     "elkjs": "^0.3.0",
     "material-ui": "^1.0.0-beta.45",
     "material-ui-icons": "^1.0.0-beta.36",
@@ -23,9 +23,11 @@
     "react-dom": "^16.3.2",
     "react-grid-layout": "^0.16.6",
     "react-redux": "^5.0.7",
+    "react-vis": "^1.9.3",
     "redux": "^4.0.0",
     "redux-devtools-extension": "^2.13.2",
     "redux-pack": "^0.1.5",
+    "redux-seamless-immutable": "^0.4.0",
     "redux-thunk": "^2.2.0",
     "reselect": "^3.0.1",
     "seamless-immutable": "^7.1.3"
