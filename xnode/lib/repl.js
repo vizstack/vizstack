@@ -41,19 +41,19 @@ export default class REPL {
         this.watchStatements = [];     // List of watch objects to determine vars/data to display
         this.executionEngine = null;   // Communication channel with Python process
 
-        // // Initialize Redux store & connect to main reducer
-        // let store = createStore(mainReducer, composeWithDevTools(
-        //     applyMiddleware(thunk),
-        // ));
-        //
+        // Initialize Redux store & connect to main reducer
+        let store = createStore(mainReducer, composeWithDevTools(
+            applyMiddleware(thunk),
+        ));
+
         // // Initialize React root component
         this.element = document.createElement('div');
-        // ReactDOM.render(
-        //     <ReduxProvider store={store}>
-        //         <Canvas />
-        //     </ReduxProvider>,
-        //     this.element
-        // );
+        ReactDOM.render(
+            <ReduxProvider store={store}>
+                <Canvas />
+            </ReduxProvider>,
+            this.element
+        );
 
         console.log("REPL constructed!");
 
