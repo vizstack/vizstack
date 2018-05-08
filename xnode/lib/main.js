@@ -22,7 +22,7 @@ export default {
         this.subscriptions = new CompositeDisposable(
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
-                if (uri === 'atom://xnode-sandbox') {
+                if(uri === 'atom://xnode-sandbox') {
                     const scriptPath = "../dummy.py";  // TODO: Get rid of this! Make current script path.
                     return new REPL(scriptPath);
                 }
@@ -36,7 +36,7 @@ export default {
             // Destroy additional objects on package deactivation
             new Disposable(() => {
                 atom.workspace.getPaneItems().forEach(item => {
-                    if (item instanceof REPL) {
+                    if(item instanceof REPL) {
                         item.destroy();
                     }
                 });

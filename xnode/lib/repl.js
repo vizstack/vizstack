@@ -39,7 +39,7 @@ export default class REPL {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
         this.watchStatements = [];     // List of watch objects to determine vars/data to display
-        this.executionEngine = startEngine(scriptPath);   // Communication channel with Python process
+        this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
         let store = createStore(mainReducer, composeWithDevTools(
