@@ -5,7 +5,6 @@
   "description": "Quick and painless prototyping, experimenting, and sharing for neural network research.",
   "keywords": [],
   "activationCommands": {
-    "atom-workspace": "xnode:toggle"
   },
   "repository": "https://github.com/nikhilxb/xnode",
   "license": "MIT",
@@ -13,6 +12,22 @@
     "atom": ">=1.0.0 <2.0.0"
   },
   "dependencies": {
-    "python-shell": "^0.5.0"
+    "atom": "^1.1.0",
+    "classnames": "^2.2.5",
+    "elkjs": "^0.3.0",
+    "material-ui": "^1.0.0-beta.45",
+    "material-ui-icons": "^1.0.0-beta.36",
+    "prop-types": "^15.6.1",
+    "python-shell": "^0.5.0",
+    "react": "^16.3.2",
+    "react-dom": "^16.3.2",
+    "react-grid-layout": "^0.16.6",
+    "react-redux": "^5.0.7",
+    "redux": "^4.0.0",
+    "redux-devtools-extension": "^2.13.2",
+    "redux-pack": "^0.1.5",
+    "redux-thunk": "^2.2.0",
+    "reselect": "^3.0.1",
+    "seamless-immutable": "^7.1.3"
   }
 }

@@ -11,7 +11,7 @@ digraph main {
         label="Sandbox";
         REPL [label="REPL\n(repl.js)\n-associated script file\l-watch expressions\l-rerun rule\l-canvas state\l-[FUTURE] probes\l"];
         ENGINE [label="ExecutionEngine\n(engine.py)\n-Python shell process\l-viz schema generation\l-[FUTURE] caching\l"];
-        CANVAS [label="Canvas\n(canvas.js)\n-viewer components"];
+        CANVAS [label="Canvas\n(components/canvas.js)\n-viewer components"];
 
         REPL -> CANVAS [label="has one"]
         REPL -> CANVAS [label="viewer data", color="/spectral10/9"]

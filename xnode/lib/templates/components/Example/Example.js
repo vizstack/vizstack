@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from 'material-ui/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { createSelector } from "reselect";
+import { createSelector } from 'reselect';
 
 
 /**

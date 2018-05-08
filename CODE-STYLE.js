@@ -18,8 +18,8 @@
  */
 
 // =====================================================================================================================
-// Section summary for block of code.
-// ----------------------------------
+// Section summary for block of code
+// ---------------------------------
 // Add optional notes here.  Pellentesque congue interdum mauris sed pretium. Pellentesque mollis accumsan arcu,
 // ut pellentesque nisl convallis sed.
 //
@@ -27,8 +27,8 @@
 // quis, consequat lorem. Phasellus eget risus vel sapien suscipit fermentum nec quis augue.
 // =====================================================================================================================
 
-// Subsection description.
-// -----------------------
+// Subsection description
+// ----------------------
 
 /** Short description of variable */
 var dummyVar = 0;

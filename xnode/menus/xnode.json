@@ -3,7 +3,7 @@
     "atom-text-editor": [
       {
         "label": "Toggle Xnode",
-        "command": "xnode:toggle"
+        "command": "xnode:create-sandbox"
       }
     ]
   },
@@ -16,7 +16,7 @@
           "submenu": [
             {
               "label": "Toggle",
-              "command": "xnode:toggle"
+              "command": "xnode:create-sandbox"
             }
           ]
         }
