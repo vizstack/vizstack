@@ -4,103 +4,136 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.8	//
-ATTRIBUTES_KEY	.\resources\schema.py	/^    ATTRIBUTES_KEY = 'attributes'$/;"	v	class:VisualizationEngine
-ScriptExecutor	.\resources\execute.py	/^class ScriptExecutor(pdb.Pdb):$/;"	c
-BOOL	.\resources\schema.py	/^    BOOL     = VisualizationType('bool', test_fn=lambda obj: issubclass(type(obj), bool),$/;"	v	class:VisualizationEngine
-CLASS	.\resources\schema.py	/^    CLASS    = VisualizationType('class', test_fn=inspect.isclass,$/;"	v	class:VisualizationEngine
-DICT	.\resources\schema.py	/^    DICT     = VisualizationType('dict', test_fn=lambda obj: issubclass(type(obj), dict),$/;"	v	class:VisualizationEngine
-FUNCTION	.\resources\schema.py	/^    FUNCTION = VisualizationType('fn', test_fn=lambda obj: type(obj) in (types.FunctionType, types.MethodType,$/;"	v	class:VisualizationEngine
-INSTANCE	.\resources\schema.py	/^    INSTANCE = VisualizationType('obj', test_fn=lambda obj: True,$/;"	v	class:VisualizationEngine
-LIST	.\resources\schema.py	/^    LIST     = VisualizationType('list', test_fn=lambda obj: issubclass(type(obj), list),$/;"	v	class:VisualizationEngine
-MODULE	.\resources\schema.py	/^    MODULE   = VisualizationType('module', test_fn=inspect.ismodule,$/;"	v	class:VisualizationEngine
-NUMBER	.\resources\schema.py	/^    NUMBER   = VisualizationType('number', test_fn=lambda obj: issubclass(type(obj), (float, int)),$/;"	v	class:VisualizationEngine
-REF_PREFIX	.\resources\schema.py	/^    REF_PREFIX = '@id:'$/;"	v	class:VisualizationEngine
-SET	.\resources\schema.py	/^    SET      = VisualizationType('set', test_fn=lambda obj: issubclass(type(obj), set),$/;"	v	class:VisualizationEngine
-STRING	.\resources\schema.py	/^    STRING   = VisualizationType('string', test_fn=lambda obj: issubclass(type(obj), str),$/;"	v	class:VisualizationEngine
-TUPLE	.\resources\schema.py	/^    TUPLE    = VisualizationType('tuple', test_fn=lambda obj: issubclass(type(obj), tuple),$/;"	v	class:VisualizationEngine
-TYPES	.\resources\schema.py	/^    TYPES = [BOOL, NUMBER, STRING, DICT, LIST, SET, TUPLE, FUNCTION, MODULE, CLASS, INSTANCE]$/;"	v	class:VisualizationEngine
-VIEWER_KEY	.\resources\schema.py	/^    VIEWER_KEY = 'viewer'$/;"	v	class:VisualizationEngine
-VisualizationEngine	.\resources\schema.py	/^class VisualizationEngine:$/;"	c
-VisualizationType	.\resources\schema.py	/^class VisualizationType:$/;"	c
-__init__	.\resources\execute.py	/^    def __init__(self, **kwargs):$/;"	m	class:ScriptExecutor
-__init__	.\resources\schema.py	/^    def __init__(self, type_name, test_fn, data_fn, str_fn=str, is_primitive=False):$/;"	m	class:VisualizationType
-_escape_str	.\resources\schema.py	/^    def _escape_str(self, s):$/;"	m	class:VisualizationEngine
-_finish_breakpoint	.\resources\execute.py	/^    def _finish_breakpoint(self, frame):$/;"	m	class:ScriptExecutor
-_generate_data_class	.\resources\schema.py	/^    def _generate_data_class(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_dict	.\resources\schema.py	/^    def _generate_data_dict(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_function	.\resources\schema.py	/^    def _generate_data_function(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_instance	.\resources\schema.py	/^    def _generate_data_instance(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_module	.\resources\schema.py	/^    def _generate_data_module(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_primitive	.\resources\schema.py	/^    def _generate_data_primitive(self, obj):$/;"	m	class:VisualizationEngine
-_generate_data_sequence	.\resources\schema.py	/^    def _generate_data_sequence(self, obj):$/;"	m	class:VisualizationEngine
-_get_data_object_attributes	.\resources\schema.py	/^    def _get_data_object_attributes(self, obj, refs, exclude_fns=True):$/;"	m	class:VisualizationEngine
-_get_line_from_frame	.\resources\execute.py	/^    def _get_line_from_frame(self, frame):$/;"	m	class:ScriptExecutor
-_get_schema_obj	.\resources\execute.py	/^    def _get_schema_obj(self, var_name, frame):$/;"	m	class:ScriptExecutor
-_get_symbol_id	.\resources\schema.py	/^    def _get_symbol_id(self, obj):$/;"	m	class:VisualizationEngine
-_get_type_info	.\resources\schema.py	/^    def _get_type_info(self, obj):$/;"	m	class:VisualizationEngine
-_get_var_from_frame	.\resources\execute.py	/^    def _get_var_from_frame(self, frame):$/;"	m	class:ScriptExecutor
-_get_var_from_line	.\resources\execute.py	/^    def _get_var_from_line(self, line):$/;"	m	class:ScriptExecutor
-_is_primitive	.\resources\schema.py	/^    def _is_primitive(self, obj):$/;"	m	class:VisualizationEngine
-_load_symbol_data	.\resources\schema.py	/^    def _load_symbol_data(self, obj):$/;"	m	class:VisualizationEngine
-_sanitize_for_data_object	.\resources\schema.py	/^    def _sanitize_for_data_object(self, key_or_value, refs):$/;"	m	class:VisualizationEngine
+ATTRIBUTES_KEY	.\lib\viz.py	/^    ATTRIBUTES_KEY = 'attributes'$/;"	v	class:VisualizationEngine
+BOOL	.\lib\viz.py	/^    BOOL     = VisualizationType('bool', test_fn=lambda obj: issubclass(type(obj), bool),$/;"	v	class:VisualizationEngine
+CLASS	.\lib\viz.py	/^    CLASS    = VisualizationType('class', test_fn=inspect.isclass,$/;"	v	class:VisualizationEngine
+DATA	.\lib\viz.py	/^    DATA = 'data'$/;"	v	class:VisualizationEngine
+DICT	.\lib\viz.py	/^    DICT     = VisualizationType('dict', test_fn=lambda obj: issubclass(type(obj), dict),$/;"	v	class:VisualizationEngine
+Executor	.\lib\engine.py	/^class Executor:$/;"	c
+FUNCTION	.\lib\viz.py	/^    FUNCTION = VisualizationType('fn', test_fn=lambda obj: type(obj) in (types.FunctionType, types.MethodType,$/;"	v	class:VisualizationEngine
+INSTANCE	.\lib\viz.py	/^    INSTANCE = VisualizationType('obj', test_fn=lambda obj: True,$/;"	v	class:VisualizationEngine
+LIST	.\lib\viz.py	/^    LIST     = VisualizationType('list', test_fn=lambda obj: issubclass(type(obj), list),$/;"	v	class:VisualizationEngine
+MODULE	.\lib\viz.py	/^    MODULE   = VisualizationType('module', test_fn=inspect.ismodule,$/;"	v	class:VisualizationEngine
+NUMBER	.\lib\viz.py	/^    NUMBER   = VisualizationType('number', test_fn=lambda obj: issubclass(type(obj), (float, int)),$/;"	v	class:VisualizationEngine
+OBJ	.\lib\viz.py	/^    OBJ = 'obj'$/;"	v	class:VisualizationEngine
+REFS	.\lib\viz.py	/^    REFS = 'refs'$/;"	v	class:VisualizationEngine
+REF_PREFIX	.\lib\viz.py	/^    REF_PREFIX = '@id:'$/;"	v	class:VisualizationEngine
+SET	.\lib\viz.py	/^    SET      = VisualizationType('set', test_fn=lambda obj: issubclass(type(obj), set),$/;"	v	class:VisualizationEngine
+SHELL	.\lib\viz.py	/^    SHELL = 'shell'$/;"	v	class:VisualizationEngine
+STRING	.\lib\viz.py	/^    STRING   = VisualizationType('string', test_fn=lambda obj: issubclass(type(obj), str),$/;"	v	class:VisualizationEngine
+ScriptExecutor	.\lib\execute.py	/^class ScriptExecutor(pdb.Pdb):$/;"	c
+TUPLE	.\lib\viz.py	/^    TUPLE    = VisualizationType('tuple', test_fn=lambda obj: issubclass(type(obj), tuple),$/;"	v	class:VisualizationEngine
+TYPES	.\lib\viz.py	/^    TYPES = [BOOL, NUMBER, STRING, DICT, LIST, SET, TUPLE, FUNCTION, MODULE, CLASS, INSTANCE]$/;"	v	class:VisualizationEngine
+TYPE_INFO	.\lib\viz.py	/^    TYPE_INFO = 'type-info'$/;"	v	class:VisualizationEngine
+VIEWER_KEY	.\lib\viz.py	/^    VIEWER_KEY = 'viewer'$/;"	v	class:VisualizationEngine
+VisualizationEngine	.\lib\execute.py	/^from xnode.xnode.lib.viz import VisualizationEngine$/;"	i
+VisualizationEngine	.\lib\viz.py	/^class VisualizationEngine:$/;"	c
+VisualizationType	.\lib\viz.py	/^class VisualizationType:$/;"	c
+__init__	.\lib\engine.py	/^    def __init__(self, script_path, watches):$/;"	m	class:Executor
+__init__	.\lib\execute.py	/^    def __init__(self, **kwargs):$/;"	m	class:ScriptExecutor
+__init__	.\lib\viz.py	/^    def __init__(self):$/;"	m	class:VisualizationEngine
+__init__	.\lib\viz.py	/^    def __init__(self, type_name, test_fn, data_fn, str_fn=str, is_primitive=False):$/;"	m	class:VisualizationType
+_escape_str	.\lib\viz.py	/^    def _escape_str(self, s):$/;"	m	class:VisualizationEngine
+_finish_breakpoint	.\lib\execute.py	/^    def _finish_breakpoint(self, frame):$/;"	m	class:ScriptExecutor
+_generate_data_class	.\lib\viz.py	/^    def _generate_data_class(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_dict	.\lib\viz.py	/^    def _generate_data_dict(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_function	.\lib\viz.py	/^    def _generate_data_function(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_instance	.\lib\viz.py	/^    def _generate_data_instance(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_module	.\lib\viz.py	/^    def _generate_data_module(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_primitive	.\lib\viz.py	/^    def _generate_data_primitive(self, obj):$/;"	m	class:VisualizationEngine
+_generate_data_sequence	.\lib\viz.py	/^    def _generate_data_sequence(self, obj):$/;"	m	class:VisualizationEngine
+_get_data_object_attributes	.\lib\viz.py	/^    def _get_data_object_attributes(self, obj, refs, exclude_fns=True):$/;"	m	class:VisualizationEngine
+_get_line_from_frame	.\lib\execute.py	/^    def _get_line_from_frame(self, frame):$/;"	m	class:ScriptExecutor
+_get_schema_obj	.\lib\execute.py	/^    def _get_schema_obj(self, var_name, frame):$/;"	m	class:ScriptExecutor
+_get_symbol_id	.\lib\viz.py	/^    def _get_symbol_id(self, obj):$/;"	m	class:VisualizationEngine
+_get_type_info	.\lib\viz.py	/^    def _get_type_info(self, symbol_id):$/;"	m	class:VisualizationEngine
+_get_var_from_frame	.\lib\execute.py	/^    def _get_var_from_frame(self, frame):$/;"	m	class:ScriptExecutor
+_get_var_from_line	.\lib\execute.py	/^    def _get_var_from_line(self, line):$/;"	m	class:ScriptExecutor
+_is_primitive	.\lib\viz.py	/^    def _is_primitive(self, obj):$/;"	m	class:VisualizationEngine
+_load_symbol_data	.\lib\viz.py	/^    def _load_symbol_data(self, symbol_id):$/;"	m	class:VisualizationEngine
+_sanitize_for_data_object	.\lib\viz.py	/^    def _sanitize_for_data_object(self, key_or_value, refs):$/;"	m	class:VisualizationEngine
+_start_process	.\lib\engine.py	/^    def _start_process(self, script_path, watches):$/;"	m	class:Executor
+_start_thread	.\lib\engine.py	/^    def _start_thread(process):$/;"	m	class:Executor
 activationCommands	.\package.json	/^  "activationCommands": {$/;"	f
-argparse	.\resources\execute.py	/^import argparse$/;"	i
+add_watch_expression	.\lib\execute.py	/^    def add_watch_expression(self, file, lineno, action=None):$/;"	m	class:ScriptExecutor
+anotherActionThunk	.\lib\templates\actions\example.js	/^function anotherActionThunk(value) {$/;"	f
+argparse	.\lib\engine.py	/^import argparse$/;"	i
+argparse	.\lib\execute.py	/^import argparse$/;"	i
+asyncReducer	.\lib\templates\reducers\example.js	/^function asyncReducer(state, action) {$/;"	f
 atom	.\package.json	/^    "atom": ">=1.0.0 <2.0.0"$/;"	f
 atom-text-editor	.\menus\xnode.json	/^    "atom-text-editor": [$/;"	f
 atom-workspace	.\keymaps\xnode.json	/^  "atom-workspace": {$/;"	f
 atom-workspace	.\package.json	/^    "atom-workspace": "xnode:toggle"$/;"	f
+class.classes	.\lib\templates\components\Example\Example.js	/^        classes: PropTypes.object.isRequired,$/;"	p
 command	.\menus\xnode.json	/^              "command": "xnode:toggle"$/;"	f
 command	.\menus\xnode.json	/^        "command": "xnode:toggle"$/;"	f
 context-menu	.\menus\xnode.json	/^  "context-menu": {$/;"	f
 ctrl-alt-o	.\keymaps\xnode.json	/^    "ctrl-alt-o": "xnode:toggle"$/;"	f
+defaultdict	.\lib\viz.py	/^from collections import defaultdict$/;"	i
 dependencies	.\package-lock.json	/^  "dependencies": {$/;"	f
 dependencies	.\package.json	/^  "dependencies": {$/;"	f
-description	.\package.json	/^  "description": "A short description of your package",$/;"	f
-do_continue	.\resources\execute.py	/^    def do_continue(self, arg):$/;"	m	class:ScriptExecutor
+description	.\package.json	/^  "description": "Quick and painless prototyping, experimenting, and sharing for neural network research.",$/;"	f
+do_continue	.\lib\execute.py	/^    def do_continue(self, arg):$/;"	m	class:ScriptExecutor
 engines	.\package.json	/^  "engines": {$/;"	f
-error	.\resources\execute.py	/^    def error(self, msg):$/;"	m	class:ScriptExecutor
-fn	.\lib\dummy.py	/^def fn():$/;"	f
-get_schema	.\resources\schema.py	/^    def get_schema(self, obj):$/;"	m	class:VisualizationEngine
-get_symbol_data	.\resources\schema.py	/^    def get_symbol_data(self, obj):$/;"	m	class:VisualizationEngine
-get_symbol_shell	.\resources\schema.py	/^    def get_symbol_shell(self, obj):$/;"	m	class:VisualizationEngine
-inspect	.\resources\schema.py	/^import inspect$/;"	i
+error	.\lib\execute.py	/^    def error(self, msg):$/;"	m	class:ScriptExecutor
+execute	.\lib\engine.py	/^def execute(executor, script_path, watches):$/;"	f
+export.ASYNC_ACTION	.\lib\templates\actions\example.js	/^    ASYNC_ACTION: "EXAMPLE::ASYNC_ACTION",$/;"	p
+export.SYNC_ACTION	.\lib\templates\actions\example.js	/^    SYNC_ACTION:  "EXAMPLE::SYNC_ACTION",$/;"	p
+fetch_symbol	.\lib\engine.py	/^    def fetch_symbol(self, symbol_id):$/;"	m	class:Executor
+fetch_symbol_data	.\lib\execute.py	/^    def fetch_symbol_data(self, symbol_id):$/;"	m	class:ScriptExecutor
+fn	.\dummy.py	/^def fn():$/;"	f
+get_diff	.\lib\engine.py	/^def get_diff(message):$/;"	f
+get_namespace_shells	.\lib\viz.py	/^    def get_namespace_shells(self, namespace):$/;"	m	class:VisualizationEngine
+get_symbol_data	.\lib\viz.py	/^    def get_symbol_data(self, symbol_id):$/;"	m	class:VisualizationEngine
+get_symbol_id	.\lib\engine.py	/^def get_symbol_id(message):$/;"	f
+get_symbol_shell	.\lib\viz.py	/^    def get_symbol_shell(self, symbol_id, name=None):$/;"	m	class:VisualizationEngine
+get_watch_expression	.\lib\execute.py	/^def get_watch_expression(message):$/;"	f
+inspect	.\lib\viz.py	/^import inspect$/;"	i
 integrity	.\package-lock.json	/^      "integrity": "sha512-+jgmFZvwk1yMBBDisDlkXXMYv1eEJKbGCtwHLppGIyEV83cKeX9hjOjfR2yONWK3yQFhum0M2r7UE0U\/\/hiK9w=="$/;"	f
-json	.\resources\schema.py	/^import json$/;"	i
+json	.\lib\viz.py	/^import json$/;"	i
 keywords	.\package.json	/^  "keywords": [],$/;"	f
 label	.\menus\xnode.json	/^              "label": "Toggle",$/;"	f
-label	.\menus\xnode.json	/^          "label": "xnode",$/;"	f
-label	.\menus\xnode.json	/^        "label": "Toggle xnode",$/;"	f
+label	.\menus\xnode.json	/^          "label": "Xnode",$/;"	f
+label	.\menus\xnode.json	/^        "label": "Toggle Xnode",$/;"	f
 label	.\menus\xnode.json	/^      "label": "Packages",$/;"	f
 license	.\package.json	/^  "license": "MIT",$/;"	f
 lockfileVersion	.\package-lock.json	/^  "lockfileVersion": 1,$/;"	f
-main	.\package.json	/^  "main": ".\/lib\/xnode",$/;"	f
-main	.\resources\execute.py	/^def main():$/;"	f
+main	.\lib\engine.py	/^def main():$/;"	f
+main	.\lib\execute.py	/^def main():$/;"	f
+main	.\package.json	/^  "main": ".\/lib\/main",$/;"	f
+mapDispatchToProps	.\lib\templates\components\Example\Example.js	/^function mapDispatchToProps(dispatch) {$/;"	f
+mapStateToProps	.\lib\templates\components\Example\Example.js	/^function mapStateToProps(state, props) {  \/\/ Second argument `props` is manually set prop$/;"	f
 menu	.\menus\xnode.json	/^  "menu": [$/;"	f
-message	.\resources\execute.py	/^    def message(self, msg):$/;"	m	class:ScriptExecutor
+message	.\lib\execute.py	/^    def message(self, msg):$/;"	m	class:ScriptExecutor
 name	.\package-lock.json	/^  "name": "xnode",$/;"	f
 name	.\package.json	/^  "name": "xnode",$/;"	f
-os	.\resources\execute.py	/^import os$/;"	i
-pdb	.\resources\execute.py	/^import pdb$/;"	i
-postcmd	.\resources\execute.py	/^    def postcmd(self, stop, line):$/;"	m	class:ScriptExecutor
-precmd	.\resources\execute.py	/^    def precmd(self, line):$/;"	m	class:ScriptExecutor
+pdb	.\lib\execute.py	/^import pdb$/;"	i
+postcmd	.\lib\execute.py	/^    def postcmd(self, stop, line):$/;"	m	class:ScriptExecutor
+precmd	.\lib\execute.py	/^    def precmd(self, line):$/;"	m	class:ScriptExecutor
 python-shell	.\package-lock.json	/^    "python-shell": {$/;"	f
 python-shell	.\package.json	/^    "python-shell": "^0.5.0"$/;"	f
-q	.\lib\dummy.py	/^q = 3$/;"	v
-r	.\lib\dummy.py	/^r = 6$/;"	v
-random	.\lib\dummy.py	/^import random$/;"	i
-read_args	.\resources\execute.py	/^def read_args():$/;"	f
-repository	.\package.json	/^  "repository": "https:\/\/github.com\/atom\/xnode",$/;"	f
+q	.\dummy.py	/^q = 3$/;"	v
+r	.\dummy.py	/^r = 6$/;"	v
+random	.\dummy.py	/^import random$/;"	i
+read_args	.\lib\engine.py	/^def read_args():$/;"	f
+read_args	.\lib\execute.py	/^def read_args():$/;"	f
+repository	.\package.json	/^  "repository": "https:\/\/github.com\/nikhilxb\/xnode",$/;"	f
 requires	.\package-lock.json	/^  "requires": true,$/;"	f
+reset_cache	.\lib\viz.py	/^    def reset_cache(self):$/;"	m	class:VisualizationEngine
 resolved	.\package-lock.json	/^      "resolved": "https:\/\/registry.npmjs.org\/python-shell\/-\/python-shell-0.5.0.tgz",$/;"	f
-run.args	.\lib\repl.js	/^            args: ['c:\\\\users\\\\ryan holmdahl\\\\documents\\\\github\\\\xnode\\\\xnode\\\\xnode\\\\lib\\\\dummy.py:10', '--script', '.\/lib\/dummy.py'],$/;"	p
-schema	.\resources\execute.py	/^import schema$/;"	i
+should_execute	.\lib\engine.py	/^def should_execute(script_path, watches, diff):$/;"	f
+startEngine.args	.\lib\repl.js	/^            args: [scriptPath],$/;"	p
 submenu	.\menus\xnode.json	/^          "submenu": [$/;"	f
 submenu	.\menus\xnode.json	/^      "submenu": [$/;"	f
-sys	.\resources\execute.py	/^import sys$/;"	i
-to_json	.\resources\schema.py	/^    def to_json(self, obj):$/;"	m	class:VisualizationEngine
-types	.\resources\schema.py	/^import types$/;"	i
-user_line	.\resources\execute.py	/^    def user_line(self, frame):$/;"	m	class:ScriptExecutor
-user_return	.\resources\execute.py	/^    def user_return(self, frame, return_value):$/;"	m	class:ScriptExecutor
+subprocess	.\lib\engine.py	/^import subprocess$/;"	i
+syncReducer	.\lib\templates\reducers\example.js	/^function syncReducer(state, action) {$/;"	f
+terminate	.\lib\engine.py	/^    def terminate(self):$/;"	m	class:Executor
+threading	.\lib\engine.py	/^import threading$/;"	i
+to_json	.\lib\viz.py	/^    def to_json(self, obj):$/;"	m	class:VisualizationEngine
+types	.\lib\viz.py	/^import types$/;"	i
+user_line	.\lib\execute.py	/^    def user_line(self, frame):$/;"	m	class:ScriptExecutor
+user_return	.\lib\execute.py	/^    def user_return(self, frame, return_value):$/;"	m	class:ScriptExecutor
 version	.\package-lock.json	/^      "version": "0.5.0",$/;"	f
 version	.\package-lock.json	/^  "version": "0.0.0",$/;"	f
 version	.\package.json	/^  "version": "0.0.0",$/;"	f
+whatever_execute_needs	.\lib\viz.py	/^    def whatever_execute_needs(self, obj):$/;"	m	class:VisualizationEngine
