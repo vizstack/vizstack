@@ -17,7 +17,7 @@ import mainReducer from './reducers';
 import Canvas from './components/Canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTE_PATH = './execute.py';
+const EXECUTE_PATH = './engine.py';
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -39,7 +39,7 @@ export default class REPL {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
         this.watchStatements = [];     // List of watch objects to determine vars/data to display
-        this.executionEngine = null;   // Communication channel with Python process
+        this.executionEngine = startEngine(scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
         let store = createStore(mainReducer, composeWithDevTools(
@@ -102,7 +102,59 @@ export default class REPL {
 
     // =================================================================================================================
     // Interacting with REPL
-    // =================================================================================================================
+    // ================================================================================================================
+
+    /**
+     * Creates a new execution engine.
+     *
+     * The engine is a Python process, which persists for the lifespan of the sandbox. Changes to files and watch
+     * statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any watched
+     * data to REPL, which stores that data.
+     *
+     * @param  {string} scriptPath
+     *      The path to the Python script whose data should be visualized in the canvas.
+     * @returns {PythonShell}
+     *      A Python subprocess with which REPL can communicate to acquire evaluated watch statements.
+     */
+    startEngine(scriptPath) {
+        let options = {
+            args: [scriptPath],
+        }
+        let executionEngine = new PythonShell(EXECUTE_PATH, options);
+        executionEngine.on('message', (message) => {
+            console.log(message);
+            let { data, shells } = JSON.parse(message);
+            // TODO store data and shells locally
+        });
+        return executionEngine;
+    }
+
+    /**
+     * Toggles the existence of a watch statement at a given line.
+     *
+     * @param  {string} filePath
+     *      Path to the file whose line should be watched.
+     * @param  {number} lineNum
+     *      The line number in `filePath` to be watched.
+     * @param  {?string} action
+     *      Currently unused; TODO: the expression to be performed on the watched variable.
+     */
+    toggleWatchStatement(filePath, lineNum, action = null) {
+        this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`)
+    }
+
+    /**
+     * Fetches the data object for a given symbol from the execution engine.
+     *
+     * The data object is not directly returned, but will eventually be sent by the execution engine to REPL as a
+     * message, at which point it is added to the symbol table.
+     *
+     * @param  {string} symbolId
+     *      The identifier of the symbol, as acquired from a reference in the symbol table.
+     */
+    fetchSymbolData(symbolId) {
+        this.executionEngine.send(`fetch:${symbolId}`);
+    }
 
     /**
      * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main script (or certain parts
@@ -111,39 +163,11 @@ export default class REPL {
      * @param  {string} file
      *     Path of file that was changed.
      * @param  {object} changes
-     *     Indicates what part of the file changed.
+     *     Indicates what parts of the file changed.
      */
     onFileChanged(file, changes) {
-        // TODO: Smarter file checking, re-run caching. Right now, assumes all changes are relevant and re-runs the
-        // script.
-        this.endShell();
-        this.startShell();
-    }
-
-    /** Ends the shell execution, if it has not already ended. */
-    endShell() {
-        // TODO: Test this -- could be that shell might have already ended? also, does this kill the shell immediately?
-        if (this.shell !== null) {
-            this.shell.end();
-            this.shell = null;
-        }
-    }
-
-    /**
-     * Starts the shell execution of the associated Python script.
-     * TODO: Right now, a new process is started each time the shell is started. But should presumably keep old process.
-     */
-    startShell() {
-        let options = {
-            args: ['c:\\users\\ryan holmdahl\\documents\\github\\xnode\\xnode\\xnode\\lib\\dummy.py:10', '--script', './lib/dummy.py'],
-        }
-        this.shell = new PythonShell(EXECUTE_PATH, options);
-        let onUpdate = this.onUpdate;
-        this.shell.on('message', (message) => {
-            console.log(message);
-            let { data, shells } = JSON.parse(message);
-            // TODO store data and shells locally
-            onUpdate(data);
-        });
+        // TODO: convert changes to string that is understood by engine
+        changes = '';
+        this.executionEngine.send(`change:${file}?${changes}`)
     }
 }

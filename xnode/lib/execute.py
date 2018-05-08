@@ -1,8 +1,7 @@
 import argparse
 import pdb
-import sys
-import os
-import schema
+
+from xnode.xnode.lib.viz import VisualizationEngine
 
 
 # Taken from atom-python-debugger
@@ -10,16 +9,21 @@ import schema
 # TODO in-place changes are really going to fuck things up
 # TODO currently bp on first line always
 # TODO sort out the refs table
-class AtomPDB(pdb.Pdb):
+class ScriptExecutor(pdb.Pdb):
 
     def __init__(self, **kwargs):
         pdb.Pdb.__init__(self, **kwargs)
         # Convert Python objects to viz schema format.
-        self.viz_engine = schema.VisualizationEngine()
+        self.viz_engine = VisualizationEngine()
         # The name of a variable whose value should be evaluated and transmitted at the next breakpoint.
         self.var_to_eval = None
-        # Mapping of symbol IDs to Python objects for every yielded object and their references.
-        self.refs = {}
+
+    def fetch_symbol_data(self, symbol_id):
+        data, shells = self.viz_engine.get_symbol_data(symbol_id)
+        return self.viz_engine.to_json({
+            'data': data,
+            'shells': shells,
+        })
 
     def user_return(self, frame, return_value):
         """
@@ -107,9 +111,7 @@ class AtomPDB(pdb.Pdb):
         elif var_name in frame.f_globals:
             obj = frame.f_globals[var_name]
         if obj:
-            schema_str, new_refs = self.viz_engine.get_schema(obj)
-            self.refs.update(new_refs)
-            return schema_str
+            return self.viz_engine.whatever_execute_needs(obj)
         else:
             raise ValueError
 
@@ -156,6 +158,9 @@ class AtomPDB(pdb.Pdb):
                 raise ValueError
         raise ValueError
 
+    def add_watch_expression(self, file, lineno, action=None):
+        self.do_break('{}:{}'.format(file, lineno))
+
     # TODO add sigint stuff
     def do_continue(self, arg):
         self.set_continue()
@@ -177,24 +182,35 @@ class AtomPDB(pdb.Pdb):
         return stop
 
 
+def get_watch_expression(message):
+    contents = message.replace('watch:', '').split('?')
+    return {
+        'file': contents[0],
+        'lineno': contents[1],
+        'action': contents[2] if len(contents) > 2 else None
+    }
+
+
 def read_args():
     parser = argparse.ArgumentParser(description='Read in watch statements.')
     parser.add_argument('--script', type=str, dest='script')
-    parser.add_argument('breakpoints', metavar='N', type=str, nargs='+')
+    parser.add_argument('watches', metavar='N', type=str, nargs='+')
     args = parser.parse_args()
-    return args.script, args.breakpoints
+    return args.script, args.watches
 
 
 def main():
-    script, breakpoints = read_args()
+    script_path, watch_strings = read_args()
+    watches = [get_watch_expression(s) for s in watch_strings]
 
-    db = AtomPDB()
+    executor = ScriptExecutor()
+    for watch in watches:
+        executor.add_watch_expression(watch['file'], watch['lineno'], watch['action'])
+    executor._runscript(script_path)
+    while True:
+        symbol_id = input()
+        print(executor.fetch_symbol_data(symbol_id))
 
-    for bp in breakpoints:
-        db.do_break(bp)
-
-    sys.stdout = None  # suppress any internal print statements
-    db._runscript(script)
 
 if __name__ == '__main__':
     main()
