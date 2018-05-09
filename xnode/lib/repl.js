@@ -2,6 +2,7 @@
 
 // Python services
 import PythonShell from 'python-shell';
+import {spawn} from 'child_process';
 import path from 'path';
 
 // React + Redux services
@@ -32,14 +33,17 @@ export default class REPL {
      * Constructor.
      *
      * @param {string} scriptPath
-     *     The path to the script that the engine should execute. The engine remains associated with this script,
-     *     rerunning if needed after every file edit.
+     *     The absolute path to the script that the engine should execute. The engine remains associated with this
+     *     script, rerunning if needed after every file edit.
      */
     constructor(scriptPath) {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
         this.watchStatements = [];     // List of watch objects to determine vars/data to display
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
+
+        // uncomment this to test REPL
+        // this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
         let store = createStore(mainReducer, composeWithDevTools(
@@ -123,8 +127,8 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTE_PATH, options);
         executionEngine.on('message', (message) => {
             console.log(message);
-            let { data, shells } = JSON.parse(message);
-            // TODO store data and shells locally
+            // let { data, shells } = JSON.parse(message);
+            // TODO: store data and shells locally
         });
         return executionEngine;
     }
@@ -140,7 +144,7 @@ export default class REPL {
      *      Currently unused; TODO: the expression to be performed on the watched variable.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
-        this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`)
+        this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`);
     }
 
     /**

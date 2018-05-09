@@ -15,7 +15,9 @@ BOOL	.\lib\viz.py	/^    BOOL     = VisualizationType('bool', test_fn=lambda obj:
 CLASS	.\lib\viz.py	/^    CLASS    = VisualizationType('class', test_fn=inspect.isclass,$/;"	v	class:VisualizationEngine
 DATA	.\lib\viz.py	/^    DATA = 'data'$/;"	v	class:VisualizationEngine
 DICT	.\lib\viz.py	/^    DICT     = VisualizationType('dict', test_fn=lambda obj: issubclass(type(obj), dict),$/;"	v	class:VisualizationEngine
-Executor	.\lib\engine.py	/^class Executor:$/;"	c
+EDIT_HEADER	.\lib\engine.py	/^EDIT_HEADER = 'change:'$/;"	v
+ExecutionManager	.\lib\engine.py	/^class ExecutionManager:$/;"	c
+FETCH_HEADER	.\lib\engine.py	/^FETCH_HEADER = 'fetch:'$/;"	v
 FUNCTION	.\lib\viz.py	/^    FUNCTION = VisualizationType('fn', test_fn=lambda obj: type(obj) in (types.FunctionType, types.MethodType,$/;"	v	class:VisualizationEngine
 INSTANCE	.\lib\viz.py	/^    INSTANCE = VisualizationType('obj', test_fn=lambda obj: True,$/;"	v	class:VisualizationEngine
 JSONStream	.\package-lock.json	/^        "JSONStream": "1.3.2",$/;"	f
@@ -24,21 +26,25 @@ LIST	.\lib\viz.py	/^    LIST     = VisualizationType('list', test_fn=lambda obj:
 MODULE	.\lib\viz.py	/^    MODULE   = VisualizationType('module', test_fn=inspect.ismodule,$/;"	v	class:VisualizationEngine
 NUMBER	.\lib\viz.py	/^    NUMBER   = VisualizationType('number', test_fn=lambda obj: issubclass(type(obj), (float, int)),$/;"	v	class:VisualizationEngine
 OBJ	.\lib\viz.py	/^    OBJ = 'obj'$/;"	v	class:VisualizationEngine
+Process	.\lib\engine.py	/^from multiprocessing import Process, Queue$/;"	i
+Queue	.\lib\engine.py	/^from multiprocessing import Process, Queue$/;"	i
 REFS	.\lib\viz.py	/^    REFS = 'refs'$/;"	v	class:VisualizationEngine
 REF_PREFIX	.\lib\viz.py	/^    REF_PREFIX = '@id:'$/;"	v	class:VisualizationEngine
 SET	.\lib\viz.py	/^    SET      = VisualizationType('set', test_fn=lambda obj: issubclass(type(obj), set),$/;"	v	class:VisualizationEngine
 SHELL	.\lib\viz.py	/^    SHELL = 'shell'$/;"	v	class:VisualizationEngine
 STRING	.\lib\viz.py	/^    STRING   = VisualizationType('string', test_fn=lambda obj: issubclass(type(obj), str),$/;"	v	class:VisualizationEngine
 ScriptExecutor	.\lib\execute.py	/^class ScriptExecutor(pdb.Pdb):$/;"	c
+THREAD_QUIT	.\lib\engine.py	/^THREAD_QUIT = 'quit'$/;"	v
 TUPLE	.\lib\viz.py	/^    TUPLE    = VisualizationType('tuple', test_fn=lambda obj: issubclass(type(obj), tuple),$/;"	v	class:VisualizationEngine
 TYPES	.\lib\viz.py	/^    TYPES = [BOOL, NUMBER, STRING, DICT, LIST, SET, TUPLE, FUNCTION, MODULE, CLASS, INSTANCE]$/;"	v	class:VisualizationEngine
 TYPE_INFO	.\lib\viz.py	/^    TYPE_INFO = 'type-info'$/;"	v	class:VisualizationEngine
 VIEWER_KEY	.\lib\viz.py	/^    VIEWER_KEY = 'viewer'$/;"	v	class:VisualizationEngine
-VisualizationEngine	.\lib\execute.py	/^from xnode.xnode.lib.viz import VisualizationEngine$/;"	i
+VisualizationEngine	.\lib\execute.py	/^from viz import VisualizationEngine$/;"	i
 VisualizationEngine	.\lib\viz.py	/^class VisualizationEngine:$/;"	c
 VisualizationType	.\lib\viz.py	/^class VisualizationType:$/;"	c
-__init__	.\lib\engine.py	/^    def __init__(self, script_path, watches):$/;"	m	class:Executor
-__init__	.\lib\execute.py	/^    def __init__(self, **kwargs):$/;"	m	class:ScriptExecutor
+WATCH_HEADER	.\lib\engine.py	/^WATCH_HEADER = 'watch:'$/;"	v
+__init__	.\lib\engine.py	/^    def __init__(self, script_path, watches):$/;"	m	class:ExecutionManager
+__init__	.\lib\execute.py	/^    def __init__(self, schema_queue, **kwargs):$/;"	m	class:ScriptExecutor
 __init__	.\lib\viz.py	/^    def __init__(self):$/;"	m	class:VisualizationEngine
 __init__	.\lib\viz.py	/^    def __init__(self, type_name, test_fn, data_fn, str_fn=str, is_primitive=False):$/;"	m	class:VisualizationType
 _escape_str	.\lib\viz.py	/^    def _escape_str(self, s):$/;"	m	class:VisualizationEngine
@@ -60,8 +66,8 @@ _get_var_from_line	.\lib\execute.py	/^    def _get_var_from_line(self, line):$/;
 _is_primitive	.\lib\viz.py	/^    def _is_primitive(self, obj):$/;"	m	class:VisualizationEngine
 _load_symbol_data	.\lib\viz.py	/^    def _load_symbol_data(self, symbol_id):$/;"	m	class:VisualizationEngine
 _sanitize_for_data_object	.\lib\viz.py	/^    def _sanitize_for_data_object(self, key_or_value, refs):$/;"	m	class:VisualizationEngine
-_start_process	.\lib\engine.py	/^    def _start_process(self, script_path, watches):$/;"	m	class:Executor
-_start_thread	.\lib\engine.py	/^    def _start_thread(process):$/;"	m	class:Executor
+_start_exec_process	.\lib\engine.py	/^    def _start_exec_process(script_path, watches):$/;"	m	class:ExecutionManager
+_start_print_thread	.\lib\engine.py	/^    def _start_print_thread(process, print_queue):$/;"	m	class:ExecutionManager
 abbrev	.\package-lock.json	/^                "abbrev": "1.1.1"$/;"	f
 abbrev	.\package-lock.json	/^            "abbrev": "1.1.1",$/;"	f
 abbrev	.\package-lock.json	/^        "abbrev": "1.1.1",$/;"	f
@@ -114,7 +120,6 @@ archy	.\package-lock.json	/^        "archy": {$/;"	f
 are-we-there-yet	.\package-lock.json	/^            "are-we-there-yet": "1.1.4",$/;"	f
 are-we-there-yet	.\package-lock.json	/^            "are-we-there-yet": {$/;"	f
 argparse	.\lib\engine.py	/^import argparse$/;"	i
-argparse	.\lib\execute.py	/^import argparse$/;"	i
 asap	.\package-lock.json	/^            "asap": "2.0.5",$/;"	f
 asap	.\package-lock.json	/^            "asap": {$/;"	f
 asap	.\package-lock.json	/^        "asap": "2.0.6"$/;"	f
@@ -568,7 +573,7 @@ escape-string-regexp	.\package-lock.json	/^                "escape-string-regexp
 execa	.\package-lock.json	/^                    "execa": "0.7.0"$/;"	f
 execa	.\package-lock.json	/^                    "execa": "0.7.0",$/;"	f
 execa	.\package-lock.json	/^                    "execa": {$/;"	f
-execute	.\lib\engine.py	/^def execute(executor, script_path, watches):$/;"	f
+execute	.\lib\engine.py	/^def execute(exec_manager, script_path, watches):$/;"	f
 export.ADD_VIEWER	.\lib\actions\canvas.js	/^    ADD_VIEWER:          "CANVAS::ADD_VIEWER",$/;"	p
 export.ASYNC_ACTION	.\lib\templates\actions\example.js	/^    ASYNC_ACTION: "EXAMPLE::ASYNC_ACTION",$/;"	p
 export.ENSURE_SYMBOL_DATA_LOADED	.\lib\actions\program.js	/^    ENSURE_SYMBOL_DATA_LOADED:  "SYMBOLTABLE::ENSURE_SYMBOL_DATA_LOADED",$/;"	p
@@ -591,7 +596,7 @@ fbjs	.\package-lock.json	/^        "fbjs": "0.8.16",$/;"	f
 fbjs	.\package-lock.json	/^    "fbjs": {$/;"	f
 fetchNamespace	.\lib\actions\program.js	/^function fetchNamespace() {$/;"	f
 fetchSymbolData	.\lib\actions\program.js	/^function fetchSymbolData(symbolId) {$/;"	f
-fetch_symbol	.\lib\engine.py	/^    def fetch_symbol(self, symbol_id):$/;"	m	class:Executor
+fetch_symbol	.\lib\engine.py	/^    def fetch_symbol(self, symbol_id):$/;"	m	class:ExecutionManager
 fetch_symbol_data	.\lib\execute.py	/^    def fetch_symbol_data(self, symbol_id):$/;"	m	class:ScriptExecutor
 figgy-pudding	.\package-lock.json	/^                "figgy-pudding": "3.1.0",$/;"	f
 figgy-pudding	.\package-lock.json	/^            "figgy-pudding": "2.0.1",$/;"	f
@@ -666,7 +671,7 @@ get_namespace_shells	.\lib\viz.py	/^    def get_namespace_shells(self, namespace
 get_symbol_data	.\lib\viz.py	/^    def get_symbol_data(self, symbol_id):$/;"	m	class:VisualizationEngine
 get_symbol_id	.\lib\engine.py	/^def get_symbol_id(message):$/;"	f
 get_symbol_shell	.\lib\viz.py	/^    def get_symbol_shell(self, symbol_id, name=None):$/;"	m	class:VisualizationEngine
-get_watch_expression	.\lib\execute.py	/^def get_watch_expression(message):$/;"	f
+get_watch_expression	.\lib\engine.py	/^def get_watch_expression(message):$/;"	f
 getpass	.\package-lock.json	/^                    "getpass": "0.1.7",$/;"	f
 getpass	.\package-lock.json	/^                    "getpass": {$/;"	f
 glob	.\package-lock.json	/^                    "glob": "7.1.2",$/;"	f
@@ -1109,7 +1114,6 @@ lru-cache	.\package-lock.json	/^            "lru-cache": "4.1.2",$/;"	f
 lru-cache	.\package-lock.json	/^        "lru-cache": "4.1.2",$/;"	f
 lru-cache	.\package-lock.json	/^        "lru-cache": {$/;"	f
 main	.\lib\engine.py	/^def main():$/;"	f
-main	.\lib\execute.py	/^def main():$/;"	f
 main	.\package.json	/^  "main": ".\/lib\/main",$/;"	f
 make-dir	.\package-lock.json	/^                "make-dir": "1.2.0",$/;"	f
 make-dir	.\package-lock.json	/^                "make-dir": {$/;"	f
@@ -1458,7 +1462,6 @@ read-package-json	.\package-lock.json	/^        "read-package-json": {$/;"	f
 read-package-tree	.\package-lock.json	/^        "read-package-tree": "5.2.1",$/;"	f
 read-package-tree	.\package-lock.json	/^        "read-package-tree": {$/;"	f
 read_args	.\lib\engine.py	/^def read_args():$/;"	f
-read_args	.\lib\execute.py	/^def read_args():$/;"	f
 readable-stream	.\package-lock.json	/^                            "readable-stream": "2.3.6"$/;"	f
 readable-stream	.\package-lock.json	/^                            "readable-stream": "2.3.6",$/;"	f
 readable-stream	.\package-lock.json	/^                        "readable-stream": "2.3.6"$/;"	f
@@ -1675,6 +1678,8 @@ rimraf	.\package-lock.json	/^        "rimraf": {$/;"	f
 run-queue	.\package-lock.json	/^                "run-queue": "1.0.3"$/;"	f
 run-queue	.\package-lock.json	/^            "run-queue": "1.0.3"$/;"	f
 run-queue	.\package-lock.json	/^            "run-queue": {$/;"	f
+run_script	.\lib\engine.py	/^from execute import run_script$/;"	i
+run_script	.\lib\execute.py	/^def run_script(receive_queue, send_queue, script_path, watches):$/;"	f
 rw	.\package-lock.json	/^        "rw": "1.3.3"$/;"	f
 rw	.\package-lock.json	/^    "rw": {$/;"	f
 safe-buffer	.\package-lock.json	/^                        "safe-buffer": "5.1.1"$/;"	f
@@ -1844,7 +1849,6 @@ strip-json-comments	.\package-lock.json	/^                            "strip-jso
 strip-json-comments	.\package-lock.json	/^                            "strip-json-comments": {$/;"	f
 submenu	.\menus\xnode.json	/^          "submenu": [$/;"	f
 submenu	.\menus\xnode.json	/^      "submenu": [$/;"	f
-subprocess	.\lib\engine.py	/^import subprocess$/;"	i
 supports-color	.\package-lock.json	/^                "supports-color": "5.3.0"$/;"	f
 supports-color	.\package-lock.json	/^                "supports-color": {$/;"	f
 symbol-observable	.\package-lock.json	/^            "symbol-observable": "1.2.0"$/;"	f
@@ -1854,6 +1858,7 @@ symbol-observable	.\package-lock.json	/^        "symbol-observable": "1.2.0",$/;
 symbol-observable	.\package-lock.json	/^        "symbol-observable": {$/;"	f
 symbol-observable	.\package-lock.json	/^    "symbol-observable": {$/;"	f
 syncReducer	.\lib\templates\reducers\example.js	/^function syncReducer(state, action) {$/;"	f
+sys	.\lib\engine.py	/^import sys$/;"	i
 tar	.\package-lock.json	/^                "tar": "4.4.1",$/;"	f
 tar	.\package-lock.json	/^            "tar": "2.2.1",$/;"	f
 tar	.\package-lock.json	/^            "tar": "4.4.1",$/;"	f
@@ -1862,7 +1867,7 @@ tar	.\package-lock.json	/^        "tar": "4.4.1",$/;"	f
 tar	.\package-lock.json	/^        "tar": {$/;"	f
 term-size	.\package-lock.json	/^                "term-size": "1.2.0",$/;"	f
 term-size	.\package-lock.json	/^                "term-size": {$/;"	f
-terminate	.\lib\engine.py	/^    def terminate(self):$/;"	m	class:Executor
+terminate	.\lib\engine.py	/^    def terminate(self):$/;"	m	class:ExecutionManager
 text-table	.\package-lock.json	/^        "text-table": "0.2.0",$/;"	f
 text-table	.\package-lock.json	/^        "text-table": {$/;"	f
 theming	.\package-lock.json	/^        "theming": "1.3.0"$/;"	f

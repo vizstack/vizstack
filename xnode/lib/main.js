@@ -3,6 +3,7 @@
 import { CompositeDisposable, Disposable } from 'atom';
 
 import REPL from './repl';
+import path from 'path';
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
@@ -23,7 +24,7 @@ export default {
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
                 if(uri === 'atom://xnode-sandbox') {
-                    const scriptPath = "../dummy.py";  // TODO: Get rid of this! Make current script path.
+                    const scriptPath = path.join(__dirname, "../dummy.py");  // TODO: Get rid of this! Make current script path.
                     return new REPL(scriptPath);
                 }
             }),

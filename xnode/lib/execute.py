@@ -1,24 +1,46 @@
-import argparse
 import pdb
 
-from xnode.xnode.lib.viz import VisualizationEngine
+from viz import VisualizationEngine
 
 
 # Taken from atom-python-debugger
-# TODO check compliance w/ python 2, since it might not use message()
-# TODO in-place changes are really going to fuck things up
-# TODO currently bp on first line always
-# TODO sort out the refs table
+# TODO: check compliance w/ python 2, since it might not use message()
+# TODO: in-place changes are really going to fuck things up
+# TODO: currently Pdb always breaks on the first line of the script
 class ScriptExecutor(pdb.Pdb):
+    """Runs a given script, producing symbol schemas for watched variables and sending them to a parent process.
 
-    def __init__(self, **kwargs):
+    The `ScriptExecutor` is a modified Pdb instance; watch expressions are added as breakpoints. When such a
+    breakpoint is encountered, the instance evaluates the variable at that line, creates a symbol schema for it,
+    and sends it to the parent process as a string via a queue.
+
+    """
+
+    def __init__(self, schema_queue, **kwargs):
         pdb.Pdb.__init__(self, **kwargs)
-        # Convert Python objects to viz schema format.
+        # Converts Python objects to viz schema format.
         self.viz_engine = VisualizationEngine()
-        # The name of a variable whose value should be evaluated and transmitted at the next breakpoint.
+        # The name of a variable whose value should be evaluated and transmitted at the next breakpoint. The program
+        # only runs a line after any breakpoints at it have been passed, so when the Pdb breaks at a line,
+        # it sets `var_to_eval` to the variable at that line, steps forward, and then evaluates the variable.
         self.var_to_eval = None
+        # A queue shared with the parent process to which newly generated symbol schemas should be added.
+        self.schema_queue = schema_queue
 
     def fetch_symbol_data(self, symbol_id):
+        """Generates the data object for a particular symbol.
+
+        Typically called from the `run_script()` loop after the `ScriptExecutor` has finished running the main
+        script, when the client, such as `repl.js`, has requested more information about a symbol.
+
+        The symbol with given ID is expected to exist as a shell within `self.viz_engine`.
+
+        Args:
+            symbol_id (str): the ID of the requested symbol
+
+        Returns:
+            (object) of form {data: {data object}, shells: {symbol id: shell}}
+        """
         data, shells = self.viz_engine.get_symbol_data(symbol_id)
         return self.viz_engine.to_json({
             'data': data,
@@ -78,7 +100,7 @@ class ScriptExecutor(pdb.Pdb):
         Returns:
 
         """
-        print(self._get_schema_obj(self.var_to_eval, frame), file=self.stdout)
+        self.schema_queue.put(self._get_schema_obj(self.var_to_eval, frame))
         self.var_to_eval = None
         self.do_continue(frame)
 
@@ -111,6 +133,7 @@ class ScriptExecutor(pdb.Pdb):
         elif var_name in frame.f_globals:
             obj = frame.f_globals[var_name]
         if obj:
+            # TODO: lol fix this
             return self.viz_engine.whatever_execute_needs(obj)
         else:
             raise ValueError
@@ -182,35 +205,13 @@ class ScriptExecutor(pdb.Pdb):
         return stop
 
 
-def get_watch_expression(message):
-    contents = message.replace('watch:', '').split('?')
-    return {
-        'file': contents[0],
-        'lineno': contents[1],
-        'action': contents[2] if len(contents) > 2 else None
-    }
-
-
-def read_args():
-    parser = argparse.ArgumentParser(description='Read in watch statements.')
-    parser.add_argument('--script', type=str, dest='script')
-    parser.add_argument('watches', metavar='N', type=str, nargs='+')
-    args = parser.parse_args()
-    return args.script, args.watches
-
-
-def main():
-    script_path, watch_strings = read_args()
-    watches = [get_watch_expression(s) for s in watch_strings]
-
-    executor = ScriptExecutor()
+def run_script(receive_queue, send_queue, script_path, watches):
+    send_queue.put('wat')  # gotta send some junk once for some reason
+    executor = ScriptExecutor(send_queue)
     for watch in watches:
         executor.add_watch_expression(watch['file'], watch['lineno'], watch['action'])
     executor._runscript(script_path)
     while True:
-        symbol_id = input()
-        print(executor.fetch_symbol_data(symbol_id))
+        symbol_id = receive_queue.get(True)
+        send_queue.put(executor.fetch_symbol_data(symbol_id))
 
-
-if __name__ == '__main__':
-    main()
