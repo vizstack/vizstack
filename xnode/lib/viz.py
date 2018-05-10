@@ -390,83 +390,36 @@ class VisualizationEngine:
     # attributes of the Python object itself.
     # ==================================================================================================================
 
-    def get_symbol_shell(self, symbol_id, name=None):
+    def get_symbol_shell(self, obj, name=None):
         """Builds the lightweight shell dict representation of a given symbol for visualization.
 
         The shell dict (described in "Symbol cache" above and in VIZ-SCHEMA.js) is used to store lightweight information
-        about an object. Except for primitives, the data of the object are not generally reflected in the shell
-        representation (though some may be present in the 'str' field).
+        about an object. If the shell has already been cached, it is simply returned; otherwise, this function will
+        fill the cache[symbol_id][SHELL] field.
 
-        The function assumes that `symbol_id` exists already within the `cache` (added via `get_symbol_data()` or
-        or `_get_namespace_shells()`) and that `cache[symbol_id][OBJ]` points to the symbol's associated Python
-        object. If the shell has already been cached, it is simply returned; otherwise, this function will fill the
-        cache[symbol_id][SHELL] field.
+        Creating a shell will also cache `obj`, meaning it will not be garbage collected.
 
-        The returned dict is a Python object, which needs conversion via `to_json()` for sending to a Javascript server.
+        The returned dict is a Python object, which needs conversion via `to_json()` for sending to a Javascript client.
 
         Args:
-            symbol_id (str): A unique identifier for the symbol, as defined by `_get_symbol_id()`.
+            obj (object): A Python object for which a shell should be created.
             name (str): Optional, a name for the symbol if defined, e.g. "myVar".
 
         Returns:
-            (dict): The symbol's shell dict.
+            (str, dict): The symbol ID of the object for future lookup and the symbol's shell dict.
         """
+        symbol_id = self._get_symbol_id(obj)
         if symbol_id not in self.cache:
-            symbol_id = self._get_symbol_id(obj)
             self.cache[symbol_id][self.OBJ] = obj
-        if self.OBJ not in self.cache[symbol_id]:
-            raise KeyError('No object reference found for symbol {}'.format(symbol_id))
         if self.SHELL not in self.cache[symbol_id]:
             symbol_type_info = self._get_type_info(symbol_id)
-            symbol_obj = self.cache[symbol_id][self.OBJ]
             self.cache[symbol_id][self.SHELL] = {
                 'type': symbol_type_info.type_name,
-                'str': symbol_type_info.str_fn(symbol_obj),
+                'str': symbol_type_info.str_fn(obj),
                 'name': name,
                 'data': None,
             }
-        return self.cache[symbol_id][self.SHELL]
-
-    def get_namespace_shells(self, namespace):
-        """Get lightweight shell representations for all objects defined in the given namespace dict.
-
-        This function should generally be used when the state of the runtime has changed. The cache is updated to
-        associate the objects in the given namespace with their symbol IDs. Future implementations may
-        retain information from step to step, but currently the cache is wiped when this function is called to
-        prevent accidental ID collisions between destroyed objects and new objects with the same ID.
-
-        Args:
-            namespace (dict): A mapping of string names to Python objects.
-
-        Returns:
-            (dict): A dict mapping symbol ID strings to shell dictionaries (see get_symbol_shell and above
-                documentation for more info).
-        """
-        self.reset_cache()
-        namespace_shells = dict()
-        for obj_name, obj in namespace.items():
-            symbol_id = self._get_symbol_id(obj)
-            self.cache[symbol_id][self.OBJ] = obj
-            namespace_shells[symbol_id] = self.get_symbol_shell(symbol_id, name=obj_name)
-            if self._is_primitive(obj):
-                data_obj, new_shells = self.get_symbol_data(symbol_id)
-                self.cache[symbol_id][self.SHELL]['data'] = data_obj
-                namespace_shells.update(new_shells)
-        return namespace_shells
-
-    # TODO: factor this out and rename it
-    def whatever_execute_needs(self, obj):
-        symbol_id = self._get_symbol_id(obj)
-        self.cache[symbol_id][self.OBJ] = obj
-        shell = self.get_symbol_shell(symbol_id)
-        data, refs = self.get_symbol_data(symbol_id)
-        full = dict()
-        full.update(shell)
-        full['data'] = data
-        return self.to_json({
-            'data': full,
-            'shells': refs,
-        })
+        return symbol_id, self.cache[symbol_id][self.SHELL]
 
     def get_symbol_data(self, symbol_id):
         """Returns the symbol data object for a particular symbol, as well as the shells of any referenced symbols.
@@ -476,17 +429,21 @@ class VisualizationEngine:
         should be serializable, such that it can be sent via socket to clients, who can decide how to process the
         given information.
 
-        This function requires a shell to have already been generated for symbol_id and stored at
-        cache[symbol_id][SHELL]. It uses, and fills if empty, cache[symbol_id][DATA] and cache[symbol_id][REFS]. REFS
-        stores all symbol IDs referenced by the data object, and the shells of each such symbol are returned along
-        with the data object.
+        This function requires a shell to have already been generated for `symbol_id` and stored at
+        cache[symbol_id][SHELL]. It uses, and fills if empty, `cache[symbol_id][DATA]` and `cache[symbol_id][REFS]`.
+        `REFS` stores all symbol IDs referenced by the data object, and the shells of each such symbol are returned
+        along with the data object.
+
+        Mutating the symbol in any way can and will cause the information returned by this function to be inaccurate;
+        thus, it is highly recommended that objects converted to schema be immutable, or the cache is cleared after a
+        change is made.
 
         Args:
-            symbol_id (str): The requested symbol's ID, as defined by self._get_symbol_id.
+            symbol_id (str): The requested symbol's ID, as defined by `self._get_symbol_id()`.
 
         Returns:
             (object): A serializable representation of the given symbol.
-            (dict): A dict mapping symbol IDs (particuarly, those found in the data object) to shells.
+            (dict): A dict mapping symbol IDs (particularly, those found in the data object) to shells.
         """
         if self.SHELL not in self.cache[symbol_id]:
             raise KeyError('Attempted to load data for {} before shell loaded.'.format(symbol_id))

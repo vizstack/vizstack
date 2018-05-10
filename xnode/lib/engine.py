@@ -112,6 +112,13 @@ class ExecutionManager:
             sys.stdout.flush()
 
 
+# ======================================================================================================================
+# Message translation.
+# --------------------
+# Functions to translate strings sent to stdin by clients (such as `repl.js`) into formats more easily used by the
+# engine.
+# ======================================================================================================================
+
 def get_diff(message):
     """Translates a string which encodes a file change to an object describing that change.
 
@@ -167,6 +174,12 @@ def get_symbol_id(message):
     return message.replace(FETCH_HEADER, '')
 
 
+# ======================================================================================================================
+# Execution control.
+# ------------------
+# Determine whether the user-written script associated with the engine should be re-run, and do so.
+# ======================================================================================================================
+
 def should_execute(script_path, watches, diff):
     """Determines if a new execution is necessary to render information after a given edit to a file.
 
@@ -203,6 +216,13 @@ def execute(exec_manager, script_path, watches):
     exec_manager = ExecutionManager(script_path, watches)
     return exec_manager
 
+
+# ======================================================================================================================
+# Main loop.
+# ----------
+# Associate the engine with a script path given in the command line and then wait for and process requests written by
+# the client to stdin.
+# ======================================================================================================================
 
 def read_args():
     """Read the path to the user-written script which should be executed by the engine from the command line.
