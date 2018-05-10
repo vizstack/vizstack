@@ -43,7 +43,7 @@ export default class REPL {
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
         // uncomment this to test REPL
-        // this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
+        this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
         let store = createStore(mainReducer, composeWithDevTools(
@@ -127,7 +127,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTE_PATH, options);
         executionEngine.on('message', (message) => {
             console.log(message);
-            // let { data, shells } = JSON.parse(message);
+            // let { data, shells, dataSymbolId } = JSON.parse(message);
             // TODO: store data and shells locally
         });
         return executionEngine;

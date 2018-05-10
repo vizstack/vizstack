@@ -301,7 +301,7 @@ class VisualizationEngine:
             symbol_id = self._get_symbol_id(key_or_value)
             self.cache[symbol_id][self.OBJ] = key_or_value
             refs.add(symbol_id)
-            return self.REF_PREFIX + symbol_id
+            return symbol_id
 
     # Schema constants.
     # -----------------
@@ -341,7 +341,7 @@ class VisualizationEngine:
         Returns:
             (str): symbol ID.
         """
-        return str(id(obj))
+        return self.REF_PREFIX + str(id(obj))
 
     def _get_type_info(self, symbol_id):
         """Returns the `VisualizationType` object associated with a particular symbol ID.
@@ -380,6 +380,31 @@ class VisualizationEngine:
         symbol_obj = self.cache[symbol_id][self.OBJ]
         return symbol_type_info.data_fn(self, symbol_obj)
 
+    def _get_symbol_shell_by_id(self, symbol_id, name=None):
+        """Returns a lightweight representation of a given symbol's properties.
+
+        Clients should have no need to get a symbol shell by its ID, as in any case where they have acquired a symbol ID
+        they will also have acquired that symbol's shell. However, this functionality is used in both
+        `get_symbol_shell()` and `get_symbol_data()`, so it is decomposed as a single function.
+
+        Args:
+            symbol_id (str): The symbol ID of the object for which a shell should be generated.
+            name (str): An optional variable name that is associated with the object.
+
+        Returns:
+            (dict): The symbol's shell representation.
+        """
+        if self.SHELL not in self.cache[symbol_id]:
+            symbol_obj = self.cache[symbol_id][self.OBJ]
+            symbol_type_info = self._get_type_info(symbol_id)
+            self.cache[symbol_id][self.SHELL] = {
+                'type': symbol_type_info.type_name,
+                'str': symbol_type_info.str_fn(symbol_obj),
+                'name': name,
+                'data': None,
+            }
+        return self.cache[symbol_id][self.SHELL]
+
     # ==================================================================================================================
     # Public functions.
     # -----------------
@@ -411,15 +436,7 @@ class VisualizationEngine:
         symbol_id = self._get_symbol_id(obj)
         if symbol_id not in self.cache:
             self.cache[symbol_id][self.OBJ] = obj
-        if self.SHELL not in self.cache[symbol_id]:
-            symbol_type_info = self._get_type_info(symbol_id)
-            self.cache[symbol_id][self.SHELL] = {
-                'type': symbol_type_info.type_name,
-                'str': symbol_type_info.str_fn(obj),
-                'name': name,
-                'data': None,
-            }
-        return symbol_id, self.cache[symbol_id][self.SHELL]
+        return symbol_id, self._get_symbol_shell_by_id(symbol_id, name)
 
     def get_symbol_data(self, symbol_id):
         """Returns the symbol data object for a particular symbol, as well as the shells of any referenced symbols.
@@ -451,7 +468,7 @@ class VisualizationEngine:
             self.cache[symbol_id][self.DATA], self.cache[symbol_id][self.REFS] = self._load_symbol_data(symbol_id)
         shells = dict()
         for ref in self.cache[symbol_id][self.REFS]:
-            shells[ref] = self.get_symbol_shell(ref)
+            shells[ref] = self._get_symbol_shell_by_id(ref)
         return self.cache[symbol_id][self.DATA], shells
 
     def to_json(self, obj):

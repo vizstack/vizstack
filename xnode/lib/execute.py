@@ -75,10 +75,7 @@ class ScriptExecutor(pdb.Pdb):
             (object) of form {data: {data object}, shells: {symbol id: shell}}
         """
         data, shells = self.viz_engine.get_symbol_data(symbol_id)
-        return self.viz_engine.to_json({
-            'data': data,
-            'shells': shells,
-        })
+        return self._schema_to_message(shells, data, symbol_id)
 
     # ==================================================================================================================
     # Watch expression logic.
@@ -120,6 +117,7 @@ class ScriptExecutor(pdb.Pdb):
         """
         return self._get_var_from_line(self._get_line_from_frame(frame))
 
+    # TODO: update documentation to reflect that this returns a str
     def _get_schema_obj(self, var_name, frame):
         """Creates an object with the schema for `var_name` evaluated at `frame`, as well as shells for all
         referenced objects.
@@ -144,15 +142,17 @@ class ScriptExecutor(pdb.Pdb):
         if obj_found:
             symbol_id, shell = self.viz_engine.get_symbol_shell(obj)
             data, refs = self.viz_engine.get_symbol_data(symbol_id)
-            full = dict()
-            full.update(shell)
-            full['data'] = data
-            return self.viz_engine.to_json({
-                'data': full,
-                'shells': refs,
-            })
+            refs.update({symbol_id: shell})
+            return self._schema_to_message(refs, data, symbol_id)
         else:
             raise ValueError
+
+    def _schema_to_message(self, shells, data, symbol_id):
+        return self.viz_engine.to_json({
+            'shells': shells,
+            'data': data,
+            'dataSymbolId': symbol_id,
+        })
 
     def _get_line_from_frame(self, frame):
         """Gets a string version of the line being executed at the given frame.
