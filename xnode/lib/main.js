@@ -38,6 +38,9 @@ export default {
             // Register listener for whenever the active editor is edited
             atom.workspace.observeActiveTextEditor(editor => {
                 if (editor !== null) {
+                    if (editor.gutterWithName('watch-gutter') === null) {
+                        editor.addGutter({name: 'watch-gutter'});
+                    }
                     const editorPath = editor.getPath();
                     const changes = null;  // TODO: get changes from last edit
                     editor.onDidStopChanging(() => {
@@ -50,7 +53,8 @@ export default {
 
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
-                'xnode:create-sandbox': () => this.createSandbox()
+                'xnode:create-sandbox': () => this.createSandbox(),
+                'xnode:watch-line': () => this.watchLine()
             }),
 
             // Destroy additional objects on package deactivation
@@ -88,5 +92,20 @@ export default {
     createSandbox() {
         console.log("Creating Sandbox!");
         atom.workspace.toggle('atom://xnode-sandbox');
+    },
+
+    /**
+     * Adds a watch expression to the selected lines.
+     * TODO: send the watch expression to selected REPL, use icon at line
+     */
+    watchLine() {
+        let editor = atom.workspace.getActiveTextEditor();
+        let gutter = editor.gutterWithName('watch-gutter');
+        let range = editor.getSelectedBufferRange();
+        let marker = editor.markBufferRange(range);
+        gutter.decorateMarker(marker, {
+            'type': 'gutter',
+            'class': 'watched-line',
+        });
     }
 };

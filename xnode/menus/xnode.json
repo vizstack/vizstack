@@ -17,6 +17,10 @@
             {
               "label": "Toggle",
               "command": "xnode:create-sandbox"
+            },
+            {
+              "label": "Watch",
+              "command": "xnode:watch-line"
             }
           ]
         }

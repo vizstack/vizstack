@@ -286,6 +286,7 @@ combined-stream	.\package-lock.json	/^                "combined-stream": "1.0.6"
 combined-stream	.\package-lock.json	/^            "combined-stream": "1.0.6",$/;"	f
 combined-stream	.\package-lock.json	/^            "combined-stream": {$/;"	f
 command	.\menus\xnode.json	/^              "command": "xnode:create-sandbox"$/;"	f
+command	.\menus\xnode.json	/^              "command": "xnode:watch-line"$/;"	f
 command	.\menus\xnode.json	/^        "command": "xnode:create-sandbox"$/;"	f
 commander	.\package-lock.json	/^        "commander": "2.15.1",$/;"	f
 commander	.\package-lock.json	/^    "commander": {$/;"	f
@@ -1035,6 +1036,7 @@ keycode	.\package-lock.json	/^        "keycode": "2.2.0",$/;"	f
 keycode	.\package-lock.json	/^    "keycode": {$/;"	f
 keywords	.\package.json	/^  "keywords": [],$/;"	f
 label	.\menus\xnode.json	/^              "label": "Toggle",$/;"	f
+label	.\menus\xnode.json	/^              "label": "Watch",$/;"	f
 label	.\menus\xnode.json	/^          "label": "Xnode",$/;"	f
 label	.\menus\xnode.json	/^        "label": "Toggle Xnode",$/;"	f
 label	.\menus\xnode.json	/^      "label": "Packages",$/;"	f
