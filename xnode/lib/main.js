@@ -19,13 +19,32 @@ export default {
      *     Object holding serialized state from last session, created through `serialize()`, if defined.
      */
     activate(state) {
+        // Array of all REPL objects created by the package
+        // TODO: how to destroy REPLs that are no longer open
+        this.repls = [];
+
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
                 if(uri === 'atom://xnode-sandbox') {
                     const scriptPath = path.join(__dirname, "../dummy.py");  // TODO: Get rid of this! Make current script path.
-                    return new REPL(scriptPath);
+                    let repl = new REPL(scriptPath);
+                    this.repls.push(repl);
+                    return repl;
+                }
+            }),
+
+            // Register listener for whenever the active editor is edited
+            atom.workspace.observeActiveTextEditor(editor => {
+                if (editor !== null) {
+                    const editorPath = editor.getPath();
+                    const changes = null;  // TODO: get changes from last edit
+                    editor.onDidStopChanging(() => {
+                        this.repls.forEach(repl => {
+                            repl.onFileChanged(editorPath, changes);
+                        })
+                    });
                 }
             }),
 
