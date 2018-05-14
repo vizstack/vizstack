@@ -19,7 +19,7 @@ export const CanvasActions = {
  * @returns {{type: string, symbolId: *}}
  *
  */
-function addViewerAction(symbolId) {
+export function addViewerAction(symbolId) {
     return {
         type: CanvasActions.ADD_VIEWER,
         symbolId

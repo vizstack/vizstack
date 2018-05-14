@@ -77,7 +77,7 @@ const styles = theme => ({
         flex: 1,
         color: '#FFFFFF',
         overflow: 'hidden',
-        fontFamily: theme.typography.monospace.fontFamily,
+        //fontFamily: theme.typography.monospace.fontFamily,
         fontSize: '9pt',
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',

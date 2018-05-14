@@ -39,11 +39,23 @@ const initialState = Immutable({
 export default function rootReducer(state = initialState, action) {
     const { type } = action;
     switch(type) {
-        case SymbolTableActions.ENSURE_SYMBOL_DATA_LOADED: return ensureSymbolDataLoadedReducer(state, action);
-        case SymbolTableActions.UPDATE_NAMESPACE:   return updateNamespaceReducer(state, action);
+        case SymbolTableActions.ADD_SHELLS: return addSymbolShellsReducer(state, action);
+        case SymbolTableActions.ADD_DATA:   return addSymbolDataReducer(state, action);
     }
     return state;  // No effect by default
 };
+
+function addSymbolShellsReducer(state, action) {
+    const { symbolShells } = action;
+    return Immutable.merge({symbolTable: symbolShells}, state, {deep: true});
+}
+
+function addSymbolDataReducer(state, action) {
+    const { symbolId, symbolData } = action;
+    let newstate = state.setIn(['symbolTable', symbolId, 'data'], symbolData);
+    console.log(newstate);
+    return newstate; // TODO
+}
 
 /**
  * Given the newly-acquired data for a particular symbol and an object containing the shells referenced by it, add the

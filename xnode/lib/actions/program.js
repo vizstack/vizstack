@@ -6,9 +6,38 @@ import { setInViewerPayloadAction } from './canvas.js';
 
 /** Action type definitions. */
 export const SymbolTableActions = {
+    ADD_SHELLS: "SYMBOLTABLE::ADD_SHELLS",
+    ADD_DATA:   "SYMBOLTABLE::ADD_DATA",
+
     ENSURE_SYMBOL_DATA_LOADED:  "SYMBOLTABLE::ENSURE_SYMBOL_DATA_LOADED",
-    UPDATE_NAMESPACE:           "SYMBOLTABLE::UPDATE_NAMESPACE",
 };
+
+
+
+export function addSymbolActionThunk(symbolId, symbolShells, symbolData) {
+    return (dispatch) => {
+        dispatch(addSymbolShellsAction(symbolShells));
+        dispatch(addSymbolDataAction(symbolId, symbolData));
+    };
+}
+
+function addSymbolShellsAction(symbolShells) {
+    return {
+        type: SymbolTableActions.ADD_SHELLS,
+        symbolShells,
+    };
+}
+
+function addSymbolDataAction(symbolId, symbolData) {
+    return {
+        type: SymbolTableActions.ADD_DATA,
+        symbolId,
+        symbolData,
+    };
+}
+
+
+
 
 /** Action which updates a symbol's data with a newly-fetched object and adds shells referenced therein to the symbol
     table. */

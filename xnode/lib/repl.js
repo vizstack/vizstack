@@ -10,12 +10,13 @@ import { composeWithDevTools } from 'redux-devtools-extension';
 
 // Python services
 import PythonShell from 'python-shell';
-import {spawn} from 'child_process';
 import path from 'path';
 
 // Custom top-level React/Redux components
 import Canvas from './components/Canvas';
 import mainReducer from './reducers';
+import { addSymbolActionThunk } from './actions/program';
+import { addViewerAction } from './actions/canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
@@ -49,14 +50,14 @@ export default class REPL {
         this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
-        let store = createStore(mainReducer, composeWithDevTools(
+        this.store = createStore(mainReducer, composeWithDevTools(
             applyMiddleware(thunk),
         ));
 
         // Initialize React root component for Canvas
         this.element = document.createElement('div');
         ReactDOM.render(
-            <ReduxProvider store={store}>
+            <ReduxProvider store={this.store}>
                 <Canvas />
             </ReduxProvider>,
             this.element
@@ -129,14 +130,9 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('executionEngine -- received message: ', message)
-
-            // A 'message' sent from the ExecutionEngine contains:
-            // "shells" --
-            // "data" --
-            // "dataSymbolId" --
-            let { shells, data, dataSymbolId } = JSON.parse(message);
-
-            // TODO: store data and shells locally
+            let { shells: symbolShells, data: symbolData, dataSymbolId: symbolId } = JSON.parse(message);
+            this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData));
+            this.store.dispatch(addViewerAction(symbolId));
         });
         return executionEngine;
     }

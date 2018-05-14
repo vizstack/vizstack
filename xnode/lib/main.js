@@ -39,7 +39,7 @@ export default {
 
             // Register listener for whenever the active editor is edited
             atom.workspace.observeActiveTextEditor(editor => {
-                if(!editor) {
+                if(editor) {
                     if(editor.gutterWithName('xnode-watch-gutter') === null) {
                         editor.addGutter({name: 'xnode-watch-gutter'});
                     }
