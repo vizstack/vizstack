@@ -11,6 +11,7 @@ import path from 'path';
  * serialization.
  */
 export default {
+    repls: [],
     subscriptions: null,
 
     /**
@@ -25,6 +26,7 @@ export default {
 
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
+
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
                 if(uri === 'atom://xnode-sandbox') {
@@ -37,9 +39,9 @@ export default {
 
             // Register listener for whenever the active editor is edited
             atom.workspace.observeActiveTextEditor(editor => {
-                if (editor !== null) {
-                    if (editor.gutterWithName('watch-gutter') === null) {
-                        editor.addGutter({name: 'watch-gutter'});
+                if(!editor) {
+                    if(editor.gutterWithName('xnode-watch-gutter') === null) {
+                        editor.addGutter({name: 'xnode-watch-gutter'});
                     }
                     const editorPath = editor.getPath();
                     const changes = null;  // TODO: get changes from last edit
@@ -66,6 +68,8 @@ export default {
                 });
             })
         );
+
+        console.debug('root -- Xnode package activated');
     },
 
     /**
@@ -73,6 +77,7 @@ export default {
      */
     deactivate() {
         this.subscriptions.dispose();
+        console.debug('root -- Xnode package deactivated');
     },
 
     // =================================================================================================================
@@ -85,13 +90,15 @@ export default {
 
 
     // =================================================================================================================
-    // Xnode-specific functions
+    // Xnode-specific commands
     // =================================================================================================================
 
-    /** Creates a new sandbox for the file open in the current active editor. */
+    /**
+     * Creates a new sandbox for the open file in the current active editor.
+     */
     createSandbox() {
-        console.log("Creating Sandbox!");
         atom.workspace.toggle('atom://xnode-sandbox');
+        console.debug('createSandbox() -- new sandbox for current active file');
     },
 
     /**
@@ -99,8 +106,9 @@ export default {
      * TODO: send the watch expression to selected REPL, use icon at line
      */
     watchLine() {
+        // TODO: What is this doing?
         let editor = atom.workspace.getActiveTextEditor();
-        let gutter = editor.gutterWithName('watch-gutter');
+        let gutter = editor.gutterWithName('xnode-watch-gutter');
         let range = editor.getSelectedBufferRange();
         let marker = editor.markBufferRange(range);
         gutter.decorateMarker(marker, {

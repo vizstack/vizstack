@@ -12,7 +12,7 @@ FETCH_HEADER = 'fetch:'
 
 
 class ExecutionManager:
-    """Runs a user-written Python script in a subprocess and prints requested symbol schemas to stdout.
+    """Runs the user's Python script in a subprocess and prints requested symbol schemas to stdout.
 
     On creation, the `ExecutionManager` starts a new process and a new thread. The new process runs `execute.run_script()`,
     which in turn runs the user-written script within a Pdb instance. The symbol schemas produced by any evaluated

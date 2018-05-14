@@ -37,3 +37,6 @@ ENV/
 
 # Java
 *.class
+
+# Atom
+.tags

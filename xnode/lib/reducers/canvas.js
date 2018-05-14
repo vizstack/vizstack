@@ -8,7 +8,7 @@ import { CanvasActions } from '../actions/canvas';
  * State slice structure for `canvas`: {
  *     'nextViewerId': 1,
  *     'viewerObjects': {
- *         '0': {
+ *         0' {
  *             symbolId: "@id:12345"
  *             payload: {},
  *         }
@@ -28,7 +28,9 @@ const initialState = Immutable({
     viewerPositions: [],
 });
 
-/** Root reducer for updating the canvas view state. */
+/**
+ * Root reducer for updating the canvas view state.
+ */
 export default function rootReducer(state = initialState, action) {
     const { type } = action;
     switch(type) {
@@ -46,7 +48,9 @@ const DEFAULT_H = 6;
 const DEFAULT_MIN_W = 2;
 const DEFAULT_MIN_H = 2;
 
-/** Reducer for adding a viewer to `canvas`. Assumes `data` for symbol is already loaded.  */
+/**
+ * Add a viewer to `canvas`. Assumes `data` for symbol is already loaded.
+ */
 function addViewerReducer(state, action) {
     const { symbolId } = action;
     const { nextViewerId } = state;
@@ -65,7 +69,9 @@ function addViewerReducer(state, action) {
         }]));
 }
 
-/** Reducer for removing a viewer from `canvas`. */
+/**
+ * Remove a viewer from `Canvas`.
+ */
 function removeViewerReducer(state, action) {
     const { viewerId } = action;
     let removeIdx = state.viewerPositions.findIndex(elem => elem.i === `${viewerId}`);
@@ -74,13 +80,17 @@ function removeViewerReducer(state, action) {
                 .setIn(['viewerObjects', viewerId], undefined);
 }
 
-/** Reducer for updating the `viewerPositions` in `canvas`. */
+/**
+ * Update the `viewerPositions` in `canvas`.
+ */
 function updateLayoutReducer(state, action) {
     const { layout } = action;
     return state.set('viewerPositions', layout);
 }
 
-/** Reducer for adding a key-value pair to an object's payload object. */
+/**
+ * Add a key-value pair to an object's `payload`.
+ */
 function setInViewerPayloadReducer(state, action) {
     const { keyArray, value, viewerId } = action;
     return state.setIn(['viewerObjects', viewerId, 'payload'].concat(keyArray), value);

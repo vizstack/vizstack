@@ -2,7 +2,7 @@
   "context-menu": {
     "atom-text-editor": [
       {
-        "label": "Toggle Xnode",
+        "label": "Create Sandbox",
         "command": "xnode:create-sandbox"
       }
     ]
@@ -15,11 +15,11 @@
           "label": "Xnode",
           "submenu": [
             {
-              "label": "Toggle",
+              "label": "Create Sandbox",
               "command": "xnode:create-sandbox"
             },
             {
-              "label": "Watch",
+              "label": "Toggle Watch for Line",
               "command": "xnode:watch-line"
             }
           ]

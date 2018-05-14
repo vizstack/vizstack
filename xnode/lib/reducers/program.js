@@ -3,6 +3,7 @@
 import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
 import { SymbolTableActions } from '../actions/program';
+
 /**
  * State slice structure for `program`: {
  *     symbolTable: {
@@ -10,7 +11,7 @@ import { SymbolTableActions } from '../actions/program';
  *             type: "number",
  *             name: "myInt",
  *             str:  "86",
- *             data: null/{viewer:{}, attributes{}}
+ *             data: null | {viewer:{}, attributes:{}}
  *         }
  *     }
  *     stackFrame: [{
@@ -18,10 +19,10 @@ import { SymbolTableActions } from '../actions/program';
  *         lineNo: 37,
  *         functionName: "myFn"
  *         args: "(arg1, arg2)",
- *         returningTo: "myFn2" or null,
+ *         returningTo: "myFn2" | null,
  *         line: "return 10",
- *     }, ...] or null,
- *     state: "waiting" or "running" or "disconnected",
+ *     }, ...] | null,
+ *     programState: "waiting" | "running" | "disconnected",
  * }
  */
 
@@ -32,7 +33,9 @@ const initialState = Immutable({
     programState: 'disconnected',
 });
 
-/** Root reducer for state related to the paused program's state and symbols that have been loaded. */
+/**
+ * Root reducer for state related to the paused program's state and symbols that have been loaded.
+ */
 export default function rootReducer(state = initialState, action) {
     const { type } = action;
     switch(type) {
@@ -42,16 +45,20 @@ export default function rootReducer(state = initialState, action) {
     return state;  // No effect by default
 };
 
-/** Given the newly-acquired data for a particular symbol and an object containing the shells referenced by it, add the
-    new shells and fill in the symbol's data field. */
+/**
+ * Given the newly-acquired data for a particular symbol and an object containing the shells referenced by it, add the
+ * new shells and fill in the symbol's data field.
+ */
 function ensureSymbolDataLoadedReducer(state, action) {
     const { symbolId, data, shells } = action;
     // It's important that `shells` be the first argument, so existing symbols are not overwritten
     return Immutable.merge({symbolTable: shells}, state, {deep: true}).setIn(['symbolTable', symbolId, 'data'], data);
 }
 
-/** Given a new namespace dict, reset the entire symbol table to only contain that namespace.
-    TODO be smarter with updating; don't wipe data that you don't need to */
+/**
+ * Given a new namespace dict, reset the entire symbol table to only contain that namespace.
+ * TODO be smarter with updating; don't wipe data that you don't need to.
+ */
 function updateNamespaceReducer(state, action) {
     const { programState, stackFrame, namespace } = action;
     return Immutable({

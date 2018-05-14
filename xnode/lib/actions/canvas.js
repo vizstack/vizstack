@@ -13,8 +13,11 @@ export const CanvasActions = {
 /**
  * Action creator thunk to add a viewer to the canvas for the symbol with the given `symbolId`. It is possible to have
  * multiple viewers with the same `symbolId` -- each will have a viewer with linked properties to the others.
- * @param symbolId Symbol to create new viewer for.
+ *
+ * @param symbolId
+ *     Symbol to create new viewer for.
  * @returns {{type: string, symbolId: *}}
+ *
  */
 function addViewerAction(symbolId) {
     return {
@@ -32,8 +35,9 @@ export function addViewerActionThunk(symbolId) {
 
 /**
  * Action creator to remove a viewer from the data canvas.
- * @param viewerId (int)
- * @returns {{type: string, viewerId: *}}
+ *
+ * @param {int} viewerId
+ * @returns {{type: string, viewerId: int}}
  */
 export function removeViewerAction(viewerId) {
     return {
@@ -44,6 +48,7 @@ export function removeViewerAction(viewerId) {
 
 /**
  * Action created to update the layout of the canvas.
+ *
  * @param layout
  * @returns {{type: string, layout: *}}
  */

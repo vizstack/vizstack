@@ -1,10 +1,5 @@
 'use babel';
 
-// Python services
-import PythonShell from 'python-shell';
-import {spawn} from 'child_process';
-import path from 'path';
-
 // React + Redux services
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -13,19 +8,27 @@ import thunk from 'redux-thunk';
 import { Provider as ReduxProvider } from 'react-redux';
 import { composeWithDevTools } from 'redux-devtools-extension';
 
-// Top-level React + Redux files
-import mainReducer from './reducers';
+// Python services
+import PythonShell from 'python-shell';
+import {spawn} from 'child_process';
+import path from 'path';
+
+// Custom top-level React/Redux components
 import Canvas from './components/Canvas';
+import mainReducer from './reducers';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTE_PATH = path.join(__dirname, 'engine.py');
+const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
- * which is re-run when appropriate (e.g. when a piece of code it depends on is edited). An spawned Python process
- * runs an `ExecutionEngine` which runs the script and generates the needed visualization schemas. (the "eval"
- * function). Watch statements are set by the user to determine what variables/data need visualization schemas to be
- * generated, so that they can be visualized in the `Canvas` (the "print" function).
+ * which is re-run when appropriate, e.g. when a piece of code it depends on is edited (aka. "read"). An spawned Python
+ * process runs an `ExecutionEngine` which runs the script and generates the needed visualization schemas (aka "eval").
+ * Watch statements are set by the user to determine what variables/data need visualization schemas to be
+ * generated, so that they can be visualized in the `Canvas` (aka "print").
+ *
+ * Together, the `REPL` + `Canvas` + `ExecutionEngine` is called a Sandbox (the term surfaced to a user). A Sandbox can
+ * be thought of as an isolated environment for experimenting with a particular program script, along with any sandbox
  */
 export default class REPL {
 
@@ -33,7 +36,7 @@ export default class REPL {
      * Constructor.
      *
      * @param {string} scriptPath
-     *     The absolute path to the script that the engine should execute. The engine remains associated with this
+     *     The absolute path of the main script tied to this `REPL`. The `ExecutionEngine` remains associated with this
      *     script, rerunning if needed after every file edit.
      */
     constructor(scriptPath) {
@@ -42,7 +45,7 @@ export default class REPL {
         this.watchStatements = [];     // List of watch objects to determine vars/data to display
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
-        // uncomment this to test REPL
+        // TODO: uncomment this to test REPL
         this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
@@ -50,7 +53,7 @@ export default class REPL {
             applyMiddleware(thunk),
         ));
 
-        // // Initialize React root component
+        // Initialize React root component for Canvas
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={store}>
@@ -59,9 +62,7 @@ export default class REPL {
             this.element
         );
 
-        console.log("REPL constructed!");
-
-        /// TODO: attach subscriptler for on file changed when created --> pull up
+        console.debug('constructor() -- REPL instance created');
     }
 
     /** Returns an object that can be retrieved when package is activated. */
@@ -72,6 +73,7 @@ export default class REPL {
      */
     destroy() {
         this.element.remove();
+        console.debug('destroy() -- REPL instance destroyed');
     }
 
 
@@ -105,15 +107,15 @@ export default class REPL {
     }
 
     // =================================================================================================================
-    // Interacting with REPL
+    // Interacting with ExecutionEngine
     // ================================================================================================================
 
     /**
      * Creates a new execution engine.
      *
-     * The engine is a Python process, which persists for the lifespan of the sandbox. Changes to files and watch
-     * statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any watched
-     * data to REPL, which stores that data.
+     * The engine is a spawned Python process that persists for the lifespan of the Sandbox. Changes to files and
+     * watch statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any
+     * watched data to REPL, which stores that data.
      *
      * @param  {string} scriptPath
      *      The path to the Python script whose data should be visualized in the canvas.
@@ -124,10 +126,16 @@ export default class REPL {
         let options = {
             args: [scriptPath],
         }
-        let executionEngine = new PythonShell(EXECUTE_PATH, options);
+        let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
-            console.log(message);
-            // let { data, shells, dataSymbolId } = JSON.parse(message);
+            console.debug('executionEngine -- received message: ', message)
+
+            // A 'message' sent from the ExecutionEngine contains:
+            // "shells" --
+            // "data" --
+            // "dataSymbolId" --
+            let { shells, data, dataSymbolId } = JSON.parse(message);
+
             // TODO: store data and shells locally
         });
         return executionEngine;
@@ -137,11 +145,11 @@ export default class REPL {
      * Toggles the existence of a watch statement at a given line.
      *
      * @param  {string} filePath
-     *      Path to the file whose line should be watched.
+     *      Path to the file with a line to watch/unwatch.
      * @param  {number} lineNum
-     *      The line number in `filePath` to be watched.
+     *      The line number in `filePath` to watch/unwatch.
      * @param  {?string} action
-     *      Currently unused; TODO: the expression to be performed on the watched variable.
+     *      Currently unused; TODO: the expression to perform on the watched variable.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
         this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`);

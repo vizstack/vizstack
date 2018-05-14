@@ -7,8 +7,14 @@ import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
 import { withStyles } from 'material-ui/styles';
 
-import GridLayout, { WidthProvider } from 'react-grid-layout';
+// Material UI
+import ColorGrey from 'material-ui/colors/grey';
 
+// Grid layout
+import GridLayout, { WidthProvider } from 'react-grid-layout';
+const FlexibleGridLayout = WidthProvider(GridLayout);
+
+// Custom React viewers
 import ViewerFrame  from './ViewerFrame';
 import NumberViewer from './viewers/NumberViewer';
 import StringViewer from './viewers/StringViewer';
@@ -16,10 +22,9 @@ import TensorViewer from './viewers/TensorViewer';
 import GraphViewer  from './viewers/GraphViewer';
 import ListViewer   from './viewers/ListViewer';
 
+// Custom Redux actions
 import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../actions/canvas";
 
-
-const FlexibleGridLayout = WidthProvider(GridLayout);
 
 /**
  * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
@@ -65,36 +70,30 @@ class Canvas extends Component {
     /**
      * Renders the inspector canvas and any viewers currently registered to it.
      */
-    // render() {
-    //     const { classes, viewers, removeViewerFn, layout, updateLayoutFn } = this.props;
-    //     let frames = viewers.map((viewer) => {
-    //         return (
-    //             <div key={viewer.viewerId} className={classes.frameContainer}>
-    //                 <ViewerFrame key={viewer.viewerId}
-    //                              viewerId={viewer.viewerId}
-    //                              type={viewer.type}
-    //                              name={viewer.name}
-    //                              removeViewerFn={removeViewerFn}>
-    //                     {this.createViewerComponent(viewer)}
-    //                 </ViewerFrame>
-    //             </div>
-    //         )
-    //     });
-    //
-    //     return (
-    //         <div className={classes.canvasContainer}>
-    //             <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
-    //                                 onLayoutChange={updateLayoutFn} draggableCancel=".ReactGridLayoutNoDrag">
-    //                 {frames}
-    //             </FlexibleGridLayout>
-    //         </div>
-    //     );
-    // }
     render() {
+        const { classes, viewers, removeViewerFn, layout, updateLayoutFn } = this.props;
+        let frames = viewers.map((viewer) => {
+            return (
+                <div key={viewer.viewerId} className={classes.frameContainer}>
+                    <ViewerFrame key={viewer.viewerId}
+                                 viewerId={viewer.viewerId}
+                                 type={viewer.type}
+                                 name={viewer.name}
+                                 removeViewerFn={removeViewerFn}>
+                        {this.createViewerComponent(viewer)}
+                    </ViewerFrame>
+                </div>
+            )
+        });
+
         return (
-          <div>
-              Hello, world!
-          </div>
+            <div className={classes.canvasContainer}>
+                <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
+                                    onLayoutChange={updateLayoutFn} draggableCancel=".ReactGridLayoutNoDrag">
+                    {frames}
+                </FlexibleGridLayout>
+                <div>Nothing to display</div>
+            </div>
         );
     }
 }
@@ -106,9 +105,10 @@ class Canvas extends Component {
 /** CSS-in-JS styling object. */
 const styles = theme => ({
     canvasContainer: {
-        flexGrow: 1,
-        margin: theme.spacing.unit * 4,
+        height: '100%',
         overflow: 'auto',
+        padding: theme.spacing.unit * 2,
+        backgroundColor: ColorGrey[100],
     },
     frameContainer: {
         display: "block",

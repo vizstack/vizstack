@@ -6,6 +6,6 @@ import canvasReducer       from './canvas.js';
 
 /** Highest-level reducer for store root. Simply dispatches to other reducers. */
 export default combineReducers({
-    program:        programReducer,
-    canvas:         canvasReducer,
+    program:    programReducer,
+    canvas:     canvasReducer,
 });
