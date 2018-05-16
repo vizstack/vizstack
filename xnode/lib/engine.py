@@ -175,6 +175,27 @@ def get_symbol_id(message):
 
 
 # ======================================================================================================================
+# Watch expressions.
+# ------------------
+# Control how watch expressions are stored and toggled.
+# ======================================================================================================================
+
+def toggle_watch(watches, watch_expression):
+    """Adds a new watch expression, or removes it if it already exists.
+
+    Args:
+        watches (list): A list of existing watch expressions, in the format returned by `get_watch_expression()`.
+        watch_expression (dict): A watch expression, which should be removed if present or otherwise added to
+            `watches`.
+
+    """
+    if watch_expression in watches:
+        watches.remove(watch_expression)
+    else:
+        watches.append(watch_expression)
+
+
+# ======================================================================================================================
 # Execution control.
 # ------------------
 # Determine whether the user-written script associated with the engine should be re-run, and do so.
@@ -251,7 +272,7 @@ def main():
         message = input()
         # TODO add unwatch
         if message.startswith(WATCH_HEADER):
-            watches.append(get_watch_expression(message))
+            toggle_watch(watches, get_watch_expression(message))
             executor = execute(executor, script_path, watches)
         elif message.startswith(EDIT_HEADER):
             if should_execute(script_path, watches, get_diff(message)):

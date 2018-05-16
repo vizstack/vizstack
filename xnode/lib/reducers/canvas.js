@@ -38,6 +38,7 @@ export default function rootReducer(state = initialState, action) {
         case CanvasActions.REMOVE_VIEWER:       return removeViewerReducer(state, action);
         case CanvasActions.UPDATE_LAYOUT:       return updateLayoutReducer(state, action);
         case CanvasActions.SET_IN_PAYLOAD:      return setInViewerPayloadReducer(state, action);
+        case CanvasActions.CLEAR_CANVAS:        return clearCanvasReducer(state, action);
     }
     return state;  // No effect by default
 };
@@ -47,6 +48,10 @@ const DEFAULT_W = 4;
 const DEFAULT_H = 6;
 const DEFAULT_MIN_W = 2;
 const DEFAULT_MIN_H = 2;
+
+function clearCanvasReducer(state, action) {
+    return state.setIn(['viewerObjects'], {}).setIn(['viewerPositions'], []).setIn(['nextViewerId'], 0);
+}
 
 /**
  * Add a viewer to `canvas`. Assumes `data` for symbol is already loaded.

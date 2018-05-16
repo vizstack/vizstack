@@ -15,8 +15,8 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from './components/Canvas';
 import mainReducer from './reducers';
-import { addSymbolActionThunk } from './actions/program';
-import { addViewerAction } from './actions/canvas';
+import { addSymbolActionThunk, clearSymbolTableAction } from './actions/program';
+import { addViewerAction, clearCanvasAction } from './actions/canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
@@ -43,11 +43,11 @@ export default class REPL {
     constructor(scriptPath) {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
-        this.watchStatements = [];     // List of watch objects to determine vars/data to display
+        this.watchStatements = {};     // mapping of file->lineno->{actions:[], decorations: []} for each watched line
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
         // TODO: uncomment this to test REPL
-        this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
+        // this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
         this.store = createStore(mainReducer, composeWithDevTools(
@@ -108,6 +108,46 @@ export default class REPL {
     }
 
     // =================================================================================================================
+    // Atom-specific behaviors
+    // ================================================================================================================
+    /**
+     * Adds Atom workspace decorations associated with a to-be-added watch expression.
+     * @param {string} filePath
+     *      The absolute path to the watched file.
+     * @param {number} lineNum
+     *      The line number to be watched in `filePath`.
+     * @param {object?} action
+     *      Not currently used.
+     */
+    addWatchDecorations(filePath, lineNum, action) {
+        // TODO: this assumes that the active editor contains the changed file
+        let editor = atom.workspace.getActiveTextEditor();
+        let gutter = editor.gutterWithName('xnode-watch-gutter');
+        let cursorPosition = editor.getCursorBufferPosition();
+        let marker = editor.markBufferPosition(cursorPosition);
+        let decoration = gutter.decorateMarker(marker, {
+            'type': 'gutter',
+            'class': 'watched-line',
+        });
+        this.watchStatements[filePath][lineNum].decorations.push(decoration)
+    }
+
+    /**
+     * Removes Atom workspace decorations associated with a to-be-removed watch expression.
+     *
+     * Note that this must be called before the watch statement is removed from `this.watchStatements.`
+     * @param {string} filePath
+     *      The absolute path to the watched file.
+     * @param {number} lineNum
+     *      The line number to be unwatched in `filePath`.
+     * @param {object?} action
+     *      Not currently used.
+     */
+    removeWatchDecorations(filePath, lineNum, action) {
+        this.watchStatements[filePath][lineNum].decorations.forEach(decoration => decoration.destroy());
+    }
+
+    // =================================================================================================================
     // Interacting with ExecutionEngine
     // ================================================================================================================
 
@@ -130,9 +170,15 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('executionEngine -- received message: ', message)
-            let { shells: symbolShells, data: symbolData, dataSymbolId: symbolId } = JSON.parse(message);
-            this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData));
-            this.store.dispatch(addViewerAction(symbolId));
+            let { shells: symbolShells, data: symbolData, dataSymbolId: symbolId, refresh } = JSON.parse(message);
+            if (refresh) {
+                this.store.dispatch(clearCanvasAction());  // TODO: don't wipe the canvas completely
+                this.store.dispatch(clearSymbolTableAction());
+            }
+            if (symbolId !== null) {
+                this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData));
+                this.store.dispatch(addViewerAction(symbolId));
+            }
         });
         return executionEngine;
     }
@@ -141,13 +187,30 @@ export default class REPL {
      * Toggles the existence of a watch statement at a given line.
      *
      * @param  {string} filePath
-     *      Path to the file with a line to watch/unwatch.
+     *      Absolute path to the file with a line to watch/unwatch.
      * @param  {number} lineNum
      *      The line number in `filePath` to watch/unwatch.
      * @param  {?string} action
      *      Currently unused; TODO: the expression to perform on the watched variable.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
+        console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
+        if (filePath in this.watchStatements && lineNum in this.watchStatements[filePath]) {
+            this.removeWatchDecorations(filePath, lineNum, action);
+            delete this.watchStatements[filePath][lineNum];
+        }
+        else {
+            if(!(filePath in this.watchStatements)) {
+                this.watchStatements[filePath] = {};
+            }
+            if(!(lineNum in this.watchStatements[filePath])) {
+                this.watchStatements[filePath][lineNum] = {
+                    actions: [],
+                    decorations: [],
+                };
+            }
+            this.addWatchDecorations(filePath, lineNum, action);
+        }
         this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`);
     }
 
@@ -176,6 +239,6 @@ export default class REPL {
     onFileChanged(file, changes) {
         // TODO: convert changes to string that is understood by engine
         changes = '';
-        this.executionEngine.send(`change:${file}?${changes}`)
+        this.executionEngine.send(`change:${file}?${changes}`);
     }
 }

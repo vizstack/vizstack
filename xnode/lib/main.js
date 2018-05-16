@@ -23,7 +23,6 @@ export default {
         // Array of all REPL objects created by the package
         // TODO: how to destroy REPLs that are no longer open
         this.repls = [];
-
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
 
@@ -43,11 +42,10 @@ export default {
                     if(editor.gutterWithName('xnode-watch-gutter') === null) {
                         editor.addGutter({name: 'xnode-watch-gutter'});
                     }
-                    const editorPath = editor.getPath();
                     const changes = null;  // TODO: get changes from last edit
-                    editor.onDidStopChanging(() => {
+                    editor.onDidSave(({path}) => {
                         this.repls.forEach(repl => {
-                            repl.onFileChanged(editorPath, changes);
+                            repl.onFileChanged(path, changes);
                         })
                     });
                 }
@@ -106,14 +104,10 @@ export default {
      * TODO: send the watch expression to selected REPL, use icon at line
      */
     watchLine() {
-        // TODO: What is this doing?
         let editor = atom.workspace.getActiveTextEditor();
-        let gutter = editor.gutterWithName('xnode-watch-gutter');
-        let range = editor.getSelectedBufferRange();
-        let marker = editor.markBufferRange(range);
-        gutter.decorateMarker(marker, {
-            'type': 'gutter',
-            'class': 'watched-line',
-        });
+        let cursorPosition = editor.getCursorBufferPosition();
+        let selectedRepl = 0; // TODO: have a "selected repl" to add watches to
+        // buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
+        this.repls[selectedRepl].toggleWatchStatement(editor.getPath(), cursorPosition.row + 1);
     }
 };

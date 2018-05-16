@@ -8,7 +8,17 @@ export const CanvasActions = {
     REMOVE_VIEWER:       "CANVAS::REMOVE_VIEWER",
     UPDATE_LAYOUT:       "CANVAS::UPDATE_LAYOUT",
     SET_IN_PAYLOAD:      "CANVAS::SET_IN_PAYLOAD",
+    CLEAR_CANVAS:        "CANVAS::CLEAR_CANVAS",
 };
+
+
+export function clearCanvasAction() {
+    return {
+        type: CanvasActions.CLEAR_CANVAS,
+    }
+}
+
+
 
 /**
  * Action creator thunk to add a viewer to the canvas for the symbol with the given `symbolId`. It is possible to have

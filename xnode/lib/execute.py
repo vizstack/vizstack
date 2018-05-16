@@ -1,4 +1,5 @@
 import pdb
+from os.path import normpath, normcase
 
 from viz import VisualizationEngine
 
@@ -25,6 +26,9 @@ class ScriptExecutor(pdb.Pdb):
         self.var_to_eval = None
         # A queue shared with the parent process to which newly generated symbol schemas should be added.
         self.schema_queue = schema_queue
+        # A set of all watched lines, so that whenever execution breaks the executor can determine whether to send
+        # schema
+        self.watch_lines = set()
 
     # ==================================================================================================================
     # Public methods.
@@ -47,7 +51,8 @@ class ScriptExecutor(pdb.Pdb):
             lineno (int): The line number of the variable assignment in that file.
             action (?): To be used for more complex watch expressions.
         """
-        self.do_break('{}:{}'.format(file_path, lineno))
+        self.watch_lines.add((normcase(normpath(file_path)), lineno))
+        self.do_break('{}:{}'.format(normcase(normpath(file_path)), lineno))
 
     def execute(self, script_path):
         """Execute a script within the `ScriptExecutor` instance, allowing its flow to be controlled by the instance.
@@ -58,6 +63,7 @@ class ScriptExecutor(pdb.Pdb):
         Args:
             script_path (str): The absolute path to the user-written script to be executed.
         """
+        self.schema_queue.put(self._schema_to_message(None, None, None, True))
         self._runscript(script_path)
 
     def fetch_symbol_data(self, symbol_id):
@@ -99,7 +105,6 @@ class ScriptExecutor(pdb.Pdb):
         """
         self.schema_queue.put(self._get_schema_obj(self.var_to_eval, frame))
         self.var_to_eval = None
-        self.do_continue(frame)
 
     def _get_var_from_frame(self, frame):
         """Gets the name of the variable being assigned to at the line being executed in the given frame.
@@ -140,19 +145,27 @@ class ScriptExecutor(pdb.Pdb):
             obj = frame.f_globals[var_name]
             obj_found = True
         if obj_found:
-            symbol_id, shell = self.viz_engine.get_symbol_shell(obj)
+            symbol_id, shell = self.viz_engine.get_symbol_shell(obj, name=var_name)
             data, refs = self.viz_engine.get_symbol_data(symbol_id)
             refs.update({symbol_id: shell})
             return self._schema_to_message(refs, data, symbol_id)
         else:
             raise ValueError
 
-    def _schema_to_message(self, shells, data, symbol_id):
+    def _schema_to_message(self, shells, data, symbol_id, refresh=False):
         return self.viz_engine.to_json({
             'shells': shells,
             'data': data,
             'dataSymbolId': symbol_id,
+            'refresh': refresh,
         })
+
+    def _get_file_lineno_from_frame(self, frame):
+        self.current_stack, self.current_stack_index = self.get_stack(frame, None)
+        frame, lineno = self.current_stack[self.current_stack_index]
+        # TODO don't use format_stack_entry, use a custom function instead to eliminate the split-join
+        stack_entry = self.format_stack_entry((frame, lineno))
+        return normcase(normpath(stack_entry.split('(')[0])), int(stack_entry.split('(')[1].split(')')[0])
 
     def _get_line_from_frame(self, frame):
         """Gets a string version of the line being executed at the given frame.
@@ -214,6 +227,7 @@ class ScriptExecutor(pdb.Pdb):
             return_value (object): The return value of the function.
         """
         self._send_schema(frame)
+        self.do_continue(frame)
 
     def user_line(self, frame):
         """Called whenever a line of code is hit where program execution has stopped.
@@ -228,15 +242,18 @@ class ScriptExecutor(pdb.Pdb):
         Args:
             frame (object): A `Pdb` object encapsulating the script's current execution state.
         """
+        # self._get_file_lineno_from_frame(frame)
         if self.var_to_eval is not None:
             self._send_schema(frame)
-        else:
+        if self._get_file_lineno_from_frame(frame) in self.watch_lines:
             try:
                 self.var_to_eval = self._get_var_from_frame(frame)
                 self.do_next(frame)
             except ValueError:
                 self.var_to_eval = None
                 self.do_continue(frame)
+        else:
+            self.do_continue(frame)
 
     # `message` and `error` are called by `Pdb` to write to the respective streams. We block those messages so that
     # only object info will be sent to stdout, and thus read by the engine.
@@ -287,4 +304,3 @@ def run_script(receive_queue, send_queue, script_path, watches):
     while True:
         symbol_id = receive_queue.get(True)
         send_queue.put(executor.fetch_symbol_data(symbol_id))
-

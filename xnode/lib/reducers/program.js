@@ -39,11 +39,18 @@ const initialState = Immutable({
 export default function rootReducer(state = initialState, action) {
     const { type } = action;
     switch(type) {
-        case SymbolTableActions.ADD_SHELLS: return addSymbolShellsReducer(state, action);
-        case SymbolTableActions.ADD_DATA:   return addSymbolDataReducer(state, action);
+        case SymbolTableActions.ADD_SHELLS:  return addSymbolShellsReducer(state, action);
+        case SymbolTableActions.ADD_DATA:    return addSymbolDataReducer(state, action);
+        case SymbolTableActions.CLEAR_TABLE: return clearSymbolTableReducer(state, action);
     }
     return state;  // No effect by default
 };
+
+
+
+function clearSymbolTableReducer(state, action) {
+    return state.setIn(['symbolTable'], {});
+}
 
 function addSymbolShellsReducer(state, action) {
     const { symbolShells } = action;
@@ -52,9 +59,7 @@ function addSymbolShellsReducer(state, action) {
 
 function addSymbolDataReducer(state, action) {
     const { symbolId, symbolData } = action;
-    let newstate = state.setIn(['symbolTable', symbolId, 'data'], symbolData);
-    console.log(newstate);
-    return newstate; // TODO
+    return state.setIn(['symbolTable', symbolId, 'data'], symbolData);
 }
 
 /**

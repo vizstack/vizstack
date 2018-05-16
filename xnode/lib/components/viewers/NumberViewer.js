@@ -21,7 +21,6 @@ class NumberViewer extends Component {
 
     render() {
         const { classes, str } = this.props;
-        console.log(str);
         return (
             <div className={classes.label}>
                 {str}
