@@ -8,6 +8,10 @@ import thunk from 'redux-thunk';
 import { Provider as ReduxProvider } from 'react-redux';
 import { composeWithDevTools } from 'redux-devtools-extension';
 
+// Material UI services
+import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
+import createMuiTheme from 'material-ui/styles/createMuiTheme';
+
 // Python services
 import PythonShell from 'python-shell';
 import path from 'path';
@@ -20,6 +24,20 @@ import { addViewerAction, clearCanvasAction } from './actions/canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
+
+/** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
+ *  For in depth description and list of overridable keys: <material-ui-next.com/customization/themes/> */
+const theme = createMuiTheme({
+    spacing: {
+        unit: 5,
+    },
+    typography: {
+        htmlFontSize: 10,
+        monospace: {
+            fontFamily: '"Roboto Mono", "Courier", monospace',
+        }
+    },
+});
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -58,7 +76,9 @@ export default class REPL {
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
-                <Canvas />
+                <MuiThemeProvider theme={theme}>
+                    <Canvas />
+                </MuiThemeProvider>
             </ReduxProvider>,
             this.element
         );

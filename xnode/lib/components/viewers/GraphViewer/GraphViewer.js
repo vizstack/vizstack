@@ -5,12 +5,12 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { withStyles } from 'material-ui/styles';
-import { createSelector } from "reselect";
+import { createSelector } from 'reselect';
 import ELK from 'elkjs';
 
-import { ensureGraphLoadedActionThunk } from "../../../actions/program";
+import { ensureGraphLoadedActionThunk } from '../../../actions/program';
 import { setInViewerPayloadAction, addViewerActionThunk } from '../../../actions/canvas';
-import { makeGetElkGraphFromHead, layoutGraph } from "./layout";
+import { makeGetElkGraphFromHead, layoutGraph } from './layout';
 
 import GraphOpNode from './GraphOpNode';
 import GraphDataEdge from './GraphDataEdge';
@@ -24,8 +24,8 @@ import DropDownIcon from 'material-ui-icons/ArrowDropDown';
 import NotInterestedIcon from 'material-ui-icons/NotInterested';
 import Collapse from 'material-ui/transitions/Collapse';
 import ColorGrey from 'material-ui/colors/grey';
-import ColorBlue from "material-ui/colors/blue";
-import ColorBlueGrey from "material-ui/colors/blueGrey";
+import ColorBlue from 'material-ui/colors/blue';
+import ColorBlueGrey from 'material-ui/colors/blueGrey';
 
 
 /**
