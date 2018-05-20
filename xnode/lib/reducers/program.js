@@ -1,8 +1,8 @@
 'use babel';
 
-import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
 import { SymbolTableActions } from '../actions/program';
+import { freezeSymbolShells, freezeSymbolId, freezeSymbolData } from '../services/freeze_utils';
 
 /**
  * State slice structure for `program`: {
@@ -39,26 +39,34 @@ const initialState = Immutable({
 export default function rootReducer(state = initialState, action) {
     const { type } = action;
     switch(type) {
-        case SymbolTableActions.ADD_SHELLS:  return addSymbolShellsReducer(state, action);
-        case SymbolTableActions.ADD_DATA:    return addSymbolDataReducer(state, action);
-        case SymbolTableActions.CLEAR_TABLE: return clearSymbolTableReducer(state, action);
+        case SymbolTableActions.ADD_SHELLS:    return addSymbolShellsReducer(state, action);
+        case SymbolTableActions.ADD_DATA:      return addSymbolDataReducer(state, action);
+        case SymbolTableActions.CLEAR_TABLE:   return clearSymbolTableReducer(state, action);
     }
     return state;  // No effect by default
 };
-
-
 
 function clearSymbolTableReducer(state, action) {
     return state.setIn(['symbolTable'], {});
 }
 
 function addSymbolShellsReducer(state, action) {
-    const { symbolShells } = action;
-    return Immutable.merge({symbolTable: symbolShells}, state, {deep: true});
+    const { symbolShells, freezeNonce } = action;
+    if (freezeNonce >= 0) {
+        return Immutable.merge({symbolTable: freezeSymbolShells(symbolShells, freezeNonce)}, state, {deep: true});
+    }
+    else {
+        return Immutable.merge({symbolTable: symbolShells}, state, {deep: true});
+    }
 }
 
 function addSymbolDataReducer(state, action) {
-    const { symbolId, symbolData } = action;
+    const { symbolId, symbolData, freezeNonce } = action;
+    if (freezeNonce >= 0) {
+        let s = state.setIn(['symbolTable', freezeSymbolId(symbolId, freezeNonce), 'data'],  freezeSymbolData(symbolData, freezeNonce));
+        console.debug(s);
+        return s;
+    }
     return state.setIn(['symbolTable', symbolId, 'data'], symbolData);
 }
 

@@ -166,18 +166,18 @@ export default class REPL {
     startEngine(scriptPath) {
         let options = {
             args: [scriptPath],
-        }
+        };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
-            console.debug('executionEngine -- received message: ', message)
-            let { shells: symbolShells, data: symbolData, dataSymbolId: symbolId, refresh } = JSON.parse(message);
+            console.debug('executionEngine -- received message: ', message);
+            let { symbolShells, symbolData, symbolId, watchCount, refresh} = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());  // TODO: don't wipe the canvas completely
                 this.store.dispatch(clearSymbolTableAction());
             }
             if (symbolId !== null) {
-                this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData));
-                this.store.dispatch(addViewerAction(symbolId));
+                this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData, watchCount));
+                this.store.dispatch(addViewerAction(symbolId, watchCount));
             }
         });
         return executionEngine;

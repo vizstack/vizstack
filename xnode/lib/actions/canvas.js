@@ -1,6 +1,7 @@
 'use babel';
 
 import { ensureSymbolDataLoadedActionThunk } from "./program";
+import { isSymbolIdFrozen } from '../services/freeze_utils';
 
 /** Action type definitions. */
 export const CanvasActions = {
@@ -26,17 +27,23 @@ export function clearCanvasAction() {
  *
  * @param symbolId
  *     Symbol to create new viewer for.
+ * @param {int} freezeNonce:
+ *      A positive number to be used for freezing the viewer, or -1 if the viewer is not frozen.
  * @returns {{type: string, symbolId: *}}
  *
  */
-export function addViewerAction(symbolId) {
+export function addViewerAction(symbolId, freezeNonce) {
     return {
         type: CanvasActions.ADD_VIEWER,
-        symbolId
+        symbolId,
+        freezeNonce,
     };
 }
 export function addViewerActionThunk(symbolId) {
     return (dispatch) => {
+        if (isSymbolIdFrozen(symbolId)) {
+            return;
+        }
         return dispatch(ensureSymbolDataLoadedActionThunk(symbolId)).then(
             () => dispatch(addViewerAction(symbolId))
         );
