@@ -29,6 +29,9 @@ class ScriptExecutor(pdb.Pdb):
         # A set of all watched lines, so that whenever execution breaks the executor can determine whether to send
         # schema
         self.watch_lines = set()
+        # A count of the number of encountered watch expressions, to be sent along with any returned messages so that
+        # symbol freezing may be performed by clients.
+        self.watch_count = 0
 
     # ==================================================================================================================
     # Public methods.
@@ -63,7 +66,7 @@ class ScriptExecutor(pdb.Pdb):
         Args:
             script_path (str): The absolute path to the user-written script to be executed.
         """
-        self.schema_queue.put(self._schema_to_message(None, None, None, True))
+        self.schema_queue.put(self._schema_to_message(None, None, None, -1, refresh=True))
         self._runscript(script_path)
 
     def fetch_symbol_data(self, symbol_id):
@@ -81,7 +84,7 @@ class ScriptExecutor(pdb.Pdb):
             (object) of form {data: {data object}, shells: {symbol id: shell}}
         """
         data, shells = self.viz_engine.get_symbol_data(symbol_id)
-        return self._schema_to_message(shells, data, symbol_id)
+        return self._schema_to_message(shells, data, symbol_id, -1)
 
     # ==================================================================================================================
     # Watch expression logic.
@@ -148,15 +151,17 @@ class ScriptExecutor(pdb.Pdb):
             symbol_id, shell = self.viz_engine.get_symbol_shell(obj, name=var_name)
             data, refs = self.viz_engine.get_symbol_data(symbol_id)
             refs.update({symbol_id: shell})
-            return self._schema_to_message(refs, data, symbol_id)
+            self.watch_count += 1
+            return self._schema_to_message(refs, data, symbol_id, self.watch_count)
         else:
             raise ValueError
 
-    def _schema_to_message(self, shells, data, symbol_id, refresh=False):
+    def _schema_to_message(self, shells, data, symbol_id, watch_count, refresh=False):
         return self.viz_engine.to_json({
-            'shells': shells,
-            'data': data,
-            'dataSymbolId': symbol_id,
+            'symbolShells': shells,
+            'symbolData': data,
+            'symbolId': symbol_id,
+            'watchCount': watch_count,
             'refresh': refresh,
         })
 
@@ -165,6 +170,7 @@ class ScriptExecutor(pdb.Pdb):
         frame, lineno = self.current_stack[self.current_stack_index]
         # TODO don't use format_stack_entry, use a custom function instead to eliminate the split-join
         stack_entry = self.format_stack_entry((frame, lineno))
+        # TODO: fix normcase/normpath being present everywhere
         return normcase(normpath(stack_entry.split('(')[0])), int(stack_entry.split('(')[1].split(')')[0])
 
     def _get_line_from_frame(self, frame):

@@ -1,8 +1,9 @@
 'use babel';
 
-import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from '../actions/canvas';
+
+import { freezeSymbolId } from '../services/freeze_utils';
 
 /**
  * State slice structure for `canvas`: {
@@ -57,10 +58,10 @@ function clearCanvasReducer(state, action) {
  * Add a viewer to `canvas`. Assumes `data` for symbol is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { symbolId } = action;
+    const { symbolId, freezeNonce } = action;
     const { nextViewerId } = state;
     return state.setIn(['viewerObjects', nextViewerId], {
-        symbolId,
+        symbolId: freezeNonce >= 0 ? freezeSymbolId(symbolId, freezeNonce) : symbolId,
         payload: {},
     }).update('nextViewerId', (prev) => prev + 1)
         .update('viewerPositions', (prev) => prev.concat([{

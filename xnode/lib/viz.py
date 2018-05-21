@@ -356,12 +356,12 @@ class VisualizationEngine:
         """
         if symbol_id not in self.cache:
             raise KeyError('Symbol id {} not found in cache.'.format(symbol_id))
-        if self.TYPE_INFO not in self.cache[symbol_id]:
-            obj = self.cache[symbol_id][self.OBJ]
-            for type_info in self.TYPES:
-                if type_info.test_fn(obj):
-                    self.cache[symbol_id][self.TYPE_INFO] = type_info
-                    break
+        # if self.TYPE_INFO not in self.cache[symbol_id]:
+        obj = self.cache[symbol_id][self.OBJ]
+        for type_info in self.TYPES:
+            if type_info.test_fn(obj):
+                self.cache[symbol_id][self.TYPE_INFO] = type_info
+                break
         return self.cache[symbol_id][self.TYPE_INFO]
 
     def _load_symbol_data(self, symbol_id):
@@ -394,15 +394,16 @@ class VisualizationEngine:
         Returns:
             (dict): The symbol's shell representation.
         """
-        if self.SHELL not in self.cache[symbol_id]:
-            symbol_obj = self.cache[symbol_id][self.OBJ]
-            symbol_type_info = self._get_type_info(symbol_id)
-            self.cache[symbol_id][self.SHELL] = {
-                'type': symbol_type_info.type_name,
-                'str': symbol_type_info.str_fn(symbol_obj),
-                'name': name,
-                'data': None,
-            }
+        # if self.SHELL not in self.cache[symbol_id]:
+        # TODO: remove all discussion of caching, or find a better way to do it
+        symbol_obj = self.cache[symbol_id][self.OBJ]
+        symbol_type_info = self._get_type_info(symbol_id)
+        self.cache[symbol_id][self.SHELL] = {
+            'type': symbol_type_info.type_name,
+            'str': symbol_type_info.str_fn(symbol_obj),
+            'name': name,
+            'data': None,
+        }
         return self.cache[symbol_id][self.SHELL]
 
     # ==================================================================================================================
@@ -464,8 +465,9 @@ class VisualizationEngine:
         """
         if self.SHELL not in self.cache[symbol_id]:
             raise KeyError('Attempted to load data for {} before shell loaded.'.format(symbol_id))
-        if self.DATA not in self.cache[symbol_id]:
-            self.cache[symbol_id][self.DATA], self.cache[symbol_id][self.REFS] = self._load_symbol_data(symbol_id)
+        # if self.DATA not in self.cache[symbol_id]:
+        # TODO: remove references to caching or find a better way to do it
+        self.cache[symbol_id][self.DATA], self.cache[symbol_id][self.REFS] = self._load_symbol_data(symbol_id)
         shells = dict()
         for ref in self.cache[symbol_id][self.REFS]:
             shells[ref] = self._get_symbol_shell_by_id(ref)

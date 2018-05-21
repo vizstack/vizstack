@@ -6,9 +6,9 @@ import { setInViewerPayloadAction } from './canvas.js';
 
 /** Action type definitions. */
 export const SymbolTableActions = {
-    ADD_SHELLS:  "SYMBOLTABLE::ADD_SHELLS",
-    ADD_DATA:    "SYMBOLTABLE::ADD_DATA",
-    CLEAR_TABLE: "SYMBOLTABLE::CLEAR_TABLE",
+    ADD_SHELLS:    "SYMBOLTABLE::ADD_SHELLS",
+    ADD_DATA:      "SYMBOLTABLE::ADD_DATA",
+    CLEAR_TABLE:   "SYMBOLTABLE::CLEAR_TABLE",
 
     ENSURE_SYMBOL_DATA_LOADED:  "SYMBOLTABLE::ENSURE_SYMBOL_DATA_LOADED",
 };
@@ -19,25 +19,27 @@ export function clearSymbolTableAction() {
     }
 }
 
-export function addSymbolActionThunk(symbolId, symbolShells, symbolData) {
+export function addSymbolActionThunk(symbolId, symbolShells, symbolData, freezeNonce) {
     return (dispatch) => {
-        dispatch(addSymbolShellsAction(symbolShells));
-        dispatch(addSymbolDataAction(symbolId, symbolData));
+        dispatch(addSymbolShellsAction(symbolShells, freezeNonce));
+        dispatch(addSymbolDataAction(symbolId, symbolData, freezeNonce));
     };
 }
 
-function addSymbolShellsAction(symbolShells) {
+function addSymbolShellsAction(symbolShells, freezeNonce) {
     return {
         type: SymbolTableActions.ADD_SHELLS,
         symbolShells,
+        freezeNonce,
     };
 }
 
-function addSymbolDataAction(symbolId, symbolData) {
+function addSymbolDataAction(symbolId, symbolData, freezeNonce) {
     return {
         type: SymbolTableActions.ADD_DATA,
         symbolId,
         symbolData,
+        freezeNonce,
     };
 }
 
