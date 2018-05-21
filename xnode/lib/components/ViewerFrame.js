@@ -31,10 +31,8 @@ class ViewerFrame extends Component {
     render() {
         const { classes, children, name, type, viewerId, removeViewerFn } = this.props;
         return (
-            <div className={classNames({
-                [classes.container]: true,
-            })}>
-                <div className={classes.header}>
+            <div className={classNames('xn-viewer-frame', classes.container)}>
+                <div className={classNames('xn-viewer-frame-header', classes.header)}>
                     <span className={classes.title}>
                         {`${name ? name + " " : ""}[${type}]`}
                     </span>
@@ -60,15 +58,10 @@ const styles = theme => ({
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        borderRadius: 2,
         overflow: 'hidden',
-        background: '@pane-item-background-color',
+        borderRadius: 2,
     },
     header: {
-        '&:hover': {
-            background: '#404040',
-        },
-        background: '#232323',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

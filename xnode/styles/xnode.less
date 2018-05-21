@@ -1,13 +1,27 @@
 // The ui-variables file is provided by base themes provided by Atom.
-//
 // See https://github.com/atom/atom-dark-ui/blob/master/styles/ui-variables.less
 // for a full listing of what's available.
 @import "ui-variables";
 
-.xnode {
+.xn {
 }
 
-.watched-line {
+.xn-watched-line {
     border-left: 2px solid #5B83AD;
     padding-left: ~"calc(0.5em - 2px)";
 }
+
+.xn-viewer-frame {
+    background: @pane-item-background-color;
+    border: 1px solid @pane-item-border-color;
+}
+
+.xn-viewer-frame-header {
+    background: @button-background-color;
+    &:hover {
+        background: @button-background-color-hover;
+    }
+}
+
+
+

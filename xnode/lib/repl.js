@@ -152,7 +152,7 @@ export default class REPL {
         let marker = editor.markBufferPosition(cursorPosition);
         let decoration = gutter.decorateMarker(marker, {
             'type': 'gutter',
-            'class': 'watched-line',
+            'class': 'xn-watched-line',
         });
         this.watchStatements[filePath][lineNum].decorations.push(decoration)
     }

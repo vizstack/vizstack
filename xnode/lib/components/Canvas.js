@@ -91,7 +91,7 @@ class Canvas extends Component {
             <div className={classNames({
                 [classes.canvasContainer]: true,
                 'native-key-bindings': true,
-            })} tabIndex='-1'>
+            })}>
                 <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
                                     onLayoutChange={updateLayoutFn} draggableCancel=".ReactGridLayoutNoDrag">
                     {frames}
