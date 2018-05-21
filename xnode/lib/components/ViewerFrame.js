@@ -31,7 +31,9 @@ class ViewerFrame extends Component {
     render() {
         const { classes, children, name, type, viewerId, removeViewerFn } = this.props;
         return (
-            <Paper className={classes.container}>
+            <div className={classNames({
+                [classes.container]: true,
+            })}>
                 <div className={classes.header}>
                     <span className={classes.title}>
                         {`${name ? name + " " : ""}[${type}]`}
@@ -44,7 +46,7 @@ class ViewerFrame extends Component {
                 <div className={classNames(classes.content, "ReactGridLayoutNoDrag")}>
                     {children}
                 </div>
-            </Paper>
+            </div>
         );
     }
 }
@@ -60,6 +62,7 @@ const styles = theme => ({
         flexDirection: 'column',
         borderRadius: 2,
         overflow: 'hidden',
+        background: '@pane-item-background-color',
     },
     header: {
         '&:hover': {

@@ -107,6 +107,11 @@ export default class REPL {
         return 'Xnode Sandbox';
     }
 
+    /** Used by Atom to show icon next to title in a tab. */
+    getIconName () {
+        return 'beaker';
+    }
+
     /** Used by Atom to identify the view when opening. */
     getURI() {
         return 'atom://xnode-sandbox';

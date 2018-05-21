@@ -6,5 +6,8 @@ def fn():
     z = 5
 
 fn()
-q = [1,2,3,4,5,2]
+q = []
+for i in range(3):
+    q.append(i)
+    q = q
 r = 6

@@ -6,6 +6,7 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
 import { withStyles } from 'material-ui/styles';
+import classNames from 'classnames';
 
 // Material UI
 import ColorGrey from 'material-ui/colors/grey';
@@ -87,12 +88,14 @@ class Canvas extends Component {
         });
 
         return (
-            <div className={classes.canvasContainer}>
+            <div className={classNames({
+                [classes.canvasContainer]: true,
+                'native-key-bindings': true,
+            })} tabIndex='-1'>
                 <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
                                     onLayoutChange={updateLayoutFn} draggableCancel=".ReactGridLayoutNoDrag">
                     {frames}
                 </FlexibleGridLayout>
-                <div>Nothing to display</div>
             </div>
         );
     }
@@ -108,7 +111,6 @@ const styles = theme => ({
         height: '100%',
         overflow: 'auto',
         padding: theme.spacing.unit * 2,
-        backgroundColor: ColorGrey[100],
     },
     frameContainer: {
         display: "block",
