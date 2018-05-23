@@ -9,6 +9,7 @@ THREAD_QUIT = 'quit'
 WATCH_HEADER = 'watch:'
 EDIT_HEADER = 'change:'
 FETCH_HEADER = 'fetch:'
+SHIFT_HEADER = 'shift:'
 
 
 class ExecutionManager:
@@ -174,6 +175,23 @@ def get_symbol_id(message):
     return message.replace(FETCH_HEADER, '')
 
 
+def get_watch_shift(message):
+    """Translates a string which encodes a watch statement line shift to an object describing the shift.
+
+    Args:
+        message (str): A string of form 'SHIFT_HEADER{file}?{original_lineno}?{new_lineno}'
+
+    Returns:
+        (dict) of form {file: str, old_lineno: int, new_lineno: int}
+    """
+    contents = message.replace(SHIFT_HEADER, '').split('?')
+    return {
+        'file': contents[0],
+        'old_lineno': int(contents[1]),
+        'new_lineno': int(contents[2]),
+    }
+
+
 # ======================================================================================================================
 # Watch expressions.
 # ------------------
@@ -193,6 +211,25 @@ def toggle_watch(watches, watch_expression):
         watches.remove(watch_expression)
     else:
         watches.append(watch_expression)
+
+        
+def shift_watch(watches, shift):
+    """Shifts the position of a watch expression to a new line.
+
+    Watch expressions are hard-coded to point to a particular line number, which causes problems when new lines are
+    inserted or old lines deleted. Allowing for shifts, as opposed to deleting and re-adding watch statements,
+    prevents unnecessary re-executions.
+
+    Args:
+        watches (list): A list of existing watch expressions, in the format returned by `get_watch_expression()`.
+        shift (dict): An object describing the line shift, in the format returned by `get_watch_shift()`.
+
+    Returns:
+
+    """
+    for watch_expression in watches:
+        if watch_expression['file'] == shift['file'] and watch_expression['lineno'] == shift['old_lineno']:
+            watch_expression['lineno'] = shift['new_lineno']
 
 
 # ======================================================================================================================
@@ -280,6 +317,8 @@ def main():
         elif message.startswith(FETCH_HEADER):
             if executor:
                 executor.fetch_symbol(get_symbol_id(message))
+        elif message.startswith(SHIFT_HEADER):
+            shift_watch(watches, get_watch_shift(message))
 
 if __name__ == '__main__':
     main()

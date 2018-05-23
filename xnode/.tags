@@ -32,6 +32,7 @@ REFS	.\lib\viz.py	/^    REFS = 'refs'$/;"	v	class:VisualizationEngine
 REF_PREFIX	.\lib\viz.py	/^    REF_PREFIX = '@id:'$/;"	v	class:VisualizationEngine
 SET	.\lib\viz.py	/^    SET      = VisualizationType('set', test_fn=lambda obj: issubclass(type(obj), set),$/;"	v	class:VisualizationEngine
 SHELL	.\lib\viz.py	/^    SHELL = 'shell'$/;"	v	class:VisualizationEngine
+SHIFT_HEADER	.\lib\engine.py	/^SHIFT_HEADER = 'shift:'$/;"	v
 STRING	.\lib\viz.py	/^    STRING   = VisualizationType('string', test_fn=lambda obj: issubclass(type(obj), str),$/;"	v	class:VisualizationEngine
 ScriptExecutor	.\lib\execute.py	/^class ScriptExecutor(pdb.Pdb):$/;"	c
 THREAD_QUIT	.\lib\engine.py	/^THREAD_QUIT = 'quit'$/;"	v
@@ -76,9 +77,9 @@ abbrev	.\package-lock.json	/^            "abbrev": "1.1.1",$/;"	f
 abbrev	.\package-lock.json	/^        "abbrev": "1.1.1",$/;"	f
 abbrev	.\package-lock.json	/^        "abbrev": {$/;"	f
 activationCommands	.\package.json	/^  "activationCommands": {$/;"	f
-addSymbolDataAction	.\lib\actions\program.js	/^function addSymbolDataAction(symbolId, symbolData, watchCount) {$/;"	f
+addSymbolDataAction	.\lib\actions\program.js	/^function addSymbolDataAction(symbolId, symbolData, freezeNonce) {$/;"	f
 addSymbolDataReducer	.\lib\reducers\program.js	/^function addSymbolDataReducer(state, action) {$/;"	f
-addSymbolShellsAction	.\lib\actions\program.js	/^function addSymbolShellsAction(symbolShells, watchCount) {$/;"	f
+addSymbolShellsAction	.\lib\actions\program.js	/^function addSymbolShellsAction(symbolShells, freezeNonce) {$/;"	f
 addSymbolShellsReducer	.\lib\reducers\program.js	/^function addSymbolShellsReducer(state, action) {$/;"	f
 addViewerReducer	.\lib\reducers\canvas.js	/^function addViewerReducer(state, action) {$/;"	f
 add_watch_expression	.\lib\execute.py	/^    def add_watch_expression(self, file_path, lineno, action=None):$/;"	m	class:ScriptExecutor
@@ -634,10 +635,7 @@ forever-agent	.\package-lock.json	/^            "forever-agent": "0.6.1",$/;"	f
 forever-agent	.\package-lock.json	/^            "forever-agent": {$/;"	f
 form-data	.\package-lock.json	/^            "form-data": "2.3.2",$/;"	f
 form-data	.\package-lock.json	/^            "form-data": {$/;"	f
-freezeIfSymbolId	.\lib\reducers\program.js	/^function freezeIfSymbolId(value, watchCount) {$/;"	f
-freezeRecurse	.\lib\reducers\program.js	/^function freezeRecurse(item, watchCount) {$/;"	f
-freezeSymbolData	.\lib\reducers\program.js	/^function freezeSymbolData(symbolData, watchCount) {$/;"	f
-freezeSymbolShells	.\lib\reducers\program.js	/^function freezeSymbolShells(symbolShells, watchCount) {$/;"	f
+freezeSymbolDataRecurse	.\lib\services\freeze_utils.js	/^function freezeSymbolDataRecurse(item, nonce) {$/;"	f
 from2	.\package-lock.json	/^                        "from2": "2.3.0",$/;"	f
 from2	.\package-lock.json	/^                        "from2": {$/;"	f
 from2	.\package-lock.json	/^                    "from2": "2.3.0",$/;"	f
@@ -685,6 +683,7 @@ getNodesAndUnslicedEdges	.\lib\components\viewers\GraphViewer\layout.js	/^functi
 getSourceHierarchy	.\lib\components\viewers\GraphViewer\layout.js	/^function getSourceHierarchy(portId, nodes) {$/;"	f
 getTargetHierarchy	.\lib\components\viewers\GraphViewer\layout.js	/^function getTargetHierarchy(portId, nodes) {$/;"	f
 get_diff	.\lib\engine.py	/^def get_diff(message):$/;"	f
+get_shift	.\lib\engine.py	/^def get_shift(message):$/;"	f
 get_symbol_data	.\lib\viz.py	/^    def get_symbol_data(self, symbol_id):$/;"	m	class:VisualizationEngine
 get_symbol_id	.\lib\engine.py	/^def get_symbol_id(message):$/;"	f
 get_symbol_shell	.\lib\viz.py	/^    def get_symbol_shell(self, obj, name=None):$/;"	m	class:VisualizationEngine
@@ -986,7 +985,7 @@ is-stream	.\package-lock.json	/^        "is-stream": "1.1.0"$/;"	f
 is-stream	.\package-lock.json	/^    "is-stream": {$/;"	f
 is-typedarray	.\package-lock.json	/^            "is-typedarray": "1.0.0",$/;"	f
 is-typedarray	.\package-lock.json	/^            "is-typedarray": {$/;"	f
-isSymbolId	.\lib\reducers\program.js	/^function isSymbolId(value) {$/;"	f
+isSymbolId	.\lib\services\freeze_utils.js	/^function isSymbolId(value) {$/;"	f
 isarray	.\package-lock.json	/^                    "isarray": "0.0.1",$/;"	f
 isarray	.\package-lock.json	/^                    "isarray": {$/;"	f
 isarray	.\package-lock.json	/^            "isarray": "1.0.0",$/;"	f
@@ -1419,7 +1418,7 @@ punycode	.\package-lock.json	/^                "punycode": "1.4.1"$/;"	f
 punycode	.\package-lock.json	/^                "punycode": {$/;"	f
 python-shell	.\package-lock.json	/^    "python-shell": {$/;"	f
 python-shell	.\package.json	/^    "python-shell": "^0.5.0",$/;"	f
-q	.\dummy.py	/^q = [f,3,4,5,2]$/;"	v
+q	.\dummy.py	/^q = ['x', 'y', 'z']$/;"	v
 q	.\dummy.py	/^q = q$/;"	v
 qrcode-terminal	.\package-lock.json	/^        "qrcode-terminal": "0.12.0",$/;"	f
 qrcode-terminal	.\package-lock.json	/^        "qrcode-terminal": {$/;"	f
@@ -1749,6 +1748,7 @@ shebang-command	.\package-lock.json	/^                            "shebang-comma
 shebang-command	.\package-lock.json	/^                            "shebang-command": {$/;"	f
 shebang-regex	.\package-lock.json	/^                                "shebang-regex": "1.0.0"$/;"	f
 shebang-regex	.\package-lock.json	/^                                "shebang-regex": {$/;"	f
+shift_watch	.\lib\engine.py	/^def shift_watch(watches, shift):$/;"	f
 should_execute	.\lib\engine.py	/^def should_execute(script_path, watches, diff):$/;"	f
 signal-exit	.\package-lock.json	/^                        "signal-exit": "3.0.2",$/;"	f
 signal-exit	.\package-lock.json	/^                        "signal-exit": {$/;"	f
@@ -1894,7 +1894,6 @@ text-table	.\package-lock.json	/^        "text-table": "0.2.0",$/;"	f
 text-table	.\package-lock.json	/^        "text-table": {$/;"	f
 theming	.\package-lock.json	/^        "theming": "1.3.0"$/;"	f
 theming	.\package-lock.json	/^    "theming": {$/;"	f
-this.watchStatements.actions	.\lib\repl.js	/^                    actions: [],$/;"	p
 threading	.\lib\engine.py	/^import threading$/;"	i
 through	.\package-lock.json	/^            "through": "2.3.8"$/;"	f
 through	.\package-lock.json	/^            "through": {$/;"	f
