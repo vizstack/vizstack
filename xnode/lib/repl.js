@@ -61,7 +61,8 @@ export default class REPL {
     constructor(scriptPath) {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
-        this.watchStatements = {};     // Mapping of file->lineno->{actions:[], decorations: []} for each watched line
+        this.watchMarkers = [];
+        // this.watchStatements = {};     // Mapping of file->lineno->{actions:[], decorations: []} for each watched line
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
@@ -130,47 +131,91 @@ export default class REPL {
     }
 
     // =================================================================================================================
-    // Atom-specific behaviors
-    // ================================================================================================================
+    // Watch statements
+    // =================================================================================================================
 
     /**
-     * Adds Atom workspace decorations associated with a to-be-added watch expression.
-     * @param {string} filePath
-     *      The absolute path to the watched file.
-     * @param {number} lineNum
-     *      The line number to be watched in `filePath`.
-     * @param {object?} action
-     *      Not currently used.
+     * Shifts the line numbers of any watch statements in the Python script that were moved by an edit.
      */
-    addWatchDecorations(filePath, lineNum, action) {
-        // TODO: this assumes that the active editor contains the changed file
+    shiftWatchStatements() {
+        this.watchMarkers.forEach(marker => {
+            const currentPosition = marker.getHeadBufferPosition().row + 1;
+            const { filePath, lineNum } = marker.getProperties();
+            if (currentPosition !== lineNum) {
+                marker.setProperties({
+                    lineNum: currentPosition,
+                });
+                this.executionEngine.send(`shift:${filePath}?${lineNum}?${currentPosition}`);
+            }
+        });
+    }
+
+    /**
+     * Returns the index of a `Marker` watching a particular line in a particular path.
+     *
+     * @param {string} filePath
+     *      The file which to which the marker is assigned.
+     * @param {number} lineNum
+     *      The line number to which the marker is assigned.
+     * @returns {number}
+     *      The index of the marker in `this.watchMarkers`, or -1 if not found.
+     */
+    indexOfMarker(filePath, lineNum) {
+        for(let i = 0; i < this.watchMarkers.length; i++) {
+            const marker = this.watchMarkers[i];
+            if(marker.getProperties().filePath === filePath && marker.getHeadBufferPosition().row === lineNum - 1) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Deletes a watch statement.
+     *
+     * @param {number} markerPos
+     *      The index of the watch statement's line marker in `this.watchMarkers`.
+     */
+    removeWatchMarker(markerPos) {
+        this.watchMarkers.splice(markerPos, 1);
+    }
+
+    /**
+     * Creates a new Atom marker to track the line of a watch expression.
+     *
+     * Atom's `Marker` objects can track position shifts from line insertion or deletions automatically, as well as
+     * recognize when the line to which they've been assigned has been destroyed. We use these markers to track our
+     * watch statements.
+     *
+     * @param {string} filePath
+     *      The path of the watched line.
+     * @param {number} lineNum
+     *      The number of the watched line at the time of marker creation.
+     */
+    addWatchMarker(filePath, lineNum) {
+    	// TODO: this assumes that the active editor contains the changed file
         // see https://github.com/willyelm/xatom-debug/blob/master/lib/breakpoint/BreakpointManager.js
         let editor = atom.workspace.getActiveTextEditor();
-        let gutter = editor.gutterWithName('xnode-watch-gutter');
         let cursorPosition = editor.getCursorBufferPosition();
         let marker = editor.markBufferPosition(cursorPosition);
-        let decoration = gutter.decorateMarker(marker, {
+        marker.setProperties({
+            filePath,
+            lineNum,
+        });
+        marker.onDidChange(e => {
+            if (!(e.isValid)) {
+                marker.destroy();
+            }
+        });
+        this.watchMarkers.push(marker);
+
+        let gutter = editor.gutterWithName('xnode-watch-gutter');
+        gutter.decorateMarker(marker, {
             'type': 'gutter',
             'class': 'xn-watched-line',
         });
-        this.watchStatements[filePath][lineNum].decorations.push(decoration)
     }
 
-    /**
-     * Removes Atom workspace decorations associated with a to-be-removed watch expression.
-     *
-     * Note that this must be called before the watch statement is removed from `this.watchStatements.`
-     * @param {string} filePath
-     *      The absolute path to the watched file.
-     * @param {number} lineNum
-     *      The line number to be unwatched in `filePath`.
-     * @param {object?} action
-     *      Not currently used.
-     */
-    removeWatchDecorations(filePath, lineNum, action) {
-        // TODO can't we push this like the example?
-        this.watchStatements[filePath][lineNum].decorations.forEach(decoration => decoration.destroy());
-    }
 
     // =================================================================================================================
     // Interacting with ExecutionEngine
@@ -220,21 +265,12 @@ export default class REPL {
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
         console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
-        if (filePath in this.watchStatements && lineNum in this.watchStatements[filePath]) {
-            this.removeWatchDecorations(filePath, lineNum, action);
-            delete this.watchStatements[filePath][lineNum];
+        const markerPos = this.indexOfMarker(filePath, lineNum);
+        if (markerPos >= 0) {
+            this.removeWatchMarker(markerPos);
         }
         else {
-            if(!(filePath in this.watchStatements)) {
-                this.watchStatements[filePath] = {};
-            }
-            if(!(lineNum in this.watchStatements[filePath])) {
-                this.watchStatements[filePath][lineNum] = {
-                    actions: [],
-                    decorations: [],
-                };
-            }
-            this.addWatchDecorations(filePath, lineNum, action);
+            this.addWatchMarker(filePath, lineNum);
         }
         this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`);
     }
@@ -264,6 +300,7 @@ export default class REPL {
     onFileChanged(file, changes) {
         // TODO: convert changes to string that is understood by engine
         changes = '';
+        this.shiftWatchStatements();
         this.executionEngine.send(`change:${file}?${changes}`);
     }
 }

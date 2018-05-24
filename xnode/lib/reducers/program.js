@@ -63,9 +63,7 @@ function addSymbolShellsReducer(state, action) {
 function addSymbolDataReducer(state, action) {
     const { symbolId, symbolData, freezeNonce } = action;
     if (freezeNonce >= 0) {
-        let s = state.setIn(['symbolTable', freezeSymbolId(symbolId, freezeNonce), 'data'],  freezeSymbolData(symbolData, freezeNonce));
-        console.debug(s);
-        return s;
+        return state.setIn(['symbolTable', freezeSymbolId(symbolId, freezeNonce), 'data'],  freezeSymbolData(symbolData, freezeNonce));
     }
     return state.setIn(['symbolTable', symbolId, 'data'], symbolData);
 }
