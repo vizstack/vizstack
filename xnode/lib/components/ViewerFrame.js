@@ -59,7 +59,7 @@ const styles = theme => ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        borderRadius: 2,
+        borderRadius: 4,
     },
     header: {
         display: 'flex',

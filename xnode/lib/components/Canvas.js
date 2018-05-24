@@ -35,18 +35,29 @@ class Canvas extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
+        /** */
         classes: PropTypes.object.isRequired,
+
+        /** */
+        fetchSymbolData: PropTypes.func.isRequired,
     };
 
     /**
      * Returns the [*]Viewer component of the proper type for the given viewer data object.
      */
     createViewerComponent(viewer) {
+        const { addViewerFn, fetchSymbolData } = this.props;
+
         const props = {
             symbolId: viewer.symbolId,
             viewerId: viewer.viewerId,
             payload: viewer.payload,
             str: viewer.str,
+
+            loadDataAndAddViewerToCanvas: (symbolId) => {
+                fetchSymbolData(symbolId);
+                addViewerFn(symbolId);
+            }
         };
 
         switch(viewer.type) {

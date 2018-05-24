@@ -1,8 +1,10 @@
 'use babel';
 
 /**
- * TODO: explainer on frozen symbols
+ * TODO: explainer on frozen symbols, is symbol Id rather than ref.startswith(REF)
  */
+
+
 
 /**
  * Creates a frozen version of a symbol ID, which will not be altered by subsequent updates to the symbol table.
@@ -10,11 +12,11 @@
  * The original symbol ID can be extracted from the frozen ID, but it is unique among all all symbol IDs and
  * frozen IDs.
  *
- * @param {string} symbolId:
+ * @param {string} symbolId
  *      The symbol ID to be frozen.
- * @param {int} nonce:
+ * @param {int} nonce
  *      A number unique to this particular snapshot of the symbol among all snapshots of the symbol.
- * @returns {string}:
+ * @returns {string}
  *      The frozen symbol ID.
  */
 export function freezeSymbolId(symbolId, nonce) {
@@ -24,9 +26,9 @@ export function freezeSymbolId(symbolId, nonce) {
 /**
  * Extracts the raw symbol ID from a frozen symbol ID.
  *
- * @param {string} frozenSymbolId:
+ * @param {string} frozenSymbolId
  *      The frozen version of the symbol ID, as produced by `freezeSymbolId()`.
- * @returns {string}:
+ * @returns {string}
  *      The original symbol ID.
  */
 export function unfreezeSymbolId(frozenSymbolId) {
@@ -36,9 +38,9 @@ export function unfreezeSymbolId(frozenSymbolId) {
 /**
  * Determines if a symbol ID is frozen or not.
  *
- * @param {string} symbolId;
+ * @param {string} symbolId
  *      A symbol ID, potentially frozen by `freezeSymbolId()`.
- * @returns {boolean}:
+ * @returns {boolean}
  *      Whether the supplied symbol ID is frozen.
  */
 export function isSymbolIdFrozen(symbolId) {
@@ -51,13 +53,13 @@ export function isSymbolIdFrozen(symbolId) {
  *
  * All symbol IDs in the mapping and in the shells will be frozen.
  *
- * @param {object} symbolShells:
+ * @param {object} symbolShells
  *      A mapping of {symbolId: symbolShell}.
- * @param {int} nonce:
+ * @param {int} nonce
  *      A number unique to this particular snapshot of the program state among all snapshots of the program state.
  *      Generally, this means that `nonce` should be unique to the watch statement that produced these shells. Note
  *      that `nonce` must match the `nonce` supplied to `freezeSymbolData()` for the same watch statement.
- * @returns {object}:
+ * @returns {object}
  *      The frozen {symbolId: symbolShell} mapping.
  */
 export function freezeSymbolShells(symbolShells, nonce) {
@@ -73,13 +75,13 @@ export function freezeSymbolShells(symbolShells, nonce) {
  *
  * Operations are performed in-place to prevent wasteful duplication of large data structures, like tensors.
  *
- * @param {object} symbolData:
+ * @param {object} symbolData
  *      A symbol's data object.
- * @param {int} nonce:
+ * @param {int} nonce
  *      A number unique to this particular snapshot of the program state among all snapshots of the program state.
  *      Generally, this means that `nonce` should be unique to the watch statement that produced this data object. Note
  *      that `nonce` must match the `nonce` supplied to `freezeSymbolShells()` for the same watch statement.
- * @returns {object}:
+ * @returns {object}
  *      `symbolData` with all symbol IDs contained therein frozen.
  */
 export function freezeSymbolData(symbolData, nonce) {
@@ -92,9 +94,9 @@ export function freezeSymbolData(symbolData, nonce) {
  *
  * Returns `true` for both frozen and unfrozen symbol IDs.
  *
- * @param {*} value:
+ * @param {*} value
  *      The variable to be checked.
- * @returns {boolean}:
+ * @returns {boolean}
  *      Whether `value` is a symbol ID string.
  */
 function isSymbolId(value) {
@@ -107,9 +109,9 @@ function isSymbolId(value) {
  *
  * Operations are performed in-place.
  *
- * @param {object | array} item:
+ * @param {object | array} item
  *      An object or array that may contain symbol IDs to be frozen.
- * @param {int} nonce:
+ * @param {int} nonce
  *      The `nonce` to use in freezing the symbol IDs.
  */
 function freezeSymbolDataRecurse(item, nonce) {

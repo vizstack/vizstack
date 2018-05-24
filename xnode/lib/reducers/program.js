@@ -70,25 +70,25 @@ function addSymbolDataReducer(state, action) {
     return state.setIn(['symbolTable', symbolId, 'data'], symbolData);
 }
 
-/**
- * Given the newly-acquired data for a particular symbol and an object containing the shells referenced by it, add the
- * new shells and fill in the symbol's data field.
- */
-function ensureSymbolDataLoadedReducer(state, action) {
-    const { symbolId, data, shells } = action;
-    // It's important that `shells` be the first argument, so existing symbols are not overwritten
-    return Immutable.merge({symbolTable: shells}, state, {deep: true}).setIn(['symbolTable', symbolId, 'data'], data);
-}
-
-/**
- * Given a new namespace dict, reset the entire symbol table to only contain that namespace.
- * TODO be smarter with updating; don't wipe data that you don't need to.
- */
-function updateNamespaceReducer(state, action) {
-    const { programState, stackFrame, namespace } = action;
-    return Immutable({
-        symbolTable: namespace,
-        stackFrame,
-        programState,
-    });
-}
+// /**
+//  * Given the newly-acquired data for a particular symbol and an object containing the shells referenced by it, add the
+//  * new shells and fill in the symbol's data field.
+//  */
+// function ensureSymbolDataLoadedReducer(state, action) {
+//     const { symbolId, data, shells } = action;
+//     // It's important that `shells` be the first argument, so existing symbols are not overwritten
+//     return Immutable.merge({symbolTable: shells}, state, {deep: true}).setIn(['symbolTable', symbolId, 'data'], data);
+// }
+//
+// /**
+//  * Given a new namespace dict, reset the entire symbol table to only contain that namespace.
+//  * TODO be smarter with updating; don't wipe data that you don't need to.
+//  */
+// function updateNamespaceReducer(state, action) {
+//     const { programState, stackFrame, namespace } = action;
+//     return Immutable({
+//         symbolTable: namespace,
+//         stackFrame,
+//         programState,
+//     });
+// }

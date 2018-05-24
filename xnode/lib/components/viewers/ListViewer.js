@@ -46,7 +46,7 @@ class ListViewer extends Component {
         }
     }
 
-    buildListComponents(classes, contents, symbolTable, addViewerToCanvas) {
+    buildListComponents(classes, contents, symbolTable, loadDataAndAddViewerToCanvas) {
         const { hover, selected } = this.state;
         return contents.map((ref, i) => {
             let str = ref;
@@ -65,9 +65,9 @@ class ListViewer extends Component {
             else if (typeof ref === 'boolean') {
                 str = ref ? 'True' : 'False';
             }
-            else if (ref.startsWith(REF)) {
+            else if (ref.startsWith(REF)) {  // TODO: refactor
                 str = symbolTable[ref].str;
-                onDoubleClick = () => addViewerToCanvas(ref);
+                onDoubleClick = () => loadDataAndAddViewerToCanvas(ref);
             }
             else {
                 str = `"${str}"`;
@@ -95,10 +95,10 @@ class ListViewer extends Component {
      * the clicked entry is a non-primitive.
      */
     render() {
-        const { classes, payload, symbolTable, addViewerToCanvas } = this.props;
+        const { classes, payload, symbolTable, loadDataAndAddViewerToCanvas } = this.props;
         const { contents } = payload;
         const { hover } = this.state;
-        let listItems = this.buildListComponents(classes, contents, symbolTable, addViewerToCanvas);
+        let listItems = this.buildListComponents(classes, contents, symbolTable, loadDataAndAddViewerToCanvas);
         return (
             <div className={classes.container} >
                 <div className={classes.listBox}>
@@ -186,11 +186,4 @@ function makeMapStateToProps() {  // Second argument `props` is manually set pro
     };
 }
 
-/** Connects bound action creator functions to component props. */
-function mapDispatchToProps(dispatch) {
-    return bindActionCreators({
-        addViewerToCanvas:  addViewerActionThunk,
-    }, dispatch);
-}
-
-export default connect(makeMapStateToProps, mapDispatchToProps)(withStyles(styles)(ListViewer));
+export default connect(makeMapStateToProps)(withStyles(styles)(ListViewer));

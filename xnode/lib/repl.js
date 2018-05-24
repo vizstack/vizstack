@@ -61,11 +61,8 @@ export default class REPL {
     constructor(scriptPath) {
         // Initialize REPL state
         this.scriptPath = scriptPath;  // Main script this REPL is tied to
-        this.watchStatements = {};     // mapping of file->lineno->{actions:[], decorations: []} for each watched line
+        this.watchStatements = {};     // Mapping of file->lineno->{actions:[], decorations: []} for each watched line
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
-
-        // TODO: uncomment this to test REPL
-        // this.toggleWatchStatement(path.join(__dirname, '../dummy.py'), 9);
 
         // Initialize Redux store & connect to main reducer
         this.store = createStore(mainReducer, composeWithDevTools(
@@ -77,7 +74,7 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={theme}>
-                    <Canvas />
+                    <Canvas fetchSymbolData={this.fetchSymbolData} />
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element
@@ -135,6 +132,7 @@ export default class REPL {
     // =================================================================================================================
     // Atom-specific behaviors
     // ================================================================================================================
+
     /**
      * Adds Atom workspace decorations associated with a to-be-added watch expression.
      * @param {string} filePath
@@ -146,6 +144,7 @@ export default class REPL {
      */
     addWatchDecorations(filePath, lineNum, action) {
         // TODO: this assumes that the active editor contains the changed file
+        // see https://github.com/willyelm/xatom-debug/blob/master/lib/breakpoint/BreakpointManager.js
         let editor = atom.workspace.getActiveTextEditor();
         let gutter = editor.gutterWithName('xnode-watch-gutter');
         let cursorPosition = editor.getCursorBufferPosition();
@@ -169,6 +168,7 @@ export default class REPL {
      *      Not currently used.
      */
     removeWatchDecorations(filePath, lineNum, action) {
+        // TODO can't we push this like the example?
         this.watchStatements[filePath][lineNum].decorations.forEach(decoration => decoration.destroy());
     }
 

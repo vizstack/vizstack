@@ -1,9 +1,9 @@
 'use babel';
 
 import { CompositeDisposable, Disposable } from 'atom';
+import path from 'path';
 
 import REPL from './repl';
-import path from 'path';
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when

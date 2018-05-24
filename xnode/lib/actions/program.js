@@ -9,23 +9,32 @@ export const SymbolTableActions = {
     ADD_SHELLS:    "SYMBOLTABLE::ADD_SHELLS",
     ADD_DATA:      "SYMBOLTABLE::ADD_DATA",
     CLEAR_TABLE:   "SYMBOLTABLE::CLEAR_TABLE",
-
-    ENSURE_SYMBOL_DATA_LOADED:  "SYMBOLTABLE::ENSURE_SYMBOL_DATA_LOADED",
 };
 
+/**
+ *
+ * @returns {{type: string}}
+ */
 export function clearSymbolTableAction() {
     return {
         type: SymbolTableActions.CLEAR_TABLE,
     }
 }
 
+/**
+ *
+ * @param symbolId
+ * @param symbolShells
+ * @param symbolData
+ * @param freezeNonce
+ * @returns {function(*)}
+ */
 export function addSymbolActionThunk(symbolId, symbolShells, symbolData, freezeNonce) {
     return (dispatch) => {
         dispatch(addSymbolShellsAction(symbolShells, freezeNonce));
         dispatch(addSymbolDataAction(symbolId, symbolData, freezeNonce));
     };
 }
-
 function addSymbolShellsAction(symbolShells, freezeNonce) {
     return {
         type: SymbolTableActions.ADD_SHELLS,
@@ -33,7 +42,6 @@ function addSymbolShellsAction(symbolShells, freezeNonce) {
         freezeNonce,
     };
 }
-
 function addSymbolDataAction(symbolId, symbolData, freezeNonce) {
     return {
         type: SymbolTableActions.ADD_DATA,
@@ -43,42 +51,15 @@ function addSymbolDataAction(symbolId, symbolData, freezeNonce) {
     };
 }
 
-
-
-
-/** Action which updates a symbol's data with a newly-fetched object and adds shells referenced therein to the symbol
-    table. */
-function ensureSymbolDataLoadedAction(symbolId, data, shells) {
-    return {
-        type: SymbolTableActions.ENSURE_SYMBOL_DATA_LOADED,
-        symbolId,
-        data,
-        shells,
-    };
-}
-
-function fetchSymbolData(symbolId) {
-    return fetch(`/api/debug/load_symbol/${symbolId.replace(`${REF}`, '')}`);
-}
-
-function fetchNamespace() {
-    return fetch('/api/debug/get_namespace');
-}
-
-/** Action which resets the symbol table to contain a new namespace. */
-export function updateNamespaceAction(programState, stackFrame, namespace) {
-    return {
-        type: SymbolTableActions.UPDATE_NAMESPACE,
-        programState,
-        stackFrame,
-        namespace,
-    };
-}
+/**
+ * =================================================================================================================
+ */
 
 /**
  * Loads the data for `symbolId` if needed, then calls itself for each parent of the symbol, thereby building the graph.
  * This function can be dispatched and chained with `.then()` statements, which will only execute when the graph has
  * loaded completely.
+ * TODO: Re-factor to make general purpose
  */
 function ensureGraphLoadedRecurseActionThunk(symbolId, confirmed) {
     return (dispatch, getState) => {
@@ -144,38 +125,3 @@ export function ensureGraphLoadedActionThunk(symbolId, viewerId) {
     }
 }
 
-/** Action creator to fetch the data about a symbol and add it to the symbol table; only executes if the symbol data
-    has not already been loaded. */
-export function ensureSymbolDataLoadedActionThunk(symbolId) {
-    return (dispatch, getState) => {
-        const dataInCache = getState().program.symbolTable[symbolId].data;
-        if (dataInCache !== null) {
-            // You don’t have to return Promises, but it’s a handy convention
-            // so the caller can always call .then() on async dispatch result.
-            return Promise.resolve();
-        }
-        return fetchSymbolData(symbolId).then(
-            resp => resp.json().then(
-                ({ data, shells }) => dispatch(ensureSymbolDataLoadedAction(symbolId, data, shells)),
-            ),
-        );
-    }
-}
-
-/** Action creator to fetch the data about a symbol and add it to the symbol table. */
-export function updateNamespaceActionThunk() {
-    return (dispatch) => {
-        return fetchNamespace().then(
-            resp => resp.json().then(
-                ({ context, namespace }) => {
-                    dispatch(updateNamespaceAction('waiting', context, namespace));
-                }
-            )
-        ).catch(
-            error => {
-                // TODO currently end-of-program behavior is addressed here and in controlbar.js. Find a way to unify
-                dispatch(updateNamespaceAction('disconnected', null, {}))
-            }
-        );
-    }
-}
