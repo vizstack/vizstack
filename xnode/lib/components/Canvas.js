@@ -21,7 +21,7 @@ import NumberViewer from './viewers/NumberViewer';
 import StringViewer from './viewers/StringViewer';
 import TensorViewer from './viewers/TensorViewer';
 import GraphViewer  from './viewers/GraphViewer';
-import ListViewer   from './viewers/ListViewer';
+import ListViewer, { assembleListModel }   from './viewers/ListViewer';
 
 // Custom Redux actions
 import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../actions/canvas";
@@ -53,7 +53,6 @@ class Canvas extends Component {
             viewerId: viewer.viewerId,
             payload: viewer.payload,
             str: viewer.str,
-
             loadDataAndAddViewerToCanvas: (symbolId) => {
                 fetchSymbolData(symbolId);
                 addViewerFn(symbolId);
@@ -61,8 +60,9 @@ class Canvas extends Component {
         };
 
         switch(viewer.type) {
+            let viewer = null;
             case "number":
-                return <NumberViewer {...props}/>;
+                viewer = <NumberViewer {...props}/>;
             case "string":
                 return <StringViewer {...props}/>;
             case "tensor":
@@ -144,6 +144,8 @@ const styles = theme => ({
  *     }
  * ]
  */
+// TODO: This selector doesn't seem to be very effective because it's still rerendering each elem in the Canvas
+    // whenever the symbol table changes.
 const viewersSelector = createSelector(
     [(state) => state.canvas.viewerObjects, (state) => state.canvas.viewerPositions, (state) => state.program.symbolTable],
     (viewerObjects, viewerPositions, symbolTable) => {

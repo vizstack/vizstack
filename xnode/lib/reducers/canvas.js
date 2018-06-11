@@ -3,7 +3,7 @@
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from '../actions/canvas';
 
-import { freezeSymbolId } from '../services/freeze_utils';
+import { freezeSymbolId } from '../services/symbol-utils';
 
 /**
  * State slice structure for `canvas`: {

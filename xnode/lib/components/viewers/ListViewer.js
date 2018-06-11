@@ -4,17 +4,13 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { withStyles } from 'material-ui/styles';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
 import { createSelector } from "reselect";
 
-import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../../actions/canvas";
-import { REF } from '../../services/mockdata.js';
-
-import Button from 'material-ui/Button';
 import Typography from 'material-ui/Typography';
-import ColorLightBlue from "material-ui/colors/lightBlue";
-import ColorBlue from "material-ui/colors/blue";
+import ColorLightBlue from 'material-ui/colors/lightBlue';
+import ColorBlue from 'material-ui/colors/blue';
+
+import { isSymbolId } from '../../services/symbol-utils';
 
 
 /** Constants for list/sequence visualization. */
@@ -24,17 +20,26 @@ const kListItemMargin = 2;
 
 
 /**
- * This smart component renders an sequence variable (tuple, list, set).
+ * This dumb component renders an sequence variable (tuple, list, set).
  */
 class ListViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        classes:    PropTypes.object.isRequired,
-        symbolId:   PropTypes.string.isRequired,
-        viewerId:   PropTypes.number.isRequired,
-        str:        PropTypes.string.isRequired,
-        payload:    PropTypes.object.isRequired,
+        classes: PropTypes.object.isRequired,
+        symbolId: PropTypes.string.isRequired,
+        viewerId: PropTypes.number.isRequired,
+        str: PropTypes.string.isRequired,
+        payload: PropTypes.object.isRequired,
+
+        /** Data model rendered by this viewer. */
+        model: PropTypes.array.isRequired,
+
+        /** Generates a sub-viewer for a particular element of the list. */
+        expandSubviewer: PropTypes.func.isRequired,
+
+        /** Unfreezes this viewer so it reflects the latest version of its symbol. */
+        unfreezeViewer: PropTypes.func.isRequired,
     };
 
     /** Constructor. */
@@ -46,59 +51,39 @@ class ListViewer extends Component {
         }
     }
 
-    buildListComponents(classes, contents, symbolTable, loadDataAndAddViewerToCanvas) {
-        const { hover, selected } = this.state;
-        return contents.map((ref, i) => {
-            let str = ref;
-            let onClick = () => {
-                this.setState({
-                    selected: i,
-                })
-            };
-            let onDoubleClick = () => {};
-            if (ref === null) {
-                str = 'None';
-            }
-            else if (typeof ref === 'number') {
-                str = `${ref}`;
-            }
-            else if (typeof ref === 'boolean') {
-                str = ref ? 'True' : 'False';
-            }
-            else if (ref.startsWith(REF)) {  // TODO: refactor
-                str = symbolTable[ref].str;
-                onDoubleClick = () => loadDataAndAddViewerToCanvas(ref);
-            }
-            else {
-                str = `"${str}"`;
-            }
-
-            return (
-                <div className={classNames({
-                    [classes.listItem]: true,
-                    [classes.hover]: hover === i,
-                    [classes.selected]: selected === i,
-                })}
-                     onClick={onClick}
-                     onDoubleClick={onDoubleClick}
-                     onMouseEnter={() => this.setState({hover: i})}
-                     onMouseLeave={() => this.setState({hover: null})}
-                     key={i}>
-                    <Typography className={classes.listItemText}>{str}</Typography>
-                </div>
-            );
-        });
-    }
-
     /**
      * Renders the list, with each item being a fixed-width button. When clicked, the button opens the viewer, if
      * the clicked entry is a non-primitive.
      */
     render() {
-        const { classes, payload, symbolTable, loadDataAndAddViewerToCanvas } = this.props;
-        const { contents } = payload;
-        const { hover } = this.state;
-        let listItems = this.buildListComponents(classes, contents, symbolTable, loadDataAndAddViewerToCanvas);
+        const { classes, model, expandSubviewer, unfreezeViewer } = this.props;
+        const { hover, selected } = this.state;
+
+        const listItems = model.map((elem, idx) => {
+
+            let onClick = () => {
+                this.setState({
+                    selected: idx,
+                })
+            };
+            let onDoubleClick = elem.ref !== null ? (() => expandSubviewer(elem.ref)) : undefined;
+
+            return (
+                <div className={classNames({
+                    [classes.listItem]: true,
+                    [classes.hover]: hover === idx,
+                    [classes.selected]: selected === idx,
+                })}
+                     onClick={onClick}
+                     onDoubleClick={onDoubleClick}
+                     onMouseEnter={() => this.setState({hover: idx})}
+                     onMouseLeave={() => this.setState({hover: null})}
+                     key={idx}>
+                    <Typography className={classes.listItemText}>{elem.text}</Typography>
+                </div>
+            );
+        });
+
         return (
             <div className={classes.container} >
                 <div className={classes.listBox}>
@@ -162,28 +147,43 @@ const styles = theme => ({
         whiteSpace:     'nowrap',
         textTransform:  'none',
     },
-    tooltip: {
-
-    },
-    tooltipStr: {
-
-    },
-    tooltipDetail: {
-        fontStyle: 'italic'
-    }
 });
 
+export default withStyles(styles)(ListViewer);
 
-// To inject application state into component
-// ------------------------------------------
+/**
+ * Assembles data model rendered by a ListViewer:
+ * [{
+ *     text: "List[4]",
+ *     ref: "@id:..." | null,
+ * },...]
+ *
+ * @param {object} payload
+ *     Payload object as defined in data schema.
+ * @param {object} symbolTable
+ *     Reference to the application symbol table.
+ * @return {array}
+ *     Data model rendered by a ListViewer.
+ */
+export function assembleListModel(payload, symbolTable) {
+    const { contents } = payload;
+    return contents.map((elem) => {
+        let text = '';
+        let ref = null;
 
-/** Connects application state objects to component props. */
-function makeMapStateToProps() {  // Second argument `props` is manually set prop
-    return (state, props) => {
-        return {
-            symbolTable: state.program.symbolTable,  // TODO make a selector for only relevant portions of the symbol table
-        };
-    };
+        if (elem === null) {  // none
+            text = 'None';
+        } else if (typeof elem === 'number') {  // number
+            text = `${elem}`;
+        } else if (typeof elem === 'boolean') {  // boolean
+            text = elem ? 'True' : 'False';
+        } else if (isSymbolId(elem)) {  // symbolId reference
+            ref = elem;
+            text = symbolTable[elem].str;
+        } else {  // string
+            text = `"${elem}"`;
+        }
+
+        return { text, ref };
+    });
 }
-
-export default connect(makeMapStateToProps)(withStyles(styles)(ListViewer));

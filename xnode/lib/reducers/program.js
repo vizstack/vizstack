@@ -2,7 +2,7 @@
 
 import Immutable from 'seamless-immutable';
 import { SymbolTableActions } from '../actions/program';
-import { freezeSymbolShells, freezeSymbolId, freezeSymbolData } from '../services/freeze_utils';
+import { freezeSymbolShells, freezeSymbolId, freezeSymbolData } from '../services/symbol-utils';
 
 /**
  * State slice structure for `program`: {

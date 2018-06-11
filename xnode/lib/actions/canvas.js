@@ -1,7 +1,7 @@
 'use babel';
 
 import { ensureSymbolDataLoadedActionThunk } from "./program";
-import { isSymbolIdFrozen } from '../services/freeze_utils';
+import { isSymbolIdFrozen } from '../services/symbol-utils';
 
 /** Action type definitions. */
 export const CanvasActions = {

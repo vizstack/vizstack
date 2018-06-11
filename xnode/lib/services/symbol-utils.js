@@ -4,6 +4,8 @@
  * TODO: explainer on frozen symbols, is symbol Id rather than ref.startswith(REF)
  */
 
+/** This string prefix marks special strings that are interpreted as symbol IDs. */
+export const ID_PREFIX = "@id:";
 
 
 /**
@@ -33,6 +35,18 @@ export function freezeSymbolId(symbolId, nonce) {
  */
 export function unfreezeSymbolId(frozenSymbolId) {
     return frozenSymbolId.substring(0, frozenSymbolId.indexOf('!'));
+}
+
+/**
+ * Determines if a string ia a symbol ID.
+ *
+ * @param {string} symbolId
+ *      A potential symbol ID string.
+ * @returns {boolean}
+ *      Whether the supplied string symbol ID is a symbol ID.
+ */
+export function isSymbolId(symbolId) {
+    return symbolId.startsWith(ID_PREFIX);
 }
 
 /**
