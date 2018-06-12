@@ -35,44 +35,84 @@ class Canvas extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** */
+        /** JSS styling classes object. */
         classes: PropTypes.object.isRequired,
 
-        /** */
+        /**
+         * See `REPL.fetchSymbolData(symbolId)`.
+         */
         fetchSymbolData: PropTypes.func.isRequired,
+
+        /**
+         * Creates a new viewer for the specified symbol at the end of the Canvas.
+         *
+         * @param symbolId
+         */
+        addViewer: PropTypes.func.isRequired,
+
+        /**
+         * Removes the viewer with the specified symbol from the Canvas.
+         *
+         * @param symbolId
+         */
+        removeViewer: PropTypes.func.isRequired,
+
+        /**
+         *
+         */
+        updateLayout: PropTypes.func.isRequired,
+
+        /** See `viewersSelector` in `Canvas`. */
+        viewers: PropTypes.array.isRequired,
+
+        /** See `viewerPositions` in `reducers/canvas`. */
+        layout:  PropTypes.array.isRequired,
+
+        /** See `symbolTable` in `reducers/program`. */
+        symbolTable: PropTypes.object.isRequired,
+
     };
 
     /**
      * Returns the [*]Viewer component of the proper type for the given viewer data object.
      */
     createViewerComponent(viewer) {
-        const { addViewerFn, fetchSymbolData } = this.props;
+        const { addViewer, fetchSymbolData, symbolTable } = this.props;
+        const { symbolId, viewerId, type, name, str, data} = viewer;
 
         const props = {
-            symbolId: viewer.symbolId,
-            viewerId: viewer.viewerId,
-            payload: viewer.payload,
-            str: viewer.str,
-            loadDataAndAddViewerToCanvas: (symbolId) => {
+            symbolId,
+            viewerId,
+            type,
+            name,
+            str,
+            expandSubviewer: (symbolId) => {
                 fetchSymbolData(symbolId);
-                addViewerFn(symbolId);
+                addViewer(symbolId);
+            },
+            unfreezeViewer: () => {
+                // TODO: viewer.viewerId
             }
         };
 
         switch(viewer.type) {
-            let viewer = null;
             case "number":
-                viewer = <NumberViewer {...props}/>;
+                return <NumberViewer {...props}/>;
+
             case "string":
                 return <StringViewer {...props}/>;
+
             case "tensor":
                 return <TensorViewer {...props}/>;
+
             case "graphdata":
                 return <GraphViewer {...props}/>;
+
             case "list":
             case "tuple":
             case "set":
-                return <ListViewer {...props}/>;
+                return <ListViewer {...props} model={assembleListModel(data, symbolTable)}/>;
+
             default:
                 return null;
             // TODO: Add more viewers
@@ -83,7 +123,7 @@ class Canvas extends Component {
      * Renders the inspector canvas and any viewers currently registered to it.
      */
     render() {
-        const { classes, viewers, removeViewerFn, layout, updateLayoutFn } = this.props;
+        const { classes, viewers, removeViewer, layout, updateLayout} = this.props;
         let frames = viewers.map((viewer) => {
             return (
                 <div key={viewer.viewerId} className={classes.frameContainer}>
@@ -91,7 +131,7 @@ class Canvas extends Component {
                                  viewerId={viewer.viewerId}
                                  type={viewer.type}
                                  name={viewer.name}
-                                 removeViewerFn={removeViewerFn}>
+                                 removeViewer={() => removeViewer(viewer.viewerId)}>
                         {this.createViewerComponent(viewer)}
                     </ViewerFrame>
                 </div>
@@ -104,7 +144,7 @@ class Canvas extends Component {
                 'native-key-bindings': true,
             })}>
                 <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
-                                    onLayoutChange={updateLayoutFn} draggableCancel=".ReactGridLayoutNoDrag">
+                                    onLayoutChange={updateLayout} draggableCancel=".ReactGridLayoutNoDrag">
                     {frames}
                 </FlexibleGridLayout>
             </div>
@@ -140,7 +180,7 @@ const styles = theme => ({
  *         type: "number",
  *         name: "myInt",
  *         str:  "86",
- *         payload: {...}
+ *         data: {...}
  *     }
  * ]
  */
@@ -159,7 +199,7 @@ const viewersSelector = createSelector(
                 type:     symbol.type,
                 name:     symbol.name,
                 str:      symbol.str,
-                payload:  viewerObj.payload.merge(symbol.data && symbol.data.viewer),  // TODO: Why this?
+                data:     symbol.data,
             };
         });
     }
@@ -168,17 +208,18 @@ const viewersSelector = createSelector(
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers: viewersSelector(state),
-        layout:  state.canvas.viewerPositions,
+        viewers:     viewersSelector(state),
+        layout:      state.canvas.viewerPositions,
+        symbolTable: state.program.symbolTable,
     };
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addViewerFn:    addViewerActionThunk,
-        removeViewerFn: removeViewerAction,
-        updateLayoutFn: updateLayoutAction,
+        addViewer:    addViewerActionThunk,
+        removeViewer: removeViewerAction,
+        updateLayout: updateLayoutAction,
     }, dispatch);
 }
 

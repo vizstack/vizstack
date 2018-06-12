@@ -9,9 +9,8 @@ import { freezeSymbolId } from '../services/symbol-utils';
  * State slice structure for `canvas`: {
  *     'nextViewerId': 1,
  *     'viewerObjects': {
- *         0' {
+ *         0: {
  *             symbolId: "@id:12345"
- *             payload: {},
  *         }
  *     },
  *     'viewerPositions': [{
@@ -62,7 +61,7 @@ function addViewerReducer(state, action) {
     const { nextViewerId } = state;
     return state.setIn(['viewerObjects', nextViewerId], {
         symbolId: freezeNonce >= 0 ? freezeSymbolId(symbolId, freezeNonce) : symbolId,
-        payload: {},
+        data: {},
     }).update('nextViewerId', (prev) => prev + 1)
         .update('viewerPositions', (prev) => prev.concat([{
             i: `${state.nextViewerId}`,

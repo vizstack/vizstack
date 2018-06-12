@@ -5,7 +5,6 @@ import PropTypes from "prop-types";
 import classNames from 'classnames';
 import { withStyles } from 'material-ui/styles';
 
-import Paper from 'material-ui/Paper';
 import IconButton from 'material-ui/IconButton';
 import CloseIcon from 'material-ui-icons/Close';
 
@@ -23,21 +22,26 @@ class ViewerFrame extends Component {
         viewerId: PropTypes.number.isRequired,
         type:     PropTypes.string.isRequired,
         name:     PropTypes.string,
+
+        /**
+         * Removes this viewer from the Canvas.
+         */
+        removeViewer: PropTypes.func.isRequired,
     };
 
     /**
      * Renders a frame with a close button, and any of the component's children..
      */
     render() {
-        const { classes, children, name, type, viewerId, removeViewerFn } = this.props;
+        const { classes, children, name, type, removeViewer } = this.props;
         return (
             <div className={classNames('xn-viewer-frame', classes.container)}>
                 <div className={classNames('xn-viewer-frame-header', classes.header)}>
                     <span className={classes.title}>
                         {`${name ? name + " " : ""}[${type}]`}
                     </span>
-                    <IconButton className={classes.button} aria-label="Close"
-                                onClick={() => removeViewerFn(viewerId)}>
+                    <IconButton aria-label="Close"
+                                onClick={() => removeViewer()}>
                         <CloseIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
                     </IconButton>
                 </div>
@@ -78,10 +82,6 @@ const styles = theme => ({
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         textAlign: 'center',
-    },
-    button: {
-        height: 15,
-        width: 15,
     },
     content: {
         overflow: 'hidden',

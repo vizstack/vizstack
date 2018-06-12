@@ -7,13 +7,18 @@ import { withStyles } from 'material-ui/styles';
 import { createSelector } from "reselect";
 
 import Typography from 'material-ui/Typography';
+import IconButton from 'material-ui/IconButton';
+
+import LockedIcon from 'material-ui-icons/Lock';
+import UnlockedIcon from 'material-ui-icons/LockOpen';
+
 import ColorLightBlue from 'material-ui/colors/lightBlue';
 import ColorBlue from 'material-ui/colors/blue';
 
 import { isSymbolId } from '../../services/symbol-utils';
 
 
-/** Constants for list/sequence visualization. */
+/** Constants for visualization. */
 const kListItemWidth  = 80;
 const kListItemHeight = 40;
 const kListItemMargin = 2;
@@ -26,19 +31,29 @@ class ListViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
+        /** JSS styling classes object. */
         classes: PropTypes.object.isRequired,
+
+        /** Unique ID of the Python symbol backing this viewer. */
         symbolId: PropTypes.string.isRequired,
+
+        /** Unique ID of this viewer in the Canvas. */
         viewerId: PropTypes.number.isRequired,
-        str: PropTypes.string.isRequired,
-        payload: PropTypes.object.isRequired,
 
         /** Data model rendered by this viewer. */
         model: PropTypes.array.isRequired,
 
-        /** Generates a sub-viewer for a particular element of the list. */
+        /**
+         * Generates a sub-viewer for a particular element of the list.
+         *
+         * @param symbolId
+         *     Symbol ID of the element for which to create a new viewer.
+         */
         expandSubviewer: PropTypes.func.isRequired,
 
-        /** Unfreezes this viewer so it reflects the latest version of its symbol. */
+        /**
+         * Unfreezes this viewer so its data model reflects the latest version the backing Python symbol.
+         */
         unfreezeViewer: PropTypes.func.isRequired,
     };
 
@@ -86,6 +101,10 @@ class ListViewer extends Component {
 
         return (
             <div className={classes.container} >
+                <IconButton aria-label="Unfreeze Viewer"
+                            onClick={() => unfreezeViewer()}>
+                    <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
+                </IconButton>
                 <div className={classes.listBox}>
                     <div className={classes.list}>
                         {listItems}
