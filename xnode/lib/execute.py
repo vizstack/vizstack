@@ -107,14 +107,17 @@ class ScriptExecutor(pdb.Pdb):
         The symbol with given ID is expected to exist as a shell within `self.viz_engine`.
 
         Args:
-            request_dict (dict): An object of the form returned by `get_fetch_request()`.
+            request_dict (dict): An object of the form returned by `engine.get_fetch_request()`.
 
         Returns:
             (object) of form {data: {data object}, shells: {symbol id: shell}}
         """
-        data, shells, attributes = self.viz_engine.get_symbol_data(request_dict['symbolid'])
-        self.schema_queue.put(self._schema_to_message(shells, data, request_dict['symbolid'], -1, False,
-                                                      request_dict['recurse']))
+        self._setup_message(False, -1)
+        symbol_id = request_dict['symbol_id']
+        shells = self.viz_engine.get_symbol_shell_by_id(symbol_id)
+        symbol_slice = self._get_symbol_slice(symbol_id, shells)
+        self._add_schema(symbol_id, symbol_slice)
+        self._send_message()
 
     # ==================================================================================================================
     # Watch expression logic.
@@ -125,7 +128,8 @@ class ScriptExecutor(pdb.Pdb):
 
     def _handle_break(self, frame):
         self._setup_message(False, self.watch_count)
-        symbol_id = self._add_schema(self.var_to_eval, frame)
+        symbol_id, symbols = self._get_schema_obj(self.var_to_eval, frame)
+        self._add_schema(symbol_id, symbols)
         self._handle_recurse(symbol_id)
         self._send_message()
         self.watch_count += 1
@@ -186,11 +190,9 @@ class ScriptExecutor(pdb.Pdb):
         self.to_send = dict()
         self.var_to_eval = None
 
-    def _add_schema(self, var_to_eval, frame):
-        symbol_id, symbols = self._get_schema_obj(var_to_eval, frame)
+    def _add_schema(self, symbol_id, symbols):
         self.to_send['viewSymbol'] = symbol_id
         self.to_send['symbols'].update(symbols)
-        return symbol_id
 
     # TODO !!: view_symbol
     def _setup_message(self, refresh, watch_count):
@@ -217,6 +219,13 @@ class ScriptExecutor(pdb.Pdb):
         """
         return self._get_var_from_line(self._get_line_from_frame(frame))
 
+    def _get_symbol_slice(self, symbol_id, shell):
+        data, refs, attributes = self.viz_engine.get_symbol_data(symbol_id)
+        refs.update({symbol_id: shell})
+        refs[symbol_id]['data'] = data
+        refs[symbol_id]['attributes'] = attributes
+        return refs
+
     # TODO: update documentation to reflect that this returns a str
     def _get_schema_obj(self, var_name, frame):
         """Creates an object with the schema for `var_name` evaluated at `frame`, as well as shells for all
@@ -241,11 +250,8 @@ class ScriptExecutor(pdb.Pdb):
             obj_found = True
         if obj_found:
             symbol_id, shell = self.viz_engine.get_symbol_shell(obj, name=var_name)
-            data, refs, attributes = self.viz_engine.get_symbol_data(symbol_id)
-            refs.update({symbol_id: shell})
-            refs[symbol_id]['data'] = data
-            refs[symbol_id]['attributes'] = attributes
-            return symbol_id, refs
+            symbol_slice = self._get_symbol_slice(symbol_id, shell)
+            return symbol_id, symbol_slice
         else:
             raise ValueError
 

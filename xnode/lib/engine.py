@@ -154,6 +154,7 @@ def get_watch_expression(message):
     Returns:
         (dict) of form {file: str, lineno: int, action: ?}
     """
+    # TODO: think deeper about what "action" should look like
     contents = message.replace(WATCH_HEADER, '').split('?')
     return {
         'file': contents[0],
@@ -191,7 +192,7 @@ def get_fetch_request(message):
     # TODO: change to action format
     contents = message.replace(FETCH_HEADER, '').split('?')
     return {
-        'symbolid': contents[0],
+        'symbol_id': contents[0],
         'recurse': [] if len(contents[1]) == 0 else [path.split('/') for path in contents[1].split('+')],
     }
 
@@ -333,6 +334,8 @@ def main():
     read inputs. None of the called functions are blocking, so the loop immediately returns to wait for the next
     message.
     """
+
+    # TODO !!!: suppress print statements in the running program
     script_path = read_args()
     executor = None
     watches = []

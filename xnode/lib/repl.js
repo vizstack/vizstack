@@ -80,7 +80,7 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={theme}>
-                    <Canvas fetchSymbolData={this.fetchSymbolData} />
+                    <Canvas fetchSymbolData={(symbolId) => this.fetchSymbolData(symbolId)} />
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element
@@ -307,7 +307,9 @@ export default class REPL {
      *      The identifier of the symbol, as acquired from a reference in the symbol table.
      */
     fetchSymbolData(symbolId) {
-        this.executionEngine.send(`fetch:${symbolId}`);
+        console.debug(`repl -- fetching symbol (${symbolId})`);
+        // TODO: switch from recurse as an option to the watch action format?
+        this.executionEngine.send(`fetch:${symbolId}?${DEFAULT_ACTION['recurse']}`);
     }
 
     /**

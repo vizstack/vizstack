@@ -506,7 +506,17 @@ class VisualizationEngine:
         data, refs = symbol_type_info.data_fn(self, symbol_obj)
         return data, refs, self._get_data_object_attributes(symbol_obj, refs)
 
-    def _get_symbol_shell_by_id(self, symbol_id, name=None):
+    # ==================================================================================================================
+    # Public functions.
+    # -----------------
+    # The functions which generate visualization-ready content about objects in the Python program. Typically,
+    # a user will first acquire the "shell" of a symbol, its lightweight representation that encapsulates its basic
+    # properties. If interested in visualizing the symbol fully, the user will then request its data, a dictionary
+    # which exposes more data-heavy properties of the object needed for visualization, as well as debugging-useful
+    # attributes of the Python object itself.
+    # ==================================================================================================================
+
+    def get_symbol_shell_by_id(self, symbol_id, name=None):
         """Returns a lightweight representation of a given symbol's properties.
 
         Clients should have no need to get a symbol shell by its ID, as in any case where they have acquired a symbol ID
@@ -533,16 +543,6 @@ class VisualizationEngine:
         }
         return self.cache[symbol_id][self.SHELL]
 
-    # ==================================================================================================================
-    # Public functions.
-    # -----------------
-    # The functions which generate visualization-ready content about objects in the Python program. Typically,
-    # a user will first acquire the "shell" of a symbol, its lightweight representation that encapsulates its basic
-    # properties. If interested in visualizing the symbol fully, the user will then request its data, a dictionary
-    # which exposes more data-heavy properties of the object needed for visualization, as well as debugging-useful
-    # attributes of the Python object itself.
-    # ==================================================================================================================
-
     def get_symbol_shell(self, obj, name=None):
         """Builds the lightweight shell dict representation of a given symbol for visualization.
 
@@ -564,7 +564,7 @@ class VisualizationEngine:
         symbol_id = self._get_symbol_id(obj)
         if symbol_id not in self.cache:
             self.cache[symbol_id][self.OBJ] = obj
-        return symbol_id, self._get_symbol_shell_by_id(symbol_id, name)
+        return symbol_id, self.get_symbol_shell_by_id(symbol_id, name)
 
     def get_symbol_data(self, symbol_id):
         """Returns the symbol data object for a particular symbol, as well as the shells of any referenced symbols.
@@ -599,7 +599,7 @@ class VisualizationEngine:
         self.cache[symbol_id][self.ATTRIBUTES] = self._load_symbol_data(symbol_id)
         shells = dict()
         for ref in self.cache[symbol_id][self.REFS]:
-            shells[ref] = self._get_symbol_shell_by_id(ref)
+            shells[ref] = self.get_symbol_shell_by_id(ref)
         return self.cache[symbol_id][self.DATA], shells, self.cache[symbol_id][self.ATTRIBUTES]
 
     def to_json(self, obj):

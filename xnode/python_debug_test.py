@@ -32,5 +32,3 @@ myRNNOutput = myRNN(myRNNInput)
 
 myPseudoLogLSTM = PseudoLogLSTM(myRNNBatchSize, myRNNDims)
 myPseudoLogLSTMOutput = myPseudoLogLSTM(myRNNInput)
-
-print('Goodbye!')
