@@ -61,6 +61,21 @@ export function isSymbolIdFrozen(symbolId) {
     return symbolId.endsWith('!');
 }
 
+export function freezeSymbolSomethings(symbolSomethings, nonce) {
+    const frozenSymbolSomethings = {};
+    Object.entries(symbolSomethings).forEach(([symbolId, symbolSomething]) => {
+        if (symbolSomething.data !== null) {
+            symbolSomething.data = freezeSymbolData(symbolSomething.data, nonce);
+        }
+        if (symbolSomething.attributes !== null) {
+            symbolSomething.attributes = freezeSymbolData(symbolSomething.attributes, nonce);
+        }
+        frozenSymbolSomethings[freezeSymbolId(symbolId, nonce)] = symbolSomething;
+    });
+    console.log(frozenSymbolSomethings);
+    return frozenSymbolSomethings;
+}
+
 /**
  * Creates a frozen version of a mapping of symbol IDs to symbol shells that will not be altered by subsequent updates
  * to the symbol table.
@@ -129,6 +144,9 @@ function isSymbolId(value) {
  *      The `nonce` to use in freezing the symbol IDs.
  */
 function freezeSymbolDataRecurse(item, nonce) {
+    if (item === null) {
+        return;
+    }
     switch(typeof(item)) {
         case 'array':
             item.forEach((elem, i) => {

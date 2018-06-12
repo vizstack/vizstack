@@ -7,6 +7,8 @@ import sys
 
 THREAD_QUIT = 'quit'
 WATCH_HEADER = 'watch:'
+UNWATCH_HEADER = 'unwatch:'
+ACTION_HEADER = 'action:'
 EDIT_HEADER = 'change:'
 FETCH_HEADER = 'fetch:'
 SHIFT_HEADER = 'shift:'
@@ -49,8 +51,8 @@ class ExecutionManager:
         self.print_queue.put(THREAD_QUIT)
         self.print_thread.join()
 
-    def fetch_symbol(self, symbol_id):
-        """Fetches the data object for a symbol with given ID from the subprocess.
+    def fetch_symbol(self, request_dict):
+        """Fetches the data object for a symbol from the subprocess.
 
         The subprocess holds the ground-truth of all objects in the script's namespace, so requests must be forwarded
         to the process itself. These requests are only processed after the script has finished running, and reflect
@@ -61,9 +63,9 @@ class ExecutionManager:
         The fetched symbol schema is written to the `print_queue`, which is printed by the printing thread.
 
         Args:
-            symbol_id (str): the ID of the symbol, as present in the symbol table produced by the process
+            request_dict (dict): A dict encoding the request, as produced by `get_fetch_request()`.
         """
-        self.fetch_queue.put(symbol_id)
+        self.fetch_queue.put(request_dict)
 
     @staticmethod
     def _start_exec_process(script_path, watches):
@@ -156,23 +158,42 @@ def get_watch_expression(message):
     return {
         'file': contents[0],
         'lineno': int(contents[1]),
-        'action': contents[2] if len(contents) > 2 else None
+        'action': {
+            pair.split(':')[0]: pair.split(':')[1] for pair in contents[2].split(';')[:-1]
+        }
     }
 
 
-def get_symbol_id(message):
-    """Translates a string which encodes a symbol data request to a the symbol's ID.
+def get_unwatch_expression(message):
+    """Translates a string which encodes a unwatch expression to an object describing that unwatch expression.
+
+    TODO document
+    """
+    contents = message.replace(UNWATCH_HEADER, '').split('?')
+    return {
+        'file': contents[0],
+        'lineno': int(contents[1]),
+    }
+
+
+def get_fetch_request(message):
+    """Translates a string which encodes a symbol data request to an object describing the request.
 
     Clients such as `repl.js` send strings to the engine's stdin informing the engine of requests for symbol data
     objects. This functions extracts the symbol ID from those strings.
 
     Args:
-        message (str): a string of form 'FETCH_HEADER{symbol_id}'
+        message (str): a string of form 'FETCH_HEADER{symbol_id}?{recurse}'
 
     Returns:
-        (str) the symbol ID
+        (dict) of form {symbolid: str, recurse: bool} TODO
     """
-    return message.replace(FETCH_HEADER, '')
+    # TODO: change to action format
+    contents = message.replace(FETCH_HEADER, '').split('?')
+    return {
+        'symbolid': contents[0],
+        'recurse': [] if len(contents[1]) == 0 else [path.split('/') for path in contents[1].split('+')],
+    }
 
 
 def get_watch_shift(message):
@@ -198,19 +219,29 @@ def get_watch_shift(message):
 # Control how watch expressions are stored and toggled.
 # ======================================================================================================================
 
-def toggle_watch(watches, watch_expression):
-    """Adds a new watch expression, or removes it if it already exists.
+def add_watch(watches, watch_expression):
+    """Adds a new watch expression.
 
     Args:
         watches (list): A list of existing watch expressions, in the format returned by `get_watch_expression()`.
-        watch_expression (dict): A watch expression, which should be removed if present or otherwise added to
-            `watches`.
+        watch_expression (dict): A watch expression, which should be `watches`. No other watch expression should be
+            present at that line.
 
     """
-    if watch_expression in watches:
+    watches.append(watch_expression)
+
+
+def remove_watch(watches, unwatch_expression):
+    to_remove = [watch_expression for watch_expression in watches if watch_expression['file'] == unwatch_expression[
+        'file'] and watch_expression['lineno'] == unwatch_expression['lineno']]
+    for watch_expression in to_remove:
         watches.remove(watch_expression)
-    else:
-        watches.append(watch_expression)
+
+
+def update_watch(watches, update):
+    for watch_expression in watches:
+        if watch_expression['file'] == update['file'] and watch_expression['lineno'] == update['lineno']:
+            watches['action'].update({update['action']})
 
         
 def shift_watch(watches, shift):
@@ -307,16 +338,21 @@ def main():
     watches = []
     while True:
         message = input()
-        # TODO add unwatch
         if message.startswith(WATCH_HEADER):
-            toggle_watch(watches, get_watch_expression(message))
+            add_watch(watches, get_watch_expression(message))
             executor = execute(executor, script_path, watches)
+        elif message.startswith(UNWATCH_HEADER):
+            remove_watch(watches, get_unwatch_expression(message))
+            executor = execute(executor, script_path, watches)
+        elif message.startswith(ACTION_HEADER):
+            # TODO: this
+            pass
         elif message.startswith(EDIT_HEADER):
             if should_execute(script_path, watches, get_diff(message)):
                 execute(executor, script_path, watches)
         elif message.startswith(FETCH_HEADER):
             if executor:
-                executor.fetch_symbol(get_symbol_id(message))
+                executor.fetch_symbol(get_fetch_request(message))
         elif message.startswith(SHIFT_HEADER):
             shift_watch(watches, get_watch_shift(message))
 

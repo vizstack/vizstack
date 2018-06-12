@@ -19,11 +19,16 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from './components/Canvas';
 import mainReducer from './reducers';
-import { addSymbolActionThunk, clearSymbolTableAction } from './actions/program';
+import { addSymbolsAction, clearSymbolTableAction } from './actions/program';
 import { addViewerAction, clearCanvasAction } from './actions/canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
+const EXECUTION_ENGINE_PATH = 'engine.py'; // path.join(__dirname, 'engine.py');
+
+// TODO: change this to accommodate graphs
+const DEFAULT_ACTION = {
+    recurse: 'creatorop+args+kwargs'
+};
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
  *  For in depth description and list of overridable keys: <material-ui-next.com/customization/themes/> */
@@ -216,6 +221,15 @@ export default class REPL {
         });
     }
 
+    // TODO: use smarter encoding here
+    stringifyWatchAction(action) {
+        let str = '';
+        Object.entries(action).forEach(([key, value]) => {
+            str+=`${key}:${value};`;
+        });
+        return str;
+    }
+
 
     // =================================================================================================================
     // Interacting with ExecutionEngine
@@ -233,21 +247,27 @@ export default class REPL {
      * @returns {PythonShell}
      *      A Python subprocess with which REPL can communicate to acquire evaluated watch statements.
      */
-    startEngine(scriptPath) {
+    startEngine(scriptPath, pythonPath='python') {
+        // TODO: remove these hard codes:
+        pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
         let options = {
             args: [scriptPath],
+            pythonPath,
+            scriptPath: __dirname,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('executionEngine -- received message: ', message);
-            let { symbolShells, symbolData, symbolId, watchCount, refresh} = JSON.parse(message);
+            let { viewSymbol, symbols, refresh, watchCount } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());  // TODO: don't wipe the canvas completely
                 this.store.dispatch(clearSymbolTableAction());
             }
-            if (symbolId !== null) {
-                this.store.dispatch(addSymbolActionThunk(symbolId, symbolShells, symbolData, watchCount));
-                this.store.dispatch(addViewerAction(symbolId, watchCount));
+            if (symbols) {
+                this.store.dispatch(addSymbolsAction(symbols, watchCount));
+            }
+            if (viewSymbol !== null) {
+                this.store.dispatch(addViewerAction(viewSymbol, watchCount));
             }
         });
         return executionEngine;
@@ -268,11 +288,13 @@ export default class REPL {
         const markerPos = this.indexOfMarker(filePath, lineNum);
         if (markerPos >= 0) {
             this.removeWatchMarker(markerPos);
+            this.executionEngine.send(`unwatch:${filePath}?${lineNum}`);
         }
         else {
+            // TODO: use passed-in action
             this.addWatchMarker(filePath, lineNum);
+            this.executionEngine.send(`watch:${filePath}?${lineNum}?${this.stringifyWatchAction(DEFAULT_ACTION)}`);
         }
-        this.executionEngine.send(`watch:${filePath}?${lineNum}?${action}`);
     }
 
     /**

@@ -6,6 +6,7 @@ import { setInViewerPayloadAction } from './canvas.js';
 
 /** Action type definitions. */
 export const SymbolTableActions = {
+    ADD_SYMBOLS:   "SYMBOLTABLE::ADD_SYMBOLS",
     ADD_SHELLS:    "SYMBOLTABLE::ADD_SHELLS",
     ADD_DATA:      "SYMBOLTABLE::ADD_DATA",
     CLEAR_TABLE:   "SYMBOLTABLE::CLEAR_TABLE",
@@ -21,14 +22,14 @@ export function clearSymbolTableAction() {
     }
 }
 
-/**
- *
- * @param symbolId
- * @param symbolShells
- * @param symbolData
- * @param freezeNonce
- * @returns {function(*)}
- */
+export function addSymbolsAction(symbolShells, freezeNonce) {
+    return {
+        type: SymbolTableActions.ADD_SYMBOLS,
+        symbolShells,
+        freezeNonce,
+    }
+}
+
 export function addSymbolActionThunk(symbolId, symbolShells, symbolData, freezeNonce) {
     return (dispatch) => {
         dispatch(addSymbolShellsAction(symbolShells, freezeNonce));

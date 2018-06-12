@@ -29,7 +29,7 @@ export default {
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
                 if(uri === 'atom://xnode-sandbox') {
-                    const scriptPath = path.join(__dirname, "../dummy.py");  // TODO: Get rid of this! Make current script path.
+                    const scriptPath = path.join(__dirname, "../python_debug_test.py");  // TODO: Get rid of this! Make current script path.
                     let repl = new REPL(scriptPath);
                     this.repls.push(repl);
                     return repl;
