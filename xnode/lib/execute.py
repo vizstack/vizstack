@@ -1,5 +1,6 @@
 import pdb
 from os.path import normpath, normcase
+from copy import deepcopy
 
 from viz import VisualizationEngine
 
@@ -137,8 +138,21 @@ class ScriptExecutor(pdb.Pdb):
     # Action: recursion.
     # --------------------------------
 
+    # first symbol already loaded
+    # follow path
+    # if found,
     def _handle_recurse(self, symbol_id):
         self._recurse_add(symbol_id, self.watch_actions[self.watching_line]['recurse'], set())
+
+    @staticmethod
+    def _flatten_list(l):
+        l = deepcopy(l)
+        while l:
+            sublist = l.pop(0)
+            if isinstance(sublist, list):
+                l = sublist + l
+            else:
+                yield sublist
 
     def _recurse_add(self, symbol_id, recurse_paths, added):
         for recurse_path in recurse_paths:
@@ -154,14 +168,9 @@ class ScriptExecutor(pdb.Pdb):
             if self._is_symbol_id(pointing_to):
                 self._recurse_symbol(pointing_to, recurse_paths, added)
             elif isinstance(pointing_to, list):
+                pointing_to = ScriptExecutor._flatten_list(pointing_to)
                 for item in pointing_to:
-                    # currently diving to one layer of depth
-                    if isinstance(item, list):
-                        for subitem in item:
-                            if self._is_symbol_id(subitem):
-                                self._recurse_symbol(subitem, recurse_paths, added)
-                    elif self._is_symbol_id(item):
-                        self._recurse_symbol(item, recurse_paths, added)
+                    self._recurse_symbol(item, recurse_paths, added)
             elif isinstance(pointing_to, dict):
                 for value in pointing_to.values():
                     self._recurse_symbol(value, recurse_paths, added)
@@ -170,7 +179,7 @@ class ScriptExecutor(pdb.Pdb):
         return isinstance(s, str) and s.startswith('@id:')
 
     def _recurse_symbol(self, symbol_id, recurse, added):
-        if symbol_id in added:
+        if not self._is_symbol_id(symbol_id) or symbol_id in added:
             return
         added.add(symbol_id)
         data, refs, attributes = self.viz_engine.get_symbol_data(symbol_id)

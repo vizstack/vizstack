@@ -20,7 +20,7 @@ import ViewerFrame  from './ViewerFrame';
 import NumberViewer from './viewers/NumberViewer';
 import StringViewer from './viewers/StringViewer';
 import TensorViewer from './viewers/TensorViewer';
-import GraphViewer  from './viewers/GraphViewer';
+import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import ListViewer, { assembleListModel }   from './viewers/ListViewer';
 
 // Custom Redux actions
@@ -106,7 +106,7 @@ class Canvas extends Component {
                 return <TensorViewer {...props}/>;
 
             case "graphdata":
-                return <GraphViewer {...props}/>;
+                return <GraphViewer {...props} model={assembleGraphModel(symbolId, symbolTable)}/>;
 
             case "list":
             case "tuple":

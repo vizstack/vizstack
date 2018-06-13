@@ -27,7 +27,7 @@ const EXECUTION_ENGINE_PATH = 'engine.py'; // path.join(__dirname, 'engine.py');
 
 // TODO: change this to accommodate graphs
 const DEFAULT_ACTION = {
-    recurse: 'creatorop+args+kwargs'
+    recurse: 'creatorop+args+kwargs+container'
 };
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.

@@ -2,15 +2,11 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { connect } from 'react-redux';
-import { bindActionCreators } from 'redux';
 import { withStyles } from 'material-ui/styles';
 import { createSelector } from 'reselect';
 import ELK from 'elkjs';
 
-import { ensureGraphLoadedActionThunk } from '../../../actions/program';
-import { setInViewerPayloadAction, addViewerActionThunk } from '../../../actions/canvas';
-import { makeGetElkGraphFromHead, layoutGraph } from './layout';
+import { layoutGraph, getFullGraphFromHead, graphToElk } from './layout';
 
 import GraphOpNode from './GraphOpNode';
 import GraphDataEdge from './GraphDataEdge';
@@ -51,14 +47,30 @@ class GraphViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        viewerId:           PropTypes.number.isRequired,
-        symbolId:           PropTypes.string.isRequired,
-        payload:            PropTypes.object.isRequired,
+        /** JSS styling classes object. */
+        classes: PropTypes.object.isRequired,
 
-        classes:            PropTypes.object.isRequired,
-        graphSkeleton:      PropTypes.object,
-        ensureGraphLoaded:  PropTypes.func.isRequired,
-        setInPayload:       PropTypes.func.isRequired,
+        /** Unique ID of the Python symbol backing this viewer. */
+        symbolId: PropTypes.string.isRequired,
+
+        /** Unique ID of this viewer in the Canvas. */
+        viewerId: PropTypes.number.isRequired,
+
+        /** Data model rendered by this viewer. */
+        model: PropTypes.array.isRequired,
+
+        /**
+         * Generates a sub-viewer for a particular element of the list.
+         *
+         * @param symbolId
+         *     Symbol ID of the element for which to create a new viewer.
+         */
+        expandSubviewer: PropTypes.func.isRequired,
+
+        /**
+         * Unfreezes this viewer so its data model reflects the latest version the backing Python symbol.
+         */
+        unfreezeViewer: PropTypes.func.isRequired,
     };
 
     constructor(props) {
@@ -68,14 +80,11 @@ class GraphViewer extends Component {
             hoverIds: [],
             isInspectorExpanded: true,
             expandedArgListItems: new Set(),
+            graphState: null,
+            graph: null,
         };
         this.setSelectedId = this.setSelectedId.bind(this);
         this.setHoverId = this.setHoverId.bind(this);
-    }
-
-    componentDidMount() {
-        let { ensureGraphLoaded, symbolId, viewerId } = this.props;
-        ensureGraphLoaded(symbolId, viewerId);
     }
 
     /**
@@ -84,19 +93,33 @@ class GraphViewer extends Component {
      *
      * @param nextProps
      */
-    componentWillReceiveProps(nextProps) {
-        let { graphSkeleton, viewerId, setInPayload } = this.props;
-        let { graphSkeleton: nextGraphSkeleton } = nextProps;
-        let { stateChanged } = nextProps.payload;
-        if (nextGraphSkeleton && (!graphSkeleton || stateChanged)) {
-            setInPayload(viewerId, ['stateChanged'], false);
+    componentDidUpdate(prevProps, prevState) {
+        const { model, viewerId } = this.props;
+        const { graphState, stateChanged } = this.state;
+        if (model && graphState === null) {
+            console.debug('GraphViewer -- resetting graph state');
+            let newGraphState = {};
+            Object.values(model.nodes).forEach(node => {
+                newGraphState[node.symbolId] = {
+                    expanded: false,
+                };
+            });
+            this.setState({
+                'graphState': newGraphState,
+                stateChanged: true,
+            });
+        }
+        if (model && stateChanged) {
+            console.debug('GraphViewer -- laying out graph');
             let elk = new ELK();
-            layoutGraph(elk, nextGraphSkeleton, viewerId, setInPayload);
+            layoutGraph(elk, graphToElk(model.nodes, model.edges, graphState), (graph) => this.setState({graph}));
             this.setState({
                 selectedIds: [],
                 hoverIds: [],
-            });
+                stateChanged: false,
+            })
         }
+        return true;
     }
 
     setSelectedId(id) {
@@ -235,8 +258,8 @@ class GraphViewer extends Component {
     }
 
     getKeyValueComponents(classes, symbolId) {
-        const { symbolTable } = this.props;
-        return symbolId ? Object.entries(symbolTable[symbolId].data.viewer.kvpairs).map(([key, value]) => {
+        let symbolTable = this.props.model.symbolTable;
+        return symbolId ? Object.entries(symbolTable[symbolId].data.kvpairs).map(([key, value]) => {
             return this.symbolIdToListItem(classes, value, key, symbolId);
         }) : [];
     }
@@ -294,7 +317,8 @@ class GraphViewer extends Component {
     }
 
     symbolIdToListItem(classes, symbolId, itemLabel=null, keyPrefix='') {
-        const { addViewerToCanvas, symbolTable } = this.props;
+        const { addViewerToCanvas } = this.props;
+        let symbolTable = this.props.model.symbolTable;
         let onClick = () => symbolId ? addViewerToCanvas(symbolId) : {};
         let str = symbolId ? symbolTable[symbolId].str : 'None';
         let key = `${keyPrefix}:${(itemLabel ? itemLabel : '')}:${symbolId}`;
@@ -325,12 +349,12 @@ class GraphViewer extends Component {
 
     // TODO is there abetter way to build this? e.g. factor out stuff?
     buildInspectorComponent(classes, symbolId) {
-        const { symbolTable } = this.props;
+        let symbolTable = this.props.model.symbolTable;
         const symbolObj = symbolTable[symbolId];
         if (symbolObj) {
             const { name, type } = symbolObj;
             if (type === 'graphop') {
-                const { args, kwargs, functionname, outputs } = symbolObj.data.viewer;
+                const { args, kwargs, functionname, outputs } = symbolObj.data;
 
                 let argComponent = null;
                 if (args.length > 0) {
@@ -376,14 +400,14 @@ class GraphViewer extends Component {
                 )
             }
             if (type === 'graphcontainer') {
-                const { functionname, contents } = symbolObj.data.viewer;
+                const { functionname, contents } = symbolObj.data;
 
                 let argComponent = null;
                 let argListItems = [];
                 let opNameAppearances = {};
                 for (let i=0; i < contents.length; i++) {
                     let contentSymbolId = contents[i];
-                    const { functionname, args } = symbolTable[contentSymbolId].data.viewer;
+                    const { functionname, args } = symbolTable[contentSymbolId].data;
                     if (!(functionname in opNameAppearances)) {
                         opNameAppearances[functionname] = 0;
                     }
@@ -408,10 +432,19 @@ class GraphViewer extends Component {
     };
 
     toggleExpanded(symbolId) {
-        let { setInPayload, viewerId } = this.props;
-        let { expanded } = this.props.payload.graphState[symbolId];
-        setInPayload(viewerId, ['graphState', symbolId, 'expanded'], !expanded);
-        setInPayload(viewerId, ['stateChanged'], true);
+        console.debug(`GraphViewer -- expanding container ${symbolId}`);
+        let { graphState } = this.state;
+        let { expanded } = graphState[symbolId].expanded;
+        this.setState({
+            'stateChanged': true,
+            'graphState': {
+                ...graphState,
+                [symbolId]: {
+                    ...graphState[symbolId],
+                    'expanded': !expanded,
+                }
+            }
+        });
     }
 
     /**
@@ -419,8 +452,8 @@ class GraphViewer extends Component {
      * the bottom of the frame that displays the hover/selected item's info.
      */
     render() {
-        const { classes, payload } = this.props;
-        const { graph } = payload;
+        const { classes } = this.props;
+        const { graph } = this.state;
         if (!graph) {
             return (
                 <div className={classes.container}>
@@ -432,7 +465,7 @@ class GraphViewer extends Component {
         }
 
         let graphComponents = this.buildNodeComponents(graph.nodes).concat(this.buildEdgeComponents(graph.edges));
-        graphComponents = graphComponents.asMutable().sort(({zOrder: z1}, {zOrder: z2}) => z1 - z2).map(({component}) => component);
+        graphComponents = graphComponents.sort(({zOrder: z1}, {zOrder: z2}) => z1 - z2).map(({component}) => component);
 
         const inspectorId = this.state.selectedIds[0];
         let inspectorComponent = this.buildInspectorComponent(classes, inspectorId);
@@ -571,27 +604,14 @@ const styles = theme => ({
     },
 });
 
-// To inject application state into component
-// ------------------------------------------
+export default withStyles(styles)(GraphViewer)
 
-/** Connects application state objects to component props. */
-function makeMapStateToProps() {
-    const getGraphFromHead = makeGetElkGraphFromHead();
-    return (state, props) => {
-        return {
-            graphSkeleton: getGraphFromHead(state, props),
-            symbolTable: state.program.symbolTable,  // TODO be smarter about how much of the symbol table we need
-        }
+export function assembleGraphModel(symbolId, symbolTable) {
+    if (symbolId in symbolTable && symbolTable[symbolId].data !== null) {
+        console.debug('GraphViewer -- reading graph');
+        let model = getFullGraphFromHead(symbolId, symbolTable);
+        model['symbolTable'] = symbolTable;
+        return model;
     }
+    return null;
 }
-
-/** Connects bound action creator functions to component props. */
-function mapDispatchToProps(dispatch) {
-    return bindActionCreators({
-        ensureGraphLoaded: ensureGraphLoadedActionThunk,
-        setInPayload: setInViewerPayloadAction,
-        addViewerToCanvas: addViewerActionThunk,
-    }, dispatch);
-}
-
-export default connect(makeMapStateToProps, mapDispatchToProps)(withStyles(styles)(GraphViewer));

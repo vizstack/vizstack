@@ -76,17 +76,17 @@ const getViewerObj = (symbolId, symbolTable) => ({
     type: symbolTable[symbolId].type,
     name: symbolTable[symbolId].name,
     str: symbolTable[symbolId].str,
-    payload: symbolTable[symbolId].data.viewer,
+    payload: symbolTable[symbolId].data,
 });
-const getCreatorOp = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.viewer.creatorop;
-const getCreatorPos = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.viewer.creatorpos;
-const getArgs = (opSymbolId, symbolTable) => symbolTable[opSymbolId].data.viewer.args;
-const getKwargs = (opSymbolId, symbolTable) => Object.entries(symbolTable[opSymbolId].data.viewer.kwargs);
-const getContainerSymbolId = (symbolId, symbolTable) => symbolTable[symbolId].data.viewer.container;
-const getContents = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.viewer.contents;
-const getContainerHeight = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.viewer.height;
-const getSymbolTemporalStep = (symbolId, symbolTable) => symbolTable[symbolId].data.viewer.temporalstep;
-const getSymbolIsTemporal = (symbolId, symbolTable) => symbolTable[symbolId].data.viewer.temporalstep >= 0;
+const getCreatorOp = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.creatorop;
+const getCreatorPos = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.creatorpos;
+const getArgs = (opSymbolId, symbolTable) => symbolTable[opSymbolId].data.args;
+const getKwargs = (opSymbolId, symbolTable) => Object.entries(symbolTable[opSymbolId].data.kwargs);
+const getContainerSymbolId = (symbolId, symbolTable) => symbolTable[symbolId].data.container;
+const getContents = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.contents;
+const getContainerHeight = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.height;
+const getSymbolTemporalStep = (symbolId, symbolTable) => symbolTable[symbolId].data.temporalstep;
+const getSymbolIsTemporal = (symbolId, symbolTable) => symbolTable[symbolId].data.temporalstep >= 0;
 const getNodeIsTemporal = (nodeObj) => nodeObj.isTemporal;
 const getPortIdIsInput = (portId) => portId.endsWith('i');
 const getIdIsPort = (id) => id.split('_').length > 1;
@@ -151,6 +151,7 @@ function getNodesAndUnslicedEdges(headSymbolId, symbolTable) {
             continue;
         }
         checkedOps.add(opSymbolId);
+        console.log(opSymbolId);
         // Assume ops can appear exactly once in the graph
         nodes[symbolIdToNodeId(opSymbolId)] = createNodeObj(
             symbolIdToNodeId(opSymbolId),
@@ -204,7 +205,7 @@ function getNodesAndUnslicedEdges(headSymbolId, symbolTable) {
             nodes[containerNodeId].contents = nodes[containerNodeId].contents.concat([dataNodeId]);
         }
     });
-    return { nodes, edges }
+    return { nodes, edges };
 }
 
 function doStuff(dataSymbolId, argName, opsToCheck, symbolTable, opOutputs, edges, opSymbolId, dataLeafContainers) {
@@ -588,6 +589,12 @@ function sliceEdges(nodes, unslicedEdges) {
     return slicedEdges;
 }
 
+export function getFullGraphFromHead(symbolId, symbolTable) {
+    let { nodes, edges } = getNodesAndUnslicedEdges(symbolId, symbolTable);
+    edges = sliceEdges(nodes, edges);
+    return { nodes, edges };
+}
+
 /**
  * A thunk which returns a selector. The selector builds objects containing all of the nodes and edges leading up to a
  * head symbol, regardless of the expansion or contraction state of the graph.
@@ -669,6 +676,11 @@ function elkGraphToEdgeList(root) {
     });
     return edges;
 }
+
+export function graphToElk(nodes, edges, graphState) {
+    return getElkGraph(nodes, assignEdgeParents(nodes, edges), graphState);
+}
+
 
 /**
  * A thunk which returns a graph in ELK format, subject to the properties contained in the viewer's `graphState`. This
@@ -786,7 +798,7 @@ function buildTemporalEdges(root, nodePositions, edges) {
     });
 }
 
-function layoutGraphRecurse(elk, toLayout, viewerId, setInPayload) {
+function layoutGraphRecurse(elk, toLayout, callback) {
     let rootNode = toLayout[0];
     if (rootNode.id === 'root' || (rootNode.children.length > 0 && rootNode.children[0].temporalStep >= 0)) {
         elk.layout(rootNode).then(
@@ -822,13 +834,13 @@ function layoutGraphRecurse(elk, toLayout, viewerId, setInPayload) {
                     });
                 }
                 if (toLayout.length > 1) {
-                    layoutGraphRecurse(elk, toLayout.splice(1), viewerId, setInPayload);
+                    layoutGraphRecurse(elk, toLayout.splice(1), callback);
                 }
                 else {
                     let positions = getNodeAndPortPositions(rootNode);
                     rootNode.edges = rootNode.edges.concat(buildTemporalEdges(rootNode, positions, rootNode.temporalEdges));
                     console.log(rootNode);
-                    setInPayload(viewerId, ['graph'], {
+                    callback({
                         width: rootNode.width,
                         height: rootNode.height,
                         nodes: elkGraphToNodeList(rootNode),
@@ -839,7 +851,7 @@ function layoutGraphRecurse(elk, toLayout, viewerId, setInPayload) {
         );
     }
     else {
-        layoutGraphRecurse(elk, toLayout.splice(1), viewerId, setInPayload);
+        layoutGraphRecurse(elk, toLayout.splice(1), callback);
     }
 }
 
@@ -861,6 +873,6 @@ function getElkNodeLayoutOrder(toLayout, i=0) {
  * @param viewerId
  * @param setInPayload
  */
-export function layoutGraph(elk, rootNode, viewerId, setInPayload) {
-    layoutGraphRecurse(elk, getElkNodeLayoutOrder([rootNode]), viewerId, setInPayload);
+export function layoutGraph(elk, rootNode, callback) {
+    layoutGraphRecurse(elk, getElkNodeLayoutOrder([rootNode]), callback);
 }

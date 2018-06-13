@@ -72,7 +72,6 @@ export function freezeSymbolSomethings(symbolSomethings, nonce) {
         }
         frozenSymbolSomethings[freezeSymbolId(symbolId, nonce)] = symbolSomething;
     });
-    console.log(frozenSymbolSomethings);
     return frozenSymbolSomethings;
 }
 
