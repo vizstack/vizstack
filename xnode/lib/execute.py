@@ -117,7 +117,7 @@ class ScriptExecutor(pdb.Pdb):
         symbol_id = request_dict['symbol_id']
         shells = self.viz_engine.get_symbol_shell_by_id(symbol_id)
         symbol_slice = self._get_symbol_slice(symbol_id, shells)
-        self._add_schema(symbol_id, symbol_slice)
+        self._add_schema(symbol_slice)
         self._send_message()
 
     # ==================================================================================================================
@@ -130,7 +130,8 @@ class ScriptExecutor(pdb.Pdb):
     def _handle_break(self, frame):
         self._setup_message(False, self.watch_count)
         symbol_id, symbols = self._get_schema_obj(self.var_to_eval, frame)
-        self._add_schema(symbol_id, symbols)
+        self._view_symbol(symbol_id)
+        self._add_schema(symbols)
         self._handle_recurse(symbol_id)
         self._send_message()
         self.watch_count += 1
@@ -199,8 +200,10 @@ class ScriptExecutor(pdb.Pdb):
         self.to_send = dict()
         self.var_to_eval = None
 
-    def _add_schema(self, symbol_id, symbols):
+    def _view_symbol(self, symbol_id):
         self.to_send['viewSymbol'] = symbol_id
+
+    def _add_schema(self, symbols):
         self.to_send['symbols'].update(symbols)
 
     # TODO !!: view_symbol

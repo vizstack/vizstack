@@ -72,7 +72,7 @@ class ListViewer extends Component {
      * the clicked entry is a non-primitive.
      */
     render() {
-        const { classes, model, expandSubviewer, unfreezeViewer } = this.props;
+        const { classes, model, expandSubviewer, unfreezeViewer, symbolId } = this.props;
         const { hover, selected } = this.state;
 
         if (!model) {

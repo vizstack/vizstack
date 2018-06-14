@@ -267,7 +267,7 @@ export default class REPL {
                 this.store.dispatch(addSymbolsAction(symbols, watchCount));
             }
             if (viewSymbol !== null) {
-                this.store.dispatch(addViewerAction(viewSymbol, watchCount));
+                this.store.dispatch(addViewerAction(viewSymbol));
             }
         });
         return executionEngine;

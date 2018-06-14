@@ -57,7 +57,12 @@ function addSymbolsReducer(state, action) {
     //     return Immutable.merge({symbolTable: freezeSymbolSomethings(symbolShells, freezeNonce)}, state, {deep: true});
     // }
     // else {
-        return Immutable.merge({symbolTable: symbolShells}, state, {deep: true});
+        Object.entries(symbolShells).forEach(([symbolId, shell]) => {
+            if (shell.data || !(symbolId in state)) {
+                state = Immutable.setIn(state, ['symbolTable', symbolId], shell);
+            }
+        });
+        return state;
     // }
 }
 

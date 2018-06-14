@@ -80,7 +80,6 @@ class Canvas extends Component {
     createViewerComponent(viewer) {
         const { addViewer, fetchSymbolData, symbolTable } = this.props;
         const { symbolId, viewerId, type, name, str, data} = viewer;
-        console.debug(symbolId);
         const props = {
             symbolId,
             viewerId,
