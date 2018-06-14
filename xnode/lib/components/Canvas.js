@@ -24,7 +24,8 @@ import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import ListViewer, { assembleListModel }   from './viewers/ListViewer';
 
 // Custom Redux actions
-import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from "../actions/canvas";
+import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from '../actions/canvas';
+import { isSymbolIdFrozen } from '../../services/symbol-utils';
 
 
 /**
@@ -87,8 +88,10 @@ class Canvas extends Component {
             name,
             str,
             expandSubviewer: (symbolId) => {
-                fetchSymbolData(symbolId);
-                addViewer(symbolId);
+                if(!isSymbolIdFrozen(symbolId)) {
+                    fetchSymbolData(symbolId);
+                    addViewer(symbolId);
+                }
             },
             unfreezeViewer: () => {
                 // TODO: viewer.viewerId
@@ -224,4 +227,3 @@ function mapDispatchToProps(dispatch) {
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(Canvas));
-

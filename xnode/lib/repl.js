@@ -248,8 +248,8 @@ export default class REPL {
      *      A Python subprocess with which REPL can communicate to acquire evaluated watch statements.
      */
     startEngine(scriptPath, pythonPath='python') {
-        // TODO: remove these hard codes:
-        pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
+        // TODO: remove these hard codes, let work in virtualenv
+        pythonPath = '/usr/local/miniconda3/bin/python';
         let options = {
             args: [scriptPath],
             pythonPath,
@@ -257,7 +257,7 @@ export default class REPL {
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
-            console.debug('executionEngine -- received message: ', message);
+            console.debug('repl -- received message: ', message);
             let { viewSymbol, symbols, refresh, watchCount } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());  // TODO: don't wipe the canvas completely
