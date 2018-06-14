@@ -53,12 +53,12 @@ function clearSymbolTableReducer(state, action) {
 
 function addSymbolsReducer(state, action) {
     const { symbolShells, freezeNonce } = action;
-    if (freezeNonce >= 0) {
-        return Immutable.merge({symbolTable: freezeSymbolSomethings(symbolShells, freezeNonce)}, state, {deep: true});
-    }
-    else {
+    // if (freezeNonce >= 0) {
+    //     return Immutable.merge({symbolTable: freezeSymbolSomethings(symbolShells, freezeNonce)}, state, {deep: true});
+    // }
+    // else {
         return Immutable.merge({symbolTable: symbolShells}, state, {deep: true});
-    }
+    // }
 }
 
 function addSymbolShellsReducer(state, action) {

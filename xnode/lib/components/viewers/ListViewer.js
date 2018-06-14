@@ -11,6 +11,7 @@ import IconButton from 'material-ui/IconButton';
 
 import LockedIcon from 'material-ui-icons/Lock';
 import UnlockedIcon from 'material-ui-icons/LockOpen';
+import { CircularProgress } from 'material-ui/Progress';
 
 import ColorLightBlue from 'material-ui/colors/lightBlue';
 import ColorBlue from 'material-ui/colors/blue';
@@ -40,8 +41,8 @@ class ListViewer extends Component {
         /** Unique ID of this viewer in the Canvas. */
         viewerId: PropTypes.number.isRequired,
 
-        /** Data model rendered by this viewer. */
-        model: PropTypes.array.isRequired,
+        /** Data model rendered by this viewer; or null if not created yet. */
+        model: PropTypes.array,
 
         /**
          * Generates a sub-viewer for a particular element of the list.
@@ -73,6 +74,16 @@ class ListViewer extends Component {
     render() {
         const { classes, model, expandSubviewer, unfreezeViewer } = this.props;
         const { hover, selected } = this.state;
+
+        if (!model) {
+            return (
+                <div className={classes.container}>
+                    <div className={classes.progress}>
+                        <CircularProgress />
+                    </div>
+                </div>
+            );
+        }
 
         const listItems = model.map((elem, idx) => {
 
@@ -127,6 +138,11 @@ const styles = theme => ({
 
         display: 'flex',
         flexDirection: 'column',
+    },
+    progress: {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
     },
     listBox: {
         overflow: 'auto',
@@ -185,6 +201,7 @@ export default withStyles(styles)(ListViewer);
  *     Data model rendered by a ListViewer.
  */
 export function assembleListModel(payload, symbolTable) {
+    if(!payload) return null;  // TODO Check this
     const { contents } = payload;
     return contents.map((elem) => {
         let text = '';

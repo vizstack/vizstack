@@ -57,10 +57,10 @@ function clearCanvasReducer(state, action) {
  * Add a viewer to `canvas`. Assumes `data` for symbol is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { symbolId, freezeNonce } = action;
+    const { symbolId } = action;
     const { nextViewerId } = state;
     return state.setIn(['viewerObjects', nextViewerId], {
-        symbolId: freezeNonce >= 0 ? freezeSymbolId(symbolId, freezeNonce) : symbolId,
+        symbolId,
         data: {},
     }).update('nextViewerId', (prev) => prev + 1)
         .update('viewerPositions', (prev) => prev.concat([{

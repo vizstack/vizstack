@@ -24,8 +24,8 @@ import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import ListViewer, { assembleListModel }   from './viewers/ListViewer';
 
 // Custom Redux actions
-import { addViewerActionThunk, removeViewerAction, updateLayoutAction } from '../actions/canvas';
-import { isSymbolIdFrozen } from '../../services/symbol-utils';
+import { addViewerAction, removeViewerAction, updateLayoutAction } from '../actions/canvas';
+import { isSymbolIdFrozen } from '../services/symbol-utils';
 
 
 /**
@@ -80,7 +80,7 @@ class Canvas extends Component {
     createViewerComponent(viewer) {
         const { addViewer, fetchSymbolData, symbolTable } = this.props;
         const { symbolId, viewerId, type, name, str, data} = viewer;
-
+        console.debug(symbolId);
         const props = {
             symbolId,
             viewerId,
@@ -89,6 +89,7 @@ class Canvas extends Component {
             str,
             expandSubviewer: (symbolId) => {
                 if(!isSymbolIdFrozen(symbolId)) {
+                    console.debug("Canvas -- expand subviewer of symbol", symbolId);
                     fetchSymbolData(symbolId);
                     addViewer(symbolId);
                 }
@@ -220,7 +221,7 @@ function mapStateToProps(state, props) {
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addViewer:    addViewerActionThunk,
+        addViewer:    addViewerAction,
         removeViewer: removeViewerAction,
         updateLayout: updateLayoutAction,
     }, dispatch);

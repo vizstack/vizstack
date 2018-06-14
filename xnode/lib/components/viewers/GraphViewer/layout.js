@@ -151,7 +151,6 @@ function getNodesAndUnslicedEdges(headSymbolId, symbolTable) {
             continue;
         }
         checkedOps.add(opSymbolId);
-        console.log(opSymbolId);
         // Assume ops can appear exactly once in the graph
         nodes[symbolIdToNodeId(opSymbolId)] = createNodeObj(
             symbolIdToNodeId(opSymbolId),

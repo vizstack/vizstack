@@ -32,20 +32,11 @@ export function clearCanvasAction() {
  * @returns {{type: string, symbolId: *}}
  *
  */
-export function addViewerAction(symbolId, freezeNonce = -1) {
+export function addViewerAction(symbolId) {
     return {
         type: CanvasActions.ADD_VIEWER,
         symbolId,
-        freezeNonce,
     };
-}
-export function addViewerActionThunk(symbolId) {
-    return (dispatch) => {
-        if (isSymbolIdFrozen(symbolId)) {
-            return;
-        }
-        dispatch(addViewerAction(symbolId));
-    }
 }
 
 /**

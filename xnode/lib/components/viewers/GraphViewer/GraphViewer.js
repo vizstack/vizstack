@@ -317,9 +317,9 @@ class GraphViewer extends Component {
     }
 
     symbolIdToListItem(classes, symbolId, itemLabel=null, keyPrefix='') {
-        const { addViewerToCanvas } = this.props;
+        const { expandSubviewer } = this.props;
         let symbolTable = this.props.model.symbolTable;
-        let onClick = () => symbolId ? addViewerToCanvas(symbolId) : {};
+        let onClick = () => symbolId ? expandSubviewer(symbolId) : {};
         let str = symbolId ? symbolTable[symbolId].str : 'None';
         let key = `${keyPrefix}:${(itemLabel ? itemLabel : '')}:${symbolId}`;
         return (
@@ -608,7 +608,7 @@ export default withStyles(styles)(GraphViewer)
 
 export function assembleGraphModel(symbolId, symbolTable) {
     if (symbolId in symbolTable && symbolTable[symbolId].data !== null) {
-        console.debug('GraphViewer -- reading graph');
+        console.debug('GraphViewer -- reading graph with head', symbolId);
         let model = getFullGraphFromHead(symbolId, symbolTable);
         model['symbolTable'] = symbolTable;
         return model;
