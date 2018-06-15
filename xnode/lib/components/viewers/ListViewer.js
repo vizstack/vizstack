@@ -110,12 +110,13 @@ class ListViewer extends Component {
             );
         });
 
+        // <IconButton aria-label="Unfreeze Viewer"
+        //             onClick={() => unfreezeViewer()}>
+        //     <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
+        // </IconButton>
         return (
             <div className={classes.container} >
-                <IconButton aria-label="Unfreeze Viewer"
-                            onClick={() => unfreezeViewer()}>
-                    <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
-                </IconButton>
+
                 <div className={classes.listBox}>
                     <div className={classes.list}>
                         {listItems}

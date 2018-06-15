@@ -6,7 +6,7 @@ import ReactDOM from 'react-dom';
 import { createStore, applyMiddleware } from 'redux';
 import thunk from 'redux-thunk';
 import { Provider as ReduxProvider } from 'react-redux';
-import { composeWithDevTools } from 'redux-devtools-extension';
+import { composeWithDevTools } from 'remote-redux-devtools';
 
 // Material UI services
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
@@ -71,7 +71,8 @@ export default class REPL {
         this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
-        this.store = createStore(mainReducer, composeWithDevTools(
+        const composeEnhancers = composeWithDevTools({ realtime: true });
+        this.store = createStore(mainReducer, composeEnhancers(
             applyMiddleware(thunk),
         ));
 
