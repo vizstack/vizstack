@@ -19,13 +19,13 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from './components/Canvas';
 import mainReducer from './reducers';
+import { freezeSymbolId, freezeSymbolTableSlice } from './services/symbol-utils';
 import { addSymbolsAction, clearSymbolTableAction } from './actions/program';
 import { addViewerAction, clearCanvasAction } from './actions/canvas';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTION_ENGINE_PATH = 'engine.py'; // path.join(__dirname, 'engine.py');
+const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
 
-// TODO: change this to accommodate graphs
 const DEFAULT_ACTION = {
     recurse: 'creatorop+args+kwargs+container'
 };
@@ -60,15 +60,12 @@ export default class REPL {
      * Constructor.
      *
      * @param {string} scriptPath
-     *     The absolute path of the main script tied to this `REPL`. The `ExecutionEngine` remains associated with this
-     *     script, rerunning if needed after every file edit.
+     *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
     constructor(scriptPath) {
         // Initialize REPL state
-        this.scriptPath = scriptPath;  // Main script this REPL is tied to
-        this.watchMarkers = [];
-        // this.watchStatements = {};     // Mapping of file->lineno->{actions:[], decorations: []} for each watched line
-        this.executionEngine = this.startEngine(scriptPath);   // Communication channel with Python process
+        this.watchMarkers = [];  // List of `atom.Marker`, one for each watch statement
+        this.executionEngine = this._createEngine(scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
         const composeEnhancers = composeWithDevTools({ realtime: true });
@@ -97,6 +94,7 @@ export default class REPL {
      * Tear down state and detach.
      */
     destroy() {
+        // TODO: do we need to destroy the execution engine as well?
         this.element.remove();
         console.debug('destroy() -- REPL instance destroyed');
     }
@@ -142,9 +140,14 @@ export default class REPL {
 
     /**
      * Shifts the line numbers of any watch statements in the Python script that were moved by an edit.
+     *
+     * If lines are inserted or removed in the Atom buffer, then the watch statements saved by `this.executionEngine`
+     * must be updated to reflect the shift in position. This function, called whenever a file changes, accomplishes
+     * this.
      */
-    shiftWatchStatements() {
+    _shiftWatchStatements() {
         this.watchMarkers.forEach(marker => {
+            // Lines in atom are 0-indexed, whereas in Python they are 1-indexed
             const currentPosition = marker.getHeadBufferPosition().row + 1;
             const { filePath, lineNum } = marker.getProperties();
             if (currentPosition !== lineNum) {
@@ -157,7 +160,7 @@ export default class REPL {
     }
 
     /**
-     * Returns the index of a `Marker` watching a particular line in a particular path.
+     * Returns the index of an `atom.Marker` watching a particular line in a particular path.
      *
      * @param {string} filePath
      *      The file which to which the marker is assigned.
@@ -166,7 +169,7 @@ export default class REPL {
      * @returns {number}
      *      The index of the marker in `this.watchMarkers`, or -1 if not found.
      */
-    indexOfMarker(filePath, lineNum) {
+    _indexOfMarker(filePath, lineNum) {
         for(let i = 0; i < this.watchMarkers.length; i++) {
             const marker = this.watchMarkers[i];
             if(marker.getProperties().filePath === filePath && marker.getHeadBufferPosition().row === lineNum - 1) {
@@ -177,29 +180,20 @@ export default class REPL {
     }
 
     /**
-     * Deletes a watch statement.
-     *
-     * @param {number} markerPos
-     *      The index of the watch statement's line marker in `this.watchMarkers`.
-     */
-    removeWatchMarker(markerPos) {
-        this.watchMarkers.splice(markerPos, 1);
-    }
-
-    /**
      * Creates a new Atom marker to track the line of a watch expression.
      *
      * Atom's `Marker` objects can track position shifts from line insertion or deletions automatically, as well as
      * recognize when the line to which they've been assigned has been destroyed. We use these markers to track our
      * watch statements.
      *
+     * We also decorate the `Marker` to provide a visual indicator of the watch statement.
+     *
      * @param {string} filePath
      *      The path of the watched line.
      * @param {number} lineNum
      *      The number of the watched line at the time of marker creation.
      */
-    addWatchMarker(filePath, lineNum) {
-    	// TODO: this assumes that the active editor contains the changed file
+    _addWatchMarker(filePath, lineNum) {
         // see https://github.com/willyelm/xatom-debug/blob/master/lib/breakpoint/BreakpointManager.js
         let editor = atom.workspace.getActiveTextEditor();
         let cursorPosition = editor.getCursorBufferPosition();
@@ -222,8 +216,62 @@ export default class REPL {
         });
     }
 
-    // TODO: use smarter encoding here
-    stringifyWatchAction(action) {
+    /**
+     * Combine two action objects into one.
+     *
+     * Each watch statement and fetch request message sent to the execution engine contains a description of additional
+     * actions that should be performed before a symbol table slice is sent back to `REPL`. Certain actions might be
+     * requested by default by `REPL`, and so additional actions requested by a user need to be merged with those
+     * default actions.
+     *
+     * @param {?object} a1:
+     *      Mapping of action categories to string values, or `null` to return `a2` verbatim.
+     * @param {?object} a2:
+     *      Mapping of action categories to string values, or `null` to return `a1` verbatim.
+     * @returns {object}
+     *      A combined version of the two actions, ready to be converted to a message by `this._stringifyAction()`.
+     */
+     _mergeActions(a1, a2) {
+        // TODO: as more actions are added, revisit this method
+        if (a1 === null) {
+            return a2;
+        }
+        if (a2 === null) {
+            return a1;
+        }
+        let action = {};
+        Object.entries(a1).forEach(([key, value]) => {
+            if (key in a2) {
+                action[key] = `${a2[key]}+${value}`
+            }
+            else {
+                action[key] = value;
+            }
+        });
+        Object.entries(a2).filter(([key]) => !(key in action)).forEach(([key, value]) => action[key] = value);
+        return action;
+    }
+
+    /**
+     * Converts an object describing the action attached to a watch statement or fetch request into a string.
+     *
+     * Each watch statement and fetch request message sent to the execution engine contains a description of additional
+     * actions that should be performed before a symbol table slice is sent back to `REPL`. These actions are received
+     * by `REPL` as objects, and so must be converted to strings before being sent to the engine.
+     *
+     * For example,
+     *          "recurse": "contents+attributes+container"
+     *      becomes
+     *          "recurse:contents+attributes+container;"
+     *
+     * The output should match the schema of an action message given in `ACTION-SCHEMA.md`.
+     *
+     * @param {object} action
+     *      Mapping of action categories to string values, to be converted to an action message.
+     * @returns {string}
+     *      An action message ready to be sent with a watch statement or fetch request to `this.executionEngine`.
+     */
+    _stringifyAction(action) {
         let str = '';
         Object.entries(action).forEach(([key, value]) => {
             str+=`${key}:${value};`;
@@ -243,32 +291,48 @@ export default class REPL {
      * watch statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any
      * watched data to REPL, which stores that data.
      *
-     * @param  {string} scriptPath
+     * @param {string} scriptPath
      *      The path to the Python script whose data should be visualized in the canvas.
+     * @param {string} pythonPath
+     *      The path to the Python executable that should be used to run the script.
      * @returns {PythonShell}
-     *      A Python subprocess with which REPL can communicate to acquire evaluated watch statements.
+     *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
-    startEngine(scriptPath, pythonPath='python') {
+    _createEngine(scriptPath, pythonPath='python') {
         // TODO: remove these hard codes, let work in virtualenv
-        pythonPath = '/usr/local/miniconda3/bin/python';
+        pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
         let options = {
             args: [scriptPath],
             pythonPath,
-            scriptPath: __dirname,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
-            console.debug('repl -- received message: ', message);
+            console.debug('repl -- received message', JSON.parse(message));
             let { viewSymbol, symbols, refresh, watchCount } = JSON.parse(message);
             if (refresh) {
-                this.store.dispatch(clearCanvasAction());  // TODO: don't wipe the canvas completely
+                this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
             }
+            // TODO: should repl even know about freezing? or should the Python side instead?
+            // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
             if (symbols) {
-                this.store.dispatch(addSymbolsAction(symbols, watchCount));
+                if (watchCount >= 0) {
+                    const frozenSlice = freezeSymbolTableSlice(symbols, watchCount);
+                    console.debug('repl -- adding frozen slice', frozenSlice);
+                    console.debug('repl -- filled data objects', Object.entries(frozenSlice).filter(([key, value]) => value.data).map(([key]) => key));
+                    this.store.dispatch(addSymbolsAction(frozenSlice));
+                }
+                else {
+                    this.store.dispatch(addSymbolsAction(symbols));
+                }
             }
             if (viewSymbol !== null) {
-                this.store.dispatch(addViewerAction(viewSymbol));
+                if (watchCount >= 0) {
+                    this.store.dispatch(addViewerAction(freezeSymbolId(viewSymbol, watchCount)));
+                }
+                else {
+                    this.store.dispatch(addViewerAction(viewSymbol));
+                }
             }
         });
         return executionEngine;
@@ -281,20 +345,21 @@ export default class REPL {
      *      Absolute path to the file with a line to watch/unwatch.
      * @param  {number} lineNum
      *      The line number in `filePath` to watch/unwatch.
-     * @param  {?string} action
-     *      Currently unused; TODO: the expression to perform on the watched variable.
+     * @param  {?object} action
+     *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
+     *      `REPL`.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
         console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
-        const markerPos = this.indexOfMarker(filePath, lineNum);
+        const markerPos = this._indexOfMarker(filePath, lineNum);
         if (markerPos >= 0) {
-            this.removeWatchMarker(markerPos);
+            this.watchMarkers.splice(markerPos, 1);
             this.executionEngine.send(`unwatch:${filePath}?${lineNum}`);
         }
         else {
-            // TODO: use passed-in action
-            this.addWatchMarker(filePath, lineNum);
-            this.executionEngine.send(`watch:${filePath}?${lineNum}?${this.stringifyWatchAction(DEFAULT_ACTION)}`);
+            this._addWatchMarker(filePath, lineNum);
+            this.executionEngine.send(
+                `watch:${filePath}?${lineNum}?${this._stringifyAction(this._mergeActions(action, DEFAULT_ACTION))}`);
         }
     }
 
@@ -304,13 +369,16 @@ export default class REPL {
      * The data object is not directly returned, but will eventually be sent by the execution engine to REPL as a
      * message, at which point it is added to the symbol table.
      *
-     * @param  {string} symbolId
+     * @param {string} symbolId
      *      The identifier of the symbol, as acquired from a reference in the symbol table.
+     * @param {?object} action
+     *
      */
-    fetchSymbolData(symbolId) {
+    fetchSymbolData(symbolId, action = null) {
+        // TODO: check to make sure the data isn't already there
         console.debug(`repl -- fetching symbol (${symbolId})`);
-        // TODO: switch from recurse as an option to the watch action format?
-        this.executionEngine.send(`fetch:${symbolId}?${DEFAULT_ACTION['recurse']}`);
+        this.executionEngine.send(
+            `fetch:${symbolId}?${this._stringifyAction(this._mergeActions(action, DEFAULT_ACTION))}`);
     }
 
     /**
@@ -320,12 +388,11 @@ export default class REPL {
      * @param  {string} file
      *     Path of file that was changed.
      * @param  {object} changes
-     *     Indicates what parts of the file changed.
+     *     Indicates what parts of the file changed. TODO: define this format and use it
      */
     onFileChanged(file, changes) {
-        // TODO: convert changes to string that is understood by engine
         changes = '';
-        this.shiftWatchStatements();
+        this._shiftWatchStatements();
         this.executionEngine.send(`change:${file}?${changes}`);
     }
 }

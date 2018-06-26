@@ -57,7 +57,7 @@ class GraphViewer extends Component {
         viewerId: PropTypes.number.isRequired,
 
         /** Data model rendered by this viewer. */
-        model: PropTypes.array.isRequired,
+        model: PropTypes.object.isRequired,
 
         /**
          * Generates a sub-viewer for a particular element of the list.
@@ -610,6 +610,7 @@ export function assembleGraphModel(symbolId, symbolTable) {
     if (symbolId in symbolTable && symbolTable[symbolId].data !== null) {
         console.debug('GraphViewer -- reading graph with head', symbolId);
         let model = getFullGraphFromHead(symbolId, symbolTable);
+        // TODO: don't hold on to the entire symbol table
         model['symbolTable'] = symbolTable;
         return model;
     }

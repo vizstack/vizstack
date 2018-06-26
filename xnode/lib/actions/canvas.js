@@ -8,28 +8,27 @@ export const CanvasActions = {
     ADD_VIEWER:          "CANVAS::ADD_VIEWER",
     REMOVE_VIEWER:       "CANVAS::REMOVE_VIEWER",
     UPDATE_LAYOUT:       "CANVAS::UPDATE_LAYOUT",
-    SET_IN_PAYLOAD:      "CANVAS::SET_IN_PAYLOAD",
     CLEAR_CANVAS:        "CANVAS::CLEAR_CANVAS",
 };
 
-
+/**
+ * Action creator to clear the canvas of all viewers.
+ *
+ * @returns {{type: string}}
+ */
 export function clearCanvasAction() {
     return {
         type: CanvasActions.CLEAR_CANVAS,
     }
 }
 
-
-
 /**
- * Action creator thunk to add a viewer to the canvas for the symbol with the given `symbolId`. It is possible to have
+ * Action creator to add a viewer to the canvas for the symbol with the given `symbolId`. It is possible to have
  * multiple viewers with the same `symbolId` -- each will have a viewer with linked properties to the others.
  *
- * @param symbolId
+ * @param {string} symbolId
  *     Symbol to create new viewer for.
- * @param {int} freezeNonce:
- *      A positive number to be used for freezing the viewer, or -1 if the viewer is not frozen.
- * @returns {{type: string, symbolId: *}}
+ * @returns {{type: string, symbolId: string}}
  *
  */
 export function addViewerAction(symbolId) {
@@ -63,16 +62,4 @@ export function updateLayoutAction(layout) {
         type: CanvasActions.UPDATE_LAYOUT,
         layout
     };
-}
-
-/**
- * Action creator to setIn `value` at the location of `keyArray` in the viewer's payload object.
- */
-export function setInViewerPayloadAction(viewerId, keyArray, value) {
-    return {
-        type: CanvasActions.SET_IN_PAYLOAD,
-        viewerId,
-        keyArray,
-        value,
-    }
 }

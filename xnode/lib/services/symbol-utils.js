@@ -1,7 +1,15 @@
 'use babel';
 
 /**
- * TODO: explainer on frozen symbols, is symbol Id rather than ref.startswith(REF)
+ * To capture changing object state at multiple points in a program execution, we introduce the concept of "freezing".
+ * When the Python program sends information about a watched symbol, it also sends an ID number unique to that watch
+ * statement. Before the symbol information is put into the symbol table, it is "frozen", replacing all symbol IDs which
+ * appear in the object with versions modified with the unique ID number. This "frozen" version of the symbol table
+ * slice is then put into the symbol table, and a viewer is opened pointing to the frozen symbol. New viewers cannot be
+ * opened by interacting with frozen viewers, as doing so would require information that may no longer exist (since the
+ * program state might have changed). If a user wants to interact with a frozen symbol, it must first be "unfrozen",
+ * sending the object's state at the program's termination to the symbol table and pointing the viewer to the unfrozen
+ * symbol ID.
  */
 
 /** This string prefix marks special strings that are interpreted as symbol IDs. */
@@ -16,13 +24,13 @@ export const ID_PREFIX = "@id:";
  *
  * @param {string} symbolId
  *      The symbol ID to be frozen.
- * @param {int} nonce
+ * @param {int} uid
  *      A number unique to this particular snapshot of the symbol among all snapshots of the symbol.
  * @returns {string}
  *      The frozen symbol ID.
  */
-export function freezeSymbolId(symbolId, nonce) {
-    return `${symbolId}!${nonce}!`;
+export function freezeSymbolId(symbolId, uid) {
+    return `${symbolId}!${uid}!`;
 }
 
 /**
@@ -38,15 +46,15 @@ export function unfreezeSymbolId(frozenSymbolId) {
 }
 
 /**
- * Determines if a string ia a symbol ID.
+ * Determines if a value is a symbol ID string.
  *
- * @param {string} symbolId
+ * @param {*} symbolId
  *      A potential symbol ID string.
  * @returns {boolean}
  *      Whether the supplied string symbol ID is a symbol ID.
  */
 export function isSymbolId(symbolId) {
-    return symbolId.startsWith(ID_PREFIX);
+    return typeof(symbolId) === 'string' && symbolId.startsWith(ID_PREFIX);
 }
 
 /**
@@ -61,41 +69,24 @@ export function isSymbolIdFrozen(symbolId) {
     return symbolId.endsWith('!');
 }
 
-export function freezeSymbolSomethings(symbolSomethings, nonce) {
-    const frozenSymbolSomethings = {};
-    Object.entries(symbolSomethings).forEach(([symbolId, symbolSomething]) => {
-        if (symbolSomething.data !== null) {
-            symbolSomething.data = freezeSymbolData(symbolSomething.data, nonce);
-        }
-        if (symbolSomething.attributes !== null) {
-            symbolSomething.attributes = freezeSymbolData(symbolSomething.attributes, nonce);
-        }
-        frozenSymbolSomethings[freezeSymbolId(symbolId, nonce)] = symbolSomething;
-    });
-    return frozenSymbolSomethings;
-}
-
 /**
- * Creates a frozen version of a mapping of symbol IDs to symbol shells that will not be altered by subsequent updates
- * to the symbol table.
  *
- * All symbol IDs in the mapping and in the shells will be frozen.
- *
- * @param {object} symbolShells
- *      A mapping of {symbolId: symbolShell}.
- * @param {int} nonce
- *      A number unique to this particular snapshot of the program state among all snapshots of the program state.
- *      Generally, this means that `nonce` should be unique to the watch statement that produced these shells. Note
- *      that `nonce` must match the `nonce` supplied to `freezeSymbolData()` for the same watch statement.
- * @returns {object}
- *      The frozen {symbolId: symbolShell} mapping.
+ * @param symbolTableSlice
+ * @param nonce
+ * @returns {{}}
  */
-export function freezeSymbolShells(symbolShells, nonce) {
-    const frozenSymbolShells = {};
-    Object.entries(symbolShells).forEach(([symbolId, symbolShell]) => {
-        frozenSymbolShells[freezeSymbolId(symbolId, nonce)] = symbolShell;
+export function freezeSymbolTableSlice(symbolTableSlice, nonce) {
+    const frozenSymbolTableSlice = {};
+    Object.entries(symbolTableSlice).forEach(([symbolId, symbolSchema]) => {
+        if (symbolSchema.data !== null) {
+            symbolSchema.data = freezeSymbolData(symbolSchema.data, nonce);
+        }
+        if (symbolSchema.attributes !== null) {
+            symbolSchema.attributes = freezeSymbolData(symbolSchema.attributes, nonce);
+        }
+        frozenSymbolTableSlice[freezeSymbolId(symbolId, nonce)] = symbolSchema;
     });
-    return frozenSymbolShells;
+    return frozenSymbolTableSlice;
 }
 
 /**
@@ -113,23 +104,8 @@ export function freezeSymbolShells(symbolShells, nonce) {
  *      `symbolData` with all symbol IDs contained therein frozen.
  */
 export function freezeSymbolData(symbolData, nonce) {
-    freezeSymbolDataRecurse(symbolData, nonce);
+    _freezeSymbolDataRecurse(symbolData, nonce);
     return symbolData;
-}
-
-/**
- * Determines if a given variable is a symbol ID string.
- *
- * Returns `true` for both frozen and unfrozen symbol IDs.
- *
- * @param {*} value
- *      The variable to be checked.
- * @returns {boolean}
- *      Whether `value` is a symbol ID string.
- */
-function isSymbolId(value) {
-    // TODO: un-hardcode @id
-    return typeof(value) === 'string' && value.startsWith('@id:');
 }
 
 /**
@@ -142,7 +118,7 @@ function isSymbolId(value) {
  * @param {int} nonce
  *      The `nonce` to use in freezing the symbol IDs.
  */
-function freezeSymbolDataRecurse(item, nonce) {
+function _freezeSymbolDataRecurse(item, nonce) {
     if (item === null) {
         return;
     }
@@ -153,7 +129,7 @@ function freezeSymbolDataRecurse(item, nonce) {
                     item[i] = freezeSymbolId(elem, nonce);
                 }
                 else {
-                    freezeSymbolDataRecurse(elem, nonce);
+                    _freezeSymbolDataRecurse(elem, nonce);
                 }
             });
             break;
@@ -168,7 +144,7 @@ function freezeSymbolDataRecurse(item, nonce) {
                     item[key] = freezeSymbolId(value, nonce);
                 }
                 else {
-                    freezeSymbolDataRecurse(value, nonce);
+                    _freezeSymbolDataRecurse(value, nonce);
                 }
             });
             break;
