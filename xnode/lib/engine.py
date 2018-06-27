@@ -3,6 +3,7 @@ import threading
 from multiprocessing import Process, Queue
 from execute import run_script
 import sys
+import json
 
 # TODO: section headers
 THREAD_QUIT = 'quit'
@@ -118,50 +119,6 @@ class _ExecutionManager:
 
 
 # ======================================================================================================================
-# Actions.
-# --------
-# Converts strings sent by clients to stdin to objects which describe how `execute.py` should preprocess symbol table
-# slices. The format of the incoming strings and the output objects are given in `ACTION-SCHEMA.md`.
-# ======================================================================================================================
-
-def _format_actions(action_message):
-    """Convert a message describing actions to be performed on returned symbol table slices to a format
-    understandable by `execute.run_script()`.
-
-    Actions are received as part of the strings client send to stdin, and should be translated to a more useful
-    format before being sent as part of watch statements or fetch requests to `execute.run_script()`.
-
-    When new actions are defined, they should be parsed here and then processed in `execute.py`.
-
-    See `ACTION-SCHEMA.md` for details on the format of the input and the output.
-
-    Args:
-        action_message (str): The component of a message sent to stdin encoding actions to be performed on the symbol
-            data. See `ACTION-SCHEMA.md` for format.
-
-    Returns:
-        (dict): An object encoding the actions to be performed in a parsed and usable format; see 'ACTION-SCHEMA.md`.
-    """
-    action_strs = {
-        pair.split(':')[0]: pair.split(':')[1] for pair in action_message.split(';')[:-1]
-    }
-    actions = {}
-    for action_name in action_strs:
-        if action_name == 'recurse':
-            actions[action_name] = [path.split('/') for path in action_strs['recurse'].split('+')]
-        # add any new actions here
-
-    for action_name in ['recurse']:
-        if action_name in actions:
-            continue
-        if action_name == 'recurse':
-            actions[action_name] = []
-        # when adding a new action, add its default value here
-
-    return actions
-
-
-# ======================================================================================================================
 # Watch expressions.
 # ------------------
 # Control how watch expressions are created, removed, and shifted.
@@ -173,15 +130,15 @@ def _add_watch(watches, message):
     Args:
         watches (list): A list of existing watch expression dicts; updated in-place.
         message (str): A string received from the client describing the new watch expression, in format
-            "{WATCH_HEADER}{file_path}?{line_no}?{action_message}"
-            where `action_message` is described in `ACTION-SCHEMA.md`.
+            "{WATCH_HEADER}{file_path}?{line_no}?{actions}"
+            where `actions` is the JSON string of an action dict as described in `ACTION-SCHEMA.md`.
     """
     contents = message.replace(WATCH_HEADER, '').split('?')
 
     watch_expression = {
         'file': contents[0],
         'lineno': int(contents[1]),
-        'actions': _format_actions(contents[2])
+        'actions': json.loads(contents[2])
     }
 
     watches.append(watch_expression)
@@ -280,12 +237,12 @@ def _fetch_symbol(exec_manager, message):
     Args:
         exec_manager (_ExecutionManager): The `_ExecutionManager` to which the request should be proxied.
         message (str): A string sent by the client to stdin of the format
-            "{FETCH_HEADER}{symbol_id}?{action_message}"
-            where `action_message` is of the format described in `ACTION-SCHEMA.md`.
+            "{FETCH_HEADER}{symbol_id}?{actions}"
+            where `actions` is the JSON string of an action dict, as described in `ACTION-SCHEMA.md`.
     """
     contents = message.replace(FETCH_HEADER, '').split('?')
     symbol_id = contents[0]
-    actions = _format_actions(contents[1])
+    actions = json.loads(contents[1])
 
     exec_manager.fetch_symbol(symbol_id, actions)
 

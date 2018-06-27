@@ -27,7 +27,7 @@ import { addViewerAction, clearCanvasAction } from './actions/canvas';
 const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
 
 const DEFAULT_ACTION = {
-    recurse: 'creatorop+args+kwargs+container'
+    recurse: [['creatorop'], ['args'], ['kwargs'], ['container']]
 };
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
@@ -229,7 +229,7 @@ export default class REPL {
      * @param {?object} a2:
      *      Mapping of action categories to string values, or `null` to return `a1` verbatim.
      * @returns {object}
-     *      A combined version of the two actions, ready to be converted to a message by `this._stringifyAction()`.
+     *      A combined version of the two actions, ready to be converted to sent to the execution engine.
      */
      _mergeActions(a1, a2) {
         // TODO: as more actions are added, revisit this method
@@ -251,34 +251,6 @@ export default class REPL {
         Object.entries(a2).filter(([key]) => !(key in action)).forEach(([key, value]) => action[key] = value);
         return action;
     }
-
-    /**
-     * Converts an object describing the action attached to a watch statement or fetch request into a string.
-     *
-     * Each watch statement and fetch request message sent to the execution engine contains a description of additional
-     * actions that should be performed before a symbol table slice is sent back to `REPL`. These actions are received
-     * by `REPL` as objects, and so must be converted to strings before being sent to the engine.
-     *
-     * For example,
-     *          "recurse": "contents+attributes+container"
-     *      becomes
-     *          "recurse:contents+attributes+container;"
-     *
-     * The output should match the schema of an action message given in `ACTION-SCHEMA.md`.
-     *
-     * @param {object} action
-     *      Mapping of action categories to string values, to be converted to an action message.
-     * @returns {string}
-     *      An action message ready to be sent with a watch statement or fetch request to `this.executionEngine`.
-     */
-    _stringifyAction(action) {
-        let str = '';
-        Object.entries(action).forEach(([key, value]) => {
-            str+=`${key}:${value};`;
-        });
-        return str;
-    }
-
 
     // =================================================================================================================
     // Interacting with ExecutionEngine
@@ -317,10 +289,7 @@ export default class REPL {
             // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
             if (symbols) {
                 if (watchCount >= 0) {
-                    const frozenSlice = freezeSymbolTableSlice(symbols, watchCount);
-                    console.debug('repl -- adding frozen slice', frozenSlice);
-                    console.debug('repl -- filled data objects', Object.entries(frozenSlice).filter(([key, value]) => value.data).map(([key]) => key));
-                    this.store.dispatch(addSymbolsAction(frozenSlice));
+                    this.store.dispatch(addSymbolsAction(freezeSymbolTableSlice(symbols, watchCount)));
                 }
                 else {
                     this.store.dispatch(addSymbolsAction(symbols));
@@ -347,7 +316,7 @@ export default class REPL {
      *      The line number in `filePath` to watch/unwatch.
      * @param  {?object} action
      *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
-     *      `REPL`.
+     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
         console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
@@ -359,7 +328,7 @@ export default class REPL {
         else {
             this._addWatchMarker(filePath, lineNum);
             this.executionEngine.send(
-                `watch:${filePath}?${lineNum}?${this._stringifyAction(this._mergeActions(action, DEFAULT_ACTION))}`);
+                `watch:${filePath}?${lineNum}?${JSON.stringify(this._mergeActions(action, DEFAULT_ACTION))}`);
         }
     }
 
@@ -372,13 +341,13 @@ export default class REPL {
      * @param {string} symbolId
      *      The identifier of the symbol, as acquired from a reference in the symbol table.
      * @param {?object} action
-     *
+     *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
+     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
      */
     fetchSymbolData(symbolId, action = null) {
         // TODO: check to make sure the data isn't already there
         console.debug(`repl -- fetching symbol (${symbolId})`);
-        this.executionEngine.send(
-            `fetch:${symbolId}?${this._stringifyAction(this._mergeActions(action, DEFAULT_ACTION))}`);
+        this.executionEngine.send(`fetch:${symbolId}?${JSON.stringify(this._mergeActions(action, DEFAULT_ACTION))}`);
     }
 
     /**
