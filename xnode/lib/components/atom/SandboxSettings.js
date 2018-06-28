@@ -5,6 +5,7 @@ import PropTypes from "prop-types";
 import classNames from 'classnames';
 import { withStyles } from 'material-ui/styles';
 
+import Typography from 'material-ui/Typography';
 import TextField from 'material-ui/TextField';
 import Button from 'material-ui/Button';
 
@@ -50,11 +51,13 @@ class SandboxSettingsComponent extends Component {
         const { pythonPath, scriptPath } = this.state;
         return (
             <div className={classes.root}>
-                Hello world!
+                <Typography className={classes.title} variant={"headline"}>
+                    Sandbox Settings
+                </Typography>
                 <div>
                     <TextField
-                        {/* use "native-key-bindings" to overcome a bug with inputs in Atom */}
-                        className={classNames('native-key-bindings')}
+                        className={classNames('native-key-bindings')
+                            /* use native-key-bindings to fix an issue with backspacing in Atom */}
                         label="Python Path"
                         value={pythonPath}
                         InputProps={{className: classes.fieldInput}}
@@ -64,8 +67,8 @@ class SandboxSettingsComponent extends Component {
                 </div>
                 <div>
                     <TextField
-                        {/* use "native-key-bindings" to overcome a bug with inputs in Atom */}
-                        className={classNames('native-key-bindings')}
+                        className={classNames('native-key-bindings')
+                            /* use native-key-bindings to fix an issue with backspacing in Atom */}
                         label="Script Path"
                         value={scriptPath}
                         InputProps={{className: classes.fieldInput}}
@@ -74,7 +77,7 @@ class SandboxSettingsComponent extends Component {
                     />
                 </div>
                 <div>
-                    <Button onClick={() => this.openSandbox()}>
+                    <Button className={classes.button} onClick={() => this.openSandbox()}>
                         Open
                     </Button>
                 </div>
@@ -95,12 +98,22 @@ const styles = theme => ({
         textAlign: 'center',
     },
 
+    title: {
+        padding: theme.spacing.unit,
+    },
+
     fieldInput: {
-        color: '#aaa'
+        color: '#aaa',
     },
 
     fieldLabel: {
-        color: '#555'
+        color: '#555',
+    },
+
+    button: {
+        color: '#aaa',
+        padding: theme.spacing.unit,
+        margin: theme.spacing.unit,
     },
 });
 
