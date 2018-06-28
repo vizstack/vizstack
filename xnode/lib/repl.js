@@ -59,13 +59,15 @@ export default class REPL {
     /**
      * Constructor.
      *
+     * @param {string} pythonPath
+     *      The path to the Python executable that should be used to execute the requeested script.
      * @param {string} scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(scriptPath) {
+    constructor(pythonPath, scriptPath) {
         // Initialize REPL state
         this.watchMarkers = [];  // List of `atom.Marker`, one for each watch statement
-        this.executionEngine = this._createEngine(scriptPath);   // Communication channel with Python process
+        this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
         const composeEnhancers = composeWithDevTools({ realtime: true });
@@ -263,16 +265,14 @@ export default class REPL {
      * watch statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any
      * watched data to REPL, which stores that data.
      *
-     * @param {string} scriptPath
-     *      The path to the Python script whose data should be visualized in the canvas.
      * @param {string} pythonPath
      *      The path to the Python executable that should be used to run the script.
+     * @param {string} scriptPath
+     *      The path to the Python script whose data should be visualized in the canvas.
      * @returns {PythonShell}
      *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
-    _createEngine(scriptPath, pythonPath='python') {
-        // TODO: remove these hard codes, let work in virtualenv
-        pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
+    _createEngine(pythonPath, scriptPath) {
         let options = {
             args: [scriptPath],
             pythonPath,
