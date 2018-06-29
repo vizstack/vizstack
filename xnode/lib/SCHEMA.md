@@ -4,7 +4,7 @@
  
  ## Symbol table slice
  
- The top-level format of a _symbol table slice message_ sent between the `ExecutionEngine` (Python backend) and the 
+ The top-level format of a _symbol table slice_ sent between the `ExecutionEngine` (Python backend) and the 
  `REPL` (Javascript frontend) is a JSON object structured like:
  
 ```json
