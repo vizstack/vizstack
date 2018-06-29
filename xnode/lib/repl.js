@@ -322,6 +322,7 @@ export default class REPL {
         console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
         const markerPos = this._indexOfMarker(filePath, lineNum);
         if (markerPos >= 0) {
+            this.watchMarkers[markerPos].destroy();
             this.watchMarkers.splice(markerPos, 1);
             this.executionEngine.send(`unwatch:${filePath}?${lineNum}`);
         }
