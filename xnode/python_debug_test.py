@@ -1,7 +1,6 @@
 import torch
-from torch.autograd import Variable
+from xtorch.autograd import Variable
 
-import graphtracker as gt
 from stack_lstm import StackLSTM, PseudoLogLSTM
 from vgg import vgg16
 
@@ -20,13 +19,13 @@ myTensor3 = (torch.randn(100, 100))
 def myFn(arg1):
     return arg1 + 5
 
-myVGGInput = gt.track_data(Variable(torch.ones(1, 3, 32, 32)), {})
+myVGGInput = Variable(torch.ones(1, 3, 32, 32))
 myVGG = vgg16()
 myVGGOutput = myVGG(myVGGInput)
 
 myRNNBatchSize = 5
 myRNNDims = [10, 10, 10, 10]
-myRNNInput = [gt.track_data(Variable(torch.ones(5, myRNNDims[0])), {'self': None}) for _ in range(4)]
+myRNNInput = [Variable(torch.ones(5, myRNNDims[0])) for _ in range(4)]
 myRNN = StackLSTM(myRNNBatchSize, myRNNDims)
 myRNNOutput = myRNN(myRNNInput)
 

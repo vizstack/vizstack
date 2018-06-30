@@ -191,6 +191,54 @@ class GraphData:
         }
 
 
+def gen_magic_method(obj_class, fn_name):
+    """Returns a magic method that, when called, executes `obj_class.fn_name()` and tracks the call.
+
+    Args:
+        obj_class (class): Class whose magic method should be executed when the generated function is called.
+        fn_name (str): The name of the magic method that should be executed when the generated function is called.
+
+    Returns:
+        (fn): A function which, when executed, calls a magic method and tracks the call.
+    """
+    magic_method = getattr(obj_class, fn_name)
+
+    def wrapped_magic_method(self, x):
+        return OpGenerator(magic_method, output_props_to_surface=[{'self': None}])(self, x)
+    return wrapped_magic_method
+
+
+# List of all arithmetic magic methods from https://rszalski.github.io/magicmethods/#appendix2
+MAGIC_METHODS = ['__add__', '__sub__', '__mul__', '__div__', '__floordiv__', '__truediv__', '__mod__', '__divmod__',
+                 '__pow__', '__lshift__', '__rshift__', '__and__', '__or__', '__xor__']
+MAGIC_METHODS += ['__r' + fn_name.lstrip('__') for fn_name in MAGIC_METHODS]
+# TODO: in-place assignment magic methods?
+
+
+def track_magic_methods(obj_class):
+    """Produces all of the magic methods that should be added to the class of a tracked data structure.
+
+    When a data structure is tracked and added to the computation graph, we would like to track any elementary
+    arithmetic operations performed on it as well. These operations do not exist as functions that can be easily
+    tracked; instead, they exist as "magic methods" of the object's class (`_add__`, `__mul__`, etc). Those methods
+    must be overwritten and replaced with versions that can be tracked; this function produces a mapping of magic
+    method names to tracked versions, that can be used with the `type()` function to replace the original methods.
+
+    Args:
+        obj_class (class): The original class of the object whose magic methods should be overwritten.
+
+    Returns:
+        (dict): A mapping of magic method name to tracked magic method function.
+    """
+    methods = {}
+    for fn_name in MAGIC_METHODS:
+        try:
+            methods[fn_name] = gen_magic_method(obj_class, fn_name)
+        except AttributeError:
+            pass
+    return methods
+
+
 # ======================================================================================================================
 # Graph containers.
 # -----------------
@@ -270,6 +318,9 @@ def track_data(obj, props_to_surface, creator_op=None, creator_pos=-1):
     Any object which is not the output of a tracked function (see `OpGenerator`) is not, by default, shown in the
     computation graph. Leaf data nodes can be added to the graph via `track_data()`.
 
+    `track_data()` adds a new field `xnode_graphdata` to `obj`, which maps to new the `GraphData` object. The class
+    of `obj` is also changed so that its arithmetic magic methods are tracked in the graph.
+
     Args:
         obj (object): Python object to add to the graph.
         props_to_surface (dict or None): A dict whose keys are user-selected names and whose values are the names
@@ -280,16 +331,12 @@ def track_data(obj, props_to_surface, creator_op=None, creator_pos=-1):
             `obj` is a leaf, `creator_op = None`.
 
     Returns:
-        (GraphData): A wrapped version of the object, which can be used as if it were unwrapped.
+        (object): `obj`, with an additional field `xnode_graphdata` and its class changed to modify its magic methods.
     """
-    try:
-        obj.xnode_graphdata = GraphData(obj, props_to_surface, creator_op, creator_pos)
-    except AttributeError:
-        # Built-in types, like `dict` and `list`, cannot have new properties added to them unless subclassed
-        class WrapperClass(type(obj)):
-            pass
-        obj = WrapperClass(obj)
-        obj.xnode_graphdata = GraphData(obj, props_to_surface, creator_op, creator_pos)
+    if not obj.__class__.__name__.startswith('__XNODE_GENERATED__'):
+        obj.__class__ = type('__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
+                             track_magic_methods(obj.__class__))
+    obj.xnode_graphdata = GraphData(obj, props_to_surface, creator_op, creator_pos)
     return obj
 
 
@@ -435,7 +482,7 @@ class AbstractContainerGenerator(wrapt.ObjectProxy):
 
 
 def tick(output, temporal_level):
-    """Create a temporal container extending backwards from output and encapsulating any outer-level op or container
+    """Create a temporal container extending backwards from `output` and encapsulating any outer-level op or container
     with `temporal_level`.
 
     Every op and container has a temporal level; abstractive containers and ops have level 0, and temporal containers
