@@ -63,7 +63,9 @@ class Canvas extends Component {
         removeViewer: PropTypes.func.isRequired,
 
         /**
+         * Updates the react-grid-layout model for the Canvas.
          *
+         * @param layout
          */
         updateLayout: PropTypes.func.isRequired,
 

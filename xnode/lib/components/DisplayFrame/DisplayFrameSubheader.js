@@ -8,10 +8,10 @@ import { withStyles } from 'material-ui/styles';
 
 /**
  * This dumb component creates a subheader bar for a display frame that horizontally lays out its children components.
- * A header is thicker and is emphasized with an accent color; it will typically contain title/subtitle text and icons,
- * grouped with `div`s appropriately for the desired spacing.
+ * A subheader is thinner and is emphasized with an accent color; it will typically contain only icons, grouped with
+ * `div`s appropriately for the desired spacing.
  */
-class DisplayFrameSubheader extends Component {
+class DisplayFrameHeader extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -19,16 +19,16 @@ class DisplayFrameSubheader extends Component {
         classes:  PropTypes.object.isRequired,
 
         /** React components within opening & closing tags. */
-        children: PropTypes.object,
+        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
     };
 
     /**
-     * Renders a frame container that wraps the children components.
+     * Renders a subheader container with specific styling and horizontal layout properties.
      */
     render() {
         const { classes, children } = this.props;
         return (
-            <div className={classNames('xn-display-frame-header', classes.header, classes.title)}>
+            <div className={classNames('xn-display-frame-subheader', classes.header)}>
                 {children}
             </div>
         );
@@ -41,23 +41,41 @@ class DisplayFrameSubheader extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     header: {
+        // Layout child components horizontally
         display: 'flex',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 4,
-        height: 20,
+
+        // No text selection within header
         userSelect: 'none',
+
+        // Padding
+        paddingTop: 2,
+        paddingBottom: 2,
+        paddingLeft: theme.spacing.unit,
+        paddingRight: theme.spacing.unit,
+
+        // Fixed height (no change)
+        flex: 'none',
+
+        // Text styling
+        '& span': {
+            flex: 1,
+            color: '#FFFFFF',
+            overflow: 'hidden',
+            fontFamily: theme.typography.monospace.fontFamily,
+            fontSize: '9pt',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            cursor: 'default',
+        },
+
+        // Transitions
+        transition: theme.transitions.create(['background'], { duration: theme.transitions.duration.shortest })
     },
-    title: {
-        flex: 1,
-        color: '#FFFFFF',
-        overflow: 'hidden',
-        fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '9pt',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        textAlign: 'center',
-    },
+
 });
 
-export default withStyles(styles)(DisplayFrameSubheader);
+export default withStyles(styles)(DisplayFrameHeader);

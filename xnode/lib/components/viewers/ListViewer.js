@@ -11,7 +11,6 @@ import IconButton from 'material-ui/IconButton';
 
 import LockedIcon from 'material-ui-icons/Lock';
 import UnlockedIcon from 'material-ui-icons/LockOpen';
-import { CircularProgress } from 'material-ui/Progress';
 
 import ColorLightBlue from 'material-ui/colors/lightBlue';
 import ColorBlue from 'material-ui/colors/blue';
@@ -79,7 +78,7 @@ class ListViewer extends Component {
             return (
                 <div className={classes.container}>
                     <div className={classes.progress}>
-                        <CircularProgress />
+                        <span className='loading loading-spinner-small inline-block' />
                     </div>
                 </div>
             );

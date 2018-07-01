@@ -71,6 +71,9 @@ const styles = theme => ({
             textAlign: 'center',
             cursor: 'default',
         },
+
+        // Transitions
+        transition: theme.transitions.create(['background'], { duration: theme.transitions.duration.shortest })
     },
 
 });
