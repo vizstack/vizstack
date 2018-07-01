@@ -1,25 +1,26 @@
-import torch.nn as nn
+import xtorch.nn as nn
 import math
 import graphtracker as gt
 
 
 class VGG(nn.Module):
-    '''
+    """
     VGG model
-    '''
+    """
     def __init__(self, features):
         super(VGG, self).__init__()
         self.features = features
         self.classifier = gt.AbstractContainerGenerator(nn.Sequential(
-            gt.OpGenerator(nn.Dropout()),
-            gt.OpGenerator(nn.Linear(512, 512)),
-            gt.OpGenerator(nn.ReLU()),
-            gt.OpGenerator(nn.Dropout()),
-            gt.OpGenerator(nn.Linear(512, 512)),
-            gt.OpGenerator(nn.ReLU(True)),
-            gt.OpGenerator(nn.Linear(512, 10)),
+            nn.Dropout(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Dropout(),
+            nn.Linear(512, 512),
+            nn.ReLU(True),
+            nn.Linear(512, 10),
         ))
-         # Initialize weights
+
+        # Initialize weights
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
@@ -38,13 +39,13 @@ def make_layers(cfg, batch_norm=False):
     in_channels = 3
     for v in cfg:
         if v == 'M':
-            layers += [gt.OpGenerator(nn.MaxPool2d(kernel_size=2, stride=2))]
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
         else:
-            conv2d = gt.OpGenerator(nn.Conv2d(in_channels, v, kernel_size=3, padding=1))
+            conv2d = nn.Conv2d(in_channels, v, kernel_size=3, padding=1)
             if batch_norm:
-                layers += [conv2d, gt.OpGenerator(nn.BatchNorm2d(v)), gt.OpGenerator(nn.ReLU())]
+                layers += [conv2d, nn.BatchNorm2d(v), nn.ReLU()]
             else:
-                layers += [conv2d, gt.OpGenerator(nn.ReLU())]
+                layers += [conv2d, nn.ReLU()]
             in_channels = v
     return nn.Sequential(*layers)
 

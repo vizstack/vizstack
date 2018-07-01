@@ -1,7 +1,7 @@
 'use babel';
 
 import { CompositeDisposable, Disposable } from 'atom';
-import path from 'path';
+import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './repl';
 
@@ -23,15 +23,23 @@ export default {
         // Array of all REPL objects created by the package
         // TODO: how to destroy REPLs that are no longer open
         this.repls = [];
+        this.sandboxSettingsView = new SandboxSettingsView();
+        this.sandboxSettingsPanel = atom.workspace.addModalPanel({
+            item: this.sandboxSettingsView.getElement(),
+            visible: false,
+        });
+
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
 
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
-                if(uri === 'atom://xnode-sandbox') {
-                    const scriptPath = path.join(__dirname, '../python_debug_test.py');  // TODO: Get rid of this!' Make current script path.
-                    let repl = new REPL(scriptPath);
+                if(uri.startsWith('atom://xnode-sandbox')) {
+                    this.sandboxSettingsPanel.hide();
+                    const tokens = uri.split('/');
+                    const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
                     this.repls.push(repl);
+                    console.debug('root -- new REPL added');
                     return repl;
                 }
             }),
@@ -53,7 +61,7 @@ export default {
 
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
-                'xnode:create-sandbox': () => this.createSandbox(),
+                'xnode:create-sandbox': () => this.openSandboxSettings(),
                 'xnode:watch-line': () => this.watchLine()
             }),
 
@@ -92,12 +100,12 @@ export default {
     // =================================================================================================================
 
     /**
-     * Creates a new sandbox for the open file in the current active editor.
+     * Opens a modal that allows users to open a sandbox after specifying key parameters.
      */
-    createSandbox() {
-        // TODO: Add modal window to display sandbox config options.
-        atom.workspace.toggle('atom://xnode-sandbox');
-        console.debug('createSandbox() -- new sandbox for current active file');
+    openSandboxSettings() {
+        this.sandboxSettingsView.resetElement(atom.workspace.getActiveTextEditor().getPath());
+        this.sandboxSettingsPanel.show();
+        console.debug('root -- sandbox settings panel opened');
     },
 
     /**
@@ -114,5 +122,5 @@ export default {
 
         // Buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
         this.repls[selectedRepl].toggleWatchStatement(editor.getPath(), cursorPosition.row + 1);
-    }
+    },
 };
