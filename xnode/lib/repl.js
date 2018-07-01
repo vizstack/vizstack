@@ -42,6 +42,14 @@ const theme = createMuiTheme({
             fontFamily: '"Roboto Mono", "Courier", monospace',
         }
     },
+    overrides: {
+        MuiIconButton: {
+            root: {
+                height: 24,
+                width: 24,
+            },
+        },
+    },
 });
 
 /**
@@ -272,7 +280,8 @@ export default class REPL {
      */
     _createEngine(scriptPath, pythonPath='python') {
         // TODO: remove these hard codes, let work in virtualenv
-        pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
+        // pythonPath = 'C:\\Anaconda2\\envs\\pytorch\\python.exe';
+        pythonPath = '/usr/local/miniconda3/bin/python';
         let options = {
             args: [scriptPath],
             pythonPath,
@@ -316,7 +325,7 @@ export default class REPL {
      *      The line number in `filePath` to watch/unwatch.
      * @param  {?object} action
      *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
-     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
+     *      `REPL`, in the format described in `ACTION-SYMBOL-TABLE-SCHEMA.md`.
      */
     toggleWatchStatement(filePath, lineNum, action = null) {
         console.debug(`repl -- toggling watch statement (${filePath}, ${lineNum})`);
@@ -342,7 +351,7 @@ export default class REPL {
      *      The identifier of the symbol, as acquired from a reference in the symbol table.
      * @param {?object} action
      *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
-     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
+     *      `REPL`, in the format described in `ACTION-SYMBOL-TABLE-SCHEMA.md`.
      */
     fetchSymbolData(symbolId, action = null) {
         // TODO: check to make sure the data isn't already there

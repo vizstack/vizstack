@@ -1,3 +1,5 @@
+'use babel';
+
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
@@ -14,7 +16,11 @@ class Example extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
+        /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
+
+        /** React components within opening & closing tags. */
+        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
     };
 
     /** Constructor. */
@@ -39,13 +45,14 @@ class Example extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     // css-key: value,
 });
 
-// TODO: For dumb components, just use following and delete `connect`/`bindActionCreators`/`createSelector` imports.
-// export default withStyles(styles)(Example);
+export default withStyles(styles)(Example);
+// TODO: For dumb components, just use the code above. Delete the code below and `connect`, `bindActionCreators`
+// `createSelector` imports. For smart components, use the code below.
 
 // To inject application state into component
 // ------------------------------------------

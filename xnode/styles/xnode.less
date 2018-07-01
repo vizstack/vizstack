@@ -10,12 +10,19 @@
     border-left: 12px solid @button-background-color-selected;
 }
 
-.xn-viewer-frame {
+.xn-display-frame-container {
     background: @pane-item-background-color;
     border: 1px solid @pane-item-border-color;
 }
 
-.xn-viewer-frame-header {
+.xn-display-frame-header {
+    background: @button-background-color;
+    &:hover {
+        background: @button-background-color-hover;
+    }
+}
+
+.xn-display-frame-subheader {
     background: @button-background-color;
     &:hover {
         background: @button-background-color-hover;

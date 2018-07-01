@@ -41,10 +41,8 @@ export default function rootReducer(state = initialState, action) {
 };
 
 /* Constants for default React Grid Layout element sizes. */
-const DEFAULT_W = 4;
 const DEFAULT_H = 6;
-const DEFAULT_MIN_W = 2;
-const DEFAULT_MIN_H = 2;
+const DEFAULT_MIN_H = 1;
 
 /**
  * Reset the canvas, removing all viewers.
@@ -67,9 +65,10 @@ function addViewerReducer(state, action) {
             i: `${state.nextViewerId}`,
             x: 0,
             y: Infinity,
-            w: DEFAULT_W,
+            w: 1,
             h: DEFAULT_H,
-            minW: DEFAULT_MIN_W,
+            minW: 1,
+            maxW: 1,
             minH: DEFAULT_MIN_H,
         }]));
 }

@@ -47,7 +47,7 @@ class GraphViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** JSS styling classes object. */
+        /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
         /** Unique ID of the Python symbol backing this viewer. */
@@ -499,7 +499,7 @@ class GraphViewer extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     container: {
         flex: 1,  // expand to fill frame vertical

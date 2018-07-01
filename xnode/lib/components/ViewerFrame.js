@@ -17,8 +17,12 @@ class ViewerFrame extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        children: PropTypes.object,
+        /** CSS-in-JS styling object. */
         classes:  PropTypes.object.isRequired,
+
+        /** React components within opening & closing tags. */
+        children: PropTypes.object,
+
         viewerId: PropTypes.number.isRequired,
         type:     PropTypes.string.isRequired,
         name:     PropTypes.string,
@@ -35,14 +39,14 @@ class ViewerFrame extends Component {
     render() {
         const { classes, children, name, type, removeViewer } = this.props;
         return (
-            <div className={classNames('xn-viewer-frame', classes.container)}>
-                <div className={classNames('xn-viewer-frame-header', classes.header)}>
+            <div className={classNames('xn-display-frame-container', classes.container)}>
+                <div className={classNames('xn-display-frame-header', classes.header)}>
                     <span className={classes.title}>
                         {`${name ? name + " " : ""}[${type}]`}
                     </span>
                     <IconButton aria-label="Close"
                                 onClick={() => removeViewer()}>
-                        <CloseIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
+                        <CloseIcon style={{color: '#FFFFFF'}}/>
                     </IconButton>
                 </div>
                 <div className={classNames(classes.content, "ReactGridLayoutNoDrag")}>
@@ -56,7 +60,7 @@ class ViewerFrame extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     container: {
         height: '100%',

@@ -29,7 +29,7 @@ export default {
             // Register openers to listen to particular URIs
             atom.workspace.addOpener(uri => {
                 if(uri === 'atom://xnode-sandbox') {
-                    const scriptPath = path.join(__dirname, "../python_debug_test.py");  // TODO: Get rid of this! Make current script path.
+                    const scriptPath = path.join(__dirname, '../python_debug_test.py');  // TODO: Get rid of this!' Make current script path.
                     let repl = new REPL(scriptPath);
                     this.repls.push(repl);
                     return repl;
@@ -95,19 +95,24 @@ export default {
      * Creates a new sandbox for the open file in the current active editor.
      */
     createSandbox() {
+        // TODO: Add modal window to display sandbox config options.
         atom.workspace.toggle('atom://xnode-sandbox');
         console.debug('createSandbox() -- new sandbox for current active file');
     },
 
     /**
-     * Adds a watch expression to the selected lines.
+     * Adds a watch expression to the selected line for the selected REPL. No-op if no REPLs have been created yet.
      * TODO: send the watch expression to selected REPL, use icon at line
      */
     watchLine() {
+        // No-op if no repls/sandboxes created yet
+        if(this.repls.length === 0) return;
+
         let editor = atom.workspace.getActiveTextEditor();
         let cursorPosition = editor.getCursorBufferPosition();
         let selectedRepl = 0; // TODO: have a "selected repl" to add watches to
-        // buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
+
+        // Buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
         this.repls[selectedRepl].toggleWatchStatement(editor.getPath(), cursorPosition.row + 1);
     }
 };

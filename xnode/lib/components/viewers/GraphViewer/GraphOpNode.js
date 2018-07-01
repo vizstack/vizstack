@@ -65,7 +65,7 @@ class GraphOpNode extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     smooth: {
         // transition: [

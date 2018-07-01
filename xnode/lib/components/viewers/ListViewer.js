@@ -32,7 +32,7 @@ class ListViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** JSS styling classes object. */
+        /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
         /** Unique ID of the Python symbol backing this viewer. */
@@ -110,13 +110,13 @@ class ListViewer extends Component {
             );
         });
 
-        // <IconButton aria-label="Unfreeze Viewer"
-        //             onClick={() => unfreezeViewer()}>
-        //     <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
-        // </IconButton>
+
         return (
             <div className={classes.container} >
-
+                <IconButton aria-label="Unfreeze Viewer"
+                            onClick={() => unfreezeViewer()}>
+                    <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
+                </IconButton>
                 <div className={classes.listBox}>
                     <div className={classes.list}>
                         {listItems}
@@ -131,7 +131,7 @@ class ListViewer extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     container: {
         width: '100%',

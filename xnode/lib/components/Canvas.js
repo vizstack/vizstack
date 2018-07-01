@@ -15,8 +15,12 @@ import ColorGrey from 'material-ui/colors/grey';
 import GridLayout, { WidthProvider } from 'react-grid-layout';
 const FlexibleGridLayout = WidthProvider(GridLayout);
 
-// Custom React viewers
-import ViewerFrame  from './ViewerFrame';
+// Canvas viewer frames
+import DisplayFrame, { DisplayFrameHeader, DisplayFrameSubheader, DisplayFrameContent } from './DisplayFrame';
+import IconButton from 'material-ui/IconButton';
+import CloseIcon from 'material-ui-icons/Close';
+
+// Custom data type viewers
 import NumberViewer from './viewers/NumberViewer';
 import StringViewer from './viewers/StringViewer';
 import TensorViewer from './viewers/TensorViewer';
@@ -36,7 +40,7 @@ class Canvas extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** JSS styling classes object. */
+        /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
         /**
@@ -88,7 +92,7 @@ class Canvas extends Component {
             str,
             expandSubviewer: (symbolId) => {
                 if(!isSymbolIdFrozen(symbolId)) {
-                    console.debug("Canvas -- expand subviewer of symbol", symbolId);
+                    console.debug('Canvas -- expand subviewer of symbol', symbolId);
                     fetchSymbolData(symbolId);
                     addViewer(symbolId);
                 }
@@ -130,13 +134,23 @@ class Canvas extends Component {
         let frames = viewers.map((viewer) => {
             return (
                 <div key={viewer.viewerId} className={classes.frameContainer}>
-                    <ViewerFrame key={viewer.viewerId}
-                                 viewerId={viewer.viewerId}
-                                 type={viewer.type}
-                                 name={viewer.name}
-                                 removeViewer={() => removeViewer(viewer.viewerId)}>
-                        {this.createViewerComponent(viewer)}
-                    </ViewerFrame>
+                    <DisplayFrame>
+
+                        <DisplayFrameHeader>
+                            <span className={classes.title}>
+                                {`${viewer.name ? viewer.name + " " : ""}[${viewer.type}]`}
+                            </span>
+                            <IconButton aria-label="Close"
+                                        onClick={() => removeViewer(viewer.viewerId)} mini>
+                                <CloseIcon style={{color: '#FFFFFF'}}/>
+                            </IconButton>
+                        </DisplayFrameHeader>
+
+                        <DisplayFrameContent classes={classNames('ReactGridLayoutNoDrag')}>
+                            {this.createViewerComponent(viewer)}
+                        </DisplayFrameContent>
+
+                    </DisplayFrame>
                 </div>
             )
         });
@@ -146,8 +160,8 @@ class Canvas extends Component {
                 [classes.canvasContainer]: true,
                 'native-key-bindings': true,
             })}>
-                <FlexibleGridLayout layout={layout} cols={12} rowHeight={25} autoSize={true}
-                                    onLayoutChange={updateLayout} draggableCancel=".ReactGridLayoutNoDrag">
+                <FlexibleGridLayout layout={layout} cols={1} rowHeight={25} autosize={true}
+                                    onLayoutChange={updateLayout} draggableCancel='.ReactGridLayoutNoDrag'>
                     {frames}
                 </FlexibleGridLayout>
             </div>
@@ -159,16 +173,17 @@ class Canvas extends Component {
 // To inject styles into component
 // -------------------------------
 
-/** CSS-in-JS styling object. */
+/** CSS-in-JS styling function. */
 const styles = theme => ({
     canvasContainer: {
         height: '100%',
         overflow: 'auto',
-        padding: theme.spacing.unit * 2,
+        padding: theme.spacing.unit,
     },
     frameContainer: {
-        display: "block",
-    }
+        display: 'block',
+        boxSizing: 'border-box',
+    },
 });
 
 
