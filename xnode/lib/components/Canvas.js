@@ -12,8 +12,9 @@ import classNames from 'classnames';
 import ColorGrey from 'material-ui/colors/grey';
 
 // Grid layout
-import GridLayout, { WidthProvider } from 'react-grid-layout';
-const FlexibleGridLayout = WidthProvider(GridLayout);
+import GridLayout from 'react-grid-layout';
+import { withSize } from 'react-sizeme';
+import { SizeMe } from 'react-sizeme'
 
 // Canvas viewer frames
 import DisplayFrame, { DisplayFrameHeader, DisplayFrameSubheader, DisplayFrameContent } from './DisplayFrame';
@@ -40,7 +41,7 @@ class Canvas extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** CSS-in-JS styling object. */
+        /** CSS-in-JS styling object (from `withStyles`). */
         classes: PropTypes.object.isRequired,
 
         /**
@@ -132,8 +133,8 @@ class Canvas extends Component {
      * Renders the inspector canvas and any viewers currently registered to it.
      */
     render() {
-        const { classes, viewers, removeViewer, layout, updateLayout} = this.props;
-        let frames = viewers.map((viewer) => {
+        const { classes, size, viewers, removeViewer, layout, updateLayout} = this.props;
+        const frames = viewers.map((viewer) => {
             return (
                 <div key={viewer.viewerId} className={classes.frameContainer}>
                     <DisplayFrame>
@@ -143,12 +144,12 @@ class Canvas extends Component {
                                 {`${viewer.name ? viewer.name + " " : ""}[${viewer.type}]`}
                             </span>
                             <IconButton aria-label="Close"
-                                        onClick={() => removeViewer(viewer.viewerId)} mini>
+                                        onClick={() => removeViewer(viewer.viewerId)}>
                                 <CloseIcon style={{color: '#FFFFFF'}}/>
                             </IconButton>
                         </DisplayFrameHeader>
 
-                        <DisplayFrameContent classes={classNames('ReactGridLayoutNoDrag')}>
+                        <DisplayFrameContent className='ReactGridLayoutNoDrag'>
                             {this.createViewerComponent(viewer)}
                         </DisplayFrameContent>
 
@@ -157,15 +158,18 @@ class Canvas extends Component {
             )
         });
 
-        return (
-            <div className={classNames({
-                [classes.canvasContainer]: true,
-                'native-key-bindings': true,
-            })}>
-                <FlexibleGridLayout layout={layout} cols={1} rowHeight={25} autosize={true}
-                                    onLayoutChange={updateLayout} draggableCancel='.ReactGridLayoutNoDrag'>
+        const sizedGridLayout = ({ size }) => {
+            return (
+                <GridLayout width={size.width} cols={1} rowHeight={25} autosize={true} containerPadding={[0, 0]}
+                            layout={layout} onLayoutChange={updateLayout} draggableCancel='.ReactGridLayoutNoDrag'>
                     {frames}
-                </FlexibleGridLayout>
+                </GridLayout>
+            );
+        };
+
+        return (
+            <div className={classNames(classes.canvasContainer)}>
+                <SizeMe>{sizedGridLayout}</SizeMe>
             </div>
         );
     }
@@ -180,7 +184,7 @@ const styles = theme => ({
     canvasContainer: {
         height: '100%',
         overflow: 'auto',
-        padding: theme.spacing.unit,
+        padding: theme.spacing.unit * 2,
     },
     frameContainer: {
         display: 'block',
@@ -243,4 +247,6 @@ function mapDispatchToProps(dispatch) {
     }, dispatch);
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(Canvas));
+export default connect(mapStateToProps, mapDispatchToProps)(
+    withStyles(styles)(Canvas)
+);

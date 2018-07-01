@@ -21,15 +21,18 @@ class DisplayFrameContent extends Component {
 
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+
+        /** Class tags to allow additional styling of container. */
+        className: PropTypes.string,
     };
 
     /**
      * Renders a content container with specific styling and vertical layout properties.
      */
     render() {
-        const { classes, children } = this.props;
+        const { classes, children, className } = this.props;
         return (
-            <div className={classes.content}>
+            <div className={classNames(classes.content, className)}>
                 {children}
             </div>
         );

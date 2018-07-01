@@ -20,15 +20,18 @@ class DisplayFrameHeader extends Component {
 
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+
+        /** Class tags to allow additional styling of container. */
+        className: PropTypes.string,
     };
 
     /**
      * Renders a header container with specific styling and horizontal layout properties.
      */
     render() {
-        const { classes, children } = this.props;
+        const { classes, children, className } = this.props;
         return (
-            <div className={classNames('xn-display-frame-header', classes.header)}>
+            <div className={classNames('xn-display-frame-header', classes.header, className)}>
                 {children}
             </div>
         );

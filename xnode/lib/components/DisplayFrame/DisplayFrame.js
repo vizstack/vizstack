@@ -19,15 +19,18 @@ class DisplayFrame extends Component {
 
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+
+        /** Class tags to allow additional styling of container. */
+        className: PropTypes.string,
     };
 
     /**
      * Renders a container with specific styling and vertical layout properties.
      */
     render() {
-        const { classes, children } = this.props;
+        const { classes, children, className } = this.props;
         return (
-            <div className={classNames('xn-display-frame-container', classes.container)}>
+            <div className={classNames('xn-display-frame-container', classes.container, className)}>
                 {children}
             </div>
         );
