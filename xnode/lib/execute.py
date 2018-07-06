@@ -69,7 +69,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         # Send a message to refresh the client's symbol table
         # TODO: is this even necessary? maybe the client can do this itself.
-        self._send_message(None, None, True, -1, None)
+        self._send_message(None, None, None, True, -1, None)
         self._runscript(_ScriptExecutor._normalize_path(script_path))
 
     def fetch_symbol_data(self, symbol_id, actions):
@@ -85,7 +85,7 @@ class _ScriptExecutor(pdb.Pdb):
             actions (dict): A dict describing the actions to be performed on the fetched symbol, of format described
                 in `ACTION-SCHEMA.md`.
         """
-        self._send_message(symbol_id, None, False, -1, actions)
+        self._send_message(symbol_id, None, None, False, -1, actions)
 
     # ==================================================================================================================
     # Message creation and sending.
@@ -93,13 +93,16 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _send_message(self, symbol_id, view_symbol, refresh, watch_count, actions):
+    def _send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions):
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
             symbol_id (str or None): The symbol whose shell, data object, and references should be included in the sent
                 slice.
-            view_symbol (str or None): A symbol ID that the client should view upon receiving the message, or `None`.
+            symbol_name (str or None): A string name given to `view_symbol_id` in the namespace, or `None` if
+                there is no `view_symbol_id` or the symbol has no name.
+            view_symbol_id (str or None): A symbol ID that the client should view upon receiving the message, or `None`
+                if no symbol should be viewed.
             refresh (bool): Whether the client should reset its symbol table information before incorporating the new
                 slice.
             watch_count (int): An integer unique to the watch statement whose information is being sent, or -1 if the
@@ -109,28 +112,30 @@ class _ScriptExecutor(pdb.Pdb):
         """
         message = {
             'symbols': {},
-            'viewSymbol': symbol_id if view_symbol else None,
+            'viewSymbol': view_symbol_id,
             'refresh': refresh,
             'watchCount': watch_count
         }
         if symbol_id:
-            symbol_slice = self._get_symbol_slice(symbol_id)
+            symbol_slice = self._get_symbol_slice(symbol_id, symbol_name)
             if actions:
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
             message['symbols'] = symbol_slice
         self._slice_output_queue.put(json.dumps(message))
 
-    def _get_symbol_slice(self, symbol_id):
+    def _get_symbol_slice(self, symbol_id, symbol_name):
         """Generates the minimal symbol table slice containing the filled shell of `symbol_id`.
 
         Args:
             symbol_id (str): A symbol ID whose minimal slice should be generated.
+            symbol_name (str or None): A string name assigned to the symbol in the namespace, or `None` if no name is
+                assigned.
 
         Returns:
             (dict): The symbol table slice containing the shell and data for `symbol_id` as well as the shells of all
                 referenced symbols.
         """
-        shell = self._viz_engine.get_symbol_shell(symbol_id)
+        shell = self._viz_engine.get_symbol_shell(symbol_id, symbol_name)
         data, attributes, refs = self._viz_engine.get_symbol_data(symbol_id)
         refs.update({symbol_id: shell})
         refs[symbol_id]['data'] = data
@@ -249,7 +254,7 @@ class _ScriptExecutor(pdb.Pdb):
         """Prepare to evaluate the variable being assigned to in `assign_frame` once it has been assigned.
 
         Since the variable is not actually assigned until the next step occurs, its value cannot be immediately
-        evaluated. Thus, `prepare_to_eval()` stores the variable name internally until `eval()` is called,
+        evaluated. Thus, `_prepare_to_eval()` stores the variable name internally until `_eval()` is called,
         at which point the value of the variable is evaluated.
 
         Args:
@@ -260,9 +265,10 @@ class _ScriptExecutor(pdb.Pdb):
         self._var_to_eval = self._get_var_name_from_frame(assign_frame)
 
     def _eval(self, eval_frame):
-        """Returns the Python object that was assigned in `assign_frame`, as evaluated in `eval_frame`.
+        """Evaluates the variable stored in `_prepare_to_eval()`, producing its Python object, variable name,
+        and associated symbol request actions.
 
-        Should be called only after `prepare_to_eval()`.
+        Should be called only after `_prepare_to_eval()`.
 
         Args:
             eval_frame (Frame): A `Pdb` frame object describing the program's stack frame at a line where a variable
@@ -274,19 +280,22 @@ class _ScriptExecutor(pdb.Pdb):
 
         Returns:
             (object): The object that was assigned to the variable name in `assign_frame`.
+            (str): The name of the variable which references the object.
+            (dict): Symbol request actions the client has associated with the variable's evaluation.
         """
+        obj_name = self._var_to_eval
         obj = None
         obj_found = False
-        if self._var_to_eval in eval_frame.f_locals:
-            obj = eval_frame.f_locals[self._var_to_eval]
+        if obj_name in eval_frame.f_locals:
+            obj = eval_frame.f_locals[obj_name]
             obj_found = True
-        elif self._var_to_eval in eval_frame.f_globals:
-            obj = eval_frame.f_globals[self._var_to_eval]
+        elif obj_name in eval_frame.f_globals:
+            obj = eval_frame.f_globals[obj_name]
             obj_found = True
 
         self._var_to_eval = None
         if obj_found:
-            return obj
+            return obj, obj_name, self._actions_on_eval
         raise ValueError
 
     # State checking.
@@ -405,7 +414,7 @@ class _ScriptExecutor(pdb.Pdb):
         if self._is_waiting_to_eval():
             # if the variable is defined in the current frame, evaluate it; otherwise, keep stepping until it is
             if self._can_eval(frame):
-                self._handle_break(self._eval(frame), self._actions_on_eval)
+                self._handle_break(frame)
                 self.do_continue(frame)
             else:
                 self.do_step(frame)
@@ -442,7 +451,7 @@ class _ScriptExecutor(pdb.Pdb):
             self.do_continue(frame)
         elif self._can_eval(frame):
             # if we have a variable to evaluate and can evaluate it, do so
-            self._handle_break(self._eval(frame), self._actions_on_eval)
+            self._handle_break(frame)
             self.do_continue(frame)
         else:
             # step until we can evaluate the variable
@@ -463,17 +472,15 @@ class _ScriptExecutor(pdb.Pdb):
     def postcmd(self, stop, line):
         return stop
 
-    def _handle_break(self, obj, actions):
-        """Sends a message with the value of `var_name` evaluated at `frame`.
+    def _handle_break(self, frame):
+        """Evaluates a watched variable, generates a symbol slice that contains it, and sends it to the client.
 
         Args:
-            frame:
-
-        Returns:
-
+            frame (pdb.Frame): The program state frame in which the variable should be evaluated.
         """
+        obj, symbol_name, actions = self._eval(frame)
         symbol_id = self._viz_engine.get_symbol_id(obj)
-        self._send_message(symbol_id, symbol_id, False, self._watch_count, actions)
+        self._send_message(symbol_id, symbol_name, symbol_id, False, self._watch_count, actions)
         self._watch_count += 1
 
     # ==================================================================================================================
