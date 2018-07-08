@@ -1,5 +1,5 @@
 """
-Replacement for `torch.autograd` that tracks any declared `Variable` objects in the computation graphs.
+Replacement for `torch.autograd` that tracks any declared `Variable` objects in the computation graph.
 """
 
 # Anything from autograd not overwritten will be pulled through

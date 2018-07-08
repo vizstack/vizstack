@@ -41,8 +41,8 @@ export default function rootReducer(state = initialState, action) {
 };
 
 /* Constants for default React Grid Layout element sizes. */
-const DEFAULT_H = 6;
-const DEFAULT_MIN_H = 1;
+const DEFAULT_H = 4;
+const DEFAULT_MIN_H = 2;
 
 /**
  * Reset the canvas, removing all viewers.

@@ -51,9 +51,7 @@ class SandboxSettingsComponent extends Component {
         const { pythonPath, scriptPath } = this.state;
         return (
             <div className={classes.root}>
-                <Typography className={classes.title} variant={"headline"}>
-                    Sandbox Settings
-                </Typography>
+                <Typography className={classes.title} variant={"headline"}>Sandbox Settings</Typography>
                 <div>
                     <TextField
                         className={classNames('native-key-bindings')
@@ -77,9 +75,7 @@ class SandboxSettingsComponent extends Component {
                     />
                 </div>
                 <div>
-                    <Button className={classes.button} onClick={() => this.openSandbox()}>
-                        Open
-                    </Button>
+                    <Button className={classes.button} onClick={() => this.openSandbox()}>Open</Button>
                 </div>
             </div>
         );

@@ -1,7 +1,7 @@
 import torch
-import xtorch.nn as nn
+import xntorch.nn as nn
 import graphtracker as gt
-from xtorch.autograd import Variable
+from xntorch.autograd import Variable
 import operator
 
 

@@ -1,5 +1,5 @@
 import torch
-from xtorch.autograd import Variable
+from xntorch.autograd import Variable
 
 from stack_lstm import StackLSTM, PseudoLogLSTM
 from vgg import vgg16

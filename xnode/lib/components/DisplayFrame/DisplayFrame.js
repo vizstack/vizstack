@@ -47,7 +47,7 @@ const styles = theme => ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        borderRadius: 4,  // TODO: Dehardcode this
+        borderRadius: theme.shape.borderRadius.regular,
     },
 });
 

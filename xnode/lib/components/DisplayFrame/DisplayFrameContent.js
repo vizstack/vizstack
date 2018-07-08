@@ -7,10 +7,10 @@ import { withStyles } from 'material-ui/styles';
 
 
 /**
- * TODO: Improve docs
- * This dumb component creates a header bar for a display frame that horizontally lays out its children components.
- * A header is thicker and is emphasized with an accent color; it will typically contain title/subtitle text and icons,
- * grouped with `div`s appropriately for the desired spacing.
+ * This dumb component creates a content container for a display frame that vertically lays out its children
+ * components.
+ * TODO: This component could be improved by incorporating more complex grid layout functionality (using flexbox grid)
+ * in order to more closely resemble Java's JPanel.
  */
 class DisplayFrameContent extends Component {
 

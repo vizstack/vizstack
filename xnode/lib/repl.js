@@ -10,7 +10,7 @@ import { composeWithDevTools } from 'remote-redux-devtools';
 
 // Material UI services
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import createMuiTheme from 'material-ui/styles/createMuiTheme';
+import XnodeMuiTheme from './theme';
 
 // Python services
 import PythonShell from 'python-shell';
@@ -30,27 +30,6 @@ const DEFAULT_ACTION = {
     recurse: [['creatorop'], ['args'], ['kwargs'], ['container']]
 };
 
-/** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
- *  For in depth description and list of overridable keys: <material-ui-next.com/customization/themes/> */
-const theme = createMuiTheme({
-    spacing: {
-        unit: 5,
-    },
-    typography: {
-        htmlFontSize: 10,
-        monospace: {
-            fontFamily: '"Roboto Mono", "Courier", monospace',
-        }
-    },
-    overrides: {
-        MuiIconButton: {
-            root: {
-                height: 24,
-                width: 24,
-            },
-        },
-    },
-});
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -87,7 +66,7 @@ export default class REPL {
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
-                <MuiThemeProvider theme={theme}>
+                <MuiThemeProvider theme={XnodeMuiTheme}>
                     <Canvas fetchSymbolData={(symbolId) => this.fetchSymbolData(symbolId)} />
                 </MuiThemeProvider>
             </ReduxProvider>,

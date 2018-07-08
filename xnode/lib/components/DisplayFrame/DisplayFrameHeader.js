@@ -65,14 +65,11 @@ const styles = theme => ({
         // Text styling
         '& span': {
             flex: 1,
-            color: '#FFFFFF',
             overflow: 'hidden',
             fontFamily: theme.typography.monospace.fontFamily,
-            fontSize: '9pt',
+            fontSize: '9pt', // TODO: Dehardcode this
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            textAlign: 'center',
-            cursor: 'default',
         },
 
         // Transitions

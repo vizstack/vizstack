@@ -1,43 +1,39 @@
 'use babel';
 
 import React, { Component } from 'react';
-import { withStyles } from 'material-ui/styles';
-import PropTypes from "prop-types";
+import PropTypes from 'prop-types';
+import { createSelector } from 'reselect';
+
+import ArrayViz from '../viz/ArrayViz';
 
 
 /**
- * This class renders a string variable in the enclosing frame.
+ * This dumb component renders a viewer for a Python string (list, tuple, set). It converts the string into a
+ * character sequence in the format of the explicit data model expected by `ArrayViz`.
  */
 class StringViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        classes: PropTypes.object.isRequired,
-        symbolId: PropTypes.string.isRequired,
-        viewerId: PropTypes.number.isRequired,
-        payload: PropTypes.object.isRequired,
-        str: PropTypes.string.isRequired,
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md`. */
+        data: PropTypes.object,
     };
 
+    /**
+     * Renders a ArrayViz after making the appropriate data transformations.
+     */
     render() {
-        const { classes, str } = this.props;
+        const { data } = this.props;
+
+        if(!data) return null;  // Empty component if no data yet
+
+        const { contents } = data;
+        const model = contents.split("").map((char) => ({ text: char, ref: null }));
+
         return (
-            <div className={classes.label}>
-                {str}
-            </div>
+            <ArrayViz model={model} startMotif='"' endMotif='"' itemWidth={20} />
         );
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = theme => ({
-    label: {
-        margin: 'auto',
-        textAlign: 'center',
-    }
-});
-
-export default withStyles(styles)(StringViewer);
+export default StringViewer;

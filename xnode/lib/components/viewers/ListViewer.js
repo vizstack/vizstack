@@ -2,46 +2,25 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import classNames from 'classnames';
-import { withStyles } from 'material-ui/styles';
-import { createSelector } from "reselect";
+import { createSelector } from 'reselect';
 
-import Typography from 'material-ui/Typography';
-import IconButton from 'material-ui/IconButton';
-
-import LockedIcon from 'material-ui-icons/Lock';
-import UnlockedIcon from 'material-ui-icons/LockOpen';
-
-import ColorLightBlue from 'material-ui/colors/lightBlue';
-import ColorBlue from 'material-ui/colors/blue';
-
+import ArrayViz from '../viz/ArrayViz';
 import { isSymbolId } from '../../services/symbol-utils';
 
 
-/** Constants for visualization. */
-const kListItemWidth  = 80;
-const kListItemHeight = 40;
-const kListItemMargin = 2;
-
-
 /**
- * This dumb component renders an sequence variable (tuple, list, set).
+ * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
+ * Canvas data structures to the explicit data model expected by `ArrayViz`.
  */
 class ListViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md`. */
+        data: PropTypes.object,
 
-        /** Unique ID of the Python symbol backing this viewer. */
-        symbolId: PropTypes.string.isRequired,
-
-        /** Unique ID of this viewer in the Canvas. */
-        viewerId: PropTypes.number.isRequired,
-
-        /** Data model rendered by this viewer; or null if not created yet. */
-        model: PropTypes.array,
+        /** Reference to the application symbol table. */
+        symbolTable: PropTypes.object.isRequired,
 
         /**
          * Generates a sub-viewer for a particular element of the list.
@@ -50,176 +29,42 @@ class ListViewer extends Component {
          *     Symbol ID of the element for which to create a new viewer.
          */
         expandSubviewer: PropTypes.func.isRequired,
-
-        /**
-         * Unfreezes this viewer so its data model reflects the latest version the backing Python symbol.
-         */
-        unfreezeViewer: PropTypes.func.isRequired,
     };
 
-    /** Constructor. */
-    constructor(props) {
-        super(props);
-        this.state = {
-            hover: null,
-            selected: null,
-        }
-    }
-
     /**
-     * Renders the list, with each item being a fixed-width button. When clicked, the button opens the viewer, if
-     * the clicked entry is a non-primitive.
+     * Renders a ArrayViz after making the appropriate data transformations.
+     * TODO: Use selectors for transformation.
      */
     render() {
-        const { classes, model, expandSubviewer, unfreezeViewer, symbolId } = this.props;
-        const { hover, selected } = this.state;
+        const { symbolTable, expandSubviewer, data } = this.props;
 
-        if (!model) {
-            return (
-                <div className={classes.container}>
-                    <div className={classes.progress}>
-                        <span className='loading loading-spinner-small inline-block' />
-                    </div>
-                </div>
-            );
-        }
+        if(!data) return null;  // Empty component if no data yet
 
-        const listItems = model.map((elem, idx) => {
+        const { contents } = data;
+        const model = contents.map((elem) => {
+            let text = '';
+            let ref = null;
 
-            let onClick = () => {
-                this.setState({
-                    selected: idx,
-                })
-            };
-            let onDoubleClick = elem.ref !== null ? (() => expandSubviewer(elem.ref)) : undefined;
+            if (elem === null) {  // none
+                text = 'None';
+            } else if (typeof elem === 'number') {  // number
+                text = `${elem}`;
+            } else if (typeof elem === 'boolean') {  // boolean
+                text = elem ? 'True' : 'False';
+            } else if (isSymbolId(elem)) {  // symbolId reference
+                ref = elem;
+                text = symbolTable[elem].str;
+            } else {  // string
+                text = `"${elem}"`;
+            }
 
-            return (
-                <div className={classNames({
-                    [classes.listItem]: true,
-                    [classes.hover]: hover === idx,
-                    [classes.selected]: selected === idx,
-                })}
-                     onClick={onClick}
-                     onDoubleClick={onDoubleClick}
-                     onMouseEnter={() => this.setState({hover: idx})}
-                     onMouseLeave={() => this.setState({hover: null})}
-                     key={idx}>
-                    <Typography className={classes.listItemText}>{elem.text}</Typography>
-                </div>
-            );
+            return { text, ref };
         });
 
-
         return (
-            <div className={classes.container} >
-                <IconButton aria-label="Unfreeze Viewer"
-                            onClick={() => unfreezeViewer()}>
-                    <LockedIcon style={{width: 15, height: 15, color: '#FFFFFF'}}/>
-                </IconButton>
-                <div className={classes.listBox}>
-                    <div className={classes.list}>
-                        {listItems}
-                    </div>
-                </div>
-            </div>
+            <ArrayViz model={model} onDoubleClick={expandSubviewer} startMotif="list[" endMotif="]"/>
         );
     }
 }
 
-
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = theme => ({
-    container: {
-        width: '100%',
-        margin: 'auto',  // center vertically
-
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    progress: {
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-    },
-    listBox: {
-        overflow: 'auto',
-        textAlign: 'center',
-        paddingTop: 16,
-        paddingBottom: 16,
-    },
-    list : {
-        display: 'inline-flex',
-        flexDirection: 'row',
-        flexWrap: 'nowrap',
-    },
-    listItem: {
-        margin: kListItemMargin,
-        width:  kListItemWidth,
-        height: kListItemHeight,
-        background: ColorLightBlue[50],
-        borderColor: 'transparent',
-        borderStyle: 'solid',
-        borderRadius: 4,
-
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        userSelect: 'none',
-    },
-    hover: {
-        borderColor: ColorLightBlue[400],
-    },
-    selected: {
-        borderColor: ColorBlue[600],
-    },
-    listItemText: {
-        textAlign:      'center',
-        overflow:       'hidden',
-        textOverflow:   'ellipsis',
-        whiteSpace:     'nowrap',
-        textTransform:  'none',
-    },
-});
-
-export default withStyles(styles)(ListViewer);
-
-/**
- * Assembles data model rendered by a ListViewer:
- * [{
- *     text: "List[4]",
- *     ref: "@id:..." | null,
- * },...]
- *
- * @param {object} payload
- *     Payload object as defined in data schema.
- * @param {object} symbolTable
- *     Reference to the application symbol table.
- * @return {array}
- *     Data model rendered by a ListViewer.
- */
-export function assembleListModel(payload, symbolTable) {
-    if(!payload) return null;  // TODO Check this
-    const { contents } = payload;
-    return contents.map((elem) => {
-        let text = '';
-        let ref = null;
-
-        if (elem === null) {  // none
-            text = 'None';
-        } else if (typeof elem === 'number') {  // number
-            text = `${elem}`;
-        } else if (typeof elem === 'boolean') {  // boolean
-            text = elem ? 'True' : 'False';
-        } else if (isSymbolId(elem)) {  // symbolId reference
-            ref = elem;
-            text = symbolTable[elem].str;
-        } else {  // string
-            text = `"${elem}"`;
-        }
-
-        return { text, ref };
-    });
-}
+export default ListViewer;

@@ -1,4 +1,4 @@
-import xtorch.nn as nn
+import xntorch.nn as nn
 import math
 import graphtracker as gt
 

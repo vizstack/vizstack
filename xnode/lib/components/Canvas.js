@@ -8,25 +8,19 @@ import { createSelector } from 'reselect';
 import { withStyles } from 'material-ui/styles';
 import classNames from 'classnames';
 
-// Material UI
-import ColorGrey from 'material-ui/colors/grey';
-
 // Grid layout
 import GridLayout from 'react-grid-layout';
-import { withSize } from 'react-sizeme';
 import { SizeMe } from 'react-sizeme'
 
-// Canvas viewer frames
-import DisplayFrame, { DisplayFrameHeader, DisplayFrameSubheader, DisplayFrameContent } from './DisplayFrame';
-import IconButton from 'material-ui/IconButton';
-import CloseIcon from 'material-ui-icons/Close';
+// Common viewer frame
+import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
 
 // Custom data type viewers
-import NumberViewer from './viewers/NumberViewer';
+// import NumberViewer from './viewers/NumberViewer';
 import StringViewer from './viewers/StringViewer';
-import TensorViewer from './viewers/TensorViewer';
-import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
-import ListViewer, { assembleListModel }   from './viewers/ListViewer';
+// import TensorViewer from './viewers/TensorViewer';
+// import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
+import ListViewer from './viewers/ListViewer';
 
 // Custom Redux actions
 import { addViewerAction, removeViewerAction, updateLayoutAction } from '../actions/canvas';
@@ -36,6 +30,7 @@ import { isSymbolIdFrozen } from '../services/symbol-utils';
 /**
  * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
  * of `ViewerFrame` objects using React Grid Layout.
+ * TODO: Refactor viewer remove based on viewerId not symbolId, because of clone.
  */
 class Canvas extends Component {
 
@@ -81,84 +76,126 @@ class Canvas extends Component {
 
     };
 
+    // =================================================================================================================
+    // Canvas viewer callback functions
+    // =================================================================================================================
+
+    // TODO: Factor these out of local definition
+    expandSubviewer(symbolId) {
+        if(!isSymbolIdFrozen(symbolId)) {
+            const { addViewer, fetchSymbolData } = this.props;
+            console.debug(`Canvas -- expand subviewer of symbol ${symbolId}`);
+            fetchSymbolData(symbolId);
+            addViewer(symbolId);
+        }
+    }
+
+    unfreezeViewer(symbolId) {
+        if(isSymbolIdFrozen(symbolId)) {
+            console.debug(`Canvas -- unfreeze viewer of symbol ${symbolId}`);
+            // TODO
+        }
+    }
+
+    freezeViewer(symbolId) {
+        if(!isSymbolIdFrozen(symbolId)) {
+            console.debug(`Canvas -- freeze viewer of symbol ${symbolId}`);
+            // TODO
+        }
+    }
+
+    cloneViewer(symbolId) {
+        console.debug(`Canvas -- clone viewer of symbol ${symbolId}`);
+    };
+
+    // =================================================================================================================
+    // Canvas rendering
+    // =================================================================================================================
+
     /**
      * Returns the [*]Viewer component of the proper type for the given viewer data object.
+     *
+     * @param {object} viewer
      */
     createViewerComponent(viewer) {
-        const { addViewer, fetchSymbolData, symbolTable } = this.props;
+        const { symbolTable } = this.props;
         const { symbolId, viewerId, type, name, str, data} = viewer;
-        const props = {
-            symbolId,
-            viewerId,
-            type,
-            name,
-            str,
-            expandSubviewer: (symbolId) => {
-                if(!isSymbolIdFrozen(symbolId)) {
-                    console.debug('Canvas -- expand subviewer of symbol', symbolId);
-                    fetchSymbolData(symbolId);
-                    addViewer(symbolId);
-                }
-            },
-            unfreezeViewer: () => {
-                // TODO: viewer.viewerId
-            }
-        };
 
-        switch(viewer.type) {
-            case "number":
-                return <NumberViewer {...props}/>;
+        // TODO: Refactor other viewers
+        let viewerContent;
+        switch(type) {
+            case "number":  // TODO
+                // viewerContent = <NumberViewer {...contentProps}/>;
+                break;
 
-            case "string":
-                return <StringViewer {...props}/>;
+            case "string":  // TODO
+                viewerContent = <StringViewer data={data} />;
+                break;
 
-            case "tensor":
-                return <TensorViewer {...props}/>;
+            case "tensor":  // TODO
+                // viewerContent = <TensorViewer {...contentProps}/>;
+                break;
 
-            case "graphdata":
-                return <GraphViewer {...props} model={assembleGraphModel(symbolId, symbolTable)}/>;
+            case "graphdata":  // TODO
+                // viewerContent = <GraphViewer {...contentProps} symbolId={symbolId} symbolTable={symbolTable}/>;
+                break;
 
             case "list":
             case "tuple":
             case "set":
-                return <ListViewer {...props} model={assembleListModel(data, symbolTable)}/>;
+                viewerContent = <ListViewer data={data} symbolTable={symbolTable} expandSubviewer={this.expandSubviewer.bind(this)}/>;
+                break;
 
             default:
-                return null;
+                console.warn(`Canvas -- unrecognized data type received; got ${type}`)
+                viewerContent = <span>Unrecognized data type</span>;
+                break;
+
             // TODO: Add more viewers
         }
+
+        // TODO: De-hardcode this
+        // TODO: What about progress spinner?
+        // if (!model) {
+        //     return (
+        //         <div className={classes.container}>
+        //             <div className={classes.progress}>
+        //                 <span className='loading loading-spinner-small inline-block' />
+        //             </div>
+        //         </div>
+        //     );
+        // }
+
+        return (
+            <ViewerDisplayFrame viewerType={type} viewerName={name}
+                                isFrozen={true}
+                                onClickClose={() => this.props.removeViewer(symbolId)}
+                                onClickUnfreeze={() => this.unfreezeViewer.bind(this, symbolId)}
+                                onClickFreeze={() => this.freezeViewer.bind(this, symbolId)}
+                                onClickClone={() => this.cloneViewer.bind(this, symbolId)}
+                                additionalIcons={null} additionalText={null}>
+                {viewerContent}
+            </ViewerDisplayFrame>
+        );
     }
 
     /**
      * Renders the inspector canvas and any viewers currently registered to it.
      */
     render() {
-        const { classes, size, viewers, removeViewer, layout, updateLayout} = this.props;
+        const { classes, viewers, layout, updateLayout} = this.props;
         const frames = viewers.map((viewer) => {
             return (
                 <div key={viewer.viewerId} className={classes.frameContainer}>
-                    <DisplayFrame>
-
-                        <DisplayFrameHeader>
-                            <span className={classes.title}>
-                                {`${viewer.name ? viewer.name + " " : ""}[${viewer.type}]`}
-                            </span>
-                            <IconButton aria-label="Close"
-                                        onClick={() => removeViewer(viewer.viewerId)}>
-                                <CloseIcon style={{color: '#FFFFFF'}}/>
-                            </IconButton>
-                        </DisplayFrameHeader>
-
-                        <DisplayFrameContent className='ReactGridLayoutNoDrag'>
-                            {this.createViewerComponent(viewer)}
-                        </DisplayFrameContent>
-
-                    </DisplayFrame>
+                    {this.createViewerComponent(viewer)}
                 </div>
             )
         });
 
-        const sizedGridLayout = ({ size }) => {
+        console.debug(`Canvas -- rendering ${frames.length} viewer frame(s)`, viewers);
+
+        // Lightweight grid layout component that adjusts width according to `size`
+        const FlexibleGridLayout = ({ size }) => {
             return (
                 <GridLayout width={size.width} cols={1} rowHeight={25} autosize={true} containerPadding={[0, 0]}
                             layout={layout} onLayoutChange={updateLayout} draggableCancel='.ReactGridLayoutNoDrag'>
@@ -169,7 +206,7 @@ class Canvas extends Component {
 
         return (
             <div className={classNames(classes.canvasContainer)}>
-                <SizeMe>{sizedGridLayout}</SizeMe>
+                <SizeMe>{FlexibleGridLayout}</SizeMe>
             </div>
         );
     }
@@ -209,7 +246,7 @@ const styles = theme => ({
  * ]
  */
 // TODO: This selector doesn't seem to be very effective because it's still rerendering each elem in the Canvas
-    // whenever the symbol table changes.
+// whenever the symbol table changes.
 const viewersSelector = createSelector(
     [(state) => state.canvas.viewerObjects, (state) => state.canvas.viewerPositions, (state) => state.program.symbolTable],
     (viewerObjects, viewerPositions, symbolTable) => {

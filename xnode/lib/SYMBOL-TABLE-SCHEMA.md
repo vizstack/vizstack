@@ -84,7 +84,7 @@ Note the redundancy.
 
 #### list/tuple/set
 ```
-"str": "List[5]",
+"str": "list[5]",
 "data": {
     "contents": [1, 3.14, false, "hi", "@id:12345"],
 }
@@ -92,7 +92,7 @@ Note the redundancy.
 
 #### dict
 ```
-"str": "Dict[4]",
+"str": "dict[4]",
 "data": {
     "contents": {
         "stringkey": "value",
@@ -136,7 +136,7 @@ Note the redundancy.
 
 #### function
 ```
-"str": "<fn function_name>",
+"str": "function<foo>",
 "data": {
     "args":["hi", "hi"],
     "kwargs":{"kwarg1": "xnode$1234"},
@@ -147,7 +147,7 @@ Note the redundancy.
 
 #### tensor
 ```
-"str": "Tensor[3,2,1](float32)",
+"str": "tensor[3,2,1].float32",
 "data": {
     "contents": [[1,2,3],[2,3,4]],
     "size": [1,2,3],

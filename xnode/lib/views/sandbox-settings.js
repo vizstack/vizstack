@@ -15,7 +15,9 @@ export default class SandboxSettingsView {
         this.element = document.createElement('div');
     }
 
-    /** Returns an object that can be retrieved when package is activated. */
+    /**
+     * Returns an object that can be retrieved when package is activated.
+     */
     serialize() {}
 
     /**
@@ -26,7 +28,9 @@ export default class SandboxSettingsView {
         console.debug('destroy() -- SandboxSettingsView instance destroyed');
     }
 
-    /** Used by Atom to get the DOM element to be rendered. */
+    /**
+     * Used by Atom to get the DOM element to be rendered.
+     */
     getElement() {
         return this.element;
     }
