@@ -15,12 +15,9 @@ import { SizeMe } from 'react-sizeme'
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
 import InspectIcon from '@material-ui/icons/Search';  // Explore, LockOpen
-import DeleteIcon from '@material-ui/icons/Delete';
-import DuplicateIcon from '@material-ui/icons/ContentCopy';
+import DeleteIcon from '@material-ui/icons/DeleteOutlined';
+import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import CloseIcon from '@material-ui/icons/Close';
-
-
-
 
 // Custom data type viewers
 // import NumberViewer from './viewers/NumberViewer';
