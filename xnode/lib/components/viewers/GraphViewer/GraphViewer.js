@@ -2,7 +2,7 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { withStyles } from 'material-ui/styles';
+import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 import ELK from 'elkjs';
 
@@ -13,15 +13,15 @@ import GraphDataEdge from './GraphDataEdge';
 import GraphDataNode from './GraphDataNode';
 import GraphContainerNode from './GraphContainerNode';
 
-import Typography from 'material-ui/Typography';
-import { CircularProgress } from 'material-ui/Progress';
-import List, { ListItem, ListItemIcon } from 'material-ui/List';
-import DropDownIcon from 'material-ui-icons/ArrowDropDown';
-import NotInterestedIcon from 'material-ui-icons/NotInterested';
-import Collapse from 'material-ui/transitions/Collapse';
-import ColorGrey from 'material-ui/colors/grey';
-import ColorBlue from 'material-ui/colors/blue';
-import ColorBlueGrey from 'material-ui/colors/blueGrey';
+import Typography from '@material-ui/core/Typography';
+import { CircularProgress } from '@material-ui/core/Progress';
+import List, { ListItem, ListItemIcon } from '@material-ui/core/List';
+import DropDownIcon from '@material-ui/icons/ArrowDropDown';
+import NotInterestedIcon from '@material-ui/icons/NotInterested';
+import Collapse from '@material-ui/core/transitions/Collapse';
+import ColorGrey from '@material-ui/core/colors/grey';
+import ColorBlue from '@material-ui/core/colors/blue';
+import ColorBlueGrey from '@material-ui/core/colors/blueGrey';
 
 
 /**

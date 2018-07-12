@@ -3,16 +3,17 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
-import { withStyles } from 'material-ui/styles';
+import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Typography from 'material-ui/Typography';
-import ColorLightBlue from 'material-ui/colors/lightBlue';
-import ColorBlue from 'material-ui/colors/blue';
+import Typography from '@material-ui/core/Typography';
+import ColorLightBlue from '@material-ui/core/colors/lightBlue';
+import ColorBlue from '@material-ui/core/colors/blue';
 
 
 /**
  * This dumb component renders visualization for an array, or a 1-D sequence of heterogeneous elements.
+ * TODO: Allow multi-line wrapping elements.
  */
 class ArrayViz extends Component {
 

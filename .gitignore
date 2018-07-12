@@ -39,5 +39,4 @@ ENV/
 *.class
 
 # Atom
-.tags
-xnode/.tags
+*.tags

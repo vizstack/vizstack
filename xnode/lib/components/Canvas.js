@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
-import { withStyles } from 'material-ui/styles';
+import { withStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 
 // Grid layout
@@ -14,6 +14,13 @@ import { SizeMe } from 'react-sizeme'
 
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
+import InspectIcon from '@material-ui/icons/Search';  // Explore, LockOpen
+import DeleteIcon from '@material-ui/icons/Delete';
+import DuplicateIcon from '@material-ui/icons/ContentCopy';
+import CloseIcon from '@material-ui/icons/Close';
+
+
+
 
 // Custom data type viewers
 // import NumberViewer from './viewers/NumberViewer';
@@ -81,32 +88,36 @@ class Canvas extends Component {
     // =================================================================================================================
 
     // TODO: Factor these out of local definition
-    expandSubviewer(symbolId) {
-        if(!isSymbolIdFrozen(symbolId)) {
-            const { addViewer, fetchSymbolData } = this.props;
-            console.debug(`Canvas -- expand subviewer of symbol ${symbolId}`);
-            fetchSymbolData(symbolId);
-            addViewer(symbolId);
-        }
-    }
+    // expandSubviewer(symbolId) {
+    //     if(!isSymbolIdFrozen(symbolId)) {
+    //         const { addViewer, fetchSymbolData } = this.props;
+    //         console.debug(`Canvas -- expand subviewer of symbol ${symbolId}`);
+    //         fetchSymbolData(symbolId);
+    //         addViewer(symbolId);
+    //     }
+    // }
 
-    unfreezeViewer(symbolId) {
+    deleteSnapshotViewer(symbolId) {
         if(isSymbolIdFrozen(symbolId)) {
-            console.debug(`Canvas -- unfreeze viewer of symbol ${symbolId}`);
+            console.debug(`Canvas -- delete snapshot viewer & watch expression for symbol ${symbolId}`);
             // TODO
         }
     }
 
-    freezeViewer(symbolId) {
-        if(!isSymbolIdFrozen(symbolId)) {
-            console.debug(`Canvas -- freeze viewer of symbol ${symbolId}`);
+    openLiveViewer(symbolId) {
+        if(isSymbolIdFrozen(symbolId)) {
+            console.debug(`Canvas -- open live viewer for symbol ${symbolId}`);
             // TODO
         }
     }
 
-    cloneViewer(symbolId) {
-        console.debug(`Canvas -- clone viewer of symbol ${symbolId}`);
-    };
+    closeLiveViewer(viewerId) {
+        console.debug(`Canvas -- close live viewer ${viewerId}`);
+    }
+
+    duplicateLiveViewer(viewerId) {
+        console.debug(`Canvas -- duplicate live viewer ${viewerId}`);
+    }
 
     // =================================================================================================================
     // Canvas rendering
@@ -124,26 +135,27 @@ class Canvas extends Component {
         // TODO: Refactor other viewers
         let viewerContent;
         switch(type) {
-            case "number":  // TODO
+            case 'number':  // TODO
                 // viewerContent = <NumberViewer {...contentProps}/>;
                 break;
 
-            case "string":  // TODO
+            case 'string':  // TODO
                 viewerContent = <StringViewer data={data} />;
                 break;
 
-            case "tensor":  // TODO
+            case 'tensor':  // TODO
                 // viewerContent = <TensorViewer {...contentProps}/>;
                 break;
 
-            case "graphdata":  // TODO
+            case 'graphdata':  // TODO
                 // viewerContent = <GraphViewer {...contentProps} symbolId={symbolId} symbolTable={symbolTable}/>;
                 break;
 
-            case "list":
-            case "tuple":
-            case "set":
-                viewerContent = <ListViewer data={data} symbolTable={symbolTable} expandSubviewer={this.expandSubviewer.bind(this)}/>;
+            case 'list':
+            case 'tuple':
+            case 'set':
+                viewerContent = <ListViewer data={data} symbolTable={symbolTable}
+                                            expandSubviewer={this.openLiveViewer.bind(this)}/>;
                 break;
 
             default:
@@ -153,6 +165,20 @@ class Canvas extends Component {
 
             // TODO: Add more viewers
         }
+
+        let icons = [];
+        if (type === 'dict' /* isSnapshot */) {
+            icons.push({title: 'Inspect', icon: <InspectIcon/>, onClick: this.openLiveViewer.bind(this, symbolId)});
+            icons.push({title: 'Delete',  icon: <DeleteIcon/>,  onClick: this.deleteSnapshotViewer.bind(this, symbolId)});
+        } else if (true /* isLive */) {
+            icons.push({title: 'Duplicate', icon: <DuplicateIcon/>, onClick: this.duplicateLiveViewer.bind(this, viewerId)});
+            icons.push({title: 'Close',     icon: <CloseIcon/>, onClick: this.closeLiveViewer.bind(this, viewerId)});
+        }
+
+        // onClickClose={() => this.props.removeViewer(symbolId)}
+        // onClickUnfreeze={() => this.unfreezeViewer.bind(this, symbolId)}
+        // onClickFreeze={() => this.freezeViewer.bind(this, symbolId)}
+        // onClickClone={() => this.cloneViewer.bind(this, symbolId)}
 
         // TODO: De-hardcode this
         // TODO: What about progress spinner?
@@ -168,12 +194,7 @@ class Canvas extends Component {
 
         return (
             <ViewerDisplayFrame viewerType={type} viewerName={name}
-                                isFrozen={true}
-                                onClickClose={() => this.props.removeViewer(symbolId)}
-                                onClickUnfreeze={() => this.unfreezeViewer.bind(this, symbolId)}
-                                onClickFreeze={() => this.freezeViewer.bind(this, symbolId)}
-                                onClickClone={() => this.cloneViewer.bind(this, symbolId)}
-                                additionalIcons={null} additionalText={null}>
+                                icons={icons}>
                 {viewerContent}
             </ViewerDisplayFrame>
         );

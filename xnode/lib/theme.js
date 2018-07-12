@@ -1,6 +1,6 @@
 'use babel';
 
-import createMuiTheme from 'material-ui/styles/createMuiTheme';
+import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
 
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.

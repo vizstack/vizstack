@@ -62,7 +62,7 @@ class ListViewer extends Component {
         });
 
         return (
-            <ArrayViz model={model} onDoubleClick={expandSubviewer} startMotif="list[" endMotif="]"/>
+            <ArrayViz model={model} onDoubleClick={expandSubviewer} startMotif="[" endMotif="]"/>
         );
     }
 }

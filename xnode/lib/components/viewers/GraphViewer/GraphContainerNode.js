@@ -1,12 +1,12 @@
 'use babel';
 
 import React, { Component } from 'react';
-import { withStyles } from 'material-ui/styles';
+import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 
-import ColorLightBlue from 'material-ui/colors/lightBlue'
-import ColorBlue from "material-ui/colors/blue";
+import ColorLightBlue from '@material-ui/core/colors/lightBlue'
+import ColorBlue from "@material-ui/core/colors/blue";
 
 
 /**

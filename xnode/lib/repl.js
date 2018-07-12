@@ -9,7 +9,7 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { composeWithDevTools } from 'remote-redux-devtools';
 
 // Material UI services
-import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
+import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
 import XnodeMuiTheme from './theme';
 
 // Python services

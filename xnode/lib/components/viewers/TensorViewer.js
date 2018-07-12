@@ -1,11 +1,11 @@
 'use babel';
 
 import React, { Component, PureComponent } from 'react';
-import { withStyles } from 'material-ui/styles';
-import Icon from 'material-ui/Icon';
-import IconButton from 'material-ui/IconButton';
-import Tooltip from 'material-ui/Tooltip';
-import CompareArrowsIcon from 'material-ui-icons/CompareArrows';
+import { withStyles } from '@material-ui/core/styles';
+import Icon from '@material-ui/core/Icon';
+import IconButton from '@material-ui/core/IconButton';
+import Tooltip from '@material-ui/core/Tooltip';
+import CompareArrowsIcon from '@material-ui/icons/CompareArrows';
 import PropTypes from 'prop-types';
 import { scaleLinear, color } from 'd3';
 import { XYPlot, XAxis, YAxis, HorizontalGridLines, VerticalGridLines, AreaSeries, LineSeries } from 'react-vis';
