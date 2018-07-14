@@ -267,7 +267,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('repl -- received message', JSON.parse(message));
-            let { viewSymbol, symbols, refresh, watchCount } = JSON.parse(message);
+            let { viewSymbol, symbols, refresh, watchCount, error } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
@@ -289,6 +289,10 @@ export default class REPL {
                 else {
                     this.store.dispatch(addViewerAction(viewSymbol));
                 }
+            }
+            if (error !== null) {
+                // TODO: where to write errors?
+                console.error(error);
             }
         });
         return executionEngine;

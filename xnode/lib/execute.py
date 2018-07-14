@@ -1,6 +1,7 @@
 import pdb
 from os.path import normpath, normcase
 import json
+import traceback
 
 from viz import VisualizationEngine
 
@@ -14,14 +15,18 @@ class _ScriptExecutor(pdb.Pdb):
     The `_ScriptExecutor` is a modified `Pdb` instance; watch expressions are added as breakpoints. When such a
     breakpoint is encountered, the instance identifies which variable is being assigned to at that line, waits for it to
     be evaluated, creates a symbol schema for it, and sends it to the parent process as a string via a queue.
+
+    Args:
+        send_message (fn): A function with signature (symbol_slice, view_symbol_id, refresh, watch_count, error) that
+            should be called to send a message containing execution state info and instructions to the client.
     """
 
-    def __init__(self, slice_output_queue, **kwargs):
+    def __init__(self, send_message, **kwargs):
         pdb.Pdb.__init__(self, **kwargs)
         # Converts Python objects to viz schema format.
         self._viz_engine = VisualizationEngine()
-        # A queue shared with the parent process to which newly generated symbol schemas should be added.
-        self._slice_output_queue = slice_output_queue
+        # A function that is called when a message should be sent to the client.
+        self._send_message = send_message
         # A count of the number of encountered watch expressions, to be sent along with any returned messages so that
         # symbol freezing may be performed by clients.
         self._watch_count = 0
@@ -69,7 +74,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         # Send a message to refresh the client's symbol table
         # TODO: is this even necessary? maybe the client can do this itself.
-        self._send_message(None, None, None, True, -1, None)
+        self._prepare_and_send_message(None, None, None, True, -1, None)
         self._runscript(_ScriptExecutor._normalize_path(script_path))
 
     def fetch_symbol_data(self, symbol_id, actions):
@@ -85,7 +90,7 @@ class _ScriptExecutor(pdb.Pdb):
             actions (dict): A dict describing the actions to be performed on the fetched symbol, of format described
                 in `ACTION-SCHEMA.md`.
         """
-        self._send_message(symbol_id, None, None, False, -1, actions)
+        self._prepare_and_send_message(symbol_id, None, None, False, -1, actions)
 
     # ==================================================================================================================
     # Message creation and sending.
@@ -93,7 +98,7 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions):
+    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions, error=None):
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
@@ -109,19 +114,14 @@ class _ScriptExecutor(pdb.Pdb):
                 message is not associated with a watch statement.
             actions (dict or None): A dict of actions to be performed on the given symbol slice before returning,
                 in the form described in `ACTION-SCHEMA.md`.
+            error (str or None): The full text of an exception message that should be relayed to the client.
         """
-        message = {
-            'symbols': {},
-            'viewSymbol': view_symbol_id,
-            'refresh': refresh,
-            'watchCount': watch_count
-        }
+        symbol_slice = None
         if symbol_id:
             symbol_slice = self._get_symbol_slice(symbol_id, symbol_name)
             if actions:
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
-            message['symbols'] = symbol_slice
-        self._slice_output_queue.put(json.dumps(message))
+        self._send_message(symbol_slice, view_symbol_id, refresh, watch_count, error)
 
     def _get_symbol_slice(self, symbol_id, symbol_name):
         """Generates the minimal symbol table slice containing the filled shell of `symbol_id`.
@@ -480,7 +480,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         obj, symbol_name, actions = self._eval(frame)
         symbol_id = self._viz_engine.get_symbol_id(obj)
-        self._send_message(symbol_id, symbol_name, symbol_id, False, self._watch_count, actions)
+        self._prepare_and_send_message(symbol_id, symbol_name, symbol_id, False, self._watch_count, actions)
         self._watch_count += 1
 
     # ==================================================================================================================
@@ -527,11 +527,24 @@ def run_script(receive_queue, send_queue, script_path, watches):
         watches (list): A list of watch expression objects of form {'file': str, 'lineno': str, 'action': dict}.
 
     """
+    def _send_message(symbol_slice, view_symbol_id, refresh, watch_count, error):
+        message = {
+            'symbols': symbol_slice,
+            'viewSymbol': view_symbol_id,
+            'refresh': refresh,
+            'watchCount': watch_count,
+            'error': error,
+        }
+        send_queue.put(json.dumps(message))
+
     send_queue.put('wat')  # gotta send some junk once for some reason
-    executor = _ScriptExecutor(send_queue)
+    executor = _ScriptExecutor(_send_message)
     for watch in watches:
         executor.add_watch_expression(watch['file'], watch['lineno'], watch['actions'])
-    executor.execute(script_path)
-    while True:
-        request = receive_queue.get(True)
-        executor.fetch_symbol_data(request['symbol_id'], request['actions'])
+    try:
+        executor.execute(script_path)
+        while True:
+            request = receive_queue.get(True)
+            executor.fetch_symbol_data(request['symbol_id'], request['actions'])
+    except:
+        _send_message(None, None, False, -1, traceback.format_exc())
