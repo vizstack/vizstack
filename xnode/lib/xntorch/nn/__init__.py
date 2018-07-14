@@ -13,22 +13,23 @@ import graphtracker as gt
 __IGNORE_LIST = ['Module', 'Sequential']
 
 
-def add_wrapped_module():
+def add_wrapped_module(_module_name):
     """Replaces a `nn.Module` in the global namespace with one where `forward()` is tracked as a graph op.
 
     This must be a separate function from the main loop over `dir(nn)`, or `getattr()` will not work properly.
     """
-    module = getattr(nn, module_name)
+    module = getattr(nn, _module_name)
 
     def _new_init_(self, *args, **kwargs):
         module.__init__(self, *args, **kwargs)
         self.forward = gt.OpGenerator(self.forward,
                                       output_props_to_surface=[{'self': None, 'data': 'data', 'grad': 'grad'},
-                                                               {'self': None, 'data': 'data', 'grad': 'grad'}])
+                                                               {'self': None, 'data': 'data', 'grad': 'grad'}],
+                                      op_name=_module_name)
 
-    globals()[module_name] = type(module_name, (module,), {'__init__': _new_init_})
+    globals()[_module_name] = type(_module_name, (module,), {'__init__': _new_init_})
 
 for module_name in dir(nn):
     if module_name.startswith('_') or not module_name[0].isupper() or module_name in __IGNORE_LIST:
         continue
-    add_wrapped_module()
+    add_wrapped_module(module_name)

@@ -42,21 +42,18 @@ class Nestable:
 
 class GraphOp(Nestable):
     """A record of a single function execution."""
-    def __init__(self, fn, args, kwargs):
+    def __init__(self, fn, fn_name, args, kwargs):
         """Constructor.
 
         Args:
             fn (Callable): The function executed in the op.
+            fn_name (str): The name of the function, as should be shown in visualizations.
             args (tuple): A sequence of positional arguments that were passed to the function at execution.
             kwargs (dict): A dictionary of keyword arguments passed to the function at execution.
         """
         super(GraphOp, self).__init__()
         self.fn = fn
-
-        try:
-            self.fn_name = fn.__name__
-        except AttributeError:
-            self.fn_name = fn.__class__.__name__
+        self.fn_name = fn_name
 
         # built-in functions don't have signatures, so we make them up
         try:
@@ -73,12 +70,6 @@ class GraphOp(Nestable):
             varargs = 'args'
 
         arg_names = arg_names[(len(arg_names) - len(args)):] + [varargs for _ in range(len(args) - len(arg_names))]
-
-        # Pytorch modules don't have a `__name__` field
-        try:
-            self.name = self.fn.__name__
-        except AttributeError:
-            self.name = self.fn.__class__.__name__
 
         # Arguments which were tracked via a call to `track_data()` (that is, should be shown in the graph) have a
         # `GraphData` object associated with them. We only record these objects (if they exist) in `self.args`,
@@ -375,8 +366,8 @@ def get_graphdata(obj):
 
 
 class OpGenerator(wrapt.ObjectProxy):
-    """Wraps a callable object, creating a `GraphOp` whenever called and wrapping each output in a `GraphData`."""
-    def __init__(self, obj, output_props_to_surface=None):
+    """Wraps a callable object, creating a `GraphOp` whenever called and creating a `GraphData` for each output."""
+    def __init__(self, obj, output_props_to_surface=None, op_name=None):
         """Constructor.
 
         Args:
@@ -385,7 +376,7 @@ class OpGenerator(wrapt.ObjectProxy):
             output_props_to_surface (list or None): A dict determining what properties of each `GraphData`
                 created by the callable should be surfaced in visualization. The i-th entry of `output_props_to_surface`
                 is passed to the i-th output of the callable. For example:
-                `
+                ```
                 a, b = Foo(), Foo()  # Foo is any arbitrary class
                 a.prop1 = 10
                 b.prop2 = 5
@@ -398,17 +389,27 @@ class OpGenerator(wrapt.ObjectProxy):
                   return new_x, new_y
 
                 c = OpGenerator(f, output_props_to_surface=[{'Arbitrary Value': 'prop1'}, {'Another Value': 'prop2'}])
-                x, y = c(a, b)  # x and y are GraphData wrappers around Foo instances
-                `
+                x, y = c(a, b)  # x and y are Foo instances with associated GraphData objects
+                ```
                 Now, when `x` is visualized and inspected in the client, it shows "Arbitrary Value": 10. When `y` is
                 visualized and inspected, it shows "Another Value": 0. For functions whose outputs have different
                 types under different conditions, or may output different numbers of values,
                 setting `output_props_to_surface` to `None` will leave all `GraphData` outputs without any fields
                 visualized. Fields can then be set after creation with `GraphData.surface_prop_in_client()`.
+            op_name (str or None): The name that should be given to created `GraphOp` objects. If `None`,
+                uses the name of `obj` (as found in `obj.__name__` or `obj.__class__.__name__`).
         """
         super(OpGenerator, self).__init__(obj)
         # wrapt requires all wrapper properties to start with _self_
         self._self_output_props = output_props_to_surface
+        if op_name is not None:
+            self._self_op_name = op_name
+        else:
+            # Pytorch modules don't have a `__name__` field
+            try:
+                self._self_op_name = obj.__name__
+            except AttributeError:
+                self._self_op_name = obj.__class__.__name__
 
     def __call__(self, *args, **kwargs):
         """Executes the wrapped function and creates a `GraphOp` recording the execution.
@@ -430,19 +431,20 @@ class OpGenerator(wrapt.ObjectProxy):
         # and what do we do about output_props?
         ret = self.__wrapped__(*args, **kwargs)
         multiple_returns = isinstance(ret, tuple) and len(ret) > 1
-        op = GraphOp(self.__wrapped__, args, kwargs)
+        op = GraphOp(self.__wrapped__, self._self_op_name, args, kwargs)
         # TODO handle passthrough returns
         if multiple_returns:
-            ret_graphdata = tuple([track_data(r,
-                                     self._self_output_props[i] if self._self_output_props is not None else None,
-                                     creator_op=op,
-                                     creator_pos=i)
-                          for i, r in enumerate(ret)])
+            ret_graphdata = tuple(
+                [track_data(r,
+                            self._self_output_props[i] if self._self_output_props is not None else None,
+                            creator_op=op,
+                            creator_pos=i)
+                 for i, r in enumerate(ret)])
         else:
             ret_graphdata = track_data(ret,
-                              self._self_output_props[0] if self._self_output_props is not None else None,
-                              creator_op=op,
-                              creator_pos=0)
+                                       self._self_output_props[0] if self._self_output_props is not None else None,
+                                       creator_op=op,
+                                       creator_pos=0)
         op.outputs = ret_graphdata if isinstance(ret_graphdata, tuple) else (ret_graphdata, )
         return ret_graphdata
 

@@ -253,13 +253,14 @@ class VisualizationEngine:
                                data_fn=_generate_data_tensor)
     GRAPH_DATA = VisualizationType('graphdata',
                                    test_fn=lambda obj: isinstance(obj, GraphData) or has_graphdata(obj),
+                                   # Exclude 'graphdata' in `_get_type_info` to prevent infinite recursion
                                    str_fn=lambda obj: VisualizationEngine._get_type_info(obj, ['graphdata']).str_fn(obj),
                                    data_fn=_generate_data_graphdata)
     GRAPH_CONTAINER = VisualizationType('graphcontainer', test_fn=lambda obj: isinstance(obj, GraphContainer),
                                         str_fn=lambda obj: 'graphcontainer[{}]'.format(len(obj.contents)),
                                         data_fn=_generate_data_graphcontainer)
     GRAPH_OP = VisualizationType('graphop', test_fn=lambda obj: isinstance(obj, GraphOp),
-                                 str_fn=lambda obj: 'graphop <{}>'.format(obj.name),
+                                 str_fn=lambda obj: 'graphop <{}>'.format(obj.fn_name),
                                  data_fn=_generate_data_graphop)
     DICT = VisualizationType('dict', test_fn=lambda obj: isinstance(obj, dict),
                              str_fn=lambda obj: 'dict[{}]'.format(len(obj)),
