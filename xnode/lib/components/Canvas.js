@@ -20,7 +20,7 @@ import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import CloseIcon from '@material-ui/icons/Close';
 
 // Custom data type viewers
-// import NumberViewer from './viewers/NumberViewer';
+import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
 // import TensorViewer from './viewers/TensorViewer';
 // import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
@@ -132,12 +132,21 @@ class Canvas extends Component {
         // TODO: Refactor other viewers
         let viewerContent;
         switch(type) {
-            case 'number':  // TODO
-                // viewerContent = <NumberViewer {...contentProps}/>;
+            case 'none':
+            case 'bool':
+            case 'number':
+                viewerContent = <PrimitiveViewer str={str}/>;
                 break;
 
-            case 'string':  // TODO
-                viewerContent = <StringViewer data={data} />;
+            case 'string':
+                viewerContent = <StringViewer data={data}/>;
+                break;
+
+            case 'list':
+            case 'tuple':
+            case 'set':
+                viewerContent = <ListViewer data={data} symbolTable={symbolTable}
+                                            expandSubviewer={this.openLiveViewer.bind(this)}/>;
                 break;
 
             case 'tensor':  // TODO
@@ -146,13 +155,6 @@ class Canvas extends Component {
 
             case 'graphdata':  // TODO
                 // viewerContent = <GraphViewer {...contentProps} symbolId={symbolId} symbolTable={symbolTable}/>;
-                break;
-
-            case 'list':
-            case 'tuple':
-            case 'set':
-                viewerContent = <ListViewer data={data} symbolTable={symbolTable}
-                                            expandSubviewer={this.openLiveViewer.bind(this)}/>;
                 break;
 
             default:
@@ -171,11 +173,6 @@ class Canvas extends Component {
             icons.push({title: 'Duplicate', icon: <DuplicateIcon/>, onClick: this.duplicateLiveViewer.bind(this, viewerId)});
             icons.push({title: 'Close',     icon: <CloseIcon/>, onClick: this.closeLiveViewer.bind(this, viewerId)});
         }
-
-        // onClickClose={() => this.props.removeViewer(symbolId)}
-        // onClickUnfreeze={() => this.unfreezeViewer.bind(this, symbolId)}
-        // onClickFreeze={() => this.freezeViewer.bind(this, symbolId)}
-        // onClickClone={() => this.cloneViewer.bind(this, symbolId)}
 
         // TODO: De-hardcode this
         // TODO: What about progress spinner?

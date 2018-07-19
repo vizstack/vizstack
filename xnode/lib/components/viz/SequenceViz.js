@@ -6,16 +6,15 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Typography from '@material-ui/core/Typography';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
-import ColorBlue from '@material-ui/core/colors/blue';
+import TokenViz from './TokenViz';
 
 
 /**
- * This dumb component renders visualization for an array, or a 1-D sequence of heterogeneous elements.
+ * This dumb component renders visualization for a 1-D sequence of heterogeneous elements.
  * TODO: Allow multi-line wrapping elements.
+ * TODO: Allow element-type-specific background coloring.
  */
-class ArrayViz extends Component {
+class SequenceViz extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -46,11 +45,10 @@ class ArrayViz extends Component {
         startMotif: PropTypes.string,
         endMotif: PropTypes.string,
 
-        /** Individual list item shape properties (in px). If `itemWidth` is set, all elements are the same width; else,
-         *  the width conforms to the content size up to `itemMaxWidth`. */
-        itemWidth: PropTypes.number,
-        itemHeight: PropTypes.number,
-        itemMaxWidth: PropTypes.number,
+        /** Individual list item dimension constraints (in px or '%'). */
+        itemMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        itemMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        itemHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     };
 
     /** Prop default values object. */
@@ -58,15 +56,14 @@ class ArrayViz extends Component {
         showIndices: true,
         startMotif: "",
         endMotif: "",
-        itemMaxWidth: 75,
-        itemHeight: 30,
+        itemHeight: 30, // TODO: Match with text size
     }
 
     /** Constructor. */
     constructor(props) {
         super(props);
         this.state = {
-            hover: null,
+            hovered: null,
             selected: null,
         }
     }
@@ -77,35 +74,25 @@ class ArrayViz extends Component {
      */
     render() {
         const { classes, model, onDoubleClick, showIndices, startMotif, endMotif,
-            itemWidth, itemHeight, itemMaxWidth } = this.props;
-        const { hover, selected } = this.state;
-
-        // Construct style dict
-        const itemStyle = { height: itemHeight, maxWidth: itemMaxWidth };
-        if(itemWidth) itemStyle.width = itemWidth;
+            itemMinWidth, itemMaxWidth, itemHeight } = this.props;
+        const { hovered, selected } = this.state;
 
         const listItems = model.map((elem, idx) => {
 
-            let onClick = () => {
-                this.setState({
-                    selected: idx,
-                })
-            };
-
             return (
-                <div key={idx}>
-                    <div className={classNames({
-                        [classes.listItem]: true,
-                        [classes.hover]: hover === idx,
-                        [classes.selected]: selected === idx,
-                    })}
-                         style={itemStyle}
-                         onClick={onClick}
-                         onDoubleClick={onDoubleClick}
-                         onMouseEnter={() => this.setState({hover: idx})}
-                         onMouseLeave={() => this.setState({hover: null})}>
-                        <Typography className={classes.listItemText}>{elem.text}</Typography>
-                    </div>
+                <div key={idx} className={classes.item}>
+                    <TokenViz model={elem.text}
+                              minWidth={itemMinWidth}
+                              maxWidth={itemMaxWidth}
+                              minHeight={itemHeight}
+                              maxHeight={itemHeight}
+                              shouldTextWrap={false}
+                              isHovered={hovered == idx}
+                              isSelected={selected === idx}
+                              onClick={() => this.setState({selected: idx})}
+                              onMouseEnter={() => this.setState({hovered: idx})}
+                              onMouseLeave={() => this.setState({hovered: null})}
+                              onDoubleClick={onDoubleClick} />
                     {showIndices ? <span className={classes.indexText}>{idx}</span> : null}
                 </div>
             );
@@ -115,7 +102,7 @@ class ArrayViz extends Component {
 
         return (
             <div className={classes.container} >
-                <div className={classes.listBox}>
+                <div className={classes.scroller}>
                     <div className={classes.list}>
                         <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
                         {listItems}
@@ -143,7 +130,7 @@ const styles = theme => ({
         display:        'flex',
         flexDirection:  'column',
     },
-    listBox: {
+    scroller: {
         overflow:       'auto',
         textAlign:      'center',
         paddingTop:     theme.spacing.unit,
@@ -154,45 +141,13 @@ const styles = theme => ({
         flexDirection:  'row',
         flexWrap:       'nowrap',
     },
-    listItem: {
-        // Set shape properties
-        margin:         2,  // TODO: Dehardcode this
-        padding:        2,  // TODO: Dehardcode this
-        background:     '#4d78cc',  // TODO: Dehardcode this
-        borderColor:    'transparent',
-        borderStyle:    'solid',
-        borderRadius:   theme.shape.borderRadius.small,
-
-        // Vertically center text
-        display:        'flex',
-        flexDirection:  'column',
-        justifyContent: 'center',
-
-        // No text selection
-        userSelect:     'none',
-        cursor:         'default',
-    },
-    hover: {
-        borderColor:    ColorLightBlue[400],
-    },
-    selected: {
-        borderColor:    ColorBlue[600],
-    },
-    listItemText: {
-        textAlign:      'center',
-        overflow:       'hidden',
-        textOverflow:   'ellipsis',
-        whiteSpace:     'nowrap',
-        textTransform:  'none',
-
-        fontFamily:     theme.typography.monospace.fontFamily,
-        fontSize:       '10pt',  // TODO: Dehardcode this
-        color:          '#fff', // TODO: Dehardcode this
+    item: {
+        marginLeft:     2,  // TODO: Dehardcode this
+        marginRight:    2,  // TODO: Dehardcode this
     },
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,
         fontSize:       '14pt',  // TODO: Dehardcode this
-        margin:         2,  // TODO: Dehardcode this
 
         // Vertically center text
         display:        'flex',
@@ -211,4 +166,4 @@ const styles = theme => ({
     }
 });
 
-export default withStyles(styles)(ArrayViz);
+export default withStyles(styles)(SequenceViz);

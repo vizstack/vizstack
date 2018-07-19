@@ -57,7 +57,24 @@ as one of the keywords used to store visualization information, causing a collis
 The only ways in which symbols of different types differ are in their `"str"` and `"data"` values, so only 
 examples of those are shown.
 
+#### none
+```
+"str": "None",
+"data": {
+    "contents": null,
+}
+```
+
+#### bool
+```
+"str": "False",
+"data": {
+    "contents": false,
+}
+```
+
 #### number
+TODO: Deal with Python `complex` primitive.
 ```
 "str": "3.14",
 "data": {
@@ -66,19 +83,11 @@ examples of those are shown.
 ```
 
 #### string
-Note the redundancy.
+Note the redundancy. TODO: Can we remove it?
 ```
 "str": "Hello world!",
 "data": {
     "contents": "Hello world!",
-}
-```
-
-#### bool
-```
-"str": "false",
-"data": {
-    "contents": false,
 }
 ```
 

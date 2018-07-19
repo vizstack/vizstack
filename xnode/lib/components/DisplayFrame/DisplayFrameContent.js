@@ -45,13 +45,16 @@ class DisplayFrameContent extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     content: {
-        flexGrow: 1,            // Fill rest of vertical space in DisplayFrame container
+        // Fill rest of vertical space in DisplayFrame container
+        flexGrow:       1,
 
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
+        // Layout child components vertically
+        display:        'flex',
+        flexDirection:  'column',
 
-        padding: 8,
+        // Content display properties
+        overflow:       'auto',
+        padding:        theme.spacing.unit,
     },
 });
 

@@ -10,6 +10,9 @@
  * program state might have changed). If a user wants to interact with a frozen symbol, it must first be "unfrozen",
  * sending the object's state at the program's termination to the symbol table and pointing the viewer to the unfrozen
  * symbol ID.
+ * TODO: Remove freeze nomenclature
+ * TODO: Factor out symbolId template.
+ * TODO: Use Regex for testing type.
  */
 
 /** This string prefix marks special strings that are interpreted as symbol IDs. */
@@ -66,7 +69,7 @@ export function isSymbolId(symbolId) {
  *      Whether the supplied symbol ID is frozen.
  */
 export function isSymbolIdFrozen(symbolId) {
-    return symbolId.endsWith('!');
+    return typeof(symbolId) === 'string' && symbolId.endsWith('!');
 }
 
 /**
@@ -127,8 +130,7 @@ function _freezeSymbolDataRecurse(item, nonce) {
             item.forEach((elem, i) => {
                 if (isSymbolId(elem)) {
                     item[i] = freezeSymbolId(elem, nonce);
-                }
-                else {
+                } else {
                     _freezeSymbolDataRecurse(elem, nonce);
                 }
             });
@@ -142,8 +144,7 @@ function _freezeSymbolDataRecurse(item, nonce) {
                 }
                 if (isSymbolId(value)) {
                     item[key] = freezeSymbolId(value, nonce);
-                }
-                else {
+                } else {
                     _freezeSymbolDataRecurse(value, nonce);
                 }
             });

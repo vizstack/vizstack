@@ -4,19 +4,19 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import ArrayViz from '../viz/ArrayViz';
+import SequenceViz from '../viz/SequenceViz';
 import { isSymbolId } from '../../services/symbol-utils';
 
 
 /**
  * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
- * Canvas data structures to the explicit data model expected by `ArrayViz`.
+ * Canvas data structures to the explicit data model expected by `SequenceViz`.
  */
 class ListViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md`. */
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "list/tuple/set". */
         data: PropTypes.object,
 
         /** Reference to the application symbol table. */
@@ -32,8 +32,10 @@ class ListViewer extends Component {
     };
 
     /**
-     * Renders a ArrayViz after making the appropriate data transformations.
+     * Renders a SequenceViz after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
+     * TODO: Rather than recreating separate list elements viz, refactor so that list displays the compact form of
+     *     real viewers. (This also allows factoring out the "dispatch on element type" logic.)
      */
     render() {
         const { symbolTable, expandSubviewer, data } = this.props;
@@ -62,7 +64,7 @@ class ListViewer extends Component {
         });
 
         return (
-            <ArrayViz model={model} onDoubleClick={expandSubviewer} startMotif="[" endMotif="]"/>
+            <SequenceViz model={model} onDoubleClick={expandSubviewer} startMotif="[" endMotif="]" itemMaxWidth={75} />
         );
     }
 }
