@@ -101,14 +101,10 @@ class SequenceViz extends Component {
         const motifStyle = { height: itemHeight };
 
         return (
-            <div className={classes.container} >
-                <div className={classes.scroller}>
-                    <div className={classes.list}>
-                        <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
-                        {listItems}
-                        <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
-                    </div>
-                </div>
+            <div className={classes.listBox}>
+                <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
+                {listItems}
+                <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
             </div>
         );
     }
@@ -121,22 +117,7 @@ class SequenceViz extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    container: {
-        // Center self vertically
-        width:          '100%',
-        margin:         'auto',
-
-        // Layout child components vertically
-        display:        'flex',
-        flexDirection:  'column',
-    },
-    scroller: {
-        overflow:       'auto',
-        textAlign:      'center',
-        paddingTop:     theme.spacing.unit,
-        paddingBottom:  theme.spacing.unit,
-    },
-    list: {
+    listBox: {
         display:        'inline-flex',
         flexDirection:  'row',
         flexWrap:       'nowrap',
@@ -144,6 +125,10 @@ const styles = theme => ({
     item: {
         marginLeft:     2,  // TODO: Dehardcode this
         marginRight:    2,  // TODO: Dehardcode this
+
+        // Layout child components vertically
+        display:        'flex',
+        flexDirection:  'column',
     },
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,

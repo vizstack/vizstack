@@ -8,7 +8,7 @@ import TokenViz from '../viz/TokenViz';
 
 
 /**
- * This dumb component renders a viewer for a Python primitive (None, float, int, complex, bool). A string is the
+ * This dumb component renders a viewer for a Python primitive (none, float, int, complex, bool). A string is the
  * explicit data model expected by `TokenViz`.
  */
 class PrimitiveViewer extends Component {

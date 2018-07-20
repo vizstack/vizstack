@@ -5,6 +5,7 @@ from stack_lstm import StackLSTM, PseudoLogLSTM
 from vgg import vgg16
 
 myInt = 86
+myInt2 = 86
 myFloat = 3.1415926535897
 myBool = True
 myString = "The quick brown fox jumps over the lazy dog"
