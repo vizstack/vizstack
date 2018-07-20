@@ -24,7 +24,7 @@ import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
 // import TensorViewer from './viewers/TensorViewer';
 // import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
-import ListViewer from './viewers/ListViewer';
+import SequenceViewer from './viewers/SequenceViewer';
 
 // Custom Redux actions
 import { addViewerAction, removeViewerAction, updateLayoutAction } from '../actions/canvas';
@@ -145,8 +145,8 @@ class Canvas extends Component {
             case 'list':
             case 'tuple':
             case 'set':
-                viewerContent = <ListViewer data={data} symbolTable={symbolTable}
-                                            expandSubviewer={this.openLiveViewer.bind(this)}/>;
+                viewerContent = <SequenceViewer data={data} symbolTable={symbolTable}
+                                                expandSubviewer={this.openLiveViewer.bind(this)}/>;
                 break;
 
             case 'tensor':  // TODO
