@@ -21,7 +21,7 @@ import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import { freezeSymbolId, freezeSymbolTableSlice } from '../services/symbol-utils';
 import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
-import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
+import { addSnapshotViewerAction, clearCanvasAction } from '../state/canvas/actions';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
@@ -267,7 +267,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('repl -- received message', JSON.parse(message));
-            let { viewSymbol, symbols, refresh, watchCount, error } = JSON.parse(message);
+            let { viewSymbol, symbols, refresh, watchCount, text, error } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
@@ -284,14 +284,18 @@ export default class REPL {
             }
             if (viewSymbol !== null) {
                 if (watchCount >= 0) {
-                    this.store.dispatch(addViewerAction(freezeSymbolId(viewSymbol, watchCount)));
+                    this.store.dispatch(addSnapshotViewerAction(freezeSymbolId(viewSymbol, watchCount)));
                 }
                 else {
-                    this.store.dispatch(addViewerAction(viewSymbol));
+                    this.store.dispatch(addSnapshotViewerAction(viewSymbol));
                 }
             }
+            if (text !== null) {
+                // TODO: create a new viewer
+                console.log(text)
+            }
             if (error !== null) {
-                // TODO: where to write errors?
+                // TODO: create a new viewer
                 console.error(error);
             }
         });

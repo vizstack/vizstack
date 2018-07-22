@@ -1,6 +1,10 @@
 import torch
 from xntorch.autograd import Variable
+import sys
+import os
 
+sys.path.append(os.path.join(sys.path[0], '..', 'test'))
+print(sys.path)
 from stack_lstm import StackLSTM, PseudoLogLSTM
 from vgg import vgg16
 
