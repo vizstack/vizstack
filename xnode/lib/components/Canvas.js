@@ -28,7 +28,7 @@ import SequenceViewer from './viewers/SequenceViewer';
 
 // Custom Redux actions
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
-    removeViewerAction, updateLayoutAction } from '../actions/canvas';
+    removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
 import { isSymbolIdFrozen } from '../services/symbol-utils';
 
 

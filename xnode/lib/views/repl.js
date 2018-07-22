@@ -10,21 +10,21 @@ import { composeWithDevTools } from 'remote-redux-devtools';
 
 // Material UI services
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
-import XnodeMuiTheme from './theme';
+import XnodeMuiTheme from '../theme';
 
 // Python services
 import PythonShell from 'python-shell';
 import path from 'path';
 
 // Custom top-level React/Redux components
-import Canvas from './components/Canvas';
-import mainReducer from './reducers';
-import { freezeSymbolId, freezeSymbolTableSlice } from './services/symbol-utils';
-import { addSymbolsAction, clearSymbolTableAction } from './actions/program';
-import { addViewerAction, clearCanvasAction } from './actions/canvas';
+import Canvas from '../components/Canvas';
+import mainReducer from '../state';
+import { freezeSymbolId, freezeSymbolTableSlice } from '../services/symbol-utils';
+import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
+import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTION_ENGINE_PATH = path.join(__dirname, 'engine.py');
+const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
 
 const DEFAULT_ACTION = {
     recurse: [['creatorop'], ['args'], ['kwargs'], ['container']]

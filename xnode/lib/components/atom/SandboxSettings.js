@@ -10,7 +10,7 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 
 
-class SandboxSettingsComponent extends Component {
+class SandboxSettingsModal extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -113,4 +113,4 @@ const styles = theme => ({
     },
 });
 
-export default withStyles(styles)(SandboxSettingsComponent);
+export default withStyles(styles)(SandboxSettingsModal);

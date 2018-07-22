@@ -1,10 +1,11 @@
 'use babel';
 
 import Immutable from 'seamless-immutable';
-import { CanvasActions } from '../actions/canvas';
+import { CanvasActions } from './actions';
 
 /**
- * State slice structure for `canvas`: {
+ * State slice structure for `canvas`:
+ * {
  *     'currentViewerId': 35,
  *     'viewerObjects': {
  *         32: {

@@ -51,6 +51,7 @@ const styles = theme => ({
 });
 
 export default withStyles(styles)(Example);
+
 // TODO: For dumb components, just use the code above. Delete the code below and `connect`, `bindActionCreators`
 // `createSelector` imports. For smart components, use the code below.
 

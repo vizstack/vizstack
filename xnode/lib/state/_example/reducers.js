@@ -1,6 +1,16 @@
+'use babel';
+
 import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
-import { ExampleActions } from '../actions/example';
+import { ExampleActions } from './actions';
+
+/**
+ * State slice structure for `example`:
+ * {
+ *     subslice: {},
+ *     subarray: [],
+ * }
+ */
 
 /** Root reducer's initial state slice. */
 const initialState = Immutable({

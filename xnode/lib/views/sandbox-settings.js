@@ -2,7 +2,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import SandboxSettingsComponent from '../components/atom/SandboxSettings';
+import SandboxSettingsModal from '../components/atom/SandboxSettings';
 
 export default class SandboxSettingsView {
 
@@ -48,7 +48,7 @@ export default class SandboxSettingsView {
     resetElement(defaultScriptPath) {
         ReactDOM.unmountComponentAtNode(this.element);
         ReactDOM.render(
-            <SandboxSettingsComponent defaultScriptPath={defaultScriptPath} />,
+            <SandboxSettingsModal defaultScriptPath={defaultScriptPath} />,
             this.element
         );
     }

@@ -17,9 +17,6 @@ myTensor1 = (torch.rand(15,20) - 0.5) * 10
 myTensor2 = torch.rand(6,7) - 0.5
 myTensor3 = (torch.randn(100, 100))
 
-def myFn(arg1):
-    return arg1 + 5
-
 myVGGInput = Variable(torch.ones(1, 3, 32, 32))
 myVGG = vgg16()
 myVGGOutput = myVGG(myVGGInput)
@@ -32,3 +29,13 @@ myRNNOutput = myRNN(myRNNInput)
 
 myPseudoLogLSTM = PseudoLogLSTM(myRNNBatchSize, myRNNDims)
 myPseudoLogLSTMOutput = myPseudoLogLSTM(myRNNInput)
+
+def myFn():
+    f = [1,2,3,4,5]
+    q = [f,3,4,5,2]
+    q[1] = 5
+    q = q
+    return q
+
+myFn()
+myFnOutput = myFn()

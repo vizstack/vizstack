@@ -3,7 +3,7 @@
 import { CompositeDisposable, Disposable } from 'atom';
 import SandboxSettingsView from './views/sandbox-settings';
 
-import REPL from './repl';
+import REPL from './views/repl';
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when

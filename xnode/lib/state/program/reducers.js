@@ -1,7 +1,7 @@
 'use babel';
 
 import Immutable from 'seamless-immutable';
-import { SymbolTableActions } from '../actions/program';
+import { SymbolTableActions } from './actions';
 
 /**
  * State slice structure for `program`: {

@@ -1,3 +1,5 @@
+'use babel';
+
 /** Action type definitions. */
 export const ExampleActions = {  // Must take form of `[module]Actions`
     SYNC_ACTION:  "EXAMPLE::SYNC_ACTION",
