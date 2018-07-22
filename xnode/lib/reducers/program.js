@@ -8,9 +8,10 @@ import { SymbolTableActions } from '../actions/program';
  *     symbolTable: {
  *         "@id:12345" : {
  *             type: "number",
- *             name: "myInt",
  *             str:  "86",
- *             data: null | {viewer:{}, attributes:{}}
+ *             name: "myInt",
+ *             attributes: { ... }
+ *             data: null | { ... }
  *         }
  *     }
  * }

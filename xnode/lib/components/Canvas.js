@@ -27,7 +27,8 @@ import StringViewer from './viewers/StringViewer';
 import SequenceViewer from './viewers/SequenceViewer';
 
 // Custom Redux actions
-import { addViewerAction, removeViewerAction, updateLayoutAction } from '../actions/canvas';
+import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
+    removeViewerAction, updateLayoutAction } from '../actions/canvas';
 import { isSymbolIdFrozen } from '../services/symbol-utils';
 
 
@@ -49,11 +50,21 @@ class Canvas extends Component {
         fetchSymbolData: PropTypes.func.isRequired,
 
         /**
-         * Creates a new viewer for the specified symbol at the end of the Canvas.
+         * Creates a new snapshot/live viewer for the specified symbol. See `actions/canvas`.
          *
-         * @param symbolId
+         * @param {string} symbolId
+         * @param {int} position
          */
-        addViewer: PropTypes.func.isRequired,
+        addSnapshotViewer: PropTypes.func.isRequired,
+        addLiveViewer: PropTypes.func.isRequired,
+
+        /**
+         * Creates a new print viewer for the specified text. See `actions/canvas`.
+         *
+         * @param {string} text
+         * @param {int} position
+         */
+        addPrintViewer: PropTypes.func.isRequired,
 
         /**
          * Removes the viewer with the specified symbol from the Canvas.
@@ -293,9 +304,11 @@ function mapStateToProps(state, props) {
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addViewer:    addViewerAction,
-        removeViewer: removeViewerAction,
-        updateLayout: updateLayoutAction,
+        addSnapshotViewer:    addSnapshotViewerAction,
+        addLiveViewer:        addLiveViewerAction,
+        addPrintViewer:       addPrintViewerAction,
+        removeViewer:         removeViewerAction,
+        updateLayout:         updateLayoutAction,
     }, dispatch);
 }
 

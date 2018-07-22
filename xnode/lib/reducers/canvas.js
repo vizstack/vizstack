@@ -5,10 +5,19 @@ import { CanvasActions } from '../actions/canvas';
 
 /**
  * State slice structure for `canvas`: {
- *     'nextViewerId': 1,
+ *     'currentViewerId': 35,
  *     'viewerObjects': {
- *         0: {
+ *         32: {
+ *             type: ViewerTypes.SNAPSHOT
+ *             symbolId: "@id:12345!0!"
+ *         },
+ *         33: {
+ *             type: ViewerTypes.LIVE
  *             symbolId: "@id:12345"
+ *         }
+ *         34: {
+ *             type: ViewerTypes.PRINT
+ *             text: "The quick brown fox ..."
  *         }
  *     },
  *     'viewerPositions': [{
@@ -21,7 +30,7 @@ import { CanvasActions } from '../actions/canvas';
 
 /** Root reducer's initial state slice. */
 const initialState = Immutable({
-    nextViewerId: 0,
+    currentViewerId: 0,
     viewerObjects: {},
     viewerPositions: [],
 });
@@ -41,36 +50,45 @@ export default function rootReducer(state = initialState, action) {
 };
 
 /* Constants for default React Grid Layout element sizes. */
-const DEFAULT_H = 4;
+const DEFAULT_H = 3;
 const DEFAULT_MIN_H = 2;
 
 /**
  * Reset the canvas, removing all viewers.
  */
 function clearCanvasReducer(state, action) {
-    return state.setIn(['viewerObjects'], {}).setIn(['viewerPositions'], []).setIn(['nextViewerId'], 0);
+    return initialState;
 }
 
 /**
- * Add a viewer to `canvas`. Assumes `data` for symbol is already loaded.
+ * Add a viewer to Canvas. Assumes `data` for symbol is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { symbolId } = action;
-    const { nextViewerId } = state;
-    return state.setIn(['viewerObjects', nextViewerId], {
-        symbolId,
-        data: {},
-    }).update('nextViewerId', (prev) => prev + 1)
-        .update('viewerPositions', (prev) => prev.concat([{
-            i: `${state.nextViewerId}`,
-            x: 0,
-            y: Infinity,
-            w: 1,
-            h: DEFAULT_H,
-            minW: 1,
-            maxW: 1,
-            minH: DEFAULT_MIN_H,
-        }]));
+    const { viewerObj, insertAfter } = action;
+    const { currentViewerId } = state;
+    if(insertAfter < -1) {
+        console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
+        return state;
+    }
+    return (
+        state
+        .setIn(['viewerObjects', currentViewerId], viewerObj)
+        .update('viewerPositions', (prev) => Immutable([]).concat(
+            insertAfter == -1 ? prev : prev.slice(0, insertAfter + 1),
+            [{
+                i:    `${state.currentViewerId}`,  // Required by API to be string
+                x:    0,
+                y:    Infinity,
+                w:    1,
+                h:    DEFAULT_H,
+                minW: 1,
+                maxW: 1,
+                minH: DEFAULT_MIN_H,
+            }],
+            insertAfter == -1 ? [] : prev.slice(insertAfter + 1),
+        ))
+        .update('currentViewerId', (prev) => prev + 1)
+    );
 }
 
 /**
@@ -78,10 +96,16 @@ function addViewerReducer(state, action) {
  */
 function removeViewerReducer(state, action) {
     const { viewerId } = action;
-    let removeIdx = state.viewerPositions.findIndex(elem => elem.i === `${viewerId}`);
-    if(removeIdx === -1) return state;
-    return state.update('viewerPositions', (arr) => arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)))
-                .setIn(['viewerObjects', viewerId], undefined);
+    let removeIdx = state.viewerPositions.findIndex((elem) => elem.i === `${viewerId}`);
+    if(removeIdx === -1) {
+        console.error("Could not find viewer with specified `viewerId` to remove; got ", viewerId);
+        return state;
+    }
+    return (
+        state
+        .update('viewerPositions', (arr) => arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)))
+        .setIn(['viewerObjects', viewerId], undefined)
+    );
 }
 
 /**

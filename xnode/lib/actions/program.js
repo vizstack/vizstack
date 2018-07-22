@@ -2,10 +2,10 @@
 
 
 /** Action type definitions. */
-export const SymbolTableActions = {
+export const SymbolTableActions = Object.freeze({
     ADD_SYMBOLS:   "SYMBOLTABLE::ADD_SYMBOLS",
     CLEAR_TABLE:   "SYMBOLTABLE::CLEAR_TABLE",
-};
+});
 
 /**
  * Action creator to remove all entries from the symbol table.

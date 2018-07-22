@@ -54,14 +54,16 @@ let group1_variant3 = "c";
  * Longer description of function. Class aptent taciti sociosqu ad litora torquent per conubia stra, per inceptos
  * himenaeos. Nam pretium ipsum ex, ac aliquet lectus ultrices a.
  *
- * @param {number/boolean/string/object/function} arg1
- *     Description of argument 1. Lowercase built-in Javascript types.
+ * @param {int/float/boolean/string/object/function} arg1
+ *     Description of argument 1. Lowercase built-in Javascript types; use int/float for extra specificity.
  * @param {CustomClassName} arg2
  *     Description of argument 2. Uppercase custom class types.
- * @return {number/...}
+ * @param {int} (optional) arg3
+ *     Description of optional argument 3. (Default: 123)
+ * @returns {number/...}
  *     Description of return 1.
  */
- function func1(arg1, arg2) {
+ function func1(arg1, arg2, arg3 = 123) {
      // Implementation comments complement the code by explaining what is going on at either a higher or lower level as
      // the code; comments at the same level are redundant. Higher-level implementation comments explain the aim
      // of a piece of code, particularly if it contains complex logic. Lower-level implementation comments provide
