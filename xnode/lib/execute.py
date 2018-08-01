@@ -2,6 +2,7 @@ import pdb
 from os.path import normpath, normcase
 import json
 import traceback
+import re
 
 from viz import VisualizationEngine
 
@@ -519,13 +520,13 @@ def run_script(receive_queue, send_queue, script_path, watches):
 
     Should be called as the main function of a new process.
 
+	TODO: update args format and content
     Args:
         receive_queue (Queue): A queue shared with the calling process to which requests for new symbol schemas are
             written by the parent.
         send_queue (Queue): A queue shared with the calling process to which this process writes symbol schema strings.
         script_path (str): The absolute path to a user-written script to be executed.
         watches (list): A list of watch expression objects of form {'file': str, 'lineno': str, 'action': dict}.
-
     """
     def _send_message(symbol_slice, view_symbol_id, refresh, watch_count, error):
         message = {
@@ -547,4 +548,7 @@ def run_script(receive_queue, send_queue, script_path, watches):
             request = receive_queue.get(True)
             executor.fetch_symbol_data(request['symbol_id'], request['actions'])
     except:
-        _send_message(None, None, False, -1, traceback.format_exc())
+        raw_error_msg = traceback.format_exc()
+        result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg, re.DOTALL)
+        clean_error_msg = result.group(1) + result.group(3)
+        _send_message(None, None, False, -1, clean_error_msg)
