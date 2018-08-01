@@ -1,17 +1,13 @@
 'use babel';
 
+import { ViewerTypes } from './constants';
+
 /** Action type definitions. */
 export const CanvasActions = Object.freeze({
     CLEAR_CANVAS:        "CANVAS::CLEAR_CANVAS",
     ADD_VIEWER:          "CANVAS::ADD_VIEWER",
     REMOVE_VIEWER:       "CANVAS::REMOVE_VIEWER",
     UPDATE_LAYOUT:       "CANVAS::UPDATE_LAYOUT",
-});
-
-export const ViewerTypes = Object.freeze({
-    SNAPSHOT:            "CANVAS:VIEWER_SNAPSHOT",
-    LIVE:                "CANVAS:VIEWER_LIVE",
-    PRINT:               "CANVAS:VIEWER_PRINT",
 });
 
 /**
@@ -30,8 +26,7 @@ export function clearCanvasAction() {
  * @param {string} snapshotSymbolId
  *     Symbol ID (with snapshot formatting) for backing symbol of this viewer.
  * @param {int} (optional) insertAfter
- *     Zero-indexed position in Canvas layout after which to add new viewer, e.g. to add after element `5`, pass
- *     `5`. (Default of -1 means add to end).
+ *     Viewer ID of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
 export function addSnapshotViewerAction(snapshotSymbolId, insertAfter = -1) {

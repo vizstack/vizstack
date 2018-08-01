@@ -10,6 +10,7 @@ import { withStyles } from '@material-ui/core/styles';
  * This dumb component creates a header bar for a display frame that horizontally lays out its children components.
  * A header is thicker and is emphasized with an accent color; it will typically contain title/subtitle text and icons,
  * grouped with `div`s appropriately for the desired spacing.
+ * TODO: Allow style overrides with 'classes'
  */
 class DisplayFrameHeader extends Component {
 
@@ -20,18 +21,15 @@ class DisplayFrameHeader extends Component {
 
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
-
-        /** Class tags to allow additional styling of container. */
-        className: PropTypes.string,
     };
 
     /**
      * Renders a header container with specific styling and horizontal layout properties.
      */
     render() {
-        const { classes, children, className } = this.props;
+        const { classes, children } = this.props;
         return (
-            <div className={classNames('xn-display-frame-header', classes.header, className)}>
+            <div className={classNames('xn-display-frame-header', classes.header)}>
                 {children}
             </div>
         );
@@ -63,8 +61,8 @@ const styles = theme => ({
         flex: 'none',
 
         // Text styling
-        '& span': {
-            flex: 1,
+        '& > span': {
+            flexShrink: 1,
             overflow: 'hidden',
             fontFamily: theme.typography.monospace.fontFamily,
             fontSize: '9pt', // TODO: Dehardcode this

@@ -2,21 +2,22 @@
 
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
+import { ViewerTypes } from './constants';
 
 /**
  * State slice structure for `canvas`:
  * {
  *     'currentViewerId': 35,
  *     'viewerObjects': {
- *         32: {
+ *         '32': {
  *             type: ViewerTypes.SNAPSHOT
  *             symbolId: "@id:12345!0!"
  *         },
- *         33: {
+ *         '33': {
  *             type: ViewerTypes.LIVE
  *             symbolId: "@id:12345"
  *         }
- *         34: {
+ *         '34': {
  *             type: ViewerTypes.PRINT
  *             text: "The quick brown fox ..."
  *         }
@@ -25,8 +26,6 @@ import { CanvasActions } from './actions';
  *         i, x, y, w, h, ...
  *     }],
  * }
- *
- * Note: The key for `viewerObjects` are numbers but `viewerPositions[*].i` is a string.
  */
 
 /** Root reducer's initial state slice. */
@@ -71,11 +70,12 @@ function addViewerReducer(state, action) {
         console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
         return state;
     }
+    const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem.i === insertAfter);
     return (
         state
-        .setIn(['viewerObjects', currentViewerId], viewerObj)
+        .setIn(['viewerObjects', `${currentViewerId}`], viewerObj)
         .update('viewerPositions', (prev) => Immutable([]).concat(
-            insertAfter == -1 ? prev : prev.slice(0, insertAfter + 1),
+            insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
             [{
                 i:    `${state.currentViewerId}`,  // Required by API to be string
                 x:    0,
@@ -86,7 +86,7 @@ function addViewerReducer(state, action) {
                 maxW: 1,
                 minH: DEFAULT_MIN_H,
             }],
-            insertAfter == -1 ? [] : prev.slice(insertAfter + 1),
+            insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
         ))
         .update('currentViewerId', (prev) => prev + 1)
     );
@@ -97,7 +97,7 @@ function addViewerReducer(state, action) {
  */
 function removeViewerReducer(state, action) {
     const { viewerId } = action;
-    let removeIdx = state.viewerPositions.findIndex((elem) => elem.i === `${viewerId}`);
+    const removeIdx = state.viewerPositions.findIndex((elem) => elem.i === viewerId);
     if(removeIdx === -1) {
         console.error("Could not find viewer with specified `viewerId` to remove; got ", viewerId);
         return state;

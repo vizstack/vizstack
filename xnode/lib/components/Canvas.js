@@ -14,10 +14,13 @@ import { SizeMe } from 'react-sizeme'
 
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
-import InspectIcon from '@material-ui/icons/Search';  // Explore, LockOpen
+import InspectIcon from '@material-ui/icons/Search';
 import DeleteIcon from '@material-ui/icons/DeleteOutlined';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import CloseIcon from '@material-ui/icons/Close';
+import LiveViewerIcon from '@material-ui/icons/PageView';
+import SnapshotViewerIcon from '@material-ui/icons/CameraAlt';
+import PrintViewerIcon from '@material-ui/icons/Print';
 
 // Custom data type viewers
 import PrimitiveViewer from './viewers/PrimitiveViewer';
@@ -29,6 +32,7 @@ import SequenceViewer from './viewers/SequenceViewer';
 // Custom Redux actions
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
     removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
+import { ViewerTypes } from "../state/canvas/constants";
 import { isSymbolIdFrozen } from '../services/symbol-utils';
 
 
@@ -92,97 +96,107 @@ class Canvas extends Component {
     };
 
     // =================================================================================================================
-    // Canvas viewer callback functions
-    // =================================================================================================================
-
-    // TODO: Factor these out of local definition
-    // expandSubviewer(symbolId) {
-    //     if(!isSymbolIdFrozen(symbolId)) {
-    //         const { addViewer, fetchSymbolData } = this.props;
-    //         console.debug(`Canvas -- expand subviewer of symbol ${symbolId}`);
-    //         fetchSymbolData(symbolId);
-    //         addViewer(symbolId);
-    //     }
-    // }
-
-    deleteSnapshotViewer(symbolId) {
-        if(isSymbolIdFrozen(symbolId)) {
-            console.debug(`Canvas -- delete snapshot viewer & watch expression for symbol ${symbolId}`);
-            // TODO
-        }
-    }
-
-    openLiveViewer(symbolId) {
-        if(isSymbolIdFrozen(symbolId)) {
-            console.debug(`Canvas -- open live viewer for symbol ${symbolId}`);
-            // TODO
-        }
-    }
-
-    closeLiveViewer(viewerId) {
-        console.debug(`Canvas -- close live viewer ${viewerId}`);
-    }
-
-    duplicateLiveViewer(viewerId) {
-        console.debug(`Canvas -- duplicate live viewer ${viewerId}`);
-    }
-
-    // =================================================================================================================
     // Canvas rendering
     // =================================================================================================================
 
     /**
-     * Returns the [*]Viewer component of the proper type for the given viewer data object.
+     * Returns a viewer for a symbol of the correct type. (See `SYMBOL-TABLE-SCHEMA.md`).
      *
-     * @param {object} viewer
+     * @param {string} viewerId
+     * @param {string} symbolId
+     * @param {string} symbolObj
      */
-    createViewerComponent(viewer) {
-        const { symbolTable } = this.props;
-        const { symbolId, viewerId, type, name, str, data} = viewer;
-
-        // TODO: Refactor other viewers
-        let viewerContent;
+    createSymbolViewer(viewerId, symbolId, symbolObj) {
+        const { symbolTable, addLiveViewer } = this.props;
+        const { type, str, name, attributes, data} = symbolObj;
         switch(type) {
             case 'none':
             case 'bool':
             case 'number':
-                viewerContent = <PrimitiveViewer str={str}/>;
-                break;
+                return <PrimitiveViewer str={str}/>;
 
             case 'string':
-                viewerContent = <StringViewer data={data}/>;
-                break;
+                return <StringViewer data={data}/>;
 
             case 'list':
             case 'tuple':
             case 'set':
-                viewerContent = <SequenceViewer data={data} symbolTable={symbolTable}
-                                                expandSubviewer={this.openLiveViewer.bind(this)}/>;
-                break;
+                return (<SequenceViewer data={data} symbolTable={symbolTable}
+                                        expandSubviewer={(symbolId) => addLiveViewer(symbolId, viewerId)}/>);
 
-            case 'tensor':  // TODO
-                // viewerContent = <TensorViewer {...contentProps}/>;
-                break;
+            case 'tensor':
+                // TODO: return <TensorViewer/>;
+                return null;
 
-            case 'graphdata':  // TODO
-                // viewerContent = <GraphViewer {...contentProps} symbolId={symbolId} symbolTable={symbolTable}/>;
-                break;
+            case 'graphdata':
+                // TODO: return <GraphViewer symbolId={symbolId} symbolTable={symbolTable}/>;
+                return null;
 
             default:
                 console.warn(`Canvas -- unrecognized data type received; got ${type}`)
-                viewerContent = <span>Unrecognized data type</span>;
-                break;
+                return null;
 
             // TODO: Add more viewers
         }
+    }
 
-        let icons = [];
-        if (type === 'dict' /* isSnapshot */) {
-            icons.push({title: 'Inspect', icon: <InspectIcon/>, onClick: this.openLiveViewer.bind(this, symbolId)});
-            icons.push({title: 'Delete',  icon: <DeleteIcon/>,  onClick: this.deleteSnapshotViewer.bind(this, symbolId)});
-        } else if (true /* isLive */) {
-            icons.push({title: 'Duplicate', icon: <DuplicateIcon/>, onClick: this.duplicateLiveViewer.bind(this, viewerId)});
-            icons.push({title: 'Close',     icon: <CloseIcon/>, onClick: this.closeLiveViewer.bind(this, viewerId)});
+    /**
+     * Returns a viewer of the correct type. (See `ViewerTypes` in `state/canvas/constants`).
+     *
+     * @param {object} viewer
+     */
+    createViewer(viewer) {
+        const { addLiveViewer, removeViewer } = this.props;
+        const { viewerId, viewerType } = viewer;
+
+        switch(viewerType) {
+            case ViewerTypes.SNAPSHOT: {
+                const { symbolId, symbolObj } = viewer;
+                const buttons = [
+                    { title: 'Inspect', icon: <InspectIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },
+                    { title: 'Delete',  icon: <DeleteIcon/>,  onClick: () => removeViewer(viewerId) },
+                ];
+                return (
+                    <ViewerDisplayFrame icon={<SnapshotViewerIcon/>}
+                                        title={`[${symbolObj.type}]  ${symbolObj.name}`}
+                                        buttons={buttons}>
+                        {this.createSymbolViewer(viewerId, symbolId, symbolObj)}
+                    </ViewerDisplayFrame>
+                );
+            }
+            case ViewerTypes.LIVE: {
+                const { symbolId, symbolObj } = viewer;
+                const buttons = [
+                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },  // TODO: Copy whole state also
+                    { title: 'Close',     icon: <CloseIcon/>,     onClick: () => removeViewer(viewerId) },
+                ];
+                return (
+                    <ViewerDisplayFrame icon={<LiveViewerIcon/>}
+                                        title={`[${symbolObj.type}]  ${symbolObj.name}`}
+                                        buttons={buttons}>
+                        {this.createSymbolViewer(viewerId, symbolId, symbolObj)}
+                    </ViewerDisplayFrame>
+                );
+            }
+
+            case ViewerTypes.PRINT: {
+                const { text } = viewer;
+                const buttons = [
+                    { title: 'Close', icon: <CloseIcon/>, onClick: () => removeViewer(viewerId) },
+                ];
+                return (
+                    <ViewerDisplayFrame icon={<PrintViewerIcon/>}
+                                        title={`output`}
+                                        buttons={buttons}>
+                        <pre>{text}</pre>
+                    </ViewerDisplayFrame>
+                );
+            }
+
+
+            default:
+                console.warn(`Unrecognized viewer type recieved; got ${viewerType}`);
+                return null;
         }
 
         // TODO: De-hardcode this
@@ -196,13 +210,6 @@ class Canvas extends Component {
         //         </div>
         //     );
         // }
-
-        return (
-            <ViewerDisplayFrame viewerType={type} viewerName={name}
-                                icons={icons}>
-                {viewerContent}
-            </ViewerDisplayFrame>
-        );
     }
 
     /**
@@ -213,7 +220,7 @@ class Canvas extends Component {
         const frames = viewers.map((viewer) => {
             return (
                 <div key={viewer.viewerId} className={classes.frameContainer}>
-                    {this.createViewerComponent(viewer)}
+                    {this.createViewer(viewer)}
                 </div>
             )
         });
@@ -262,32 +269,56 @@ const styles = theme => ({
 /**
  * Creates derived data structure for `viewers`: [
  *     {
+ *         viewerId: "0",
+ *         viewerType: ViewerTypes.SNAPSHOT/LIVE
  *         symbolId: "@id:12345",
- *         viewerId: 0,
- *         type: "number",
- *         name: "myInt",
- *         str:  "86",
- *         data: {...}
+ *         symbolObj: {
+ *             type: "number",
+ *             str:  "86",
+ *             name: "myInt",
+ *             attributes: {...}
+ *             data: {...}
+ *         }
+ *     },
+ *     {
+ *         viewerId: "1",
+ *         viewerType: ViewerTypes.PRINT
+ *         text: "The quick brown fox ...",
  *     }
  * ]
  */
 // TODO: This selector doesn't seem to be very effective because it's still rerendering each elem in the Canvas
 // whenever the symbol table changes.
+// TODO: Refactor this according to ducks format (selector file)
 const viewersSelector = createSelector(
     [(state) => state.canvas.viewerObjects, (state) => state.canvas.viewerPositions, (state) => state.program.symbolTable],
     (viewerObjects, viewerPositions, symbolTable) => {
         return viewerPositions.map((viewerPosition) => {
-            let viewerId = parseInt(viewerPosition.i);
-            let viewerObj = viewerObjects[viewerId];
-            let symbol = symbolTable[viewerObj.symbolId];
-            return {
-                symbolId: viewerObj.symbolId,
-                viewerId: viewerId,
-                type:     symbol.type,
-                name:     symbol.name,
-                str:      symbol.str,
-                data:     symbol.data,
-            };
+            const viewerId = viewerPosition.i;
+            const viewerObj = viewerObjects[viewerId];
+            const viewerType = viewerObj.type;
+
+            switch(viewerType) {
+                case ViewerTypes.LIVE:
+                case ViewerTypes.SNAPSHOT:
+                    const { symbolId } = viewerObj;
+                    const symbolObj = symbolTable[symbolId];
+                    return {
+                        viewerId,
+                        viewerType,
+                        symbolId,
+                        symbolObj,
+                    };
+
+                case ViewerTypes.PRINT:
+                    const { text } = viewerObj;
+                    return {
+                        viewerId,
+                        viewerType,
+                        text,
+                    };
+            }
+
         });
     }
 );
@@ -295,9 +326,9 @@ const viewersSelector = createSelector(
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers:     viewersSelector(state),
-        layout:      state.canvas.viewerPositions,
-        symbolTable: state.program.symbolTable,
+        viewers:        viewersSelector(state),
+        layout:         state.canvas.viewerPositions,
+        symbolTable:    state.program.symbolTable,
     };
 }
 

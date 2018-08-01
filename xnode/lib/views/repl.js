@@ -21,7 +21,8 @@ import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import { freezeSymbolId, freezeSymbolTableSlice } from '../services/symbol-utils';
 import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
-import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
+import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
+    clearCanvasAction } from '../state/canvas/actions';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
@@ -268,31 +269,28 @@ export default class REPL {
         executionEngine.on('message', (message) => {
             console.debug('repl -- received message', JSON.parse(message));
             let { viewSymbol, symbols, refresh, watchCount, error } = JSON.parse(message);
-            if (refresh) {
+            if(refresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
             }
             // TODO: should repl even know about freezing? or should the Python side instead?
             // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
-            if (symbols) {
-                if (watchCount >= 0) {
+            if(symbols) {
+                if(watchCount >= 0) {
                     this.store.dispatch(addSymbolsAction(freezeSymbolTableSlice(symbols, watchCount)));
-                }
-                else {
+                } else {
                     this.store.dispatch(addSymbolsAction(symbols));
                 }
             }
-            if (viewSymbol !== null) {
+            if(viewSymbol !== null) {
                 if (watchCount >= 0) {
-                    this.store.dispatch(addViewerAction(freezeSymbolId(viewSymbol, watchCount)));
-                }
-                else {
-                    this.store.dispatch(addViewerAction(viewSymbol));
+                    this.store.dispatch(addSnapshotViewerAction(freezeSymbolId(viewSymbol, watchCount)));
+                } else {
+                    this.store.dispatch(addLiveViewerAction(viewSymbol));
                 }
             }
-            if (error !== null) {
-                // TODO: where to write errors?
-                console.error(error);
+            if(error !== null) {
+                this.store.dispatch(addPrintViewerAction(error));
             }
         });
         return executionEngine;

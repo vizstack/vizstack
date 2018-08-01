@@ -29,18 +29,15 @@ class ViewerDisplayFrame extends Component {
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
 
-        /** Class tags to allow additional styling of the `DisplayFrame` container. */
-        className: PropTypes.string,
+        /** Left-justified icon element to display in header. */
+        icon: PropTypes.element,
 
-        /** Viewer text properties. */
-        viewerType: PropTypes.string.isRequired,
-        viewerName: PropTypes.string,
+        /** Left-justified text string/element to display in header. */
+        title: PropTypes.oneOfType(PropTypes.string, PropTypes.element),
 
-        /** Header icons in the following data schema: [{title: "Click Me", onClick: myFn, icon: <MyIcon />},...] */
-        icons: PropTypes.array,
-
-        /** Text element(s) to append to back of viewer-general text. */
-        text: PropTypes.oneOfType([PropTypes.arrayOf(PropTypes.element), PropTypes.element]),
+        /** Right-justified button elements to display in header, with the following data schema:
+         * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */
+        buttons: PropTypes.array,
     };
 
     /**
@@ -48,24 +45,23 @@ class ViewerDisplayFrame extends Component {
      * providing any viewer-specific modifications to header.
      */
     render() {
-        const { classes, children, className, viewerType, viewerName, icons, text } = this.props;
+        const { classes, children, icon, title, buttons } = this.props;
 
-        const iconComponents = icons.map((icon, idx) => (
-            <Tooltip key={idx} placement='bottom' title={icon.title}>
-                <IconButton aria-label={icon.title} onClick={icon.onClick}>{icon.icon}</IconButton>
+        const buttonsComponents = buttons.map((button, idx) => (
+            <Tooltip key={idx} placement='bottom' title={button.title}>
+                <IconButton aria-label={button.title} onClick={button.onClick}>{button.icon}</IconButton>
             </Tooltip>
         ));
 
         return (
-            <DisplayFrame className={className}>
+            <DisplayFrame>
                 <DisplayFrameHeader>
-                    <span>
-                        <span className={classes.textType}>{`[${viewerType}]  `}</span>
-                        {viewerName ? <span className={classes.textName}>{`${viewerName}`}</span> : null}
-                        {text}
+                    <span className={classes.bundle}>
+                        {icon ? <span className={classes.icon}>{icon}</span> : null}
+                        {title ? <span className={classes.title}>{title}</span> : null}
                     </span>
-                    <span className={classes.icons}>
-                        {iconComponents}
+                    <span className={classes.buttons}>
+                        {buttonsComponents}
                     </span>
                 </DisplayFrameHeader>
 
@@ -82,13 +78,20 @@ class ViewerDisplayFrame extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    textType: {
+    bundle: {
+       display: 'inline-flex',
+    },
+    icon: {
+        textAlign: 'left',
+
+        // Vertically center icon
+        display: 'inline-flex',
+        paddingRight: theme.spacing.unit,
+    },
+    title: {
         textAlign: 'left',
     },
-    textName: {
-        textAlign: 'left',
-    },
-    icons: {
+    buttons: {
         textAlign: 'right',
     }
 });
