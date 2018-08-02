@@ -2,11 +2,8 @@ import json
 import pdb
 import sys
 import traceback
-<<<<<<< HEAD
 import re
-=======
 from os.path import normpath, normcase
->>>>>>> origin/interactive-python-shell
 
 from viz import VisualizationEngine
 
