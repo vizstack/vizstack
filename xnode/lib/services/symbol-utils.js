@@ -1,113 +1,162 @@
 'use babel';
 
 /**
- * To capture changing object state at multiple points in a program execution, we introduce the concept of "freezing".
- * When the Python program sends information about a watched symbol, it also sends an ID number unique to that watch
- * statement. Before the symbol information is put into the symbol table, it is "frozen", replacing all symbol IDs which
- * appear in the object with versions modified with the unique ID number. This "frozen" version of the symbol table
- * slice is then put into the symbol table, and a viewer is opened pointing to the frozen symbol. New viewers cannot be
- * opened by interacting with frozen viewers, as doing so would require information that may no longer exist (since the
- * program state might have changed). If a user wants to interact with a frozen symbol, it must first be "unfrozen",
- * sending the object's state at the program's termination to the symbol table and pointing the viewer to the unfrozen
- * symbol ID.
- * TODO: Remove freeze nomenclature
- * TODO: Factor out symbolId template.
- * TODO: Use Regex for testing type.
+ * A symbol can change values during program execution. (Note that this is different from changing a variable name to
+ * point to a different symbol.) To capture a symbol's value at a given point in time, the symbol can be turned into a
+ * "snapshot symbol" by associating it with a "snapshot UID". All symbols referenced within its representation are
+ * also turned into "snapshot symbols". This allows the snapshot symbol to be stored in a symbol table without
+ * clashing with other versions of itself.
+ *
+ * Any symbol that is still within scope at the end of the program is an eligible "live symbol". These symbols have much
+ * more information available for inspection, since digging deeper simply means request more information on-demand
+ * from the program execution engine. In contrast, "snapshot symbols" only have 1 level of inspection by default, since
+ * it is unknown which ones the user will want to inspect and sending all possible information is highly inefficient.
  */
 
-/** This string prefix marks special strings that are interpreted as symbol IDs. */
-export const ID_PREFIX = "@id:";
-
-
 /**
- * Creates a frozen version of a symbol ID, which will not be altered by subsequent updates to the symbol table.
- *
- * The original symbol ID can be extracted from the frozen ID, but it is unique among all all symbol IDs and
- * frozen IDs.
- *
- * @param {string} symbolId
- *      The symbol ID to be frozen.
- * @param {int} uid
- *      A number unique to this particular snapshot of the symbol among all snapshots of the symbol.
- * @returns {string}
- *      The frozen symbol ID.
+ * A live symbol ID takes the form:
+ *     "@id:<symbolUid>"
+ * where <symbolUid> is an int that uniquely identifies the symbol.
  */
-export function freezeSymbolId(symbolId, uid) {
-    return `${symbolId}!${uid}!`;
-}
+const kLiveSymbolIdRegex = /^@id:(\d+)$/;
+const kLiveSymbolIdTemplate = (symbolUid) => `@id:${symbolUid}`;
 
 /**
- * Extracts the raw symbol ID from a frozen symbol ID.
- *
- * @param {string} frozenSymbolId
- *      The frozen version of the symbol ID, as produced by `freezeSymbolId()`.
- * @returns {string}
- *      The original symbol ID.
+ * A snapshot symbol ID:
+ *     "@id:<symbolUid>!<snapshotUid>!"
+ * where <symbolUid> is an int that uniquely identifies the symbol,
+ *       <snapshotUid> is an int that uniquely identifies a snapshot (version of the symbol during execution).
  */
-export function unfreezeSymbolId(frozenSymbolId) {
-    return frozenSymbolId.substring(0, frozenSymbolId.indexOf('!'));
-}
+const kSnapshotSymbolIdRegex = /^@id:(\d+)!(\d+)!$/;
+const kSnapshotSymbolIdTemplate = (symbolUid, snapshotUid) => `@id:${symbolUid}!${snapshotUid}!`;
 
 /**
- * Determines if a value is a symbol ID string.
- *
- * @param {*} symbolId
- *      A potential symbol ID string.
+ * Determines if the input (of unconstrained type) is a live symbol ID.
+ * @param {*} x
  * @returns {boolean}
- *      Whether the supplied string symbol ID is a symbol ID.
  */
-export function isSymbolId(symbolId) {
-    return typeof(symbolId) === 'string' && symbolId.startsWith(ID_PREFIX);
+export function isLiveSymbolId(x) {
+    return typeof(x) === 'string' && kLiveSymbolIdRegex.test(x);
 }
 
 /**
- * Determines if a symbol ID is frozen or not.
- *
- * @param {string} symbolId
- *      A symbol ID, potentially frozen by `freezeSymbolId()`.
+ * Determines if the input (of unconstrained type) is a snapshot symbol ID.
+ * @param {*} x
  * @returns {boolean}
- *      Whether the supplied symbol ID is frozen.
  */
-export function isSymbolIdFrozen(symbolId) {
-    return typeof(symbolId) === 'string' && symbolId.endsWith('!');
+export function isSnapshotSymbolId(x) {
+    return typeof(x) === 'string' && kSnapshotSymbolIdRegex.test(x);
 }
 
 /**
- *
- * @param symbolTableSlice
- * @param nonce
- * @returns {{}}
+ * Determines if input (of unconstrained type) is any type of symbol ID.
+ * @param {*} x
+ * @returns {boolean}
  */
-export function freezeSymbolTableSlice(symbolTableSlice, nonce) {
+export function isAnySymbolId(x) {
+    return isSnapshotSymbolId(x) || isLiveSymbolId(x);
+}
+
+/**
+ * Creates a live symbol ID from the specified parameters.
+ * @param {int} symbolUid
+ * @returns {string}
+ */
+export function makeLiveSymbolId(symbolUid) {
+    return kLiveSymbolIdTemplate(symbolUid);
+}
+
+/**
+ * Creates a snapshot symbol ID from the specified parameters.
+ * @param {int} symbolUid
+ * @param {int} snapshotUid
+ * @returns {string}
+ */
+export function makeSnapshotSymbolId(symbolUid, snapshotUid) {
+    return kSnapshotSymbolIdTemplate(symbolUid, snapshotUid);
+}
+
+/**
+ * Returns the parameters used to make the live symbol ID.
+ * @param {string} liveSymbolId
+ * @returns {{symbolUid: int}}
+ */
+export function parseLiveSymbolId(liveSymbolId) {
+    if(!isLiveSymbolId(liveSymbolId)) throw TypeError(`Invalid liveSymbolId; got ${liveSymbolId}`);
+    const [ , symbolUid ] = kLiveSymbolIdRegex.exec(liveSymbolId);
+
+    return { symbolUid: parseInt(symbolUid) };
+}
+
+/**
+ * Returns the parameters used to make the snapshot symbol ID.
+ * @param {string} liveSymbolId
+ * @returns {{symbolUid: int, snapshotUid: int}}
+ */
+export function parseSnapshotSymbolId(snapshotSymbolId) {
+    if(!isSnapshotSymbolId(snapshotSymbolId)) throw TypeError(`Invalid snapshotSymbolId; got ${snapshotSymbolId}`);
+    const [ , symbolUid, snapshotUid ] = kSnapshotSymbolIdRegex.exec(snapshotSymbolId);
+    return { symbolUid: parseInt(symbolUid), snapshotUid: parseInt(snapshotUid) };
+}
+
+/**
+ * Converts a live symbol ID into a snapshot ID for the same symbol, using the specified snapshot UID.
+ * @param {string} liveSymbolId
+ * @param {int} snapshotUid
+ * @returns {string}
+ */
+export function liveToSnapshotSymbolId(liveSymbolId, snapshotUid) {
+    if(!isLiveSymbolId(liveSymbolId)) throw TypeError(`Invalid liveSymbolId; got ${liveSymbolId}`);
+    const { symbolUid } = parseLiveSymbolId(liveSymbolId);
+    return makeSnapshotSymbolId(symbolUid, snapshotUid);
+}
+
+/**
+ * Converts a snapshot symbol ID into a live symbol ID for the same symbol.
+ * @param {string} snapshotSymbolId
+ * @returns {string}
+ */
+export function snapshotToLiveSymbolId(snapshotSymbolId) {
+    if(!isSnapshotSymbolId(snapshotSymbolId)) throw TypeError(`Invalid snapshotSymbolId; got ${snapshotSymbolId}`);
+    const { symbolUid  } = parseSnapshotSymbolId(snapshotSymbolId);
+    return makeLiveSymbolId(symbolUid);
+}
+
+/**
+ * Converts all symbols within a symbol table slice to snapshot symbols.
+ * @param {{[liveSymbolId]: {...symbolObj...}}} symbolTableSlice
+ * @param snapshotUid
+ * @returns {{[snapshotSymbolId]: {...symbolObj...}}}
+ */
+export function snapshotSymbolTableSlice(symbolTableSlice, snapshotUid) {
     const frozenSymbolTableSlice = {};
-    Object.entries(symbolTableSlice).forEach(([symbolId, symbolSchema]) => {
+    Object.entries(symbolTableSlice).forEach(([liveSymbolId, symbolSchema]) => {
         if (symbolSchema.data !== null) {
-            symbolSchema.data = freezeSymbolData(symbolSchema.data, nonce);
+            symbolSchema.data = snapshotSymbolData(symbolSchema.data, snapshotUid);
         }
         if (symbolSchema.attributes !== null) {
-            symbolSchema.attributes = freezeSymbolData(symbolSchema.attributes, nonce);
+            symbolSchema.attributes = snapshotSymbolData(symbolSchema.attributes, snapshotUid);
         }
-        frozenSymbolTableSlice[freezeSymbolId(symbolId, nonce)] = symbolSchema;
+        frozenSymbolTableSlice[liveToSnapshotSymbolId(liveSymbolId, snapshotUid)] = symbolSchema;
     });
     return frozenSymbolTableSlice;
 }
 
 /**
- * Freezes all symbol IDs in a symbol's data object, in-place.
+ * Converts all live symbol IDs to snapshot symbol IDs, in-place within an object.
  *
  * Operations are performed in-place to prevent wasteful duplication of large data structures, like tensors.
  *
  * @param {object} symbolData
  *      A symbol's data object.
- * @param {int} nonce
+ * @param {int} snapshotUid
  *      A number unique to this particular snapshot of the program state among all snapshots of the program state.
- *      Generally, this means that `nonce` should be unique to the watch statement that produced this data object. Note
- *      that `nonce` must match the `nonce` supplied to `freezeSymbolShells()` for the same watch statement.
+ *      Generally, this means that `snapshotUid` should be unique to the watch statement that produced this data object.
  * @returns {object}
  *      `symbolData` with all symbol IDs contained therein frozen.
  */
-export function freezeSymbolData(symbolData, nonce) {
-    _freezeSymbolDataRecurse(symbolData, nonce);
+export function snapshotSymbolData(symbolData, snapshotUid) {
+    _snapshotSymbolDataRecurse(symbolData, snapshotUid);
     return symbolData;
 }
 
@@ -118,34 +167,33 @@ export function freezeSymbolData(symbolData, nonce) {
  *
  * @param {object | array} item
  *      An object or array that may contain symbol IDs to be frozen.
- * @param {int} nonce
- *      The `nonce` to use in freezing the symbol IDs.
+ * @param {int} snapshotUid
  */
-function _freezeSymbolDataRecurse(item, nonce) {
+function _snapshotSymbolDataRecurse(item, snapshotUid) {
     if (item === null) {
         return;
     }
     switch(typeof(item)) {
         case 'array':
             item.forEach((elem, i) => {
-                if (isSymbolId(elem)) {
-                    item[i] = freezeSymbolId(elem, nonce);
+                if (isLiveSymbolId(elem)) {
+                    item[i] = liveToSnapshotSymbolId(elem, snapshotUid);
                 } else {
-                    _freezeSymbolDataRecurse(elem, nonce);
+                    _snapshotSymbolDataRecurse(elem, snapshotUid);
                 }
             });
             break;
         case 'object':
             Object.entries(item).forEach(([key, value]) => {
-                if (isSymbolId(key)) {
+                if (isLiveSymbolId(key)) {
                     delete item[key];
-                    item[freezeSymbolId(key, nonce)] = value;
-                    key = freezeSymbolId(key, nonce);
+                    item[liveToSnapshotSymbolId(key, snapshotUid)] = value;
+                    key = liveToSnapshotSymbolId(key, snapshotUid);
                 }
-                if (isSymbolId(value)) {
-                    item[key] = freezeSymbolId(value, nonce);
+                if (isLiveSymbolId(value)) {
+                    item[key] = liveToSnapshotSymbolId(value, snapshotUid);
                 } else {
-                    _freezeSymbolDataRecurse(value, nonce);
+                    _snapshotSymbolDataRecurse(value, snapshotUid);
                 }
             });
             break;

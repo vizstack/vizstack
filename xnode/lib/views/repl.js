@@ -19,7 +19,7 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import { freezeSymbolId, freezeSymbolTableSlice } from '../services/symbol-utils';
+import { liveToSnapshotSymbolId, snapshotSymbolTableSlice } from '../services/symbol-utils';
 import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
     clearCanvasAction } from '../state/canvas/actions';
@@ -277,14 +277,14 @@ export default class REPL {
             // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
             if(symbols) {
                 if(watchCount >= 0) {
-                    this.store.dispatch(addSymbolsAction(freezeSymbolTableSlice(symbols, watchCount)));
+                    this.store.dispatch(addSymbolsAction(snapshotSymbolTableSlice(symbols, watchCount)));
                 } else {
                     this.store.dispatch(addSymbolsAction(symbols));
                 }
             }
             if(viewSymbol !== null) {
                 if (watchCount >= 0) {
-                    this.store.dispatch(addSnapshotViewerAction(freezeSymbolId(viewSymbol, watchCount)));
+                    this.store.dispatch(addSnapshotViewerAction(liveToSnapshotSymbolId(viewSymbol, watchCount)));
                 } else {
                     this.store.dispatch(addLiveViewerAction(viewSymbol));
                 }

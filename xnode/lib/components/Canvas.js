@@ -33,7 +33,7 @@ import SequenceViewer from './viewers/SequenceViewer';
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
     removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
 import { ViewerTypes } from "../state/canvas/constants";
-import { isSymbolIdFrozen } from '../services/symbol-utils';
+import { isSnapshotSymbolId } from '../services/symbol-utils';
 
 
 /**
@@ -152,8 +152,12 @@ class Canvas extends Component {
         switch(viewerType) {
             case ViewerTypes.SNAPSHOT: {
                 const { symbolId, symbolObj } = viewer;
+                const inspectLiveSymbol = () => {
+                    // TODO: Implement
+                };
                 const buttons = [
                     { title: 'Inspect', icon: <InspectIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },
+                    // TODO: Delete should also remove corresponding watch statement
                     { title: 'Delete',  icon: <DeleteIcon/>,  onClick: () => removeViewer(viewerId) },
                 ];
                 return (
@@ -167,7 +171,8 @@ class Canvas extends Component {
             case ViewerTypes.LIVE: {
                 const { symbolId, symbolObj } = viewer;
                 const buttons = [
-                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },  // TODO: Copy whole state also
+                    // TODO: Duplicate should also replicate the existing state of a live viewer
+                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },
                     { title: 'Close',     icon: <CloseIcon/>,     onClick: () => removeViewer(viewerId) },
                 ];
                 return (

@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import SequenceViz from '../viz/SequenceViz';
-import { isSymbolId } from '../../services/symbol-utils';
+import { isAnySymbolId } from '../../services/symbol-utils';
 
 
 /**
@@ -53,7 +53,7 @@ class SequenceViewer extends Component {
                 text = `${elem}`;
             } else if (typeof elem === 'boolean') {  // boolean
                 text = elem ? 'True' : 'False';
-            } else if (isSymbolId(elem)) {  // symbolId reference
+            } else if (isAnySymbolId(elem)) {  // symbolId reference
                 ref = elem;
                 text = symbolTable[elem].str;
             } else {  // string
