@@ -1,10 +1,15 @@
-import pdb
-from os.path import normpath, normcase
 import json
+import pdb
+import sys
 import traceback
+<<<<<<< HEAD
 import re
+=======
+from os.path import normpath, normcase
+>>>>>>> origin/interactive-python-shell
 
 from viz import VisualizationEngine
+
 
 # TODO: check compliance w/ python 2, since it might not use Pdb.message()
 
@@ -99,7 +104,7 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions, error=None):
+    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions):
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
@@ -115,14 +120,13 @@ class _ScriptExecutor(pdb.Pdb):
                 message is not associated with a watch statement.
             actions (dict or None): A dict of actions to be performed on the given symbol slice before returning,
                 in the form described in `ACTION-SCHEMA.md`.
-            error (str or None): The full text of an exception message that should be relayed to the client.
         """
         symbol_slice = None
         if symbol_id:
             symbol_slice = self._get_symbol_slice(symbol_id, symbol_name)
             if actions:
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
-        self._send_message(symbol_slice, view_symbol_id, refresh, watch_count, error)
+        self._send_message(symbol_slice, view_symbol_id, refresh, watch_count, None, None)
 
     def _get_symbol_slice(self, symbol_id, symbol_name):
         """Generates the minimal symbol table slice containing the filled shell of `symbol_id`.
@@ -503,6 +507,58 @@ class _ScriptExecutor(pdb.Pdb):
         return normcase(normpath(file_path))
 
 
+class PrintOverwriter:
+    """
+    An object to be used as a replacement for stdout, which uses a given function to "print" strings.
+    """
+    def __init__(self, send_message):
+        self.send_message = send_message
+
+    def write(self, text):
+        if text == '\n':
+            return
+        self.send_message(None, None, False, -1, '{}\n'.format(text), None)
+
+    def flush(self):
+        pass
+
+
+def _gen_send_message(send_queue):
+    """Generates a function which relays information about the program to clients in a standardized format.
+
+    Args:
+        send_queue (multiprocessing.Queue): A queue to which all messages created by `_send_message()` are added.
+
+    Returns:
+        (func): A function which relays information about the program to the client.
+    """
+    def _send_message(symbol_slice, view_symbol_id, refresh, watch_count, text, error):
+        """Writes a message to the client containing information about symbols and the program state.
+
+        Args:
+            symbol_slice (dict or None): A symbol table slice that the client should add to its local store, or `None`
+                if no slice should be added.
+            view_symbol_id (str or None): A symbol ID that the client should view upon receiving the message, or `None`
+                if no symbol should be viewed.
+            refresh (bool): Whether the client should reset its symbol table information before incorporating the new
+                slice.
+            watch_count (int): An integer unique to the watch statement whose information is being sent, or -1 if the
+                message is not associated with a watch statement.
+            text (str or None): A string printed by the user-specified script.
+            error (str or None): The full text of an exception message that should be relayed to the client.
+        """
+        message = {
+            'symbols': symbol_slice,
+            'viewSymbol': view_symbol_id,
+            'refresh': refresh,
+            'watchCount': watch_count,
+            'text': text,
+            'error': error,
+        }
+        send_queue.put(json.dumps(message))
+    return _send_message
+
+
 # ======================================================================================================================
 # Public methods.
 # ---------------
@@ -528,18 +584,14 @@ def run_script(receive_queue, send_queue, script_path, watches):
         script_path (str): The absolute path to a user-written script to be executed.
         watches (list): A list of watch expression objects of form {'file': str, 'lineno': str, 'action': dict}.
     """
-    def _send_message(symbol_slice, view_symbol_id, refresh, watch_count, error):
-        message = {
-            'symbols': symbol_slice,
-            'viewSymbol': view_symbol_id,
-            'refresh': refresh,
-            'watchCount': watch_count,
-            'error': error,
-        }
-        send_queue.put(json.dumps(message))
 
     send_queue.put('wat')  # gotta send some junk once for some reason
-    executor = _ScriptExecutor(_send_message)
+    send_message = _gen_send_message(send_queue)
+
+    # Replace stdout with an object that conveys all statements printed by the user script as messages
+    sys.stdout = PrintOverwriter(send_message)
+
+    executor = _ScriptExecutor(send_message)
     for watch in watches:
         executor.add_watch_expression(watch['file'], watch['lineno'], watch['actions'])
     try:
@@ -551,4 +603,4 @@ def run_script(receive_queue, send_queue, script_path, watches):
         raw_error_msg = traceback.format_exc()
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg, re.DOTALL)
         clean_error_msg = result.group(1) + result.group(3)
-        _send_message(None, None, False, -1, clean_error_msg)
+        send_message(None, None, False, -1, None, clean_error_msg)
