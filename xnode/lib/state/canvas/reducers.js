@@ -71,9 +71,10 @@ function addViewerReducer(state, action) {
         return state;
     }
     const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem.i === insertAfter);
+    console.log(viewerObj);
     return (
         state
-        .setIn(['viewerObjects', `${currentViewerId}`], viewerObj)
+        .setIn(['viewerObjects', `${currentViewerId}`], viewerObj, {deep: true})
         .update('viewerPositions', (prev) => Immutable([]).concat(
             insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
             [{

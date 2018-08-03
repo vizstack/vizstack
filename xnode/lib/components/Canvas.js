@@ -33,8 +33,12 @@ import SequenceViewer from './viewers/SequenceViewer';
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
     removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
 import { ViewerTypes } from "../state/canvas/constants";
-import { isSnapshotSymbolId } from '../services/symbol-utils';
+import {isSnapshotSymbolId, snapshotToLiveSymbolId} from '../services/symbol-utils';
 
+
+/** Component to display when loading data */
+const kLoadingSpinner = <span className='loading loading-spinner-small inline-block'/>;
+const kLoadingMsg = "Loading ...";
 
 /**
  * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
@@ -50,6 +54,9 @@ class Canvas extends Component {
 
         /**
          * See `REPL.fetchSymbolData(symbolId)`.
+         *
+         * @param {string} symbolId
+         * @param {?object} action
          */
         fetchSymbolData: PropTypes.func.isRequired,
 
@@ -107,8 +114,15 @@ class Canvas extends Component {
      * @param {string} symbolObj
      */
     createSymbolViewer(viewerId, symbolId, symbolObj) {
-        const { symbolTable, addLiveViewer } = this.props;
+        const { symbolTable, addLiveViewer, fetchSymbolData } = this.props;
         const { type, str, name, attributes, data} = symbolObj;
+
+        const inspectAnySymbol = (symbolId, viewerId) => {
+            const liveSymbolId = isSnapshotSymbolId(symbolId) ? snapshotToLiveSymbolId(symbolId) : symbolId;
+            fetchSymbolData(liveSymbolId);
+            addLiveViewer(liveSymbolId, viewerId);
+        };
+
         switch(type) {
             case 'none':
             case 'bool':
@@ -122,7 +136,7 @@ class Canvas extends Component {
             case 'tuple':
             case 'set':
                 return (<SequenceViewer data={data} symbolTable={symbolTable}
-                                        expandSubviewer={(symbolId) => addLiveViewer(symbolId, viewerId)}/>);
+                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
                 // TODO: return <TensorViewer/>;
@@ -146,40 +160,49 @@ class Canvas extends Component {
      * @param {object} viewer
      */
     createViewer(viewer) {
-        const { addLiveViewer, removeViewer } = this.props;
+        const { fetchSymbolData, addLiveViewer, removeViewer } = this.props;
         const { viewerId, viewerType } = viewer;
+
+        const inspectLiveSymbol = (liveSymbolId, viewerId) => {
+            fetchSymbolData(liveSymbolId);
+            addLiveViewer(liveSymbolId, viewerId);
+        };
 
         switch(viewerType) {
             case ViewerTypes.SNAPSHOT: {
-                const { symbolId, symbolObj } = viewer;
-                const inspectLiveSymbol = () => {
-                    // TODO: Implement
-                };
+                const { symbolId: snapshotSymbolId, symbolObj } = viewer;
+                const liveSymbolId = snapshotToLiveSymbolId(snapshotSymbolId);
+                const title = !symbolObj ? kLoadingMsg : `[${symbolObj.type}]  ${symbolObj.name}`;
                 const buttons = [
-                    { title: 'Inspect', icon: <InspectIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },
+                    { title: 'Inspect', icon: <InspectIcon/>, onClick: () => inspectLiveSymbol(liveSymbolId, viewerId) },
                     // TODO: Delete should also remove corresponding watch statement
                     { title: 'Delete',  icon: <DeleteIcon/>,  onClick: () => removeViewer(viewerId) },
                 ];
+                const component = !symbolObj ? kLoadingSpinner :
+                    this.createSymbolViewer(viewerId, snapshotSymbolId, symbolObj);
                 return (
                     <ViewerDisplayFrame icon={<SnapshotViewerIcon/>}
-                                        title={`[${symbolObj.type}]  ${symbolObj.name}`}
+                                        title={title}
                                         buttons={buttons}>
-                        {this.createSymbolViewer(viewerId, symbolId, symbolObj)}
+                        {component}
                     </ViewerDisplayFrame>
                 );
             }
             case ViewerTypes.LIVE: {
-                const { symbolId, symbolObj } = viewer;
+                const { symbolId: liveSymbolId, symbolObj } = viewer;
+                const title = !symbolObj ? kLoadingMsg : `[${symbolObj.type}]  ${symbolObj.name}`;
                 const buttons = [
                     // TODO: Duplicate should also replicate the existing state of a live viewer
-                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => addLiveViewer(symbolId, viewerId) },
+                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectLiveSymbol(liveSymbolId, viewerId) },
                     { title: 'Close',     icon: <CloseIcon/>,     onClick: () => removeViewer(viewerId) },
                 ];
+                const component = !symbolObj ? kLoadingSpinner :
+                    this.createSymbolViewer(viewerId, liveSymbolId, symbolObj);
                 return (
                     <ViewerDisplayFrame icon={<LiveViewerIcon/>}
-                                        title={`[${symbolObj.type}]  ${symbolObj.name}`}
+                                        title={title}
                                         buttons={buttons}>
-                        {this.createSymbolViewer(viewerId, symbolId, symbolObj)}
+                        {component}
                     </ViewerDisplayFrame>
                 );
             }
@@ -203,18 +226,6 @@ class Canvas extends Component {
                 console.warn(`Unrecognized viewer type recieved; got ${viewerType}`);
                 return null;
         }
-
-        // TODO: De-hardcode this
-        // TODO: What about progress spinner?
-        // if (!model) {
-        //     return (
-        //         <div className={classes.container}>
-        //             <div className={classes.progress}>
-        //                 <span className='loading loading-spinner-small inline-block' />
-        //             </div>
-        //         </div>
-        //     );
-        // }
     }
 
     /**

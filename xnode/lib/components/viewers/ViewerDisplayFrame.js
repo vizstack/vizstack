@@ -33,7 +33,7 @@ class ViewerDisplayFrame extends Component {
         icon: PropTypes.element,
 
         /** Left-justified text string/element to display in header. */
-        title: PropTypes.oneOfType(PropTypes.string, PropTypes.element),
+        title: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
 
         /** Right-justified button elements to display in header, with the following data schema:
          * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */

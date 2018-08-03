@@ -58,7 +58,7 @@ export default class REPL {
         this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
-        const composeEnhancers = composeWithDevTools({ realtime: true });
+        const composeEnhancers = composeWithDevTools({ realtime: true, });
         this.store = createStore(mainReducer, composeEnhancers(
             applyMiddleware(thunk),
         ));
@@ -223,18 +223,13 @@ export default class REPL {
      */
      _mergeActions(a1, a2) {
         // TODO: as more actions are added, revisit this method
-        if (a1 === null) {
-            return a2;
-        }
-        if (a2 === null) {
-            return a1;
-        }
+        if (a1 === null) return a2;
+        if (a2 === null) return a1;
         let action = {};
         Object.entries(a1).forEach(([key, value]) => {
             if (key in a2) {
                 action[key] = `${a2[key]}+${value}`
-            }
-            else {
+            } else {
                 action[key] = value;
             }
         });
@@ -335,7 +330,7 @@ export default class REPL {
      *      The identifier of the symbol, as acquired from a reference in the symbol table.
      * @param {?object} action
      *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
-     *      `REPL`, in the format described in `ACTION-SYMBOL-TABLE-SCHEMA.md`.
+     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
      */
     fetchSymbolData(symbolId, action = null) {
         // TODO: check to make sure the data isn't already there

@@ -63,8 +63,17 @@ class SequenceViewer extends Component {
             return { text, ref };
         });
 
+        const inspectElement = (ref) => {
+            if(isAnySymbolId(ref)) {
+                console.log("has ref", ref);
+            } else {
+                console.log("no ref", ref);
+                expandSubviewer(ref);
+            }
+        }
+
         return (
-            <SequenceViz model={model} onDoubleClick={expandSubviewer} startMotif="[" endMotif="]" itemMaxWidth={75} />
+            <SequenceViz model={model} onDoubleClick={inspectElement} startMotif="[" endMotif="]" itemMaxWidth={75} />
         );
     }
 }
