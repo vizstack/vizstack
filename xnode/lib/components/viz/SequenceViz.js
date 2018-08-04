@@ -92,7 +92,7 @@ class SequenceViz extends Component {
                               onClick={() => this.setState({selected: idx})}
                               onMouseEnter={() => this.setState({hovered: idx})}
                               onMouseLeave={() => this.setState({hovered: null})}
-                              onDoubleClick={onDoubleClick} />
+                              onDoubleClick={() => onDoubleClick(elem.ref)} />
                     {showIndices ? <span className={classes.indexText}>{idx}</span> : null}
                 </div>
             );

@@ -66,9 +66,9 @@ class SequenceViewer extends Component {
         const inspectElement = (ref) => {
             if(isAnySymbolId(ref)) {
                 console.log("has ref", ref);
+                expandSubviewer(ref);
             } else {
                 console.log("no ref", ref);
-                expandSubviewer(ref);
             }
         }
 
