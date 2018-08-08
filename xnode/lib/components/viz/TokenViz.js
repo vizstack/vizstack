@@ -21,9 +21,7 @@ class TokenViz extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viewer:
-         *  "Text to be rendered"
-         */
+        /** Data model rendered by this viz. */
         model: PropTypes.string.isRequired,
 
         /** Token box dimension constraints (in px or '%'). */
@@ -136,7 +134,7 @@ const styles = theme => ({
         color:          '#fff', // TODO: Dehardcode this
     },
     textWrap: {
-        wordBreak:   'break-all',
+        wordBreak:      'break-all',
     },
     textNoWrap: {
         whiteSpace:     'nowrap',

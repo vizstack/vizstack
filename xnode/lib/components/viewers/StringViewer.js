@@ -20,17 +20,38 @@ class StringViewer extends Component {
         data: PropTypes.object,
     };
 
+    /** Constructor. */
+    constructor(props) {
+        super(props);
+        this.state = {
+            hoveredIdx: null,
+            selectedIdx: null,
+        };
+    }
+
     /**
      * Renders a SequenceViz after making the appropriate data transformations.
      */
     render() {
         const { data } = this.props;
         if(!data) return null;  // Empty component if no data yet
+        const { hoveredIdx, selectedIdx } = this.state;
         const { contents } = data;
-        const model = contents.split("").map((char) => ({ text: char, ref: null }));
+        const model = contents.split("").map((char, idx) => ({
+            text: char,
+            isHovered: idx === hoveredIdx,
+            isSelected: idx === selectedIdx,
+            onClick: () => this.setState({selectedIdx: idx}),
+            onMouseEnter: () => this.setState({hoveredIdx: idx}),
+            onMouseLeave: () => this.setState({hoveredIdx: null}),
+        }));
 
         return (
-            <SequenceViz model={model} startMotif='"' endMotif='"' itemMinWidth={20} itemMaxWidth={20} />
+            <SequenceViz model={model}
+                         startMotif='"'
+                         endMotif='"'
+                         itemMinWidth={20}
+                         itemMaxWidth={20} />
         );
     }
 }

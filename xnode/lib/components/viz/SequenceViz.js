@@ -8,7 +8,6 @@ import { createSelector } from 'reselect';
 
 import TokenViz from './TokenViz';
 
-
 /**
  * This dumb component renders visualization for a 1-D sequence of heterogeneous elements.
  * TODO: Allow multi-line wrapping elements.
@@ -21,22 +20,18 @@ class SequenceViz extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viewer:
-         *  [{
-         *      text: "list[4]",
-         *      ref: "@id:..." | null,
-         *  }, ...]
-         *
-         */
-        model: PropTypes.array.isRequired,
-
-        /**
-         * Executed when any list element is double-clicked.
-         *
-         * @param ref
-         *     The `ref` field of the target element.
-         */
-        onDoubleClick: PropTypes.func,
+        /** Data model rendered by this viz. */
+        model: PropTypes.arrayOf(
+            PropTypes.shape({
+                text:           PropTypes.string.isRequired,
+                isHovered:      PropTypes.bool,
+                isSelected:     PropTypes.bool,
+                onClick:        PropTypes.func,
+                onDoubleClick:  PropTypes.func,
+                onMouseEnter:   PropTypes.func,
+                onMouseLeave:   PropTypes.func,
+            })
+        ),
 
         /** Whether to display element index labels. */
         showIndices: PropTypes.bool,
@@ -59,40 +54,30 @@ class SequenceViz extends Component {
         itemHeight: 30, // TODO: Match with text size
     }
 
-    /** Constructor. */
-    constructor(props) {
-        super(props);
-        this.state = {
-            hovered: null,
-            selected: null,
-        }
-    }
-
     /**
-     * Renders the list, with each item being a fixed-width button. When clicked, the button opens the viewer, if
-     * the clicked entry is a non-primitive.
+     * Renders a sequence of TokenViz elements, optionally numbered with indices. The sequence can have start/end
+     * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, model, onDoubleClick, showIndices, startMotif, endMotif,
+        const { classes, model, showIndices, startMotif, endMotif,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
-        const { hovered, selected } = this.state;
 
         const listItems = model.map((elem, idx) => {
-
+            const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = elem;
             return (
                 <div key={idx} className={classes.item}>
-                    <TokenViz model={elem.text}
+                    <TokenViz model={text}
                               minWidth={itemMinWidth}
                               maxWidth={itemMaxWidth}
                               minHeight={itemHeight}
                               maxHeight={itemHeight}
                               shouldTextWrap={false}
-                              isHovered={hovered == idx}
-                              isSelected={selected === idx}
-                              onClick={() => this.setState({selected: idx})}
-                              onMouseEnter={() => this.setState({hovered: idx})}
-                              onMouseLeave={() => this.setState({hovered: null})}
-                              onDoubleClick={() => onDoubleClick(elem.ref)} />
+                              isHovered={isHovered}
+                              isSelected={isSelected}
+                              onClick={onClick}
+                              onDoubleClick={onDoubleClick}
+                              onMouseEnter={onMouseEnter}
+                              onMouseLeave={onMouseLeave}/>
                     {showIndices ? <span className={classes.indexText}>{idx}</span> : null}
                 </div>
             );

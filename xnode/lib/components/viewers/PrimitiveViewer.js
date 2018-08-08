@@ -19,13 +19,26 @@ class PrimitiveViewer extends Component {
         str: PropTypes.string.isRequired,
     };
 
+    /** Constructor. */
+    constructor(props) {
+        super(props);
+        this.state = {
+            isHovered: false,
+        };
+    }
+
     /**
      * Renders a TokenViz with the given string.
      */
     render() {
         const { str } = this.props;
+        const { isHovered, isSelected } = this.state;
         return (
-            <TokenViz model={str} shouldTextWrap={true} />
+            <TokenViz model={str}
+                      shouldTextWrap={true}
+                      isHovered={isHovered}
+                      onMouseEnter={() => this.setState({isHovered: true})}
+                      onMouseLeave={() => this.setState({isSelected: false})}/>
         );
     }
 }

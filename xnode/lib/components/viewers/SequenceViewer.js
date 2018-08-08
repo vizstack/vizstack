@@ -31,6 +31,15 @@ class SequenceViewer extends Component {
         expandSubviewer: PropTypes.func.isRequired,
     };
 
+    /** Constructor. */
+    constructor(props) {
+        super(props);
+        this.state = {
+            hoveredIdx: null,
+            selectedIdx: null,
+        };
+    }
+
     /**
      * Renders a SequenceViz after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
@@ -39,13 +48,13 @@ class SequenceViewer extends Component {
      */
     render() {
         const { symbolTable, expandSubviewer, data } = this.props;
-
         if(!data) return null;  // Empty component if no data yet
+        const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
-        const model = contents.map((elem) => {
-            let text = '';
-            let ref = null;
+        const model = contents.map((elem, idx) => {
+            let text = undefined;
+            let onDoubleClick = undefined;
 
             if (elem === null) {  // none
                 text = 'None';
@@ -54,26 +63,28 @@ class SequenceViewer extends Component {
             } else if (typeof elem === 'boolean') {  // boolean
                 text = elem ? 'True' : 'False';
             } else if (isAnySymbolId(elem)) {  // symbolId reference
-                ref = elem;
+                onDoubleClick = () => expandSubviewer(elem);
                 text = symbolTable[elem].str;
             } else {  // string
                 text = `"${elem}"`;
             }
 
-            return { text, ref };
+            return {
+                text,
+                isHovered: idx === hoveredIdx,
+                isSelected: idx === selectedIdx,
+                onClick: () => this.setState({selectedIdx: idx}),
+                onDoubleClick,
+                onMouseEnter: () => this.setState({hoveredIdx: idx}),
+                onMouseLeave: () => this.setState({hoveredIdx: null}),
+            };
         });
 
-        const inspectElement = (ref) => {
-            if(isAnySymbolId(ref)) {
-                console.log("has ref", ref);
-                expandSubviewer(ref);
-            } else {
-                console.log("no ref", ref);
-            }
-        }
-
         return (
-            <SequenceViz model={model} onDoubleClick={inspectElement} startMotif="[" endMotif="]" itemMaxWidth={75} />
+            <SequenceViz model={model}
+                         startMotif="["
+                         endMotif="]"
+                         itemMaxWidth={75} />
         );
     }
 }
