@@ -48,26 +48,13 @@ class SequenceViewer extends Component {
      */
     render() {
         const { symbolTable, expandSubviewer, data } = this.props;
-        if(!data) return null;  // Empty component if no data yet
+        if (!data) return null;  // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
         const model = contents.map((elem, idx) => {
-            let text = undefined;
-            let onDoubleClick = undefined;
-
-            if (elem === null) {  // none
-                text = 'None';
-            } else if (typeof elem === 'number') {  // number
-                text = `${elem}`;
-            } else if (typeof elem === 'boolean') {  // boolean
-                text = elem ? 'True' : 'False';
-            } else if (isAnySymbolId(elem)) {  // symbolId reference
-                onDoubleClick = () => expandSubviewer(elem);
-                text = symbolTable[elem].str;
-            } else {  // string
-                text = `"${elem}"`;
-            }
+            let text = symbolTable[elem].str;
+            let onDoubleClick = () => expandSubviewer(elem);
 
             return {
                 text,

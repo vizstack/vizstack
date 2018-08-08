@@ -78,17 +78,17 @@ class VisualizationEngine:
         """Data generation function for primitives."""
         refs = set()
         return {
-            'contents': self._sanitize_for_data_object(obj, refs),
+            'contents': obj,
         }, refs
 
     def _generate_data_tensor(self, obj):
         """Data generation function for tensors."""
         refs = set()
         return {
-            # This is deliberately not datafied to prevent the lists from being turned into references.
+            # This is deliberately not sanitized to prevent the lists from being turned into references.
             'contents': obj.cpu().numpy().tolist(),
             'size': list(obj.size()),
-            'type': self._sanitize_for_data_object(self.TENSOR_TYPES[obj.type()], refs),
+            'type': self.TENSOR_TYPES[obj.type()],
             'maxmag': obj.abs().max(),
         }, refs
 
@@ -103,10 +103,11 @@ class VisualizationEngine:
             # TODO: check when this gets thrown, why, and if this is the appropriate response
             graphdata_obj = obj
         return {
-            'creatorop': self._sanitize_for_data_object(graphdata_obj.creator_op, refs),
-            'creatorpos': self._sanitize_for_data_object(graphdata_obj.creator_pos, refs),
+            'creatorop':
+                self._sanitize_for_data_object(graphdata_obj.creator_op, refs) if graphdata_obj.creator_op else None,
+            'creatorpos': graphdata_obj.creator_pos,
             'kvpairs': {
-                self._sanitize_for_data_object(key, refs): self._sanitize_for_data_object(value, refs)
+                key: self._sanitize_for_data_object(value, refs)
                 for key, value in graphdata_obj.get_visualization_dict().items()
             }
         }, refs
@@ -116,10 +117,10 @@ class VisualizationEngine:
         refs = set()
         return {
             'contents': [self._sanitize_for_data_object(op, refs) for op in obj.contents],
-            'container': self._sanitize_for_data_object(obj.container, refs),
-            'temporalstep': self._sanitize_for_data_object(obj.temporal_step, refs),
-            'height': self._sanitize_for_data_object(obj.height, refs),
-            'functionname': self._sanitize_for_data_object(obj.fn_name, refs),
+            'container': self._sanitize_for_data_object(obj.container, refs) if obj.container else None,
+            'temporalstep': obj.temporal_step,
+            'height': obj.height,
+            'functionname': obj.fn_name,
         }, refs
 
     def _generate_data_graphop(self, obj):
@@ -127,18 +128,18 @@ class VisualizationEngine:
         refs = set()
         d = {
             'function': self._sanitize_for_data_object(obj.fn, refs),
-            'args': [[self._sanitize_for_data_object(arg[0], refs),
+            'args': [[arg[0],
                       self._sanitize_for_data_object(arg[1], refs) if not isinstance(arg[1], list) else
                       [self._sanitize_for_data_object(arg_item, refs) for arg_item in arg[1]]] if len(arg) > 1 else
                      [self._sanitize_for_data_object(arg[0], refs)]
                      for arg in obj.args],
-            'kwargs': [[self._sanitize_for_data_object(arg[0], refs),
-                      self._sanitize_for_data_object(arg[1], refs) if not isinstance(arg[1], list) else
-                      [self._sanitize_for_data_object(arg_item, refs) for arg_item in arg[1]]] if len(arg) > 1 else
-                     [self._sanitize_for_data_object(arg[0], refs)]
-                     for arg in obj.kwargs],
-            'container': self._sanitize_for_data_object(obj.container, refs),
-            'functionname': self._sanitize_for_data_object(obj.fn_name, refs),
+            'kwargs': [[arg[0],
+                        self._sanitize_for_data_object(arg[1], refs) if not isinstance(arg[1], list) else
+                        [self._sanitize_for_data_object(arg_item, refs) for arg_item in arg[1]]] if len(arg) > 1 else
+                       [self._sanitize_for_data_object(arg[0], refs)]
+                       for arg in obj.kwargs],
+            'container': self._sanitize_for_data_object(obj.container, refs) if obj.container else None,
+            'functionname': obj.fn_name,
             'outputs': [self._sanitize_for_data_object(output, refs) for output in obj.outputs],
         }
         return d, refs
@@ -151,7 +152,7 @@ class VisualizationEngine:
             contents[self._sanitize_for_data_object(key, refs)] = self._sanitize_for_data_object(value, refs)
         return {
             'contents': contents,
-            'length': self._sanitize_for_data_object(len(obj), refs),
+            'length': len(obj),
         }, refs
 
     def _generate_data_sequence(self, obj):
@@ -162,22 +163,22 @@ class VisualizationEngine:
             contents.append(self._sanitize_for_data_object(item, refs))
         return {
             'contents': contents,
-            'length': self._sanitize_for_data_object(len(obj), refs),
+            'length': len(obj),
         }, refs
 
     def _generate_data_function(self, obj):
         """Data generation function for functions."""
         refs = set()
         viewer_data = {
-            'filename': self._sanitize_for_data_object(obj.__code__.co_filename, refs),
-            'lineno': self._sanitize_for_data_object(obj.__code__.co_firstlineno, refs),
+            'filename': obj.__code__.co_filename,
+            'lineno': obj.__code__.co_firstlineno,
         }
         argnames = obj.__code__.co_varnames
         default_arg_values = obj.__defaults__
         if default_arg_values is not None:
             viewer_data['args'] = argnames[:-len(default_arg_values)]
             viewer_data['kwargs'] = {
-                self._sanitize_for_data_object(argname, refs): self._sanitize_for_data_object(value, refs)
+                argname: self._sanitize_for_data_object(value, refs)
                 for argname, value in zip(argnames[-len(default_arg_values)], default_arg_values)
             }
         else:
@@ -204,11 +205,9 @@ class VisualizationEngine:
             try:
                 value = getattr(obj, attr)
                 if self.FUNCTION.test_fn(value):
-                    contents['functions'][self._sanitize_for_data_object(attr, refs)] = \
-                        self._sanitize_for_data_object(value, refs)
+                    contents['functions'][attr] = self._sanitize_for_data_object(value, refs)
                 else:
-                    contents['staticfields'][self._sanitize_for_data_object(attr, refs)] = \
-                        self._sanitize_for_data_object(value, refs)
+                    contents['staticfields'][attr] = self._sanitize_for_data_object(value, refs)
             except AttributeError:
                 continue
         return {
@@ -226,11 +225,9 @@ class VisualizationEngine:
             try:
                 if not self.FUNCTION.test_fn(value) and (
                                 attr not in instance_class_attrs or getattr(instance_class, attr, None) != value):
-                    contents[self._sanitize_for_data_object(attr, refs)] = \
-                        self._sanitize_for_data_object(getattr(obj, attr), refs)
+                    contents[attr] = self._sanitize_for_data_object(getattr(obj, attr), refs)
             except TypeError:
-                contents[self._sanitize_for_data_object(attr, refs)] = \
-                    self._sanitize_for_data_object(getattr(obj, attr), refs)
+                contents[attr] = self._sanitize_for_data_object(getattr(obj, attr), refs)
         return {
             'contents': contents,
         }, refs
@@ -325,48 +322,33 @@ class VisualizationEngine:
                     continue
             except RuntimeError:
                 continue
-            attributes[self._sanitize_for_data_object(attr, refs)] = \
-                self._sanitize_for_data_object(getattr(obj, attr), refs)
+            attributes[attr, refs] = self._sanitize_for_data_object(getattr(obj, attr), refs)
         return attributes
 
-    def _is_primitive(self, obj):
-        """Returns `True` if `obj` is primitive, as defined by the engine's `VisualizationType` objects."""
-        for type_info in self.TYPES:
-            if type_info.test_fn(obj):
-                return type_info.is_primitive
-        return False
-
-    def _escape_str(self, s):
-        # TODO: We need to have a system for escaping strings, to ensure that strings starting with REF_PREFIX are not
-        # considered references mistakenly.
-        """Reformats a string to eliminate ambiguity between strings and symbol ID references."""
-        return s
-
-    def _sanitize_for_data_object(self, key_or_value, refs):
-        """Takes in a Python object and returns a version which is safe to send to clients.
+    def _sanitize_for_data_object(self, obj, refs):
+        """Takes in a Python object and returns a string ID for it that is safe to send to clients.
 
         `_sanitize_for_data_object()` translates any key or value which needs to be in a symbol's data object into a
-        JSON-safe version. Everything put into a symbol's data object must be sanitized first. For primitives,
-        this does nothing but escapes strings so that they are not confused with symbol references. For non-primitive
-        objects, a symbol ID reference string which refers to the input object is returned.
+        reference ID string, which can be sent to the client along with a shell for the key or value. Only objects
+        which should be "inspectable" as separate entities from their parent should be sanitized; for example,
+        the contents of a sent list must all be sanitized, as each can be inspected, but the name of a `graphop`
+        argument should not be sanitized, since it is not an object clients should be able to inspect.
 
-        Non-primitive objects are added to the cache, so that the returned symbol ID is associated with that object
+        The newly generated reference ID is added to `refs`, to indicate that a shell of its Python object should
+        be sent to the client.`obj` is to the local cache, so that the returned symbol ID is associated with that object
         for future use.
 
         Args:
-            key_or_value (object): An object to make safe for inclusion in the data object.
+            obj (object): An object to make safe for inclusion in the data object.
             refs (set): A set to save new symbol ID reference strings created during generation.
 
         Returns:
-            (str or int or float): Serialization-safe representation of `obj`, possibly as a symbol ID reference.
+            (str): A symbol ID reference to `obj`.
         """
-        if self._is_primitive(key_or_value):
-            return self._escape_str(key_or_value) if self.STRING.test_fn(key_or_value) else key_or_value
-        else:
-            symbol_id = self.get_symbol_id(key_or_value)
-            self.cache[symbol_id][self.OBJ] = key_or_value
-            refs.add(symbol_id)
-            return symbol_id
+        symbol_id = self.get_symbol_id(obj)
+        self.cache[symbol_id][self.OBJ] = obj
+        refs.add(symbol_id)
+        return symbol_id
 
     # Schema constants.
     # -----------------

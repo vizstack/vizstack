@@ -393,20 +393,23 @@ class GraphViewer extends Component {
             getArgs(opSymbolId).concat(getKwargs(opSymbolId)).forEach(([argName, arg]) => {
                 // Arguments can be either values or lists of values; we convert the former to the latter for
                 // convenience, since behavior doesn't change either way
+                let argIsList = true;
                 if (!Array.isArray(arg)) {
                     arg = [arg];
+                    argIsList = false;
                 }
-                arg.filter(dataSymbolId => dataSymbolId !== null).forEach(dataSymbolId => {
+                arg.forEach((dataSymbolId, argIndex) => {
                     const creatorOpSymbolId = getCreatorOp(dataSymbolId);
                     if (creatorOpSymbolId === null) {
                         computationGraph.addData(dataSymbolId);
                         // A data node always has exactly one output port, so we provide "0" as the port number
-                        computationGraph.addEdge(dataSymbolId, dataSymbolId, 0, opSymbolId, argName);
+                        computationGraph.addEdge(dataSymbolId, dataSymbolId, 0, opSymbolId,
+                            argIsList ? `${argName}[${argIndex}]` : argName);
                     }
                     else {
                         opsToCheck.push(creatorOpSymbolId);
                         computationGraph.addEdge(dataSymbolId, creatorOpSymbolId, getCreatorPos(dataSymbolId),
-                            opSymbolId, argName);
+                            opSymbolId, argIsList ? `${argName}[${argIndex}]` : argName);
                     }
                 });
             });

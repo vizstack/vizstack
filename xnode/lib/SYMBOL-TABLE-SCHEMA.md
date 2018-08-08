@@ -95,7 +95,7 @@ Note the redundancy. TODO: Can we remove it?
 ```
 "str": "list[5]",
 "data": {
-    "contents": [1, 3.14, false, "hi", "@id:12345"],
+    "contents": ["@id:1234", "@id:4345"],
 }
 ```
 
@@ -104,8 +104,7 @@ Note the redundancy. TODO: Can we remove it?
 "str": "dict[4]",
 "data": {
     "contents": {
-        "stringkey": "value",
-        "@id:12345": [1, 2, 3],  // any non-string key, must have indirection
+        "@id:12345": "@id:4345",
     }
 }
 ```
@@ -133,7 +132,7 @@ Note the redundancy. TODO: Can we remove it?
 }
 ```
 
-#### object
+#### instance
 ```
 "str": "object<MyAwesomeClass>",
 "data": {
@@ -148,7 +147,7 @@ Note the redundancy. TODO: Can we remove it?
 "str": "function<foo>",
 "data": {
     "args":["hi", "hi"],
-    "kwargs":{"kwarg1": "xnode$1234"},
+    "kwargs":{"kwarg1": "@id:1234"},
     "filename": "hihi.py",
     "lineno": 2,
 }
@@ -164,41 +163,42 @@ Note the redundancy. TODO: Can we remove it?
 }
 ```
 
-#### graphdata (TODO)
+#### graphdata
 ```
 "str": "GraphData",
 "data": {
-    "creatorop": null, //reference to graphop symbol, or None if leaf,
-    "creatorpos"
+    "creatorop": null, // reference to graphop symbol, or None if leaf
+    "creatorpos": 0, // the index in the creator op's output tuple, or -1 if leaf
     "kvpairs": {
         // user-defined key-value pairs
+        "key": "@id:871432193874"
     }
 }
 ```
 
-#### graphop (TODO)
+#### graphop
 ```
 "str": "GraphOp",
 "data": {
-    "function": "xnode$98750897202" // reference to function which performed the operation represented by graphop
-    "args": [["arg1"], ["arg2", "xnode$02395897342"]] // list of arguments to the op, containing only None or references to graphdata
+    "function": "@id:98750897202" // reference to function which performed the operation represented by graphop
+    "args": [["arg1"], ["arg2", "@id:02395897342"]] // list of arguments to the op, containing only references to graphdata
     "kwargs": {
-        "dim": "xnode$3032099235" // keyword : graphdata ref pairs for each keyword argument input; assumed None for any keys not present
+        "dim": "@id:3032099235" // keyword : graphdata ref pairs for each keyword argument input; assumed None for any keys not present
     },
-    "container":"xnode$98750897202",
+    "container":"@id:98750897202", // symbol ID of graphcontainer, or null if no container
     "functionname": "funky_the_function",
-    "outputs": ["xnode$23509321590"] // list of graphdata objects output by the op
+    "outputs": ["@id:23509321590"] // list of graphdata objects output by the op
 }
 ```
 
-#### graphcontainer (TODO)
+#### graphcontainer
 ```
 "str": "GraphContainer",
 "data": {
-    "contents": ["xnode$98750", "xnode$97750"], // list of graphop.graphcontainer grouped by this container.
-    "container": "xnode$3032099235",
+    "contents": ["@id:98750", "@id:97750"], // list of graphop.graphcontainer grouped by this container.
+    "container": "@id:3032099235", // symbol ID of graphcontainer, or null if no container
     "temporalstep": 1,  // -1 for abstractive containers, >=0 for temporal
-    "height": 5,
-    "functionname": "funky_the_function",
+    "height": 5, // length of longest chain of descendants
+    "functionname": "funky_the_function", // name of associated function, or null if there is none (like for temporal containers)
 }
 ```
