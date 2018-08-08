@@ -25,6 +25,7 @@ import PrintViewerIcon from '@material-ui/icons/Print';
 // Custom data type viewers
 import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
+import GraphViewer from './viewers/GraphViewer';
 // import TensorViewer from './viewers/TensorViewer';
 // import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import SequenceViewer from './viewers/SequenceViewer';
@@ -143,11 +144,10 @@ class Canvas extends Component {
                 return null;
 
             case 'graphdata':
-                // TODO: return <GraphViewer symbolId={symbolId} symbolTable={symbolTable}/>;
-                return null;
+                return <GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}/>;
 
             default:
-                console.warn(`Canvas -- unrecognized data type received; got ${type}`)
+                console.warn(`Canvas -- unrecognized data type received; got ${type}`);
                 return null;
 
             // TODO: Add more viewers
