@@ -322,7 +322,7 @@ class VisualizationEngine:
                     continue
             except RuntimeError:
                 continue
-            attributes[attr, refs] = self._sanitize_for_data_object(getattr(obj, attr), refs)
+            attributes[attr] = self._sanitize_for_data_object(getattr(obj, attr), refs)
         return attributes
 
     def _sanitize_for_data_object(self, obj, refs):
