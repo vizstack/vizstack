@@ -180,11 +180,9 @@ Note the redundancy. TODO: Can we remove it?
 ```
 "str": "GraphOp",
 "data": {
-    "function": "@id:98750897202" // reference to function which performed the operation represented by graphop
-    "args": [["arg1"], ["arg2", "@id:02395897342"]] // list of arguments to the op, containing only references to graphdata
-    "kwargs": {
-        "dim": "@id:3032099235" // keyword : graphdata ref pairs for each keyword argument input; assumed None for any keys not present
-    },
+    "function": "@id:9875089" // reference to function which performed the operation represented by graphop
+    "args": [["arg1"], ["arg2", "@id:023958"], ["arg3", ["@id:8787", "@id:4564"]] // list of arguments to the op, containing only references to graphdata or lists of references to graphdata
+    "args": [["kwarg1", "@id:023958"], ["kwarg2", ["@id:8787", "@id:4564"]] // list of keyword arguments to the op, containing only references to graphdata or lists of references to graphdata
     "container":"@id:98750897202", // symbol ID of graphcontainer, or null if no container
     "functionname": "funky_the_function",
     "outputs": ["@id:23509321590"] // list of graphdata objects output by the op

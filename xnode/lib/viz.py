@@ -285,7 +285,10 @@ class VisualizationEngine:
                               str_fn=lambda obj: 'class <{}>'.format(obj.__name__),
                               data_fn=_generate_data_class)
     INSTANCE = VisualizationType('obj', test_fn=lambda obj: True,
-                                 str_fn=lambda obj: '<{}>'.format(obj.__class__.__name__, str(obj)),
+                                 # TODO: this is information leakage from `graphtracker`. When we likely refactor it,
+                                 # clean this up as well.
+                                 str_fn=lambda obj: '<{}>'.format(obj.__class__.__name__
+                                                                  .replace('__XNODE_GENERATED__', '')),
                                  data_fn=_generate_data_instance)
 
     # A list of all `VisualizationType` objects, in the order in which type should be tested. For example, the

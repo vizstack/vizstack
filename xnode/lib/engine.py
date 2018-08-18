@@ -50,6 +50,7 @@ class _ExecutionManager:
         The `_ExecutionManager` is hereafter dead, and a new one should be created if another script must be run.
         """
         self.exec_process.terminate()
+        self.exec_process.join()
         self.print_queue.put(THREAD_QUIT)
         self.print_thread.join()
 
@@ -90,6 +91,7 @@ class _ExecutionManager:
         fetch_queue = Queue()
         print_queue = Queue()
         process = Process(target=run_script, args=(fetch_queue, print_queue, script_path, watches))
+        process.daemon = True
         process.start()
         print_queue.get()  # gotta do this here once for some reason
 
@@ -136,6 +138,8 @@ def _add_watch(watches, message):
     contents = message.replace(WATCH_HEADER, '').split('?')
 
     watch_expression = {
+        # TODO: use a better system for assigning the next ID
+        'id': max([watch['id'] + 1 for watch in watches]) if len(watches) > 0 else 0,
         'file': contents[0],
         'lineno': int(contents[1]),
         'actions': json.loads(contents[2])
@@ -290,7 +294,7 @@ def main():
 
         elif message.startswith(EDIT_HEADER):
             if _should_execute(script_path, watches, message):
-                _execute(exec_manager, script_path, watches)
+                exec_manager = _execute(exec_manager, script_path, watches)
 
         elif message.startswith(FETCH_HEADER):
             if exec_manager:

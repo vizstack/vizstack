@@ -47,7 +47,7 @@ function clearSymbolTableReducer(state, action) {
 function addSymbolTableSlice(state, action) {
     const { symbolTableSlice } = action;
     Object.entries(symbolTableSlice).forEach(([symbolId, symbolSchema]) => {
-        if (symbolSchema.data || !(symbolId in state)) {
+        if (symbolSchema.data !== null || !(symbolId in state.symbolTable)) {
             state = Immutable.setIn(state, ['symbolTable', symbolId], symbolSchema);
         }
     });

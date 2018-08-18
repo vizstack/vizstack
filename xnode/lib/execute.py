@@ -20,7 +20,7 @@ class _ScriptExecutor(pdb.Pdb):
     be evaluated, creates a symbol schema for it, and sends it to the parent process as a string via a queue.
 
     Args:
-        send_message (fn): A function with signature (symbol_slice, view_symbol_id, refresh, watch_count, error) that
+        send_message (fn): A function with signature (symbol_slice, view_symbol_id, refresh, watch_id, error) that
             should be called to send a message containing execution state info and instructions to the client.
     """
 
@@ -30,16 +30,17 @@ class _ScriptExecutor(pdb.Pdb):
         self._viz_engine = VisualizationEngine()
         # A function that is called when a message should be sent to the client.
         self._send_message = send_message
-        # A count of the number of encountered watch expressions, to be sent along with any returned messages so that
-        # symbol freezing may be performed by clients.
-        self._watch_count = 0
         # A mapping of (file_name, line_number) tuples to dictionaries that describe what actions should be performed
         # at which watched lines.
         self._watch_actions = dict()
+
+        self._watch_ids = dict()
         # The name of a variable that should be evaluated once defined in the running program's stack frame.
         self._var_to_eval = None
         # A dictionary describing the actions to be performed when the variable in `self._var_to_eval` is evaluated.
         self._actions_on_eval = None
+
+        self._eval_id = None
 
     # ==================================================================================================================
     # Public methods.
@@ -48,7 +49,7 @@ class _ScriptExecutor(pdb.Pdb):
     # the script's namespace.
     # ==================================================================================================================
 
-    def add_watch_expression(self, file_path, lineno, actions):
+    def add_watch_expression(self, watch_id, file_path, lineno, actions):
         """Adds a watch expression to a particular line of code, causing any variable assigned in that line to be
         surfaced to the client.
 
@@ -57,6 +58,7 @@ class _ScriptExecutor(pdb.Pdb):
         No behavior will change if the watched line is not executed during the running of the main script.
 
         Args:
+            watch_id (int): A unique ID for this watch statement.
             file_path (str): The absolute path to the file.
             lineno (int): The line number of the variable assignment in that file.
             actions (dict): A dict describing the actions to _execute at the watched line, of format described in
@@ -64,6 +66,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         file_path = _ScriptExecutor._normalize_path(file_path)
         self.do_break('{}:{}'.format(file_path, lineno))
+        self._watch_ids[(file_path, lineno)] = watch_id
         self._watch_actions[(file_path, lineno)] = actions
 
     def execute(self, script_path):
@@ -101,7 +104,7 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_count, actions):
+    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_id, actions):
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
@@ -113,7 +116,7 @@ class _ScriptExecutor(pdb.Pdb):
                 if no symbol should be viewed.
             refresh (bool): Whether the client should reset its symbol table information before incorporating the new
                 slice.
-            watch_count (int): An integer unique to the watch statement whose information is being sent, or -1 if the
+            watch_id (int): An integer unique to the watch statement whose information is being sent, or -1 if the
                 message is not associated with a watch statement.
             actions (dict or None): A dict of actions to be performed on the given symbol slice before returning,
                 in the form described in `ACTION-SCHEMA.md`.
@@ -123,7 +126,7 @@ class _ScriptExecutor(pdb.Pdb):
             symbol_slice = self._get_symbol_slice(symbol_id, symbol_name)
             if actions:
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
-        self._send_message(symbol_slice, view_symbol_id, refresh, watch_count, None, None)
+        self._send_message(symbol_slice, view_symbol_id, refresh, watch_id, None, None)
 
     def _get_symbol_slice(self, symbol_id, symbol_name):
         """Generates the minimal symbol table slice containing the filled shell of `symbol_id`.
@@ -263,6 +266,7 @@ class _ScriptExecutor(pdb.Pdb):
             assign_frame (Frame): A `Pdb` frame object describing the program's stack frame at a line where a
                 variable is being assigned.
         """
+        self._eval_id = self._watch_ids[self._get_file_lineno(assign_frame)]
         self._actions_on_eval = self._watch_actions[self._get_file_lineno(assign_frame)]
         self._var_to_eval = self._get_var_name_from_frame(assign_frame)
 
@@ -283,6 +287,7 @@ class _ScriptExecutor(pdb.Pdb):
         Returns:
             (object): The object that was assigned to the variable name in `assign_frame`.
             (str): The name of the variable which references the object.
+            (int): An ID unique to this watch statement.
             (dict): Symbol request actions the client has associated with the variable's evaluation.
         """
         obj_name = self._var_to_eval
@@ -297,7 +302,7 @@ class _ScriptExecutor(pdb.Pdb):
 
         self._var_to_eval = None
         if obj_found:
-            return obj, obj_name, self._actions_on_eval
+            return obj, obj_name, self._eval_id, self._actions_on_eval
         raise ValueError
 
     # State checking.
@@ -480,10 +485,9 @@ class _ScriptExecutor(pdb.Pdb):
         Args:
             frame (pdb.Frame): The program state frame in which the variable should be evaluated.
         """
-        obj, symbol_name, actions = self._eval(frame)
+        obj, symbol_name, watch_id, actions = self._eval(frame)
         symbol_id = self._viz_engine.get_symbol_id(obj)
-        self._prepare_and_send_message(symbol_id, symbol_name, symbol_id, False, self._watch_count, actions)
-        self._watch_count += 1
+        self._prepare_and_send_message(symbol_id, symbol_name, symbol_id, False, watch_id, actions)
 
     # ==================================================================================================================
     # Static helper methods.
@@ -529,7 +533,7 @@ def _gen_send_message(send_queue):
     Returns:
         (func): A function which relays information about the program to the client.
     """
-    def _send_message(symbol_slice, view_symbol_id, refresh, watch_count, text, error):
+    def _send_message(symbol_slice, view_symbol_id, refresh, watch_id, text, error):
         """Writes a message to the client containing information about symbols and the program state.
 
         Args:
@@ -539,7 +543,7 @@ def _gen_send_message(send_queue):
                 if no symbol should be viewed.
             refresh (bool): Whether the client should reset its symbol table information before incorporating the new
                 slice.
-            watch_count (int): An integer unique to the watch statement whose information is being sent, or -1 if the
+            watch_id (int): An integer unique to the watch statement whose information is being sent, or -1 if the
                 message is not associated with a watch statement.
             text (str or None): A string printed by the user-specified script.
             error (str or None): The full text of an exception message that should be relayed to the client.
@@ -548,7 +552,7 @@ def _gen_send_message(send_queue):
             'symbols': symbol_slice,
             'viewSymbol': view_symbol_id,
             'refresh': refresh,
-            'watchCount': watch_count,
+            'watchId': watch_id,
             'text': text,
             'error': error,
         }
@@ -573,7 +577,7 @@ def run_script(receive_queue, send_queue, script_path, watches):
 
     Should be called as the main function of a new process.
 
-	TODO: update args format and content
+    TODO: update args format and content
     Args:
         receive_queue (Queue): A queue shared with the calling process to which requests for new symbol schemas are
             written by the parent.
@@ -590,7 +594,7 @@ def run_script(receive_queue, send_queue, script_path, watches):
 
     executor = _ScriptExecutor(send_message)
     for watch in watches:
-        executor.add_watch_expression(watch['file'], watch['lineno'], watch['actions'])
+        executor.add_watch_expression(watch['id'], watch['file'], watch['lineno'], watch['actions'])
     try:
         executor.execute(script_path)
         while True:

@@ -52,7 +52,7 @@ class SequenceViz extends Component {
         startMotif: "",
         endMotif: "",
         itemHeight: 30, // TODO: Match with text size
-    }
+    };
 
     /**
      * Renders a sequence of TokenViz elements, optionally numbered with indices. The sequence can have start/end
@@ -86,7 +86,7 @@ class SequenceViz extends Component {
         const motifStyle = { height: itemHeight };
 
         return (
-            <div className={classes.listBox}>
+            <div className={classes.keyValuePairList}>
                 <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
                 {listItems}
                 <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
@@ -102,7 +102,7 @@ class SequenceViz extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    listBox: {
+    keyValuePairList: {
         display:        'inline-flex',
         flexDirection:  'row',
         flexWrap:       'nowrap',

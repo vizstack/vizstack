@@ -277,6 +277,7 @@ const styles = theme => ({
         textAlign: 'right',
         fontFamily: theme.typography.monospace.fontFamily,
         fontSize: '7pt',
+        userSelect: 'none',
     },
     edgeLabelHovered: {
         opacity: 1,
@@ -318,6 +319,7 @@ const styles = theme => ({
         fontSize: '1.3rem',
         fontWeight: 'bold',
         color: 'white',
+        userSelect: 'none',
     },
 });
 

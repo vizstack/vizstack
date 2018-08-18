@@ -49,7 +49,7 @@ class TokenViz extends Component {
         shouldTextWrap: false,
         isHovered: false,
         isSelected: false,
-    }
+    };
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
@@ -128,7 +128,7 @@ const styles = theme => ({
     tokenText: {
         textAlign:      'center',
         textOverflow:   'ellipsis',
-        overflow:       'auto',
+        overflow:       'hidden',
         fontFamily:     theme.typography.monospace.fontFamily,
         fontSize:       '10pt',  // TODO: Dehardcode this
         color:          '#fff', // TODO: Dehardcode this

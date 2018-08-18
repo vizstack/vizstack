@@ -51,10 +51,11 @@ export default {
                         editor.addGutter({name: 'xnode-watch-gutter'});
                     }
                     const changes = null;  // TODO: get changes from last edit
-                    editor.onDidSave(({path}) => {
+                    editor.onDidStopChanging(() => {
+                        editor.save();
                         this.repls.forEach(repl => {
-                            repl.onFileChanged(path, changes);
-                        })
+                            repl.onFileChanged(editor.getPath(), changes);
+                        });
                     });
                 }
             }),

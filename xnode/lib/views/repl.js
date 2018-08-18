@@ -71,7 +71,7 @@ export default class REPL {
                     <Canvas fetchSymbolData={(symbolId) => this.fetchSymbolData(symbolId)} />
                 </MuiThemeProvider>
             </ReduxProvider>,
-            this.element
+            this.element,
         );
 
         console.debug('constructor() -- REPL instance created');
@@ -263,7 +263,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('repl -- received message', JSON.parse(message));
-            let { viewSymbol, symbols, refresh, watchCount, text, error } = JSON.parse(message);
+            let { viewSymbol, symbols, refresh, watchId, text, error } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
@@ -271,15 +271,15 @@ export default class REPL {
             // TODO: should repl even know about freezing? or should the Python side instead?
             // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
             if(symbols) {
-                if(watchCount >= 0) {
-                    this.store.dispatch(addSymbolsAction(snapshotSymbolTableSlice(symbols, watchCount)));
+                if(watchId >= 0) {
+                    this.store.dispatch(addSymbolsAction(snapshotSymbolTableSlice(symbols, watchId)));
                 } else {
                     this.store.dispatch(addSymbolsAction(symbols));
                 }
             }
             if(viewSymbol !== null) {
-                if (watchCount >= 0) {
-                    this.store.dispatch(addSnapshotViewerAction(liveToSnapshotSymbolId(viewSymbol, watchCount)));
+                if (watchId >= 0) {
+                    this.store.dispatch(addSnapshotViewerAction(liveToSnapshotSymbolId(viewSymbol, watchId)));
                 } else {
                     this.store.dispatch(addLiveViewerAction(viewSymbol));
                 }
@@ -290,6 +290,9 @@ export default class REPL {
             if (error !== null) {
                 this.store.dispatch(addPrintViewerAction(error));
             }
+            // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
+            // focus so the user can keep typing.
+            atom.views.getView(atom.workspace.getActiveTextEditor()).focus();
         });
         return executionEngine;
     }

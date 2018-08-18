@@ -1,2 +1,2 @@
 'use babel';
-export { default, assembleGraphModel } from './GraphViewer.js';
+export { default } from './GraphViewer.js';

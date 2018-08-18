@@ -26,6 +26,7 @@ import PrintViewerIcon from '@material-ui/icons/Print';
 import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
 import GraphViewer from './viewers/GraphViewer';
+import GraphOpViewer from './viewers/GraphViewer/GraphOpViewer';
 // import TensorViewer from './viewers/TensorViewer';
 // import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import SequenceViewer from './viewers/SequenceViewer';
@@ -144,7 +145,11 @@ class Canvas extends Component {
                 return null;
 
             case 'graphdata':
-                return <GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}/>;
+                return (<GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}
+                                    expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+            case 'graphop':
+                return (<GraphOpViewer data={data} symbolTable={symbolTable}
+                                       expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             default:
                 console.warn(`Canvas -- unrecognized data type received; got ${type}`);
@@ -190,7 +195,9 @@ class Canvas extends Component {
             }
             case ViewerTypes.LIVE: {
                 const { symbolId: liveSymbolId, symbolObj } = viewer;
-                const title = !symbolObj ? kLoadingMsg : `[${symbolObj.type}]  ${symbolObj.name}`;
+                const title = !symbolObj ? kLoadingMsg : (
+                    symbolObj.name !== null ? `[${symbolObj.type}]  ${symbolObj.name}` : `[${symbolObj.type}]`
+                );
                 const buttons = [
                     // TODO: Duplicate should also replicate the existing state of a live viewer
                     { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectLiveSymbol(liveSymbolId, viewerId) },

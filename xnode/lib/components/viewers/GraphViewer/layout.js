@@ -1,641 +1,803 @@
 'use babel';
 
-import { createSelector } from "reselect";
+/**
+ * Produces node and edge positions for directed acyclic graphs created by the `dagbuilder` module.
+ *
+ * The representation created by `DAGBuilder` is transformed into one that the layout engine (currently the Eclipse
+ * Layout Kernel) can use with `createElkGraph()`. The transformed graph can then be input to `layoutElkGraph()`, which
+ * produces node and edge positions for each visible node and edge in the DAG.
+ */
+
+import ELK from 'elkjs';
 
 
 /**
  * Graph layout constants.
  * -----------------------
  */
-const kDataNodeHeight = 25;
-const kDataNodeWidth = 25;
-const kOpNodeHeight = 40;
-const kOpNodeWidth = 80;
-const kCollapsedAbstractiveHeight = 40;
-const kCollapsedAbstractiveWidth = 80;
 const kEdgeMargin = 10;
-const kContainerPadding = 30;
-const kNodeMargin = 40;
-const kTemporalContainerMargin = 40;
-const kEdgeThickness = 2.5;
+const kLateralNodeMargin = 40;
 const kCurvePointFactor = 0.1;
+const kNodeMargin = 40;
+const kRootNode = 'root';
+const kLateralEdges = 'lateral';
+
+// =====================================================================================================================
+// Convert a `dagbuilder` generic graph into an engine-ready graph.
+// ----------------------------------------------------------------
+// `DAGBuilder` objects store a general representation of a DAG, but that format is not directly used by the layout
+// algorithm. To lay out the graph, an engine-ready graph must first be created and then fed to the layout engine.
+// =====================================================================================================================
 
 /**
- * Creates a "node object" which can be translated into a node in the ELK graph; data, ops, and container nodes are
- * represented as node objects.
+ * Builds an ELK graph that is ready for layout from arrays of `DAGNode`s and `DAGEdge`s.
  *
- * @param nodeId
- *     Unique identifier for the node object.
- * @param symbolId
- *     Id of the symbol represented by the node. Note that two node objects may share a symbol id, as GraphData
- *     which are used in multiple timesteps have a node created in each temporal container.
- * @param symbolInfo
- *     The symbol's entry in the symbol table.
- * @param container
- *     The node id of the node's container.
- * @param outPorts
- *     The number of output ports the node has; typically modified after node object creation. For example, an op
- *     node might be created before all of its outputs have been explored in the graph, meaning that `outPorts`
- *     cannot be set until after the whole graph is created.
- * @param height
- *     How many layers are nested within the node. 0 for ops and data.
- * @param contents
- *     A list of all node ids contained by the node.
- * @param containsTemporal
- *     Whether the node contains any temporal containers; needed for proper orientation of contents in the ELK graph.
- * @param isTemporal
- *     Whether the node is a temporal container.
+ * @param {DAGNode[]} nodes
+ *      Array of `DAGNode` objects, containing every node in a DAG.
+ * @param {DAGEdge[]} edges
+ *      Array of `DAGEdge` objects, containing every edge in a DAG.
+ * @returns {object}
+ *      An ELK graph ready for layout.
  */
-function createNodeObj(nodeId, symbolId, symbolTable, container, outPorts=[], height=0, contents=[], temporalStep=-1, containsTemporal=false) {
-    if (container === null) {
-        container = 'root';
-    }
+export function getElkGraph(nodes, edges) {
+    const { edgeSegments, outPortCounts, inPortCounts } = getEdgeSegments(edges);
+    const elkNodes = {};
+    // Create the ELK nodes
+    nodes.forEach(node =>
+        elkNodes[node.getId()] = createElkNode(node, outPortCounts[node.getId()], inPortCounts[node.getId()]));
+    // Assign ELK nodes to their proper parents
+    nodes.forEach(node => {
+        if (node.getParent() !== null && node.getParent().getIsExpanded()) {
+            elkNodes[node.getParent().getId()].children.push(elkNodes[node.getId()])
+        }
+    });
+    // Assign edge segments to the ELK nodes that should contain them (first node that is or contains both terminals)
+    nodes.forEach(node => {
+        if (node.getIsExpanded()) {
+            elkNodes[node.getId()].edges = edgeSegments[node.getId()];
+        }
+    });
+    const rootNodes = nodes.filter(node => node.getParent() === null);
+    const orientation = rootNodes.length > 0 && rootNodes[0].getIsLateral() ? 'RIGHT' : 'UP';
     return {
-        viewerObj: getViewerObj(symbolId, symbolTable),
-        type: symbolTable[symbolId].type,
-        symbolId,
-        nodeId,
-        container,
-        outermost: container === 'root',
-        inPorts: 0,
-        outPorts,
-        contents,
-        height,
-        containsTemporal,
-        orientation: containsTemporal ? "RIGHT" : "UP",
-        isTemporal: temporalStep >= 0,
-        temporalStep,
-    };
-}
-
-/**
- * Getter methods
- */
-const getViewerObj = (symbolId, symbolTable) => ({
-    symbolId,
-    type: symbolTable[symbolId].type,
-    name: symbolTable[symbolId].name,
-    str: symbolTable[symbolId].str,
-    payload: symbolTable[symbolId].data,
-});
-const getCreatorOp = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.creatorop;
-const getCreatorPos = (dataSymbolId, symbolTable) => symbolTable[dataSymbolId].data.creatorpos;
-const getArgs = (opSymbolId, symbolTable) => symbolTable[opSymbolId].data.args;
-const getKwargs = (opSymbolId, symbolTable) => Object.entries(symbolTable[opSymbolId].data.kwargs);
-const getContainerSymbolId = (symbolId, symbolTable) => symbolTable[symbolId].data.container;
-const getContents = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.contents;
-const getContainerHeight = (containerSymbolId, symbolTable) => symbolTable[containerSymbolId].data.height;
-const getSymbolTemporalStep = (symbolId, symbolTable) => symbolTable[symbolId].data.temporalstep;
-const getSymbolIsTemporal = (symbolId, symbolTable) => symbolTable[symbolId].data.temporalstep >= 0;
-const getNodeIsTemporal = (nodeObj) => nodeObj.isTemporal;
-const getPortIdIsInput = (portId) => portId.endsWith('i');
-const getIdIsPort = (id) => id.split('_').length > 1;
-const getFirstTemporalContainerSymbolId = (symbolId, symbolTable) => {
-    let containerId = getContainerSymbolId(symbolId, symbolTable);
-    while (containerId !== null && !getSymbolIsTemporal(containerId, symbolTable)) {
-        containerId = getContainerSymbolId(containerId, symbolTable);
-    }
-    return containerId;
-};
-
-/**
- * Id translation helper methods.
- * A symbol id is the id associated with a particular object in the Python program. A node id uniquely identifies a node
- * in the graph, and is of the form
- *      {nodeNum}{symbolId}
- * where `nodeNum` indicates how many nodes representing that symbol already exist. A port id uniquely identifies an
- * input or output port on a node, and is of the form
- *      {nodeId}_{portNum}{portType}
- * where `portNum` is the zero-indexed ordering of the port relative to other ports on the node, and `portType` is "i"
- * if the port is an input port and "o" if it is an output port. Note that ELK ids must be globally unique, so ports
- * even on different nodes cannot share ids.
- */
-const portIdToSymbolId = (nodeId) => ('\@id:' + nodeId.split('\@id:')[1]).split('_')[0];
-const symbolIdToNodeId = (symbolId, nodeNum=0) => symbolId === null ? 'root' : `${nodeNum}${symbolId}`;
-const portIdToNodeId = (portId) => portId.indexOf('_') >= 0 ? portId.split('_')[0] : portId;
-const nodeIdToPortId = (nodeId, portNum, isInput=false) => `${nodeId}_${portNum}` + (isInput ? 'i' : 'o');
-const portIdToPortNum = (portId) => parseInt(portId.split('_')[1]);
-
-/**
- * Builds the graph, creating node objects for each op, container, and leaf data encountered. An array of op-op and
- * data-op edges is also created.
- * @param headSymbolId: the symbol id of the data object at the head of the graph.
- * @param symbolTable: the mapping of symbol ids to their properties taken directly from the Redux state
- * @returns {{nodes: {nodeId: 'nodeObject'}, edges: [['fromNodeId', 'fromPortNum', 'toNodeId']}}
- */
-function getNodesAndUnslicedEdges(headSymbolId, symbolTable) {
-    let nodes = {};
-    let edges = [];
-    let opsToCheck = [];
-    // Maps the symbol ids of leaf data nodes to an array of container symbol ids that the node should be placed in
-    let dataLeafContainers = {};
-    let opOutputs = {};
-    let checkedOps = new Set();
-    if (getCreatorOp(headSymbolId, symbolTable)) {
-        // Add info for the head data node, since we iterate over ops
-        edges.push([symbolIdToNodeId(getCreatorOp(headSymbolId, symbolTable)),
-            getCreatorPos(headSymbolId, symbolTable),
-            symbolIdToNodeId(headSymbolId),
-            getViewerObj(headSymbolId, symbolTable),
-            '']);
-        opsToCheck.push(getCreatorOp(headSymbolId, symbolTable));
-        dataLeafContainers[headSymbolId] = getFirstTemporalContainerSymbolId(getCreatorOp(headSymbolId, symbolTable), symbolTable);
-        opOutputs[symbolIdToNodeId(getCreatorOp(headSymbolId, symbolTable))] = new Set([headSymbolId]);
-    }
-    else {
-        dataLeafContainers[headSymbolId] = null;
-    }
-    while (opsToCheck.length > 0) {
-        let opSymbolId = opsToCheck.pop();
-        if (checkedOps.has(opSymbolId) || opSymbolId === null) {
-            continue;
-        }
-        checkedOps.add(opSymbolId);
-        // Assume ops can appear exactly once in the graph
-        nodes[symbolIdToNodeId(opSymbolId)] = createNodeObj(
-            symbolIdToNodeId(opSymbolId),
-            opSymbolId,
-            symbolTable,
-            symbolIdToNodeId(getContainerSymbolId(opSymbolId, symbolTable))
-        );
-        nodes = {
-            ...nodes,
-            ...getContainerNodes(opSymbolId, symbolTable),
-        };
-        let args = getArgs(opSymbolId, symbolTable).concat(getKwargs(opSymbolId, symbolTable));
-        args.forEach(([argName, arg]) => {
-            if (Array.isArray(arg)) {
-                arg.forEach(dataSymbolId => {
-                    doStuff(dataSymbolId, argName, opsToCheck, symbolTable, opOutputs, edges, opSymbolId, dataLeafContainers);
-                })
-            }
-            else {
-                doStuff(arg, argName, opsToCheck, symbolTable, opOutputs, edges, opSymbolId, dataLeafContainers);
-            }
-        });
-        // We don't assign input ports here, so args may be out of order. Since we moved temporal inputs to the side,
-        // though, we can't possibly have order anyway.
-        // getArgs(opSymbolId, symbolTable)
-        //     .concat(kwargs.map(([key, value]) => value))
-        //     .forEach((dataSymbolId, i) => {
-        //
-        //     });
-    }
-
-    // Set the `outPorts` field of each op node object, now that we know how many outputs they will have.
-    Object.entries(opOutputs).forEach(([opNodeId, outputs]) => {
-        outputs.forEach(dataSymbolId => {
-            nodes[opNodeId].outPorts.push(dataSymbolId);
-        });
-    });
-
-    // Add data nodes, placed in the proper containers.
-    Object.entries(dataLeafContainers).forEach(([dataSymbolId, containerSymbolId]) => {
-        let containerNodeId = symbolIdToNodeId(containerSymbolId);
-        let dataNodeId = symbolIdToNodeId(dataSymbolId);
-        nodes[dataNodeId] = createNodeObj(
-            dataNodeId,
-            dataSymbolId,
-            symbolTable,
-            containerNodeId,
-            dataSymbolId === headSymbolId ? [] : [dataSymbolId]);
-        if (containerNodeId !== 'root') {
-            // `contents` is immutable since it is derived from the symbol table, so we have to operate on it like this
-            nodes[containerNodeId].contents = nodes[containerNodeId].contents.concat([dataNodeId]);
-        }
-    });
-    return { nodes, edges };
-}
-
-function doStuff(dataSymbolId, argName, opsToCheck, symbolTable, opOutputs, edges, opSymbolId, dataLeafContainers) {
-    if (!dataSymbolId) {
-        return;
-    }
-    // we don't need an input port since two things won't go into the same input
-    if (getCreatorOp(dataSymbolId, symbolTable)) {
-        opsToCheck.push(getCreatorOp(dataSymbolId, symbolTable));
-        let creatorOpNodeId = symbolIdToNodeId(getCreatorOp(dataSymbolId, symbolTable));
-        if (!(creatorOpNodeId in opOutputs)) {
-            opOutputs[creatorOpNodeId] = [];
-        }
-        if (opOutputs[creatorOpNodeId].indexOf(dataSymbolId) < 0){
-            opOutputs[creatorOpNodeId].push(dataSymbolId);
-        }
-        edges.push([creatorOpNodeId, getCreatorPos(dataSymbolId, symbolTable), symbolIdToNodeId(opSymbolId), getViewerObj(dataSymbolId, symbolTable), argName]);
-    }
-    else {
-        let firstTemporalSymbolId = getFirstTemporalContainerSymbolId(opSymbolId, symbolTable);
-        if (!(dataSymbolId in dataLeafContainers) ||
-            getSymbolTemporalStep(dataLeafContainers[dataSymbolId], symbolTable) > getSymbolTemporalStep(firstTemporalSymbolId, symbolTable)) {
-            dataLeafContainers[dataSymbolId] = firstTemporalSymbolId;
-        }
-        // Data nodes only have one output port, so use 0 every time
-        edges.push([symbolIdToNodeId(dataSymbolId), 0, symbolIdToNodeId(opSymbolId), getViewerObj(dataSymbolId, symbolTable), argName]);
-    }
-}
-
-/**
- * Creates node objects for every container in the hierarchy rooted at `symbolId`.
- * @param symbolId: the id of a symbol whose parent containers should be found
- * @param symbolTable: symbol table from the Redux store mapping symbol ids to properties
- */
-function getContainerNodes(symbolId, symbolTable) {
-    let containerNodes = {};
-    let containerId = getContainerSymbolId(symbolId, symbolTable);
-    while (containerId !== null) {
-        containerNodes[symbolIdToNodeId(containerId)] = createNodeObj(
-            symbolIdToNodeId(containerId),
-            containerId,
-            symbolTable,
-            symbolIdToNodeId(getContainerSymbolId(containerId, symbolTable)),
-            [],
-            getContainerHeight(containerId, symbolTable),
-            getContents(containerId, symbolTable).map(opSymbolId => symbolIdToNodeId(opSymbolId)),
-            getSymbolTemporalStep(containerId, symbolTable),
-            getSymbolIsTemporal(getContents(containerId, symbolTable)[0], symbolTable));
-        containerId = getContainerSymbolId(containerId, symbolTable);
-    }
-    return containerNodes;
-}
-
-/**
- * Returns the node id of the first node whose descendants is or includes both nodes. This can return `nodeId1` or
- * `nodeId2` if one node is a descendant of the other.
- * @param nodeId1
- * @param nodeId2
- * @param nodes: mapping of node id: node object.
- */
-function getCommonNodeParent(nodeId1, nodeId2, nodes) {
-    while (nodeId1 !== nodeId2) {
-        if (nodeId1 === 'root' || nodeId2 !== 'root' && nodes[nodeId1].height > nodes[nodeId2].height) {
-            nodeId2 = nodes[nodeId2].container;
-        }
-        else if (nodeId2 === 'root' || nodes[nodeId1].height < nodes[nodeId2].height) {
-            nodeId1 = nodes[nodeId1].container;
-        }
-        else{
-            nodeId1 = nodes[nodeId1].container;
-            nodeId2 = nodes[nodeId2].container;
-        }
-    }
-    return nodeId1;
-}
-
-const symbolIdFromPortId = (portId, nodes) => nodes[portIdToNodeId(portId)].outPorts[portIdToPortNum(portId)];
-const portNumFromSymbolId = (nodeId, symbolId, nodes) => nodes[nodeId].outPorts.indexOf(symbolId);
-
-function getSourceHierarchy(portId, nodes) {
-    let hierarchy = [];
-    const portSymbolId = symbolIdFromPortId(portId, nodes);
-    let nodeId = portIdToNodeId(portId);
-    while (true) {
-        hierarchy.push(portId);
-        nodeId = nodes[nodeId].container;
-        if (nodeId === 'root') {
-            break;
-        }
-        portId = nodeIdToPortId(nodeId, portNumFromSymbolId(nodeId, portSymbolId, nodes));
-    }
-    return hierarchy.reverse();
-}
-
-function getTargetHierarchy(portId, nodes) {
-    let hierarchy = [];
-    let nodeId = portIdToNodeId(portId);
-    while (nodeId !== 'root') {
-        hierarchy.push(nodeId);
-        nodeId = nodes[nodeId].container;
-    }
-    return hierarchy.reverse();
-}
-
-
-/**
- * Creates arrays of ELK edge objects and associates them with the node id of the ELK node which should contain them.
- * @param nodes: mapping of node ids to node objects
- * @param edges: array of edges of the form `[fromPortId, toPortId, metadata]`. `fromPortId` must be an actual port, but
- *               `toPortId` may be either a port or a node
- */
-function assignEdgeParents(nodes, edges) {
-    let edgeParents = {'root': [], 'temporal': []};
-    // to could be a port or a node id, depending on whether or not its a temporal slice
-    edges.forEach(([fromPortId, toPortId, metadata]) => {
-        if (metadata.isTemporalEdge) {
-            edgeParents['temporal'].push({id: fromPortId + toPortId, sourceHierarchy: getSourceHierarchy(fromPortId, nodes), targetHierarchy: getTargetHierarchy(toPortId, nodes), metadata});
-            return;
-        }
-        let commonParent = getCommonNodeParent(portIdToNodeId(fromPortId), portIdToNodeId(toPortId), nodes);
-        if (!(commonParent in edgeParents)) {
-            edgeParents[commonParent] = [];
-        }
-        edgeParents[commonParent].push({id: fromPortId + toPortId, sources: [fromPortId], targets: [toPortId], metadata});
-    });
-    return edgeParents;
-}
-
-/**
- * Recursively builds ELK graph nodes for a given node object and its children. Each ELK node contains a field
- * `viewerObj` which contains all of the values which should be passed to the component that renders the node. Nodes
- * also contain a `temporal` field which indicates whether the node is a temporal container.
- * @param nodeId
- * @param nodes: mapping of node id: node object
- * @param edges: mapping of node id to array of edges that should be included in that ELK node
- * @param graphState: mapping of symbol ids to properties about the graph, including whether the node should be
- *                    expanded. Note that this might lead to problems down the road, since there can be multiple nodes
- *                    of the same symbol id. For now, this only applies to data nodes, which cannot be expanded or
- *                    collapsed, so it's not an issue.
- */
-function createElkNode(nodeId, nodes, edges, graphState) {
-    let nodeObj = nodes[nodeId];
-    let expanded = graphState[nodeObj.symbolId].expanded || nodeObj.type !== 'graphcontainer' || getNodeIsTemporal(nodeObj);
-    let elkNode = {
-        id: nodeObj.nodeId,
+        id: kRootNode,
         properties: {
-            'elk.direction': nodeObj.orientation,
-            // We fix the positions of ports on temporal nodes so that we can ensure they go in the right direction
-            'portConstraints': getNodeIsTemporal(nodeObj) ? 'FIXED_POS' : 'FIXED_SIDE',
-            'elk.layered.spacing.nodeNodeBetweenLayers': kNodeMargin,
-            'elk.spacing.nodeNode': kNodeMargin
-        },
-        containerHeight: nodeObj.height,
-        viewerObj: nodeObj.viewerObj,
-        temporalStep: nodeObj.temporalStep,
-        zOrder: nodeObj.height === 0 || !expanded ? 1 : -nodeObj.height,
-        edges: [],
-        children: [],
-        ports: [],
-    };
-    if (expanded) {
-        // Trying to map over nodeObj.contents leads to unexpected behavior; TODO look into this
-        for (let i=0; i < nodeObj.contents.length; i++) {
-            let childNodeId = nodeObj.contents[i];
-            // not all of a container's contents have to be in the graph
-            if (childNodeId in nodes) {
-                elkNode.children.push(createElkNode(childNodeId, nodes, edges, graphState));
-            }
-        }
-    }
-    for (let i=0; i < nodeObj.inPorts; i++) {
-        let newPort = {
-            id: nodeIdToPortId(nodeObj.nodeId, i, true),
-            properties: {
-                'port.side': getNodeIsTemporal(nodeObj) ? "WEST" : "SOUTH",
-            }
-        };
-        // On the initial graph construction, we lock all temporal ports to the top of the container. This forces the
-        // first layout to put temporal containers in the proper order and lay out nodes to accomodate these
-        // cross-temporal edges. We then move the ports to go directly to their destination and lay the graph out again.
-        if (getNodeIsTemporal(nodeObj)) {
-            newPort.y = 0;
-        }
-        elkNode.ports.push(newPort);
-    }
-    nodeObj.outPorts.forEach((dataSymbolId, i) => {
-        let newPort = {
-            id: nodeIdToPortId(nodeObj.nodeId, i, false),
-            properties: {
-                'port.side': getNodeIsTemporal(nodeObj) ? "EAST": "NORTH",
-            }
-        };
-        if (getNodeIsTemporal(nodeObj)) {
-            newPort.y = 0;
-        }
-        elkNode.ports.push(newPort);
-    });
-    if (nodeObj.type === 'graphcontainer') {
-        if (expanded) {
-            if (nodeObj.nodeId in edges) {
-                elkNode.edges = edges[nodeObj.nodeId];
-            }
-        }
-        else {
-            elkNode.height = kCollapsedAbstractiveHeight;
-            elkNode.width = kCollapsedAbstractiveWidth;
-        }
-    }
-    else if (nodeObj.type === 'graphop') {
-        elkNode.height = kOpNodeHeight;
-        elkNode.width = kOpNodeWidth;
-    }
-    else if (nodeObj.type === 'graphdata') {
-        elkNode.height = kDataNodeHeight;
-        elkNode.width = kDataNodeWidth;
-    }
-    return elkNode;
-}
-
-const getRootContainsTemporal = (nodes) => {
-    let outermost = Object.entries(nodes).filter(([nodeId, nodeObj]) => nodeObj.outermost);
-    return outermost.length > 0 && outermost[0][1].temporalStep >= 0;
-};
-
-/**
- * Builds the ELK graph to be laid out.
- * @param nodes: mapping of node ids to node objects
- * @param edges: mapping of node id to array of edges which should be given to that node in the ELK graph
- * @param graphState: mapping of symbol ids to properties about the graph
- */
-function getElkGraph(nodes, edges, graphState) {
-    let rootChildren = Object.entries(nodes).filter(([nodeId, nodeObj]) => nodeObj.outermost).map(([nodeId]) => createElkNode(nodeId, nodes, edges, graphState));
-    let orientation = rootChildren.length > 0 && rootChildren[0].temporalStep >= 0 ? 'RIGHT' : 'UP';
-    return {
-        id: 'root',
-        properties: {'elk.algorithm': 'layered',
+            'elk.algorithm': 'layered',
             'elk.direction': orientation,
             'elk.layered.spacing.nodeNodeBetweenLayers': kNodeMargin,
             'elk.spacing.nodeNode': kNodeMargin
         },
-        children: rootChildren,
-        edges: edges['root'],
-        temporalEdges: edges['temporal'],
+        children: rootNodes.map(node => elkNodes[node.getId()]),
+        edges: edgeSegments[kRootNode],
+        notElk: {
+            temporalEdges: edgeSegments[kLateralEdges],
+        }
+    };
+}
+
+/** Returns the string ID of a port on a given node with given index. */
+const getPortId = (node, portNum, isInput) => `${node.getId()}_${portNum}` + (isInput ? 'i' : 'o');
+
+/**
+ * This JS object describes a segment of an edge in a DAG. Since ELK can only lay out edges which connect nodes that
+ * share a parent or a parent-child pair themselves, the edges in the DAG must be sliced into segments before being
+ * added to the ELK graph to be laid out.
+ */
+class ELKEdgeSegment {
+    /**
+     * Constructor.
+     * @param {DAGEdge} edge
+     *      The `DAGEdge` of which this edge is a segment.
+     * @param {DAGNode} startNode
+     *      The `DAGNode` where this segment begins.
+     * @param {string} startPortId
+     *      The name of the port on `startNode` where this segment begins.
+     * @param {DAGNode} endNode
+     *      The `DAGNode` where this segment ends; should be the sibling, child, or parent of `startNode`.
+     * @param {string} endPortId
+     *      The name of the port on `endNode` where this segment ends.
+     */
+    constructor(edge, startNode, startPortId, endNode, endPortId) {
+        // The position of this segment in the sequence of all segments belonging to `edge`; set with `setIndex()`.
+        this._index = null;
+        this._edgeId = edge.getId();
+        this._startNode = startNode;
+        this._startPortId = startPortId;
+        this._endNode = endNode;
+        this._endPortId = endPortId;
+
+        // Find the parent node, the node which is the lowest common ancestor of both the start and end nodes; the
+        // segment will be a child of the parent node in the ELK graph
+        while (startNode !== endNode) {
+            if (startNode === null || endNode !== null && startNode.getHierarchyHeight() > endNode.getHierarchyHeight()) {
+                endNode = endNode.getParent();
+            }
+            else if (endNode === null || startNode.getHierarchyHeight() < endNode.getHierarchyHeight()) {
+                startNode = startNode.getParent();
+            }
+            else{
+                startNode = startNode.getParent();
+                endNode = endNode.getParent();
+            }
+        }
+        if (startNode === null) {
+            this._parentNodeId = kRootNode;
+        }
+        else {
+            this._parentNodeId = startNode.getId();
+        }
+    }
+
+    /** Returns the ID of the `DAGNode` whose corresponding ELK node should contain this segment. */
+    getParentNodeId = () => this._parentNodeId;
+
+    /**
+     * Sets the edge's order in the sequence of segments belonging to its `DAGEdge`.
+     *
+     * This index will be used to unify the edge segments into a single edge before being returned to clients.
+     *
+     * @param {number} index
+     *      The 0-indexed order of this segment among all segments belong to the original `DAGEdge`.
+     */
+    setIndex = (index) => this._index = index;
+
+    /**
+     * Returns a version of this segment ready to be placed into the ELK graph representation.
+     *
+     * @returns {{id: string, sources: string[], targets: string[], notElk: {edgeId: number, index: number, z: number}}}
+     */
+    toElkEdge() {
+        return {
+            id: this._startPortId + this._endPortId,
+            sources: [this._startPortId],
+            targets: [this._endPortId],
+            notElk: {
+                edgeId: this._edgeId,
+                index: this._index,
+                z: 0,
+            }
+        }
     }
 }
 
 /**
- * Create a new edge which connects a node's input port to  a new input port on its parent container.
- * @param toNode: node object
- * @param toContainer: node object
- * @param metadata: object containing non-ELK properties of the edge
+ * Returns the first node, starting from `node` and moving through its ancestry, that should currently be visible in
+ * the graph.
+ *
+ * Any node which is a descendant of a contracted node will not be visible in the graph. If it has any edges that start
+ * or end at it, those edges should start or end at its first visible ancestor. This function finds that first visible
+ * ancestor (or returns `node` itself if it is visible).
+ *
+ * @param {DAGNode} node
+ *      The node whose first visible ancestor should be returned.
+ * @returns {DAGNode}
+ *      The first visible ancestor of `node`, or `node` itself if it is visible.
  */
-function linkInputs(toNode, toContainer, metadata) {
-    let newEdge = [
-        nodeIdToPortId(toContainer.nodeId, toContainer.inPorts, true),
-        nodeIdToPortId(toNode.nodeId, toNode.inPorts, true),
-        metadata
-    ];
-    if (!metadata.isTemporalEdge) {
-        toNode.inPorts += 1;
+function getFirstVisible(node) {
+    while(!node.getIsVisible()) {
+        node = node.getParent();
     }
-    return {newEdge, toNodeId: toContainer.nodeId, toContainerNodeId: toContainer.container}
+    return node;
 }
 
 /**
- * Create a new edge which connects a node's output port at port `fromPortNum` to a new output port on its parent
- * container.
- * @param fromNode: node object
- * @param fromPortNum: number identifying the port on `fromNode`
- * @param fromContainer: node object
- * @param metadata: object containing non-ELK properties of the edge
+ * Divides a `DAGEdge` into segment objects that are ready to be inserted into an ELK graph.
+ *
+ * Since ELK can only lay out edges which connect nodes that share a parent or a parent-child pair themselves,
+ * `DAGEdge`s must be sliced into segments that connect siblings or parent-child pairs. This function does that slicing,
+ * creating a mapping of node IDs to lists of ELK edge objects that should be added to them in the ELK graph.
+ *
+ * @param {DAGEdge[]} edges
+ *      `DAGEdges` which should be sliced into segments that can be laid out in an ELK graph.
+ * @returns {{edgeSegments: {nodeId: object[]}, outPortCounts: {nodeId: number}, inPortCounts: {nodeId: number}}}
+ *      The ELK edge objects which should be inserted into the `edges` field of each node's ELK object.
+ *      The number of outgoing ports that each ELK node has.
+ *      The number of incoming ports that each ELK node has.
  */
-function linkOutputs(fromNode, fromPortNum, fromContainer, metadata) {
-    let edgeDataSymbolId = metadata.edgeDataViewerObj.symbolId;
-    if (fromContainer.outPorts.indexOf(edgeDataSymbolId) >= 0) {
-        let newEdge = [
-            nodeIdToPortId(fromNode.nodeId, fromPortNum),
-            nodeIdToPortId(fromContainer.nodeId, fromContainer.outPorts.indexOf(edgeDataSymbolId)),
-            metadata
-        ];
-        return {newEdge, fromPortNum: fromContainer.outPorts.indexOf(edgeDataSymbolId), fromNodeId: fromContainer.nodeId, fromContainerNodeId: fromContainer.container};
-    }
-    else {
-        let newEdge = [
-            nodeIdToPortId(fromNode.nodeId, fromPortNum),
-            nodeIdToPortId(fromContainer.nodeId,fromContainer.outPorts.length),
-            metadata
-        ];
-        fromContainer.outPorts.push(edgeDataSymbolId);
-        return {newEdge, fromPortNum: fromContainer.outPorts.length - 1, fromNodeId: fromContainer.nodeId, fromContainerNodeId: fromContainer.container};
-    }
-}
+function getEdgeSegments(edges) {
+    const edgeSegments = new Proxy({}, {
+        get: (target, name) => name in target ? target[name] : (target[name] = [])
+    });
+    // We use a port list for outputs because we want edges with the same group ID to go through the same output ports.
+    const outPortIds = new Proxy({}, {
+        get: (target, name) => name in target ? target[name] : (target[name] = [])
+    });
+    // We use a count for inputs because each input should have a separate port (this can maybe be changed to
+    // accommodate lists passed as arguments to ops)
+    const inPortCounts = new Proxy({}, {
+        get: (target, name) => name in target ? target[name] : 0
+    });
+    edges.forEach((edge) => {
+        // As we move up through the node hierarchy, we keep track of edges coming _from_ the starting node separate
+        // from those going _to_ the end node. This allows us to put the edge segments in proper order when the edge
+        // has been completely subdivided.
+        let fromEdgeSegments = [];
+        let toEdgeSegments = [];
+        let fromPortNum = edge.getStartPort();
+        let startNode = edge.getStartNode();
+        let endNode = edge.getEndNode();
 
-/**
- * Converts edges which connect ops to ops and ops to data nodes into sub-edges bridging each container boundary in
- * between. ELK can only create edges between nodes when one is the child of the other or if they share an immediate
- * parent.
- * @param nodes: mapping of node ids to node objects
- * @param unslicedEdges: array of edges of the form `[fromNodeId, fromPortNum, toNodeId]`.
- * @returns ([['fromPortId', 'toPortId', {...edge metadata}]])
- */
-function sliceEdges(nodes, unslicedEdges) {
-    let slicedEdges = [];
-    unslicedEdges.forEach((edge, joinedEdgeId) => {
-        let [fromNodeId, fromPortNum, toNodeId, edgeDataViewerObj, edgeName] = edge;
-        let fromContainerNodeId = nodes[fromNodeId].container;
-        let toContainerNodeId = nodes[toNodeId].container;
-        // In the case of edges which cross temporal containers, we make our own edges after laying out instead of using
-        // the new "to edge" slices. This allows us to maintain port alignment and prevent ELK's ugly attempts at making
-        // these edges work.
-        let toEdgeSlices = [];
-        let fromEdgeSlices = [];
-        let joinedEdgeOrder = 0;
-        let sharedParent = getCommonNodeParent(fromNodeId, toNodeId, nodes);
-        let isTemporalEdge = (sharedParent  === 'root' && getRootContainsTemporal(nodes)) || (sharedParent !== 'root' && nodes[sharedParent].containsTemporal);
-        // if (isTemporalEdge) {
-        //     while (fromContainerNodeId !== 'root') {
-        //         ({fromPortNum, fromNodeId, fromContainerNodeId} = linkOutputs(nodes[fromNodeId], fromPortNum, nodes[fromContainerNodeId], {edgeDataSymbolId}));
-        //     }
-        //     return;
-        // }
+        // Add the edge's group ID to the out port list of the starting node
+        while (outPortIds[startNode.getId()].length <= fromPortNum) {
+            outPortIds[startNode.getId()].push(null);
+        }
+        outPortIds[startNode.getId()][fromPortNum] = edge.getGroupId();
+
+        // In the case of edges which are "lateral" -- crossing the boundary between horizontally-aligned containers --
+        // we lay them out manually after the ELK layout process, since ELK fails to produce sensible outputs when a
+        // graph contains both vertical and horizontal edges
+        if (edge.getIsLateral()) {
+            // Find the nodes that the lateral edge will go between, given the graph's current state
+            startNode = getFirstVisible(startNode);
+            endNode = getFirstVisible(endNode);
+            if (startNode !== null && endNode !== null) {
+                // If the node's terminal ops/data leaves aren't present in the graph's current state, we create/find an
+                // output port on the start. We don't increment the end's input ports, since lateral edges enter the
+                // sides and are spaced separately from non-lateral inputs
+                if (outPortIds[startNode.getId()].indexOf(edge.getGroupId()) < 0) {
+                    outPortIds[startNode.getId()].push(edge.getGroupId());
+                }
+                fromPortNum = outPortIds[startNode.getId()].indexOf(edge.getGroupId());
+
+                const lateralEdge = new ELKEdgeSegment(edge, startNode, getPortId(startNode, fromPortNum), endNode,
+                                                       endNode.getId());
+                edgeSegments[kLateralEdges].push(lateralEdge.toElkEdge());
+            }
+            return;
+        }
+        // Move from the terminals up through the node parent hierarchy until a common ancestor is found; then, link
+        // the edge segments built along the way
         while (true) {
-            const metadata = {
-                joinedEdgeId,
-                joinedEdgeOrder,
-                edgeDataViewerObj,
-                edgeName,
-                isTemporalEdge,
-                zOrder: 0,
-            };
-            if (toContainerNodeId === fromContainerNodeId) {
-                let finalEdge = [
-                    nodeIdToPortId(fromNodeId, fromPortNum),
-                    nodeIdToPortId(toNodeId, nodes[toNodeId].inPorts, true),
-                    Object.assign({}, metadata),
-                ];
-                fromEdgeSlices.push(finalEdge);
-                joinedEdgeOrder += 1;
-                // If the edge bridges two temporal containers, then we don't actually return `toEdgeSlices`. Instead,
-                // we will create a new, prettier edge after the graph has been laid out, since ELK doesn't handle
-                // the right-oriented cross-temporal edges well.
-                if (isTemporalEdge) {
-                    slicedEdges.push([nodeIdToPortId(edge[0], edge[1]), edge[2], {joinedEdgeOrder, joinedEdgeId, isTemporalEdge, edgeDataViewerObj, zOrder: 0, edgeName}]);
-                    break;
-                    // finalEdge[2].routeToTerminal = [toNodeId].concat(toEdgeSlices.reverse().map(([fromPortId, toPortId]) => toPortId));
-                    // slicedEdges = slicedEdges.concat(fromEdgeSlices);
-                }
-                else{
-                    toEdgeSlices.reverse().forEach(edgeSlice => {
-                       edgeSlice[2].joinedEdgeOrder = joinedEdgeOrder;
-                       joinedEdgeOrder += 1;
-                    });
-                    slicedEdges = slicedEdges.concat(toEdgeSlices).concat(fromEdgeSlices);
-                    nodes[toNodeId].inPorts += 1;
-                    break;
-                }
+            // When we find a common ancestor, create the final segment, assign every segment their proper index, and
+            // add them to `edgeSegments`
+            if (startNode.getParent() === endNode.getParent()) {
+                fromEdgeSegments.push(new ELKEdgeSegment(
+                    edge,
+                    startNode,
+                    getPortId(startNode, fromPortNum, false),
+                    endNode,
+                    getPortId(endNode, inPortCounts[endNode.getId()], true)));
+                inPortCounts[endNode.getId()] += 1;
+                fromEdgeSegments.concat(toEdgeSegments.reverse()).forEach((edgeSegment, i) => {
+                    edgeSegment.setIndex(i);
+                    edgeSegments[edgeSegment.getParentNodeId()].push(edgeSegment.toElkEdge());
+                });
+                break;
             }
-            if (fromContainerNodeId === 'root' || toContainerNodeId !== 'root' && nodes[fromContainerNodeId].height > nodes[toContainerNodeId].height) {
-                let newEdge = null;
-                ({ newEdge, toNodeId, toContainerNodeId } = linkInputs(nodes[toNodeId], nodes[toContainerNodeId], Object.assign({}, metadata)));
-                toEdgeSlices.push(newEdge);
+            // If the start node is at a greater height than the end node, add a new segment connecting the end node to
+            // its parent
+            if (startNode.getParent() === null ||
+                endNode.getParent() !== null && startNode.getParent().getHierarchyHeight() > endNode.getParent().getHierarchyHeight()) {
+                if (!edge.getIsLateral()) {
+                    toEdgeSegments.push(new ELKEdgeSegment(
+                        edge,
+                        endNode.getParent(),
+                        getPortId(endNode.getParent(), inPortCounts[endNode.getParent().getId()], true),
+                        endNode,
+                        getPortId(endNode, inPortCounts[endNode.getId()], true)));
+                }
+                inPortCounts[endNode.getId()] += 1;
+                endNode = endNode.getParent();
                 continue;
             }
-            if (toContainerNodeId === 'root' || nodes[toContainerNodeId].height > nodes[fromContainerNodeId].height) {
-                let newEdge = null;
-                ({ newEdge, fromNodeId, fromPortNum, fromContainerNodeId} = linkOutputs(nodes[fromNodeId], fromPortNum, nodes[fromContainerNodeId], Object.assign({}, metadata)));
-                joinedEdgeOrder += 1;
-                fromEdgeSlices.push(newEdge);
-                continue;
+            // Otherwise, add a new segment from the start node to its parent
+            fromEdgeSegments.push(new ELKEdgeSegment(
+                edge,
+                startNode,
+                getPortId(startNode, fromPortNum, false),
+                startNode.getParent(),
+                getPortId(startNode.getParent(), fromPortNum, false)));
+            startNode = startNode.getParent();
+            if (outPortIds[startNode.getId()].indexOf(edge.getGroupId()) < 0) {
+                outPortIds[startNode.getId()].push(edge.getGroupId());
             }
-            let newToEdge = null;
-            ({ newEdge: newToEdge, toNodeId, toContainerNodeId } = linkInputs(nodes[toNodeId], nodes[toContainerNodeId], Object.assign({}, metadata)));
-            toEdgeSlices.push(newToEdge);
-
-            let newFromEdge = null;
-            ({ newEdge: newFromEdge, fromNodeId, fromPortNum, fromContainerNodeId} = linkOutputs(nodes[fromNodeId], fromPortNum, nodes[fromContainerNodeId], Object.assign({}, metadata)));
-            joinedEdgeOrder += 1;
-            fromEdgeSlices.push(newFromEdge);
+            fromPortNum = outPortIds[startNode.getId()].indexOf(edge.getGroupId());
         }
     });
-    return slicedEdges;
-}
-
-export function getFullGraphFromHead(symbolId, symbolTable) {
-    let { nodes, edges } = getNodesAndUnslicedEdges(symbolId, symbolTable);
-    edges = sliceEdges(nodes, edges);
-    return { nodes, edges };
+    const outPortCounts = {};
+    Object.entries(outPortIds).forEach(([nodeId, outPortIdArray]) => outPortCounts[nodeId] = outPortIdArray.length);
+    return { edgeSegments, outPortCounts, inPortCounts };
 }
 
 /**
- * A thunk which returns a selector. The selector builds objects containing all of the nodes and edges leading up to a
- * head symbol, regardless of the expansion or contraction state of the graph.
+ * Translates a `DAGNode` into an ELK node.
+ *
+ * The new node will not have any assigned edges or children, which should be added after creation.
+ *
+ * @param {DAGNode} node
+ *      The `DAGNode` for which an ELK node object should be created.
+ * @param {number} numOutPorts
+ *      The number of output ports that the ELK node object should have.
+ * @param {number} numInPorts
+ *      The number of input ports that the ELK node object should have; does not include lateral edges, as these are
+ *      handled separately.
+ * @returns {object}
+ *      An ELK node object with no edges or children.
  */
-function makeGetFullGraphFromHead() {
-    return createSelector(
-        [
-            (state, props) => props.payload.graphLoaded,
-            (state) => state.program.symbolTable,
-            (state, props) => props.symbolId,
-        ],
-        (graphLoaded, symbolTable, headSymbolId) => {
-            if (!graphLoaded) {
-                return null;
+function createElkNode(node, numOutPorts, numInPorts) {
+    const elkNode = {
+        id: node.getId(),
+        properties: {
+            'elk.direction': node.getContainsLateral() ? 'RIGHT' : 'UP',
+            'portConstraints': 'FIXED_SIDE',
+            'elk.layered.spacing.nodeNodeBetweenLayers': kNodeMargin,
+            'elk.spacing.nodeNode': kNodeMargin
+        },
+        edges: [],
+        ports: [],
+        children: [],
+        notElk: {
+            z: node.getIsExpanded() ? -node.getHierarchyHeight() : 1,
+            lateralStep: node.getLateralStep(),
+        }
+    };
+    for (let i=0; i < numInPorts; i++) {
+        let newPort = {
+            id: getPortId(node, i, true),
+            properties: {
+                'port.side': "SOUTH",
             }
-            let { nodes, edges } = getNodesAndUnslicedEdges(headSymbolId, symbolTable);
-            edges = sliceEdges(nodes, edges);
-            return { nodes, edges };
-        }
-    )
-}
-
-// TODO document all this
-// TODO center the ports; currently starts from the top of the terminal
-// TODO handle excessive input ports (which would extend beyond terminal node's height) to a single node
-
-function elkGraphToNodeList(elkNode, nodes=[], offset={x: 0, y: 0}) {
-    for (let i = 0; i < elkNode.children.length; i++) {
-        let {viewerObj, width, height, x, y, id, zOrder, temporalStep} = elkNode.children[i];
-        let { type, symbolId } = viewerObj;
-        let newNode = {key: id, type, symbolId, viewerObj, x: x + offset.x, y: y + offset.y, width, height, zOrder, isExpanded: elkNode.children[i].children.length > 0};
-        if (newNode.type === 'graphcontainer') {
-            newNode.isTemporal = temporalStep >= 0;
-        }
-        nodes.push(newNode);
-
-        elkGraphToNodeList(elkNode.children[i], nodes, {x: x + offset.x, y: y + offset.y});
+        };
+        elkNode.ports.push(newPort);
     }
-    return nodes;
+    for (let i=0; i < numOutPorts; i++) {
+        let newPort = {
+            id: getPortId(node, i, false),
+            properties: {
+                'port.side': "NORTH",
+            }
+        };
+        elkNode.ports.push(newPort);
+    }
+    if (!node.getIsExpanded()) {
+        elkNode.width = node.getCollapsedWidth();
+        elkNode.height = node.getCollapsedHeight();
+    }
+    return elkNode;
 }
 
-function getEdgePoints(edge, offset) {
+// =====================================================================================================================
+// Lay out an engine-ready graph.
+// ------------------------------
+// After a `DAGBuilder` graph has been converted to an engine-ready version, it can be laid out. After layout, a
+// callback function is executed, passing the new node and edge transforms to a user (typically a `DAGBuilder`).
+// =====================================================================================================================
+
+/**
+ * Assigns positions and sizes to nodes and edges in an ELK graph.
+ *
+ * After the graph is laid out, `onComplete` is called, passing the positions and sizes of the graph's nodes and edges
+ * to the caller for rendering.
+ *
+ * @param {object} graph
+ *      An ELK graph, ready to be laid out.
+ * @param {function} onComplete
+ *      A function accepting argument `(graphWidth, graphHeight, nodeTransforms, edgeTransforms)` to be executed when
+ *      the graph has been laid out. `nodeTransforms` is an object of the form:
+ *          {
+ *              nodeId: {
+ *                  x,
+ *                  y,
+ *                  z,
+ *                  width,
+ *                  height,
+ *              }
+ *              ...
+ *          }
+ *      where one entry exists for each visible node in the graph. `edgeTransforms` is an object of the form:
+ *          {
+ *              edgeId: {
+ *                  z,
+ *                  points,
+ *              }
+ *              ...
+ *          }
+ *      where one entry exists for each visible edge in the graph.
+ */
+export function layoutElkGraph(graph, onComplete) {
+    layoutElkGraphRecurse(new ELK(), getNodeLayoutOrder(graph), onComplete);
+}
+
+/**
+ * A recursive function which lays out ELK graph nodes in a specified order.
+ *
+ * ELK does not support our layout of lateral nodes natively, so we cannot just lay out the whole graph at once
+ * and have it look as intended. Therefore, we have to manually lay out lateral nodes side-by-side. We cannot do
+ * this after the graph has been laid out, as edges and other nodes would not be placed properly relative to the new
+ * lateral node positions. Instead, we lay the graph out bottom-up, manually rearranging lateral nodes as
+ * they appear, so that higher levels can route edges and place other nodes with knowledge of their new positions.
+ *
+ * ELK will raise an exception on `elk.layout(node)` if `node.edges` includes edges that connect the children of `node`
+ * to itself. This is frustrating. To work around this, we actually don't lay out a node unless it is the root or
+ * contains temporal containers. This way, most containers aren't laid out directly, avoiding the bug. However, there
+ * are still problems if a series of lateral nodes are nested within an abstractive container that then connects
+ * to some node outside of itself TODO.
+ *
+ * After a node is laid out, the relative positions of its contents are fixed, so that subsequent layouts do not change
+ * its arrangement (which would undo our manual temporal container layout).
+ *
+ * ELK lays out graphs in place and asynchronously, so `graph` will point to the newly laid-out graph object and a
+ * callback is triggered when layout is complete.
+ *
+ * @param {ELKNode} elk
+ *      An ELK object which performs the layout.
+ * @param {object[]} toLayout
+ *      An array of node objects in ELK format, in the order in which the nodes should be laid out. Likely produced by
+ *      `getNodeLayoutOrder()`.
+ * @param {function} onComplete
+ *      A function with signature `(graphWidth, graphHeight, nodeTransforms, edgeTransforms)` to be executed when
+ *      the graph has been laid out.
+ */
+function layoutElkGraphRecurse(elk, toLayout, onComplete) {
+    let elkNode = toLayout[0];
+    // `elk.layout(elkNode)` will crash if `elkNode` contains edges that connect itself to its children. Thus, we only
+    // lay out when `elkNode` is the root node (which cannot connect to its children) and when `elkNode` contains
+    // lateral nodes.
+    if (elkNode.id === kRootNode || getElkNodeContainsLateral(elkNode)) {
+        if (elkNode.id !== kRootNode) {
+            elkNode.edges = [];
+        }
+        elk.layout(elkNode).then(
+            () => {
+                if (getElkNodeContainsLateral(elkNode)) {
+                    // Arrange lateral nodes in order of lateral step
+                    let lateralNodes = elkNode.children.sort((c1, c2) => c1.notElk.lateralStep - c2.notElk.lateralStep);
+                    layoutLateralNodes(lateralNodes);
+                    elkNode.width = lateralNodes[lateralNodes.length - 1].x +
+                        lateralNodes[lateralNodes.length - 1].width + kLateralNodeMargin;
+                    // All temporal containers have the same height, so we can index arbitrarily
+                    elkNode.height = lateralNodes[0].height + kLateralNodeMargin * 2;
+                }
+                lockElkNodeLayout(elkNode);
+                if (elkNode.id !== kRootNode) {
+                    layoutElkGraphRecurse(elk, toLayout.splice(1), onComplete);
+                }
+                else {
+                    elkNode.edges = elkNode.edges.concat(
+                        layoutLateralEdges(elkNode.notElk.temporalEdges, getNodeAndPortTransforms(elkNode)));
+                    onComplete(elkNode.width, elkNode.height,
+                        elkGraphToNodeTransforms(elkNode), elkGraphToEdgeTransforms(elkNode));
+                }
+            }
+        );
+    }
+    else {
+        layoutElkGraphRecurse(elk, toLayout.splice(1), onComplete);
+    }
+}
+
+/**
+ * Sets the positions and sizes of lateral nodes in an ELK graph to be of equal height and side-by-side, in place.
+ *
+ * The positions of all of lateral node contents are updated to reflect their new size.
+ *
+ * @param {object} lateralNodes
+ *      An array of ELK objects which represent horizontally-aligned nodes, sorted by lateral step.
+ */
+function layoutLateralNodes(lateralNodes) {
+    let xPos = kLateralNodeMargin;
+    let maxChildHeight = Math.max(...lateralNodes.map(node => node.height));
+    lateralNodes.forEach(node => {
+        node.x = xPos;
+        xPos += node.width + kLateralNodeMargin;
+
+        let heightDiff = maxChildHeight - node.height;
+        node.children.forEach(child => child.y += heightDiff);
+        node.ports.forEach(port => port.y += heightDiff);
+        // Each edge should have only one section; multiple sections are only used in hyperedges (which we do not use).
+        node.edges.forEach(edge =>
+            [edge.sections[0].startPoint, edge.sections[0].endPoint]
+                .concat(edge.sections[0].bendPoints ? edge.sections[0].bendPoints : [])
+                .forEach(point => point.y += heightDiff));
+        node.height = maxChildHeight;
+        node.y = kLateralNodeMargin;
+        lockElkNodeLayout(node);
+    });
+}
+
+/**
+ * Creates an array of lateral edges with proper start, end, and bend points.
+ *
+ * After the graph has been laid out, lateral edges must be added manually (as ELK apparently cannot lay out edges from
+ * left-to-right while other edges go bottom-to-top). Given an array of edge sources and targets, we create new Objects
+ * in the ELK JSON edge schema, with positions relative to the graph origin. These edges should then be added to the
+ * root node's edge array.
+ *
+ * @param {object[]} lateralEdges
+ *      An array of objects of the form
+ *      {
+ *          id: a string id unique within the graph
+ *          sources: an array containing a single string, which is the ID of the edge's starting node or port
+ *          targets: an array containing a single string, which is the ID of the edge's target node (lateral edges do
+ *              not target ports)
+ *          notElk: an object containing metadata not used here or by ELK, but needed for downstream use
+ *      }
+ * @param {object} nodeAndPortTransforms
+ *      An object mapping node and port IDs to their coordinates relative to the graph origin as well as their
+ *      dimensions.
+ * @returns {object[]}
+ *      Laid-out versions of `lateralEdges`, with the additional field `sections` which contains the path the edge
+ *      should follow.
+ */
+function layoutLateralEdges(lateralEdges, nodeAndPortTransforms) {
+    const lateralInputsToNode = getNumLateralInputsByNode(lateralEdges);
+
+    const outputCountByPort = {};
+    const inputCountByNode = {};
+    return lateralEdges.map(({id, sources, targets, notElk}) => {
+        let sourceId = sources[0];
+        let targetId = targets[0];
+        if (!(sourceId in outputCountByPort)) {
+            outputCountByPort[sourceId] = 0;
+        }
+        outputCountByPort[sourceId] += 1;
+
+        if (!(targetId in inputCountByNode)) {
+            inputCountByNode[targetId] = 0;
+        }
+        inputCountByNode[targetId] += 1;
+
+        let startPoint = {x: nodeAndPortTransforms[sourceId].x, y: nodeAndPortTransforms[sourceId].y};
+        let portSep = (nodeAndPortTransforms[targetId].height / (lateralInputsToNode[targetId] + 1));
+        let endPoint = {x: nodeAndPortTransforms[targetId].x, y: nodeAndPortTransforms[targetId].y +
+            portSep * (inputCountByNode[targetId])};
+        let bendPoints = buildLateralEdgeBendPoints(startPoint, endPoint, outputCountByPort[sourceId]);
+        return {
+            id,
+            sections: [{
+                startPoint,
+                endPoint,
+                bendPoints}],
+            sources,
+            targets,
+            notElk,
+        }
+    });
+}
+
+/**
+ * Builds an array of (x, y) coordinates that a lateral edge should follow between its source and its target.
+ *
+ * Since lateral edges are laid out separately from the ELK graph edges, they are not given a path by the ELK algorithm,
+ * and we must lay them out manually.
+ *
+ * @param {{x: number, y: number}} startPoint
+ *      {x, y} coordinates, relative to the graph origin, that the edge starts from
+ * @param {{x: number, y: number}} endPoint
+ *      {x, y} coordinates, relative to the graph origin, that the edge ends at
+ * @param {number} lateralOutputCount
+ *      The number of lateral outputs at the edge's starting port. Used to determine y-position of edge's first bend
+ *      point to minimize overlap
+ * @returns {[{x, y}, ...]}
+ *      Array of {x, y} points through the lateral edge should pass
+ */
+function buildLateralEdgeBendPoints(startPoint, endPoint, lateralOutputCount) {
+    let slope = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
+    let length = Math.sqrt((endPoint.y - startPoint.y)**2 + (endPoint.x - startPoint.x)**2);
+    let orthogonal = -1 / slope;
+    let curveLen = length * kCurvePointFactor;
+    let curveX = Math.sqrt(curveLen**2 / (1 + orthogonal**2));
+    let curveY = orthogonal * curveX;
+    if (curveY > 0) {
+        curveY *= -1;
+        curveX *= -1;
+    }
+    let halfway = {x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2};
+
+    let curvePoint = {x: halfway.x + curveX, y: halfway.y + curveY};
+    return [
+        {x: startPoint.x, y: startPoint.y - kEdgeMargin * lateralOutputCount},
+        curvePoint,
+        {x: endPoint.x - kEdgeMargin, y: endPoint.y},
+    ];
+}
+
+/** Changes an ELK node's settings so that its children cannot be rearranged by future `layout()` calls. */
+const lockElkNodeLayout = (elkNode) => {elkNode.properties['elk.algorithm'] = 'elk.fixed'};
+/** Returns whether a given ELK node contains lateral nodes. */
+const getElkNodeContainsLateral = (elkNode) => elkNode.children && elkNode.children.length > 0 &&
+    elkNode.children[0].notElk.lateralStep >= 0;
+
+/**
+ * Builds a mapping of node IDs and port IDs to their height, width, and absolute position relative to the graph origin.
+ *
+ * When manually laying out lateral edges after the ELK layout process has been completed, the edges must be drawn
+ * between absolute positions, while the x and y attributes of each node are relative to its parent. Thus, we build this
+ * mapping so that the edges can be drawn correctly.
+ *
+ * @param {object} elkNode
+ *      An object in ELK JSON format with an x and y position.
+ * @param {object} positions
+ *      A mapping of node and port IDs to objects of the form {x, y}.
+ * @param {{x: number, y: number}} offset
+ *      The positional offset of `elkNode` from the graph's root.
+ * @returns {{node or port ID: {x, y, height}}}
+ *      A mapping of node and port IDs to absolute positions; height is also included for spacing lateral edges
+ *      properly.
+ */
+function getNodeAndPortTransforms(elkNode, positions={}, offset={x: 0, y: 0}) {
+    positions[elkNode.id] = {...offset, height: elkNode.height};
+    if (elkNode.children) {
+        elkNode.children.forEach(child => {
+            getNodeAndPortTransforms(child, positions, {x: offset.x + child.x, y: offset.y + child.y});
+        });
+    }
+    if (elkNode.ports) {
+        elkNode.ports.forEach(port => {
+            getNodeAndPortTransforms(port, positions, {x: offset.x + port.x, y: offset.y + port.y})
+        });
+    }
+    return positions;
+}
+
+/**
+ * Builds a mapping of node IDs to the count of lateral edges connecting to that node.
+ *
+ * Required for properly spacing the input ports of lateral edges, as the ports are centered and spaced equally along
+ * the node's side.
+ *
+ * @param {object[]} lateralEdges
+ *      An array of edges in ELK JSON format.
+ * @returns {{node ID: number}}
+ *      A mapping of node IDs to the number of lateral edges which end at them.
+ */
+function getNumLateralInputsByNode(lateralEdges) {
+    let temporalInputsToNode = {};
+    lateralEdges.forEach(({targets}) => {
+        // `targets` is always a list with one item, by ELK JSON spec
+        let targetId = targets[0];
+        if (!(targetId in temporalInputsToNode)) {
+            temporalInputsToNode[targetId] = 0;
+        }
+        temporalInputsToNode[targetId] += 1;
+    });
+    return temporalInputsToNode;
+}
+
+/**
+ * Returns an array of ELK node objects in the order in which they should be laid out.
+ *
+ * @param {object} graph
+ *      The object representing the root of the graph to be laid out, in ELK JSON format.
+ * @returns {object[]}
+ *      An array of objects in ELK JSON format, where each node is at a lower index than its ancestors.
+ */
+function getNodeLayoutOrder(graph) {
+    return getNodeLayoutOrderRecurse([graph], 0);
+}
+
+/**
+ * A recursive function which extends an array of ELK JSON objects with the children of one of the array's members.
+ *
+ * @param {object[]} toLayout
+ *      An array of ELK JSON objects, in the order in which they should be laid out.
+ * @param {number} i
+ *      An index into `toLayout`; `toLayout` will be extended with the children of `toLayout[i]`.
+ * @returns {object[]}
+ *      An array containing node objects in ELK JSON format, where each node is at a lower index than its ancestors.
+ */
+function getNodeLayoutOrderRecurse(toLayout, i) {
+    if (i === toLayout.length) {
+        return toLayout.reverse();
+    }
+    toLayout[i].children.forEach(child => {
+        toLayout.push(child);
+    });
+    return getNodeLayoutOrderRecurse(toLayout, i + 1);
+}
+
+// Extract node and edge transforms from a laid-out ELK graph.
+// -----------------------------------------------------------
+
+/**
+ * Creates a mapping of edge IDs (as found in the `DAGEdge` object) to the edge's path and z-order.
+ *
+ * The `onComplete` callback passed to `layoutElkGraph()` expects a mapping of edge IDs to edge transforms. In ELK
+ * format, each node object has a list of edges between itself and its children, causing edges which pass through
+ * parent boundaries to be "sliced" into multiple pieces. In addition, these slices contain fields which are relevant
+ * only for the ELK layout process. These slices must be unified and aggregated before `onComplete` can be called.
+ *
+ * @param {object} graph
+ *      The root node of a graph in ELK JSON format.
+ * @returns {object}
+ *      A mapping of edge IDs to their transforms; see `layoutElkGraph()`.
+ */
+function elkGraphToEdgeTransforms(graph) {
+    const edgeGroups = elkGraphToEdgeGroups(graph);
+    const edgeTransforms = {};
+    Object.entries(edgeGroups).forEach(([groupId, edgeGroup]) => {
+        let edgeGroupSorted = edgeGroup.edgeSlices.splice(0).sort(({order: order1}, {order: order2}) => order1 - order2);
+        let newEdge = [edgeGroupSorted[0].points[0]];
+        edgeGroupSorted.forEach(({points}) => points.forEach((point, i) => {if (i > 0) {newEdge.push(point)}}));
+        edgeTransforms[groupId] = {
+            points: newEdge,
+            z: edgeGroup.z,
+        };
+    });
+    return edgeTransforms;
+}
+
+/**
+ * Groups together edge segments in an ELK graph which should be drawn as a single edge.
+ *
+ * To connect nodes in an ELK graph which do not share an immediate parent, the edge connecting them must be sliced into
+ * pieces whose start and end points share a direct common parent. When the graph must be rendered, those slices must be
+ * reunified.
+ *
+ * This function outputs an object, where each key is a unique ID for a new unified edge (matching that on the original
+ * `DAGEdge`) and each value has the required information to form that unified edge.
+ *
+ * @param {object} graph
+ *      The root node of an ELK graph.
+ * @returns {{
+ *      edgeGroupId: {
+ *          z: number
+ *          edgeSlices: [{
+ *              points: {x: number, y: number}[],
+ *              order: number
+ *          }]
+ *      }
+ *   }}
+ *   where `z` is the draw order of the unified edge and `order` is the index of the edge segment in the sequence of
+ *   edge segments.
+ */
+function elkGraphToEdgeGroups(graph) {
+    return elkGraphToEdgeGroupsRecurse(graph, {}, {x: 0, y: 0});
+}
+
+/**
+ * Recursive function which groups all edges in a single node and then calls itself for each of that node's children.
+ *
+ * @param {object} elkNode
+ *      An object in ELK JSON format whose edges should be added to groups.
+ * @param {{}} edgeGroups
+ *      An object which maps edge group ids to properties of the group and an array of edges. See
+ *      `elkGraphToEdgeGroups()`.
+ * @param {{x: number, y: number}} offset
+ *      The position of `elkNode` relative to the graph origin.
+ * @returns {{}}
+ *      The `edgeGroups` object with the edges of `elkNode` and all of its descendants added.
+ */
+function elkGraphToEdgeGroupsRecurse(elkNode, edgeGroups, offset) {
+    for (let i = 0; i < elkNode.edges.length; i++) {
+        let edge = elkNode.edges[i];
+        let edgeGroupId = edge.notElk.edgeId;
+        let points = elkEdgeToPointArray(edge, offset);
+        if (!(edgeGroupId in edgeGroups)) {
+            // All edges of the same group share an `argName`, `zOrder`, `isTemporal`, and `viewerObj`.
+            edgeGroups[edgeGroupId] = {
+                z: edge.notElk.z,
+                edgeSlices: [],
+            };
+        }
+        edgeGroups[edgeGroupId].edgeSlices.push(
+            {
+                points,
+                order: edge.notElk.index,
+            }
+        );
+    }
+    for (let i = 0; i< elkNode.children.length; i ++) {
+        let {x, y} = elkNode.children[i];
+        elkGraphToEdgeGroupsRecurse(elkNode.children[i], edgeGroups, {x: offset.x + x, y: offset.y + y});
+    }
+    return edgeGroups;
+}
+
+/**
+ * Returns an array of points through which an ELK edge travels.
+ *
+ * ELK edges store their path in a bizarre way, with a start point, end point, and array of bend points contained
+ * in a single object which is the only item in a `sections` array. The format expected downstream of graph layout
+ * is an array of {x, y} objects, which is created here.
+ *
+ * @param {object} edge
+ *      An edge object in ELK JSON format representing a single laid-out edge.
+ * @param {{x: number, y: number}} offset
+  *     The offset of the edge's parent node from the graph origin.
+ * @returns {{x: number, y: number}[]}
+ */
+function elkEdgeToPointArray(edge, offset) {
     let points = [];
     let { startPoint, endPoint, bendPoints } = edge.sections[0];
     points.push({x: startPoint.x + offset.x, y: startPoint.y + offset.y});
@@ -648,230 +810,49 @@ function getEdgePoints(edge, offset) {
     return points;
 }
 
-function elkGraphToEdgeGroups(elkNode, edgeGroups={}, offset={x: 0, y: 0}) {
-    for (let i = 0; i < elkNode.edges.length; i++) {
-        let edge = elkNode.edges[i];
-        let points = getEdgePoints(edge, offset);
-        if (!(edge.metadata.joinedEdgeId in edgeGroups)) {
-            edgeGroups[edge.metadata.joinedEdgeId] = [];
-        }
-        edgeGroups[edge.metadata.joinedEdgeId].push({points, argName: edge.metadata.edgeName, sourceSymbolId: portIdToSymbolId(edge.sources[0]), targetSymbolId: portIdToSymbolId(edge.targets[0]), order: edge.metadata.joinedEdgeOrder, viewerObj: edge.metadata.edgeDataViewerObj, zOrder: edge.metadata.zOrder, isTemporal: edge.metadata.isTemporalEdge});
-    }
-    for (let i = 0; i< elkNode.children.length; i ++) {
-        let {x, y} = elkNode.children[i];
-        elkGraphToEdgeGroups(elkNode.children[i], edgeGroups, {x: offset.x + x, y: offset.y + y});
-    }
-    return edgeGroups;
-}
-
-function elkGraphToEdgeList(root) {
-    let edgeGroups = elkGraphToEdgeGroups(root);
-    let edges = [];
-    Object.entries(edgeGroups).forEach(([groupId, edgeGroup]) => {
-        let edgeGroupSorted = edgeGroup.splice(0).sort(({order: order1}, {order: order2}) => order1 - order2);
-        let newEdge = [edgeGroupSorted[0].points[0]];
-        edgeGroupSorted.forEach(({points}) => points.forEach((point, i) => {if (i > 0) {newEdge.push(point)}}));
-        edges.push({key: groupId, points: newEdge, viewerObj: edgeGroupSorted[0].viewerObj, argName: edgeGroupSorted[0].argName, zOrder: edgeGroupSorted[0].zOrder, isTemporal: edgeGroupSorted[0].isTemporal, sourceSymbolId: edgeGroupSorted[0].sourceSymbolId, targetSymbolId: edgeGroupSorted[edgeGroupSorted.length - 1].targetSymbolId});
-    });
-    return edges;
-}
-
-export function graphToElk(nodes, edges, graphState) {
-    return getElkGraph(nodes, assignEdgeParents(nodes, edges), graphState);
-}
-
-
 /**
- * A thunk which returns a graph in ELK format, subject to the properties contained in the viewer's `graphState`. This
- * composes `makeGetFullGraphFromHead()` so that the graph doesn't need to be completely reloaded every time the state
- * changes.
- */
-export function makeGetElkGraphFromHead() {
-    return createSelector(
-        [
-            makeGetFullGraphFromHead(),
-            (state, props) => props.payload.graphState,
-        ],
-        (fullGraph, graphState) => {
-            if (!graphState || !fullGraph) {
-                return null;
-            }
-            let { nodes, edges } = fullGraph;
-            // we must assign parents here because the objects produced are preserved throughout layouting; creating
-            // them in `makeGetFullGraphFromHead()` persists data like breakpoints
-            return getElkGraph(nodes, assignEdgeParents(nodes, edges), graphState);
-        }
-    )
-}
-
-function getNodeAndPortPositions(elkNode, positions={}, offset={x: 0, y: 0}) {
-    positions[elkNode.id] = offset;
-    if (elkNode.children) {
-        elkNode.children.forEach(child => {
-            getNodeAndPortPositions(child, positions, {x: offset.x + child.x, y: offset.y + child.y});
-        });
-    }
-    if (elkNode.ports) {
-        elkNode.ports.forEach(port => {
-            getNodeAndPortPositions(port, positions, {x: offset.x + port.x, y: offset.y + port.y})
-        });
-    }
-    return positions;
-}
-
-function getLastExistingInHierarchy(hierarchy, root) {
-    let lastFoundPortId = null;
-    let nodeHeight = 0;
-    for (let i = 0; i < hierarchy.length; i++) {
-        // hierarchy[i] is either a port or a node
-        let nextNodeId = portIdToNodeId(hierarchy[i]);
-        root = root.children.find(child => child.id === nextNodeId);
-        if (!root) {
-            return { lastFoundPortId, nodeHeight }
-        }
-        nodeHeight = root.height;
-        lastFoundPortId = hierarchy[i];
-    }
-    return { lastFoundPortId, nodeHeight }
-}
-
-function buildTemporalEdges(root, nodePositions, edges) {
-    // TODO put edges that travel farther above others from the same port
-    let totalInputsToNode = {};
-    edges.filter(({sourceHierarchy}) => portIdToPortNum(getLastExistingInHierarchy(sourceHierarchy, root).lastFoundPortId) >= 0)
-        .forEach(({targetHierarchy}) => {
-            let { lastFoundPortId: target } = getLastExistingInHierarchy(targetHierarchy, root);
-            if (!(target in totalInputsToNode)) {
-                totalInputsToNode[target] = 0;
-            }
-            totalInputsToNode[target] += 1;
-        });
-    let outputCountByPort = {};
-    let inputCountByNode = {};
-    return edges.filter(({sourceHierarchy}) => portIdToPortNum(getLastExistingInHierarchy(sourceHierarchy, root).lastFoundPortId) >= 0)
-        .map(({id, sourceHierarchy, targetHierarchy, metadata}) => {
-        let { lastFoundPortId: source } = getLastExistingInHierarchy(sourceHierarchy, root);
-        let sourceNode = source;
-        let { lastFoundPortId: target, nodeHeight: targetHeight } = getLastExistingInHierarchy(targetHierarchy, root);
-        if (!(sourceNode in outputCountByPort)) {
-            outputCountByPort[sourceNode] = 0;
-        }
-        outputCountByPort[sourceNode] += 1;
-
-        if (!(target in inputCountByNode)) {
-            inputCountByNode[target] = 0;
-        }
-        inputCountByNode[target] += 1;
-
-        let startPoint = {x: nodePositions[source].x, y: nodePositions[source].y};
-        let portSep = (targetHeight / (totalInputsToNode[target] + 1));
-        let endPoint = {x: nodePositions[target].x, y: nodePositions[target].y + portSep * (inputCountByNode[target])};
-        let slope = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
-        let length = Math.sqrt((endPoint.y - startPoint.y)**2 + (endPoint.x - startPoint.x)**2);
-        let orthogonal = -1 / slope;
-        let curveLen = length * kCurvePointFactor;
-        let curveX = Math.sqrt(curveLen**2 / (1 + orthogonal**2));
-        let curveY = orthogonal * curveX;
-        if (curveY > 0) {
-            curveY *= -1;
-            curveX *= -1;
-        }
-        let halfway = {x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2};
-
-        let curvePoint = {x: halfway.x + curveX, y: halfway.y + curveY};
-        let bendPoints = [
-            {x: startPoint.x, y: startPoint.y - kEdgeMargin * outputCountByPort[sourceNode]},
-            curvePoint,
-            {x: endPoint.x - kEdgeMargin, y: endPoint.y},
-            //{x: (endPoint.x + startPoint.x) / 2, y: startPoint.y - kEdgeMargin * outputCountByPort[source]},
-           // {x: (endPoint.x + startPoint.x) / 2, y: endPoint.y}
-        ];
-        return {id, sections: [{
-            startPoint,
-            endPoint,
-            bendPoints}],
-            sources: [source],
-            targets: [target],
-            metadata
-        }
-    });
-}
-
-function layoutGraphRecurse(elk, toLayout, callback) {
-    let rootNode = toLayout[0];
-    if (rootNode.id === 'root' || (rootNode.children.length > 0 && rootNode.children[0].temporalStep >= 0)) {
-        elk.layout(rootNode).then(
-            () => {
-                if (rootNode.children && rootNode.children.length > 0 && rootNode.children[0].temporalStep >= 0) {
-                    let sortedContainers = new Array(rootNode.children.length).fill(0);
-                    rootNode.children.forEach(child => sortedContainers.splice(child.temporalStep, 1, child));
-                    rootNode.width = 0;
-                    rootNode.height = 0;
-                    let xPos = kContainerPadding;
-                    let maxChildHeight = 0;
-                    sortedContainers.forEach(child => {
-                        child.x = xPos;
-                        rootNode.width = Math.max(rootNode.width, xPos + child.width + kContainerPadding);
-                        rootNode.height = Math.max(rootNode.height, child.height + kContainerPadding * 2);
-                        xPos += child.width + kTemporalContainerMargin;
-                        maxChildHeight = Math.max(maxChildHeight, child.height);
-                    });
-                    sortedContainers.forEach(child => {
-                        let heightDiff = maxChildHeight - child.height;
-                        child.children.forEach(grandchild => grandchild.y += heightDiff);
-                        child.ports.forEach(port => port.y += heightDiff);
-                        child.edges.forEach(edge =>
-                            [edge.sections[0].startPoint, edge.sections[0].endPoint].concat(edge.sections[0].bendPoints ? edge.sections[0].bendPoints : []).forEach(point => point.y += heightDiff));
-                        child.height = maxChildHeight;
-                        child.y = rootNode.height - kContainerPadding - child.height;
-                    });
-                }
-                rootNode.properties['elk.algorithm'] = 'elk.fixed';
-                if (rootNode.children) {
-                    rootNode.children.forEach(child => {
-                        child.properties['elk.algorithm'] = 'elk.fixed';
-                    });
-                }
-                if (toLayout.length > 1) {
-                    layoutGraphRecurse(elk, toLayout.splice(1), callback);
-                }
-                else {
-                    let positions = getNodeAndPortPositions(rootNode);
-                    rootNode.edges = rootNode.edges.concat(buildTemporalEdges(rootNode, positions, rootNode.temporalEdges));
-                    console.log(rootNode);
-                    callback({
-                        width: rootNode.width,
-                        height: rootNode.height,
-                        nodes: elkGraphToNodeList(rootNode),
-                        edges: elkGraphToEdgeList(rootNode)
-                    });
-                }
-            }
-        );
-    }
-    else {
-        layoutGraphRecurse(elk, toLayout.splice(1), callback);
-    }
-}
-
-function getElkNodeLayoutOrder(toLayout, i=0) {
-    if (i === toLayout.length) {
-        return toLayout.reverse();
-    }
-    toLayout[i].children.forEach(child => {
-        toLayout.push(child);
-    });
-    return getElkNodeLayoutOrder(toLayout, i + 1);
-}
-
-
-/**
+ * Creates an mapping of node IDs (as found in the original `DAGNode`) to objects containing node positions and sizes.
  *
- * @param elk
- * @param rootNode
- * @param viewerId
- * @param setInPayload
+ * The `onComplete` callback passed to `layoutElkGraph()` expects a mapping of node IDs to their transforms. In ELK
+ * format, nodes are deeply nested, and contain fields that are relevant only to the ELK layout process. This function
+ * crawls the graph and creates a new object for each encountered node, which contains only positional properties used
+ * in rendering.
+ *
+ * @param {object} graph
+ *      The root node of a graph in ELK JSON format
+ * @returns {object}
+ *      A mapping of node IDs to their transforms; see `layoutElkGraph()`.
  */
-export function layoutGraph(elk, rootNode, callback) {
-    layoutGraphRecurse(elk, getElkNodeLayoutOrder([rootNode]), callback);
+function elkGraphToNodeTransforms(graph) {
+    return elkGraphToNodeTransformsRecurse(graph, {}, {x: 0, y: 0});
+}
+
+/**
+ * Recursive function which builds a node transform object for each child of the given ELK node, then calls itself for
+ * each child.
+ *
+ * @param {object} elkNode
+ *      A node object in ELK JSON format.
+ * @param {object} nodes
+ *      A mapping of node IDs to transforms to which newly created transforms are added
+ * @param {{x: number, y: number}} offset
+ *      The position of `elkNode` relative to the graph origin.
+ * @returns {object}
+ *      A mapping of edge IDs to their transforms; see `layoutElkGraph()`.
+ */
+function elkGraphToNodeTransformsRecurse(elkNode, nodes, offset) {
+    for (let i = 0; i < elkNode.children.length; i++) {
+        let { width, height, x, y, id, notElk } = elkNode.children[i];
+        let { z } = notElk;
+        nodes[id] = {
+            x: x + offset.x,
+            y: y + offset.y,
+            z,
+            width,
+            height,
+        };
+
+        elkGraphToNodeTransformsRecurse(elkNode.children[i], nodes, {x: x + offset.x, y: y + offset.y});
+    }
+    return nodes;
 }

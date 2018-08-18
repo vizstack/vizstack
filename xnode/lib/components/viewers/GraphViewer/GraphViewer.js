@@ -2,62 +2,339 @@
 
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
-import ELK from 'elkjs';
 
-import { layoutGraph, getFullGraphFromHead, graphToElk } from './layout';
+import DAGViz from '../../viz/DAGViz';
+import DAGBuilder from './dagbuilder';
 
-import GraphOpNode from './GraphOpNode';
-import GraphDataEdge from './GraphDataEdge';
-import GraphDataNode from './GraphDataNode';
-import GraphContainerNode from './GraphContainerNode';
-
-import Typography from '@material-ui/core/Typography';
-import { CircularProgress } from '@material-ui/core/Progress';
-import List, { ListItem, ListItemIcon } from '@material-ui/core/List';
-import DropDownIcon from '@material-ui/icons/ArrowDropDown';
-import NotInterestedIcon from '@material-ui/icons/NotInterested';
-import Collapse from '@material-ui/core/transitions/Collapse';
+import ColorPink from '@material-ui/core/colors/pink';
 import ColorGrey from '@material-ui/core/colors/grey';
-import ColorBlue from '@material-ui/core/colors/blue';
-import ColorBlueGrey from '@material-ui/core/colors/blueGrey';
+import ColorBlue from "@material-ui/core/colors/blue";
+import ColorOrange from '@material-ui/core/colors/orange';
 
+// Graph element size constants.
+const kDataNodeHeight = 25;
+const kDataNodeWidth = 25;
+const kOpNodeHeight = 40;
+const kOpNodeWidth = 80;
+const kCollapsedAbstractiveHeight = 40;
+const kCollapsedAbstractiveWidth = 80;
 
 /**
- * This smart component builds and contains all the components of a computation graph.
- * The `payload` prop:
- * {
- *      graphState: {
- *          symbolId: {
- *              expanded: false,
- *          },
- *          ...
- *      },
- *      graph: {
- *          id: 'root',
- *          children: [{...}, {...}],
- *          edges: [{...}, {...}],
- *      },
- *      stateChanged: false,
- *      graphLoaded: false,
- * }
+ * This object uses the ops, data, and edges in a graph, as read from the symbol table, to create a `DAGBuilder`
+ * instance ready to lay out that graph.
+ */
+class _ComputationGraph {
+    /**
+     * Constructor.
+     *
+     * @param {object} symbolTable
+     *      A mapping of symbol IDs to symbol schemas.
+     */
+    constructor(symbolTable) {
+        // Collection of edges of the form `[dataSymbolId, startSymbolId, fromPortNum, endSymbolId, argumentName]`
+        this._edges = [];
+        // Mapping of op symbol IDs to sets of all their containers; used to check if a symbol in the graph is an op,
+        // as well as determine the the graph's minimal encapsulating container
+        this._opContainerSets = {};
+        // A list of container symbol IDs, from lowest height to highest; used to identify graph's minimal encapsulating
+        // container
+        this._opContainerChain = null;
+        // Set of all container symbol IDs in the ancestry of the graph's op nodes; some or all will be included in the
+        // graph
+        this._containerSymbolIds = new Set();
+        // Mapping of data symbol IDs to sets of all ops that use that data as input; used to determine where data
+        // nodes should be created
+        this._dataConnections = {};
+        // All ops and containers without any parent container; these will not be in the graph if the minimal
+        // encapsulating container is not `null`
+        this._containerlessNodes = new Set();
+        // A DAGBuilder instance which this graph will use to translate itself into a generic DAG
+        this._builder = null;
+        // The symbol ID of the minimal encapsulating container of the graph
+        this._encapsulatingContainer = null;
+        // Mapping of op symbol IDs to DAGNode objects
+        this._opNodes = {};
+        // Mapping of container symbol IDs to DAGNode objects
+        this._containerNodes = {};
+        // Mapping of data symbol IDs to {container symbol ID: DAGNode} objects; there might be multiple data nodes of
+        // the same symbol in a graph (as many as one per connected op)
+        this._dataNodes = {};
+
+        // Helper functions for extracting information about symbols in the graph. A reference to `symbolTable` should
+        // not be directly stored, so we have a better idea of why `_ComputationGraph` needs it at all.
+        this._getContainerSymbolId = (symbolId) => symbolTable[symbolId].data.container;
+        this._getTemporalStep = (symbolId) => symbolTable[symbolId].data.temporalstep;
+        this._getFunctionName = (symbolId) => symbolTable[symbolId].data.functionname;
+    }
+
+    /**
+     * Indicate that a particular `graphdata` instance should appear at least once in the computation graph.
+     *
+     * When a `graphdata` instance is used as input to a `graphop`, but the `graphdata` was not created by any recorded
+     * op, it exists as a data node somewhere in the graph. When multiple ops use the same `graphdata`, they sometimes
+     * share the same data node, and other times have separate data nodes. We decide this in `createDagBuilder()`; for
+     * now, just register that the data node will exist somewhere.
+     *
+     * @param symbolId
+     */
+    addData(symbolId) {
+        if(!(symbolId in this._dataConnections)) {
+            this._dataConnections[symbolId] = [];
+        }
+    }
+
+    /**
+     * Add a new op node to the computation graph.
+     *
+     * `graphop` instances have a well-defined container, and appear as exactly one node in the graph. This function
+     * also stores internally all information about the op's container ancestry, which will be used in
+     * `createDAGBuilder()` to identify what the minimal encapsulating container of the graph is.
+     *
+     * @param symbolId
+     */
+    addOp(symbolId) {
+        const opSymbolId = symbolId;
+        const containerChain = [];
+        this._opContainerSets[opSymbolId] = new Set();
+        while (symbolId !== null) {
+            if (this._getContainerSymbolId(symbolId) === null) {
+                this._containerlessNodes.add(symbolId);
+            }
+            symbolId = this._getContainerSymbolId(symbolId);
+            if (symbolId !== null) {
+                this._containerSymbolIds.add(symbolId);
+            }
+            containerChain.push(symbolId);
+        }
+        this._opContainerSets[opSymbolId] = new Set(containerChain);
+
+        // If we don't have one saved already, save the `containerChain` so that we can iterate through it to identify
+        // the graph's minimal encapsulating container.
+        if (this._opContainerChain === null) {
+            this._opContainerChain = containerChain;
+        }
+    }
+
+    /**
+     * Add a new edge to the computation graph.
+     *
+     * By the construction of a computation graph, the edge can connect either two op nodes, connect a data node to an
+     * op node, or connect an op node to a data node. Here, we record the properties of the edge (which symbols it
+     * connects, its label, etc). In addition, if the edge involves a data node, we save internally that the associated
+     * data node connects to the associated op. This will be used in `createDAGBuilder()` to determine position and
+     * presence of data nodes.
+     *
+     * @param {string} symbolId
+     *      The symbol ID of the `graphdata` being passed into or out of an op node in this edge.
+     * @param {string} startSymbolId
+     *      The symbol ID of the op or data node from which the edge originates.
+     * @param {number} fromPortNum
+     *      The index of the port on the starting node from which the edge originates; higher index places the edge's
+     *      origin further to the right.
+     * @param {string} endSymbolId
+     *      The symbol ID of the op or data node at which the edge ends.
+     * @param {string} argName
+     *      The string name of the argument on the terminal op node to which the edge is input
+     */
+    addEdge(symbolId, startSymbolId, fromPortNum, endSymbolId, argName) {
+        // If the edge starts at a data node, then register that that `graphdata` connects to the terminal `graphop`
+        if (startSymbolId === symbolId) {
+            if (!(symbolId in this._dataConnections)) {
+                this._dataConnections[symbolId] = [];
+            }
+            this._dataConnections[symbolId].push(endSymbolId);
+        }
+        // If the edge ends at a data node, then register that that `graphdata` connects to the starting `graphop`
+        if (endSymbolId === symbolId) {
+            if (!(symbolId in this._dataConnections)) {
+                this._dataConnections[symbolId] = [];
+            }
+            this._dataConnections[symbolId].push(startSymbolId);
+        }
+        this._edges.push([symbolId, startSymbolId, fromPortNum, endSymbolId, argName]);
+    }
+
+    /**
+     * Gets the smallest container that encloses every op added to the computation graph.
+     *
+     * When building and rendering the graph, we only render the portion that exists within the minimal encapsulating
+     * container; otherwise, if we were to view a small subgraph in a large and complex structure, we would have to
+     * dive through many layers of containers just to find the content of interest.
+     *
+     * @returns {?string}
+     *      The symbol ID of the minimal encapsulating container, or `null` if there is no single container that holds
+     *      every op.
+     * @private
+     */
+    _getEncapsulatingContainer() {
+        // If there are no ops, then `_opContainerChain` is `null`, and there is no encapsulating container
+        if (this._opContainerChain === null) {
+            return null;
+        }
+        const commonContainers = new Set(
+            Object.values(this._opContainerSets).reduce((a, b) => [...a].filter(x => b.has(x)))
+        );
+
+        const sharedHierarchy = this._opContainerChain.filter(symbolId => commonContainers.has(symbolId));
+        return sharedHierarchy.length > 0 ? sharedHierarchy[0] : null;
+    }
+
+    /**
+     * Gets the object on which `addNode()` should be called to create the `DAGNode` object for a given container or op
+     * symbol.
+     *
+     * The parent node may or may not exist; if it doesn't, `_getNode()` will be called, potentially calling
+     * `_getParentNode()` again, until an already-existing node is found or the outermost container is reached. If the
+     * latter occurs, then the returned parent node is a `DAGBuilder`.
+     *
+     * @param {string} symbolId
+     *      The symbol ID of a `graphcontainer` or a `graphop`.
+     * @returns {DAGNode|DAGBuilder}
+     *      The object on which `addNode()` should be called to create a `DAGNode` for the symbol with ID `symbolId`.
+     * @private
+     */
+    _getParentNode(symbolId) {
+        let parentNode = this._builder;
+        if (this._getContainerSymbolId(symbolId) !== this._encapsulatingContainer) {
+            parentNode = this._getNode(this._getContainerSymbolId(symbolId), null);
+        }
+        return parentNode;
+    }
+
+    /**
+     * Gets the `DAGNode` for a given symbol, creating it if it does not already exist.
+     *
+     * This function may operate recursively if the node for that symbol has not yet been created. For `graphop` and
+     * `graphcontainer` symbols, `connectedSymbolId` is not used. For `graphdata`, `connectedSymbolId` is the symbol ID
+     * of a `graphop` to which this particular `graphdata` instance is connected, which will be used to determine the
+     * placement of the symbol's `DAGNode` and whether it should be the same as that used as input to other `graphop`s.
+     *
+     * @param {string} symbolId
+     *      The symbol ID of the object whose associated `DAGNode` should be returned.
+     * @param {?string} connectedSymbolId
+     *      The symbol ID fo a `graphop` to which the symbol with ID `symbolId` is connected; for `graphdata` instances,
+     *      this is required and will affect which `DAGNode` is returned.
+     * @returns {DAGNode}
+     *      The `DAGNode` that represents the symbol with ID `symbolId`, as connected to the symbol with ID
+     *      `connectedSymbolId`.
+     * @private
+     */
+    _getNode(symbolId, connectedSymbolId) {
+        // If it's an op we've seen before, return the node
+        if (symbolId in this._opNodes) {
+            return this._opNodes[symbolId];
+        }
+        // If it's a container we've seen before, return the node
+        if (symbolId in this._containerNodes) {
+            return this._containerNodes[symbolId];
+        }
+        // If it's an op we haven't seen before, create a node
+        if (symbolId in this._opContainerSets) {
+            const node = this._getParentNode(symbolId).addNode(-1);
+            node.setCollapsedWidth(kOpNodeWidth);
+            node.setCollapsedHeight(kOpNodeHeight);
+            node.addMetadata('symbolId', symbolId);
+            node.addMetadata('type', 'graphop');
+            node.addMetadata('label', this._getFunctionName(symbolId));
+            this._opNodes[symbolId] = node;
+            return node;
+        }
+        // If it's a container we haven't seen before, create a node
+        if (this._containerSymbolIds.has(symbolId)) {
+            const node = this._getParentNode(symbolId).addNode(this._getTemporalStep(symbolId));
+            node.setCollapsedWidth(kCollapsedAbstractiveWidth);
+            node.setCollapsedHeight(kCollapsedAbstractiveHeight);
+            node.addMetadata('symbolId', symbolId);
+            node.addMetadata('type', 'graphcontainer');
+            node.addMetadata('label', this._getFunctionName(symbolId));
+            if (this._getTemporalStep(symbolId) >= 0) {
+                // Temporal nodes should start open
+                node.toggleExpanded();
+                node.addMetadata('temporal', true);
+            }
+            this._containerNodes[symbolId] = node;
+            return node;
+        }
+        // If it's a data leaf, we create a new node if one has not yet been created in the connected op's container. If
+        // there is no connected op, create a new "island" node.
+        if (symbolId in this._dataConnections) {
+            let parentNode = null;
+            if (connectedSymbolId === null) {
+                parentNode = this._builder;
+            }
+            else {
+                if (!(symbolId in this._dataNodes)) {
+                    this._dataNodes[symbolId] = {};
+                }
+
+                if (this._getContainerSymbolId(connectedSymbolId) in this._dataNodes[symbolId]) {
+                    return this._dataNodes[symbolId][this._getContainerSymbolId(connectedSymbolId)];
+                }
+                parentNode = this._getParentNode(connectedSymbolId);
+            }
+
+            const node = parentNode.addNode(-1);
+            node.setCollapsedWidth(kDataNodeWidth);
+            node.setCollapsedHeight(kDataNodeHeight);
+            node.addMetadata('symbolId', symbolId);
+            node.addMetadata('type', 'graphdata');
+
+            if (connectedSymbolId !== null) {
+                this._dataNodes[symbolId][this._getContainerSymbolId(connectedSymbolId)] = node;
+            }
+            return node;
+        }
+    }
+
+    /**
+     * Creates a new `DAGBuilder` and adds all nodes and edges in the computation graph.
+     *
+     * @param {function} onLayout
+     *      A function accepting arguments `(graphWidth, graphHeight, nodes, edges)` that should be called whenever
+     *      the `DAGBuilder` has laid out the graph.
+     * @returns {DAGBuilder}
+     *      A `DAGBuilder` containing all nodes and edges in the computation graph and ready to be built.
+     */
+    createDAGBuilder(onLayout) {
+        this._builder = new DAGBuilder(onLayout);
+        this._encapsulatingContainer = this._getEncapsulatingContainer();
+        this._edges.forEach(([symbolId, startSymbolId, startPos, endSymbolId, argName]) => {
+            const startNode = this._getNode(startSymbolId, endSymbolId);
+            const endNode = this._getNode(endSymbolId, startSymbolId);
+            const edge = startNode.addEdge(startPos, endNode);
+            edge.unifyWith(symbolId);
+            edge.addMetadata('symbolId', symbolId);
+            edge.addMetadata('label', argName);
+        });
+        // Add any data nodes that had no connecting edges; we don't need to do this for op nodes, since they cannot be
+        // islands
+        Object.keys(this._dataConnections).forEach(dataSymbolId => {
+           if (!(dataSymbolId in this._dataNodes)) {
+               this._getNode(dataSymbolId, null);
+           }
+        });
+        return this._builder;
+    }
+}
+
+/**
+ * This dumb component renders a computation graph, including op nodes, data nodes, abstractive containers, temporal
+ * containers, and edges representing data transfer between them. It reads the graph from the symbol table once, then
+ * lays it out whenever the graph's state changes.
  */
 class GraphViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for the head "graphdata" instance. */
+        data: PropTypes.object,
 
-        /** Unique ID of the Python symbol backing this viewer. */
-        symbolId: PropTypes.string.isRequired,
+        /** Reference to the application symbol table. */
+        symbolTable: PropTypes.object.isRequired,
 
-        /** Unique ID of this viewer in the Canvas. */
-        viewerId: PropTypes.number.isRequired,
-
-        /** Data model rendered by this viewer. */
-        model: PropTypes.object.isRequired,
+        /** The symbol ID of the graph's head `graphdata` instance. */
+        symbolId: PropTypes.string,
 
         /**
          * Generates a sub-viewer for a particular element of the list.
@@ -66,553 +343,196 @@ class GraphViewer extends Component {
          *     Symbol ID of the element for which to create a new viewer.
          */
         expandSubviewer: PropTypes.func.isRequired,
-
-        /**
-         * Unfreezes this viewer so its data model reflects the latest version the backing Python symbol.
-         */
-        unfreezeViewer: PropTypes.func.isRequired,
     };
 
     constructor(props) {
         super(props);
         this.state = {
-            selectedIds: [],
-            hoverIds: [],
-            isInspectorExpanded: true,
-            expandedArgListItems: new Set(),
-            graphState: null,
-            graph: null,
+            // The symbol ID of the currently selected graph component, or `null` if none is selected
+            selectedId: null,
+            // The symbol ID of the currently hovered graph component, or `null` if none is selected
+            hoverId: null,
+            // An array of `dagbuilder.DAGNode` objects, or `null` if the graph has yet to be laid out
+            nodes: null,
+            // An array of `dagbuilder.DAGEdge` objects, or `null` if the graph has yet to be laid out
+            edges: null,
+            // The height of the graph being rendered in the viewer
+            graphHeight: null,
+            // The width of the graph being rendered in the viewer
+            graphWidth: null,
+            // Whether the DAG has been built (but possibly not yet laid out)
+            built: false,
         };
-        this.setSelectedId = this.setSelectedId.bind(this);
-        this.setHoverId = this.setHoverId.bind(this);
     }
 
     /**
-     * If the viewer is receiving new nodes or edges (generated by `makeGetElkGraphFromHead()`), then it lays out the graph
-     * in a promise and updates the Redux store when complete.
-     *
-     * @param nextProps
+     * When the component updates, we check if it still needs to build the graph for the first time; if it does, and has
+     * the information to do so, build the DAG.
      */
-    componentDidUpdate(prevProps, prevState) {
-        const { model, viewerId } = this.props;
-        const { graphState, stateChanged } = this.state;
-        if (model && graphState === null) {
-            console.debug('GraphViewer -- resetting graph state');
-            let newGraphState = {};
-            Object.values(model.nodes).forEach(node => {
-                newGraphState[node.symbolId] = {
-                    expanded: false,
-                };
-            });
-            this.setState({
-                'graphState': newGraphState,
-                stateChanged: true,
-            });
+    componentDidUpdate() {
+        const { symbolId, symbolTable, data } = this.props;
+        const { built } = this.state;
+        if (!built && symbolId in symbolTable && data !== null) {
+            this.buildDAG(symbolId);
+            this.setState({built: true});
         }
-        if (model && stateChanged) {
-            console.debug('GraphViewer -- laying out graph');
-            let elk = new ELK();
-            layoutGraph(elk, graphToElk(model.nodes, model.edges, graphState), (graph) => this.setState({graph}));
-            this.setState({
-                selectedIds: [],
-                hoverIds: [],
-                stateChanged: false,
-            })
-        }
-        return true;
-    }
-
-    setSelectedId(id) {
-        this.setState(prev => ({
-            selectedIds: id ? [id] : [],
-        }));
-    }
-
-    setHoverId(id) {
-        this.setState(prev => ({
-            hoverIds: id ? prev.hoverIds.concat([id]) : [],
-        }));
-    }
-
-    toggleInspectorExpanded() {
-        this.setState(prev => ({
-            isInspectorExpanded: !prev.isInspectorExpanded,
-        }));
     }
 
     /**
-     * Recursively adds new `GraphDataEdge` components to the `components` array.
+     * Read the graph from a head symbol via backlinks, adding all encountered op and data nodes to a `_ComputationGraph`
+     * object.
      *
-     * @param elkNode
-     *     An ELK node object which contains at least `x` and `y` fields, as well as an array of edge objects. Each
-     *     edge has a list of source port ids (of length exactly one) and a list of target port ids (also of length
-     *     exactly one). Note that node ids (different from port ids) are of the form
-     *         [0-9]?{symbolId}
-     *     where the leading digit is only added if the same symbol appears in multiple nodes (like if it is a leaf
-     *     in multiple temporal containers). A port id is of the form
-     *         {nodeId}_{portNumber}
-     *     The edge also contains an array `sections`, also of length exactly one (ELK supports hyperedges, hence
-     *     why everything is a list). This section object has a start point and an end point, as well as an array
-     *     of bend points, indicating points the final edge should pass through.
-     * @param components
-     *     The list to which new edge components should be added.
-     * @param offset
-     *     The position offset at which new edges should be rendered. Edge positions are relative, so we must
-     *     maintain an offset value to position them globally. Edges aren't just offset from their parent node,
-     *     however. An edge is stored in the node which is the first common ancestor of the edge's source and its
-     *     target. For edges that connect a container to one of its children, this means that only the container is
-     *     in `elkNode`'s children, while the target is stored in the container's node  object. In this case, the
-     *     edge is offset not by `elkNode`'s position, but by the position of the container node.
+     * @param {string} headSymbolId
+     *      The symbol ID of the head data node of the graph.
+     * @returns {_ComputationGraph}
+     *      A `_ComputationGraph` object to which all encountered nodes and edges have been added.
      */
-    buildEdgeComponents(edges) {
-        const { viewerId } = this.props;
-        const { selectedIds } = this.state;
-        return edges.map(edge => {
-            const { key, points, zOrder, isTemporal, viewerObj, sourceSymbolId, targetSymbolId, argName } = edge;
-            const edgeId = viewerId + key;
-            const layoutObj = {
-                points,
-                zOrder,
-                isTemporal,
-                sourceSymbolId,
-                targetSymbolId,
-                argName,
-                setSelected:    () => this.setSelectedId(selectedIds.includes(viewerObj.symbolId) ? null : viewerObj.symbolId),
-                setHover:       (isHovered = true) => this.setHoverId(isHovered ? viewerObj.symbolId : null),
-                selectedIds:    this.state.selectedIds,
-                hoverIds:       this.state.hoverIds,
-            };
-            return ({
-                component: <GraphDataEdge key={key} edgeId={edgeId} {...viewerObj} {...layoutObj} />,
-                zOrder,
-            });
-        });
-    }
+    loadGraphBackwards(headSymbolId) {
+        const { symbolTable } = this.props;
+        const getCreatorOp = (symbolId) => symbolTable[symbolId].data.creatorop;
+        const getCreatorPos = (symbolId) => symbolTable[symbolId].data.creatorpos;
+        const getArgs = (symbolId) => symbolTable[symbolId].data.args;
+        const getKwargs = (symbolId) => symbolTable[symbolId].data.kwargs;
 
-    /**
-     * Recursively builds node components and adds them to `components`.
-     *
-     * @param elkNode
-     *     A node in the ELK graph, containing a (possibly empty) list of child nodes as well as `width`, `height`,
-     *     `x`, `y`, and `viewerObj` fields. `viewerObj` contains the properties needed to render the node (type,
-     *     name, str, symbolId, and data.viewer).
-     * @param components
-     *     The array to which node components should be added.
-     * @param offset
-     *     The pixel offset at which the component should be rendered. ELK uses relative positioning, meaning that a
-     *     node's global position should be equal to its parent's global position, plus the node's `x` and `y` values.
-     */
-    buildNodeComponents(nodes) {
-        const { selectedIds } = this.state;
-        return nodes.map(node => {
-            const { type, key, viewerObj, x, y, width, height, zOrder, isTemporal, isExpanded } = node;
-            const layoutProps = {
-                width,
-                height,
-                x,
-                y,
-                isTemporal,
-                isExpanded,
-            };
-            const interactionProps = {
-                setSelected:    () => this.setSelectedId(selectedIds.includes(viewerObj.symbolId) ? null : viewerObj.symbolId),
-                setHover:       (isHovered = true) => this.setHoverId(isHovered ? viewerObj.symbolId : null),
-                selectedIds:    this.state.selectedIds,
-                hoverIds:       this.state.hoverIds,
-            };
+        const computationGraph = new _ComputationGraph(symbolTable);
+        computationGraph.addData(headSymbolId);
 
-            switch(type) {
-                case 'graphdata':
-                    return ({
-                        component: <GraphDataNode key={key} {...viewerObj} {...layoutProps} {...interactionProps} />,
-                        zOrder,
-                    });
+        const opsToCheck = [];
+        const checkedOps = new Set();
 
-                case 'graphop':
-                    return ({
-                        component: <GraphOpNode key={key} {...viewerObj} {...layoutProps} {...interactionProps}/>,
-                        zOrder,
-                    });
-
-                case 'graphcontainer':
-                    return ({
-                        component: <GraphContainerNode key={key} {...viewerObj} {...layoutProps} {...interactionProps}
-                                                       toggleExpanded={() => this.toggleExpanded(viewerObj.symbolId)} />,
-                        zOrder,
-                    });
+        const headCreatorOpId = getCreatorOp(headSymbolId);
+        if (headCreatorOpId !== null) {
+            opsToCheck.push(headCreatorOpId);
+            computationGraph.addEdge(headSymbolId, headCreatorOpId, getCreatorPos(headSymbolId), headSymbolId, '');
+        }
+        // Loop until every op in the history of the head symbol has been added
+        while (opsToCheck.length > 0) {
+            let opSymbolId = opsToCheck.pop();
+            if (checkedOps.has(opSymbolId) || opSymbolId === null) {
+                continue;
             }
-        });
-    }
-
-    toggleArgListItemSelected(itemKey) {
-        const { expandedArgListItems } = this.state;
-        if (expandedArgListItems.has(itemKey)) {
-            expandedArgListItems.delete(itemKey);
-        }
-        else {
-            expandedArgListItems.add(itemKey);
-        }
-        this.setState({
-            expandedArgListItems,
-        });
-    }
-
-    getKeyValueComponents(classes, symbolId) {
-        let symbolTable = this.props.model.symbolTable;
-        return symbolId ? Object.entries(symbolTable[symbolId].data.kvpairs).map(([key, value]) => {
-            return this.symbolIdToListItem(classes, value, key, symbolId);
-        }) : [];
-    }
-
-
-    // TODO make item naming unique, or refresh set each time
-    getArgListItem(classes, argName, argSymbolId, opName, i=-1) {
-        const { expandedArgListItems } = this.state;
-        const keyValueComponents = this.getKeyValueComponents(classes, argSymbolId);
-        const itemName = `${argName}${i >= 0 ? `[${i}]` : ''}`;
-        const itemIsTracked = typeof argSymbolId !== 'undefined';
-        const itemKey = `${argSymbolId}:${argName}:${i}:${opName ? opName : ''}`;
-        const expanded = expandedArgListItems.has(itemKey);
-        const onClick = (e) => {
-            e.stopPropagation();
-            e.nativeEvent.stopImmediatePropagation();
-            if (itemIsTracked)
-                this.toggleArgListItemSelected(itemKey);
-        };
-        return (
-            <div key={itemKey}>
-                <ListItem button
-                          className={classes.argItem}
-                          onClick={onClick}>
-                    <ListItemIcon onClick={onClick} className={classes.arrows}>
-                        {itemIsTracked ?
-                            (expanded ? <DropDownIcon/> : <DropDownIcon className={classes.rotated}/>) : (<NotInterestedIcon/>)}
-                    </ListItemIcon>
-                    <span className={classes.argItemText}>
-                        <span className={classes.argItemLabel}>{itemName}</span>
-                        <span className={classes.argItemDetail}>{opName ? ` (${opName})` : ''}</span>
-                    </span>
-                </ListItem>
-                <Collapse in={expanded} timeout={50}>
-                    <List className={classes.inspectorList} dense>
-                        {keyValueComponents}
-                    </List>
-                </Collapse>
-            </div>
-        );
-    }
-
-    argArrToListItems(classes, argArr, opName=null) {
-        let arr = [];
-        const [ argName, argVal ] = argArr;
-        if (Array.isArray(argVal)) {
-            argVal.forEach((arg, i) => {
-                arr.push(this.getArgListItem(classes, argName, arg, opName, i))
-            });
-        }
-        else {
-            arr.push(this.getArgListItem(classes, argName, argVal, opName))
-        }
-        return arr;
-    }
-
-    symbolIdToListItem(classes, symbolId, itemLabel=null, keyPrefix='') {
-        const { expandSubviewer } = this.props;
-        let symbolTable = this.props.model.symbolTable;
-        let onClick = () => symbolId ? expandSubviewer(symbolId) : {};
-        let str = symbolId ? symbolTable[symbolId].str : 'None';
-        let key = `${keyPrefix}:${(itemLabel ? itemLabel : '')}:${symbolId}`;
-        return (
-            <ListItem button
-                  className={classes.symbolItem}
-                  onClick={onClick}
-                  key={key}>
-                    <span className={classes.symbolItemText} >
-                        <span className={classes.symbolItemLabel}>{itemLabel}</span>
-                        <span className={classes.symbolItemSeparator}>{itemLabel ? ': ' : null}</span>
-                        <span className={classes.symbolItemString}>{str}</span>
-                    </span>
-            </ListItem>
-        );
-    }
-
-    buildInspectorList(classes, listName, listItems) {
-        return (
-            <div>
-                <Typography className={classes.inspectorLabel} variant="caption">{listName}</Typography>
-                <List dense component={'nav'} className={classes.inspectorList}>
-                    {listItems}
-                </List>
-            </div>
-        );
-    }
-
-    // TODO is there abetter way to build this? e.g. factor out stuff?
-    buildInspectorComponent(classes, symbolId) {
-        let symbolTable = this.props.model.symbolTable;
-        const symbolObj = symbolTable[symbolId];
-        if (symbolObj) {
-            const { name, type } = symbolObj;
-            if (type === 'graphop') {
-                const { args, kwargs, functionname, outputs } = symbolObj.data;
-
-                let argComponent = null;
-                if (args.length > 0) {
-                    let argListItems = [];
-                    args.forEach(argArr => argListItems = argListItems.concat(this.argArrToListItems(classes, argArr)));
-                    argComponent = this.buildInspectorList(classes, 'Positional Args', argListItems);
+            checkedOps.add(opSymbolId);
+            computationGraph.addOp(opSymbolId);
+            getArgs(opSymbolId).concat(getKwargs(opSymbolId)).forEach(([argName, arg]) => {
+                // Arguments can be either values or lists of values; we convert the former to the latter for
+                // convenience, since behavior doesn't change either way
+                let argIsList = true;
+                if (!Array.isArray(arg)) {
+                    arg = [arg];
+                    argIsList = false;
                 }
-
-                let kwargComponent = null;
-                if (kwargs.length > 0) {
-                    let kwargListItems = [];
-                    kwargs.forEach(argArr => kwargListItems = kwargListItems.concat(this.argArrToListItems(classes, argArr)));
-                    kwargComponent = this.buildInspectorList(classes, 'Keyword Args', kwargListItems);
-                }
-
-                let outputComponent = null;
-                if (outputs.length > 0) {
-                    let outputListItems = outputs.map(symbolId => this.symbolIdToListItem(classes, symbolId));
-                    outputComponent = this.buildInspectorList(classes, 'Outputs', outputListItems);
-                }
-                return (
-                    <div className={classes.inspector}>
-                        <Typography className={classes.inspectorLabel} variant="caption">Function Name</Typography>
-                        <span className={classes.inspectorText}>{functionname}</span>
-                        {argComponent}
-                        {kwargComponent}
-                        {outputComponent}
-                    </div>
-                );
-            }
-            if (type === 'graphdata') {
-                let nameComponent = name ? (
-                    <div>
-                        <Typography className={classes.inspectorLabel} variant="caption">Object Name</Typography>
-                        <span className={classes.inspectorText}>{name}</span>
-                    </div>) : null;
-
-                return (
-                    <div className={classes.inspector}>
-                        {nameComponent}
-                        {this.buildInspectorList(classes, 'Data', this.getKeyValueComponents(classes, symbolId))}
-                    </div>
-                )
-            }
-            if (type === 'graphcontainer') {
-                const { functionname, contents } = symbolObj.data;
-
-                let argComponent = null;
-                let argListItems = [];
-                let opNameAppearances = {};
-                for (let i=0; i < contents.length; i++) {
-                    let contentSymbolId = contents[i];
-                    const { functionname, args } = symbolTable[contentSymbolId].data;
-                    if (!(functionname in opNameAppearances)) {
-                        opNameAppearances[functionname] = 0;
+                arg.forEach((dataSymbolId, argIndex) => {
+                    const creatorOpSymbolId = getCreatorOp(dataSymbolId);
+                    if (creatorOpSymbolId === null) {
+                        computationGraph.addData(dataSymbolId);
+                        // A data node always has exactly one output port, so we provide "0" as the port number
+                        computationGraph.addEdge(dataSymbolId, dataSymbolId, 0, opSymbolId,
+                            argIsList ? `${argName}[${argIndex}]` : argName);
                     }
-                    if (args && args.length > 0) {  // could be container
-                        args.forEach(argArr => argListItems = argListItems.concat(this.argArrToListItems(classes, argArr, `${functionname}[${opNameAppearances[functionname]}]`)));
-                        opNameAppearances[functionname] += 1;
+                    else {
+                        opsToCheck.push(creatorOpSymbolId);
+                        computationGraph.addEdge(dataSymbolId, creatorOpSymbolId, getCreatorPos(dataSymbolId),
+                            opSymbolId, argIsList ? `${argName}[${argIndex}]` : argName);
                     }
-                }
-                if (argListItems.length > 0) {
-                    argComponent = this.buildInspectorList(classes, 'Positional Args', argListItems);
-                }
-
-                return (
-                    <div className={classes.inspector}>
-                        <Typography className={classes.inspectorLabel} variant="caption">Function Name</Typography>
-                        <span className={classes.inspectorText}>{functionname}</span>
-                        {argComponent}
-                    </div>
-                );
-            }
+                });
+            });
         }
-    };
-
-    toggleExpanded(symbolId) {
-        console.debug(`GraphViewer -- expanding container ${symbolId}`);
-        let { graphState } = this.state;
-        let { expanded } = graphState[symbolId].expanded;
-        this.setState({
-            'stateChanged': true,
-            'graphState': {
-                ...graphState,
-                [symbolId]: {
-                    ...graphState[symbolId],
-                    'expanded': !expanded,
-                }
-            }
-        });
+        return computationGraph;
     }
 
     /**
-     * Renders all of the graph's op and data components, laid out by ELK. Additionally, displays an inspector fixed to
-     * the bottom of the frame that displays the hover/selected item's info.
+     * Reads the computation graph from the symbol table and then creates a `DAGBuilder` that lays out the graph and
+     * will trigger a re-render whenever the graph state changes.
+     *
+     * The `DAGBuilder` will hold every node and edge in the graph, as well as the state of the graph. Whenever the
+     * graph state changes, the `DAGBuilder` lays out the graph again, then triggers a re-render of the `GraphViewer`.
+     *
+     * @param {string} headSymbolId
+     *      The symbol ID of the head data node of the computation graph.
+     */
+    buildDAG(headSymbolId) {
+        const { symbolId } = this.props;
+        console.debug(`GraphViewer (${symbolId}) -- building DAG`);
+        const computationGraph = this.loadGraphBackwards(headSymbolId);
+        const builder = computationGraph.createDAGBuilder(
+            (graphWidth, graphHeight, nodes, edges) =>
+                this.setState({graphWidth, graphHeight, nodes, edges})
+        );
+        builder.build();
+    }
+
+    /**
+     * Renders a computation graph, including op nodes, data nodes, abstractive containers, temporal containers, and
+     * edges representing data transfer between them.
      */
     render() {
-        const { classes } = this.props;
-        const { graph } = this.state;
-        if (!graph) {
+        const { expandSubviewer } = this.props;
+        const { nodes, edges, graphHeight, graphWidth, hoverId, selectedId } = this.state;
+        if (nodes !== null) {  // if nodes is non-null, then so is edges
+            const model = {
+                nodes: nodes.map(node => {
+                    const { x, y, z, width, height } = node.getTransform();
+                    const { symbolId, label, type, temporal } = node.getMetadata();
+                    let color = null;
+                    switch(type) {
+                        case 'graphcontainer':
+                            color = ColorBlue;
+                            break;
+                        case 'graphop':
+                            color = ColorPink;
+                            break;
+                        case 'graphdata':
+                            color = ColorOrange;
+                            break;
+                    }
+                    return {
+                        key: 'node' + node.getId(),
+                        x, y, z, width, height, label, color,
+                        isExpanded: node.getIsExpanded(),
+                        isHovered: !temporal ? hoverId === symbolId : false,
+                        isSelected: !temporal ? selectedId === symbolId : false,
+                        onClick: () => this.setState({selectedId: !temporal ? symbolId : null}),
+                        onDoubleClick: () => {
+                            if (type === 'graphcontainer' && !temporal) {
+                                node.toggleExpanded();
+                            }
+                            if (type === 'graphop' || type === 'graphdata') {
+                                expandSubviewer(symbolId);
+                            }
+                        },
+                        onMouseEnter: () => !temporal ? this.setState({hoverId: symbolId}) : null,
+                        onMouseLeave: () => !temporal ? this.setState({hoverId: null}) : null,
+                    }
+                }),
+                edges: edges.map(edge => {
+                    const { z, points } = edge.getTransform();
+                    const { symbolId, label } = edge.getMetadata();
+                    const isHovered = hoverId === symbolId;
+                    const isSelected = selectedId === symbolId;
+                    return {
+                        key: 'edge' + edge.getId(),
+                        id: edge.getId(),
+                        z, points, label,
+                        baseColor: ColorGrey,
+                        selectedColor: ColorBlue,
+                        isCurved: edge.getIsLateral(),
+                        isBackground: edge.getIsLateral(),
+                        isHovered,
+                        isSelected,
+                        isOtherActive: (hoverId !== null || selectedId !== null) && !isHovered && !isSelected,
+                        onClick: () => this.setState({selectedId: symbolId}),
+                        onMouseEnter: () => this.setState({hoverId: symbolId}),
+                        onMouseLeave: () => this.setState({hoverId: null}),
+                    }
+                }),
+            };
             return (
-                <div className={classes.container}>
-                    <div className={classes.progress}>
-                        <CircularProgress />
-                    </div>
-                </div>
+                <DAGViz model={model} graphHeight={graphHeight} graphWidth={graphWidth}
+                        onClick={() => this.setState({selectedId: null})}/>
             );
         }
-
-        let graphComponents = this.buildNodeComponents(graph.nodes).concat(this.buildEdgeComponents(graph.edges));
-        graphComponents = graphComponents.sort(({zOrder: z1}, {zOrder: z2}) => z1 - z2).map(({component}) => component);
-
-        const inspectorId = this.state.selectedIds[0];
-        let inspectorComponent = this.buildInspectorComponent(classes, inspectorId);
-
-        let buildArrowheadMarker = (id, color) => (
-            <marker id={id} viewBox="-5 -3 5 6" refX="0" refY="0"
-                    markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
-                <path d="M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z" fill={color} />
-            </marker>
-        );
-
-        return (
-            <div className={classes.container}>
-                <div className={classes.graph}>
-                    <svg width={graph.width} height={graph.height}>
-                        <defs>
-                            {buildArrowheadMarker("arrowheadGrey", ColorGrey[600])}
-                            {buildArrowheadMarker("arrowheadBlue", ColorBlue[600])}
-                        </defs>
-                        <rect x={0} y={0} width={graph.width} height={graph.height} fill="transparent"
-                              onClick={() => this.setSelectedId(null)}/>
-                        {graphComponents}
-                    </svg>
-                </div>
-                {inspectorComponent}
-            </div>
-        );
+        return null;
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = theme => ({
-    container: {
-        flex: 1,  // expand to fill frame vertical
-
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center',  // along main axis (horizontal)
-        alignItems: 'stretch',  // along cross axis (vertical)
-        overflow: 'hidden',
-    },
-    progress: {
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-    },
-    graph: {
-        flex: 'auto',  // makes graph fill remaining space so sidebar is on side
-        overflow: 'auto',
-        textAlign: 'left', // so SVG doesn't move
-    },
-    inspector: {
-        minWidth: 150,
-        overflow: 'auto',
-
-        boxSizing: 'border-box',
-        backgroundColor: ColorGrey[50],
-        borderLeftWidth: 1,
-        borderLeftStyle: 'solid',
-        borderLeftColor: ColorGrey[200],
-        fontSize: '9pt',
-        textAlign: 'left',
-    },
-    inspectorLabel: {
-        paddingTop: 8,
-        paddingLeft: 12,
-    },
-    inspectorText: {
-        paddingLeft: 12,
-        fontFamily: theme.typography.monospace.fontFamily,
-    },
-    inspectorList: {
-        width: '100%',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        paddingTop: 0,
-        paddingBottom: 0,
-    },
-    argItem: {
-        paddingTop: 0,
-        paddingBottom: 0,
-    },
-    argItemText: {
-        overflow:'hidden',
-        textOverflow:'ellipsis',
-        whiteSpace:'nowrap',
-        width: '100%',
-        fontFamily: theme.typography.monospace.fontFamily,
-    },
-    argItemLabel: {
-
-    },
-    argItemDetail: {
-        fontStyle: 'italic',
-        fontSize: '7pt',
-        color: ColorBlueGrey[300],
-    },
-    symbolItem: {
-        paddingTop: 0,
-        paddingBottom: 0,
-    },
-    symbolItemText: {
-        overflow:'hidden',
-        textOverflow:'ellipsis',
-        whiteSpace:'nowrap',
-        width: '100%',
-        marginLeft: '8px',
-        fontFamily: theme.typography.monospace.fontFamily,
-    },
-    symbolItemLabel: {
-    },
-    symbolItemSeparator: {
-    },
-    symbolItemString: {
-        color: ColorBlueGrey[500],
-    },
-    icon: {
-        visibility: 'hidden',
-    },
-    itemhover: {
-        '&:hover $icon': {
-            visibility: 'inherit',
-        }
-    },
-    arrows: {
-        height: 15,
-        width: 15,
-        marginLeft: '-10px',
-        marginRight: 0,
-    },
-    rotated: {
-        transform: 'rotate(-90deg)',
-    },
-});
-
-export default withStyles(styles)(GraphViewer)
-
-export function assembleGraphModel(symbolId, symbolTable) {
-    if (symbolId in symbolTable && symbolTable[symbolId].data !== null) {
-        console.debug('GraphViewer -- reading graph with head', symbolId);
-        let model = getFullGraphFromHead(symbolId, symbolTable);
-        // TODO: don't hold on to the entire symbol table
-        model['symbolTable'] = symbolTable;
-        return model;
-    }
-    return null;
-}
+export default GraphViewer;
