@@ -13,8 +13,8 @@ import Typography from '@material-ui/core/Typography';
 
 
 /**
- * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
- * Canvas data structures to the explicit data model expected by `SequenceViz`.
+ * This dumb component renders a viewer for an op node in a computation graph, showing its input arguments and output
+ * GraphData objects.
  */
 class GraphOpViewer extends Component {
 
@@ -23,14 +23,14 @@ class GraphOpViewer extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "list/tuple/set". */
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "graphop". */
         data: PropTypes.object,
 
         /** Reference to the application symbol table. */
         symbolTable: PropTypes.object.isRequired,
 
         /**
-         * Generates a sub-viewer for a particular element of the list.
+         * Generates a sub-viewer for a particular item in the op's inputs or outputs.
          *
          * @param symbolId
          *     Symbol ID of the element for which to create a new viewer.
@@ -47,6 +47,21 @@ class GraphOpViewer extends Component {
         };
     }
 
+    /**
+     * Creates the data model for a `KeyValueViz` from a list of arguments or keyword arguments, as defined in
+     * `SYMBOL-TABLE-SCHEMA.md`.
+     *
+     * @param {array} argList
+     *      A list of arguments or keyword arguments; each element in the array is an array whose the first element is
+     *      the string name of the argument and whose second element is either a single symbol ID or an array of
+     *      symbol IDs (for arguments accepting a sequence).
+     * @param {number} startIdx
+     *      The ID of the first argument key-value pair's first item; this is not a symbol ID, but the ID used for
+     *      determining which element of the viewer is hovered or selected. Since the viewer creates multiple models,
+     *      this argument ensures that the models do not have overlapping element IDs.
+     * @returns {array}
+     *      The data model for a `KeyValueViz`.
+     */
     buildArgModel(argList, startIdx) {
         const { symbolTable, expandSubviewer } = this.props;
         const { hoveredIdx, selectedIdx } = this.state;
@@ -82,10 +97,8 @@ class GraphOpViewer extends Component {
     }
 
     /**
-     * Renders a SequenceViz after making the appropriate data transformations.
+     * Renders a composition of `KeyValueViz`-s and a `SequenceViz` after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
-     * TODO: Rather than recreating separate list elements viz, refactor so that list displays the compact form of
-     *     real viewers. (This also allows factoring out the "dispatch on element type" logic.)
      */
     render() {
         const { classes, symbolTable, expandSubviewer, data } = this.props;

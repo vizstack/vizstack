@@ -86,7 +86,7 @@ class SequenceViz extends Component {
         const motifStyle = { height: itemHeight };
 
         return (
-            <div className={classes.keyValuePairList}>
+            <div className={classes.listBox}>
                 <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
                 {listItems}
                 <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
@@ -102,7 +102,7 @@ class SequenceViz extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    keyValuePairList: {
+    listBox: {
         display:        'inline-flex',
         flexDirection:  'row',
         flexWrap:       'nowrap',

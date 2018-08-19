@@ -33,14 +33,15 @@ class _ScriptExecutor(pdb.Pdb):
         # A mapping of (file_name, line_number) tuples to dictionaries that describe what actions should be performed
         # at which watched lines.
         self._watch_actions = dict()
-
+        # A mapping of (file_name, line_number) tuples to unique numerical IDs, so that identity of watch statements
+        # can be maintained even after statements are moved or added
         self._watch_ids = dict()
         # The name of a variable that should be evaluated once defined in the running program's stack frame.
         self._var_to_eval = None
         # A dictionary describing the actions to be performed when the variable in `self._var_to_eval` is evaluated.
         self._actions_on_eval = None
-
-        self._eval_id = None
+        # The ID of the watch statement which is being evaluated when the variable in `self._var_to_eval` is evaluated.
+        self._watch_id_on_eval = None
 
     # ==================================================================================================================
     # Public methods.
@@ -266,7 +267,7 @@ class _ScriptExecutor(pdb.Pdb):
             assign_frame (Frame): A `Pdb` frame object describing the program's stack frame at a line where a
                 variable is being assigned.
         """
-        self._eval_id = self._watch_ids[self._get_file_lineno(assign_frame)]
+        self._watch_id_on_eval = self._watch_ids[self._get_file_lineno(assign_frame)]
         self._actions_on_eval = self._watch_actions[self._get_file_lineno(assign_frame)]
         self._var_to_eval = self._get_var_name_from_frame(assign_frame)
 
@@ -287,7 +288,7 @@ class _ScriptExecutor(pdb.Pdb):
         Returns:
             (object): The object that was assigned to the variable name in `assign_frame`.
             (str): The name of the variable which references the object.
-            (int): An ID unique to this watch statement.
+            (int): An ID unique to the watch statement that was evaluated.
             (dict): Symbol request actions the client has associated with the variable's evaluation.
         """
         obj_name = self._var_to_eval
@@ -302,7 +303,7 @@ class _ScriptExecutor(pdb.Pdb):
 
         self._var_to_eval = None
         if obj_found:
-            return obj, obj_name, self._eval_id, self._actions_on_eval
+            return obj, obj_name, self._watch_id_on_eval, self._actions_on_eval
         raise ValueError
 
     # State checking.
