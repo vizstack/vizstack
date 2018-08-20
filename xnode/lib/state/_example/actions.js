@@ -1,10 +1,10 @@
 'use babel';
 
 /** Action type definitions. */
-export const ExampleActions = {  // Must take form of `[module]Actions`
+export const ExampleActions = Object.freeze({  // Must take form of `[Feature]Actions`
     SYNC_ACTION:  "EXAMPLE::SYNC_ACTION",
     ASYNC_ACTION: "EXAMPLE::ASYNC_ACTION",
-};
+});
 
 // TODO: Feature grouping
 // ----------------------

@@ -32,13 +32,13 @@ class PrimitiveViewer extends Component {
      */
     render() {
         const { str } = this.props;
-        const { isHovered, isSelected } = this.state;
+        const { isHovered } = this.state;
         return (
             <TokenViz model={str}
                       shouldTextWrap={true}
                       isHovered={isHovered}
                       onMouseEnter={() => this.setState({isHovered: true})}
-                      onMouseLeave={() => this.setState({isSelected: false})}/>
+                      onMouseLeave={() => this.setState({isHovered: false})}/>
         );
     }
 }
