@@ -10,7 +10,7 @@ import { createSelector } from 'reselect';
 
 
 /**
- * This [dumb/smart] component ___.
+ * This [pure dumb / statful dumb / smart] component ___.
  */
 class Example extends Component {
 
@@ -28,9 +28,7 @@ class Example extends Component {
         super(props);
     }
 
-    /**
-     * Renders ___.
-     */
+    /** Renderer. */
     render() {
         const { classes } = this.props;
         return (

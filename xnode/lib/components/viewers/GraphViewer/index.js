@@ -1,2 +1,2 @@
 'use babel';
-export { default } from './GraphViewer.js';
+export { default } from './GraphViewer';

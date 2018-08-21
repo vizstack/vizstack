@@ -18,7 +18,7 @@ class KeyValueViz extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viz (an array of length-2 arrays representing key value paris). Uses an array
+        /** Data model rendered by this viz (an array of length-2 arrays representing key value pairs). Uses an array
          * instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
          * between renderings. */
         model: PropTypes.arrayOf(
@@ -63,7 +63,8 @@ class KeyValueViz extends Component {
             itemHeight } = this.props;
 
         const keyValuePairs = model.map(([key, value], idx) => {
-            let keyComponent = undefined;
+
+            let keyComponent;
             {
                 const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = key;
                 keyComponent = (
@@ -81,7 +82,8 @@ class KeyValueViz extends Component {
                               onMouseLeave={onMouseLeave}/>
                 );
             }
-            let valueComponent = undefined;
+
+            let valueComponent;
             {
                 const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = value;
                 valueComponent = (
@@ -99,6 +101,7 @@ class KeyValueViz extends Component {
                               onMouseLeave={onMouseLeave}/>
                 );
             }
+
             return (
                 <div key={idx} className={classes.keyValuePair}>
                     <span className={classes.keyValueItem}>

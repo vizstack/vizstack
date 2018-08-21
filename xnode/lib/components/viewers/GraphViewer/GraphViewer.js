@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import DAGViz from '../../viz/DAGViz';
+import DAGViz from '../../viz/DagViz';
 import DAGBuilder from './dagbuilder';
 
 import ColorPink from '@material-ui/core/colors/pink';
