@@ -38,12 +38,12 @@ class SequenceViz extends Component {
 
         /** Characters to place at start/end of sequence as decoration, e.g. "{" and "}" for sets. */
         startMotif: PropTypes.string,
-        endMotif: PropTypes.string,
+        endMotif:   PropTypes.string,
 
         /** Individual list item dimension constraints (in px or '%'). */
         itemMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
         itemMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        itemHeight:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     };
 
     /** Prop default values object. */

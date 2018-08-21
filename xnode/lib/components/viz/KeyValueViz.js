@@ -19,32 +19,32 @@ class KeyValueViz extends Component {
         classes: PropTypes.object.isRequired,
 
         /** Data model rendered by this viz (an array of length-2 arrays representing key value pairs). Uses an array
-         * instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
-         * between renderings. */
+         *  instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
+         *  between renderings. */
         model: PropTypes.arrayOf(
             PropTypes.arrayOf(
                 PropTypes.shape({
-                    text: PropTypes.string.isRequired,
-                    isHovered: PropTypes.bool,
-                    isSelected: PropTypes.bool,
-                    onClick: PropTypes.func,
-                    onDoubleClick: PropTypes.func,
-                    onMouseEnter: PropTypes.func,
-                    onMouseLeave: PropTypes.func,
+                    text:           PropTypes.string.isRequired,
+                    isHovered:      PropTypes.bool,
+                    isSelected:     PropTypes.bool,
+                    onClick:        PropTypes.func,
+                    onDoubleClick:  PropTypes.func,
+                    onMouseEnter:   PropTypes.func,
+                    onMouseLeave:   PropTypes.func,
                 })
             )
         ),
 
         /** Characters to place at start/end of the key-value sequence as decoration, e.g. "{" and "}" for dicts. */
         startMotif: PropTypes.string,
-        endMotif: PropTypes.string,
+        endMotif:   PropTypes.string,
 
         /** Individual key and value item dimension constraints (in px or '%'). */
-        keyMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        keyMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        keyMinWidth:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        keyMaxWidth:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
         valueMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
         valueMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        itemHeight:    PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     };
 
     /** Prop default values object. */
@@ -62,7 +62,7 @@ class KeyValueViz extends Component {
         const { classes, model, startMotif, endMotif, keyMinWidth, keyMaxWidth, valueMinWidth, valueMaxWidth,
             itemHeight } = this.props;
 
-        const keyValuePairs = model.map(([key, value], idx) => {
+        const kvPairs = model.map(([key, value], idx) => {
 
             let keyComponent;
             {
@@ -120,7 +120,7 @@ class KeyValueViz extends Component {
         return (
             <div className={classes.keyValuePairList}>
                 <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
-                {keyValuePairs}
+                {kvPairs}
                 <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
             </div>
         );

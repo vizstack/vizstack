@@ -4,15 +4,14 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import SequenceViz from '../viz/SequenceViz';
-import { isAnySymbolId } from '../../services/symbol-utils';
+import KeyValueViz from '../viz/KeyValueViz';
 
 
 /**
- * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
- * Canvas data structures to the explicit data model expected by `SequenceViz`.
+ * This dumb component renders a viewer for a Python key-value variable (dict, class, module, object). It converts
+ * between the Canvas data structures to the explicit data model expected by `KeyValueViz`.
  */
-class SequenceViewer extends Component {
+class KeyValueViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -43,6 +42,8 @@ class SequenceViewer extends Component {
     /**
      * Renders a SequenceViz after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
+     * TODO: Rather than recreating separate list elements viz, refactor so that list displays the compact form of
+     *     real viewers. (This also allows factoring out the "dispatch on element type" logic.)
      */
     render() {
         const { symbolTable, expandSubviewer, data } = this.props;
@@ -63,7 +64,7 @@ class SequenceViewer extends Component {
         });
 
         return (
-            <SequenceViz model={model}
+            <KeyValueViz model={model}
                          startMotif="["
                          endMotif="]"
                          itemMaxWidth={75} />
@@ -71,4 +72,4 @@ class SequenceViewer extends Component {
     }
 }
 
-export default SequenceViewer;
+export default KeyValueViewer;

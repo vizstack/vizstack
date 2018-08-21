@@ -2,7 +2,6 @@ import torch
 from xntorch.autograd import Variable
 import sys
 import os
-
 sys.path.append(os.path.join(sys.path[0], '..', 'test'))
 from stack_lstm import StackLSTM, PseudoLogLSTM
 from vgg import vgg16
@@ -16,7 +15,7 @@ myNone = None
 
 myList = [1, 2.3, False, "hello", None, [10, 11, ["This", "is", "the", "end"]]]
 myList[0] = 100
-myDict = {"key1": "value1"}
+myDict = {"key1": "value1", "key2": "value2"}
 myTensor1 = (torch.rand(15,20) - 0.5) * 10
 myTensor2 = torch.rand(6,7) - 0.5
 myTensor3 = (torch.randn(100, 100))

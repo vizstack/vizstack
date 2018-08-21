@@ -42,7 +42,7 @@ class DagNode extends Component {
 
     render() {
         const { classes, color, width, height, x, y, label, isHovered, isSelected, isExpanded,
-            onClick, onDoubleClick, onMouseEnter, onMouseLeave } = props;
+            onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
         return (
             <g>
                 <rect x={x} y={y} width={width} height={height} style={{fill: color[kNodeFill]}}
@@ -96,7 +96,7 @@ class DagEdge extends Component {
 
     render() {
         const { classes, id, baseColor, selectedColor, points, isCurved, isBackground, isHovered, isSelected, isOtherActive,
-            label, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = props;
+            label, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
         let pathString = null;
         if (isCurved) {
             let curveGenerator = line().curve(curveBasis);

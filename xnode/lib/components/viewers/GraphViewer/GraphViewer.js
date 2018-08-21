@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import DAGViz from '../../viz/DagViz';
-import DAGBuilder from './dagbuilder';
+import DAGBuilder from './dag-builder';
 
 import ColorPink from '@material-ui/core/colors/pink';
 import ColorGrey from '@material-ui/core/colors/grey';
