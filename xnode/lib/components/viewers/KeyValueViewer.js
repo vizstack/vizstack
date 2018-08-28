@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import KeyValueViz from '../viz/KeyValueViz';
+import { isAnySymbolId } from '../../services/symbol-utils';
 
 
 /**
@@ -15,7 +16,7 @@ class KeyValueViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "list/tuple/set". */
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "dict/class/module/object". */
         data: PropTypes.object,
 
         /** Reference to the application symbol table. */
@@ -51,23 +52,34 @@ class KeyValueViewer extends Component {
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
-        const model = contents.map((elem, idx) => {
-            return {
-                text: symbolTable[elem].str,
-                isHovered: idx === hoveredIdx,
-                isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
-                onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
+        const model = Object.entries(contents).map(([k, v], idx) => {
+            return [{
+                text: isAnySymbolId(k) ? symbolTable[k].str : k,
+                isHovered: `k${idx}` === hoveredIdx,
+                isSelected: `k${idx}` === selectedIdx,
+                onClick: () => this.setState({selectedIdx: `k${idx}`}),
+                onDoubleClick: () => isAnySymbolId(k) ? expandSubviewer(k) : undefined,
+                onMouseEnter: () => this.setState({hoveredIdx: `k${idx}`}),
                 onMouseLeave: () => this.setState({hoveredIdx: null}),
-            };
+            }, {
+                text: symbolTable[v].str,
+                isHovered: `v${idx}` === hoveredIdx,
+                isSelected: `v${idx}` === selectedIdx,
+                onClick: () => this.setState({selectedIdx: `v${idx}`}),
+                onDoubleClick: () => expandSubviewer(v),
+                onMouseEnter: () => this.setState({hoveredIdx: `v${idx}`}),
+                onMouseLeave: () => this.setState({hoveredIdx: null}),
+            }]
         });
 
         return (
             <KeyValueViz model={model}
-                         startMotif="["
-                         endMotif="]"
-                         itemMaxWidth={75} />
+                        startMotif="{"
+                        endMotif="}"
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75} />
         );
     }
 }

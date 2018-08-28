@@ -140,8 +140,8 @@ class GraphOpViewer extends Component {
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Positional Arguments</Typography>
                     <KeyValueViz model={argsModel}
-                                 startMotif={"["}
-                                 endMotif={"]"}
+                                 startMotif="["
+                                 endMotif="]"
                                  keyMaxWidth={75}
                                  keyMinWidth={75}
                                  valueMaxWidth={75}
@@ -150,8 +150,8 @@ class GraphOpViewer extends Component {
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Keyword Arguments</Typography>
                     <KeyValueViz model={kwargsModel}
-                                 startMotif={"{"}
-                                 endMotif={"}"}
+                                 startMotif="{"
+                                 endMotif="}"
                                  keyMaxWidth={75}
                                  keyMinWidth={75}
                                  valueMaxWidth={75}

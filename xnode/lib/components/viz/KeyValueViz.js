@@ -135,9 +135,6 @@ class KeyValueViz extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     keyValuePairList: {
-        display:        'inline-flex',
-        flexDirection:  'column',
-        flexWrap:       'nowrap',
     },
     keyValuePair: {
         marginTop:      2,  // TODO: Dehardcode this

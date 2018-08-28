@@ -132,7 +132,7 @@ Note the redundancy. TODO: Can we remove it?
 }
 ```
 
-#### instance
+#### object
 ```
 "str": "object<MyAwesomeClass>",
 "data": {
