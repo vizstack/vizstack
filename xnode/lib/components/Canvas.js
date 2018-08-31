@@ -25,6 +25,8 @@ import PrintViewerIcon from '@material-ui/icons/Print';
 // Custom data type viewers
 import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
+import KeyValueViewer from './viewers/KeyValueViewer';
+import FunctionViewer from './viewers/FunctionViewer';
 import GraphViewer from './viewers/GraphViewer';
 import GraphDataViewer from './viewers/GraphViewer/GraphDataViewer';
 import GraphOpViewer from './viewers/GraphViewer/GraphOpViewer';
@@ -141,9 +143,23 @@ class Canvas extends Component {
                 return (<SequenceViewer data={data} symbolTable={symbolTable}
                                         expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
+            case 'dict':
+            case 'instance':
+            case 'module':
+                return (<KeyValueViewer data={data} symbolTable={symbolTable}
+                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+
             case 'tensor':
                 // TODO: return <TensorViewer/>;
                 return null;
+
+            case 'class':
+                // TODO: return <ClassViewer/>;
+                return null;
+
+            case 'fn':
+                return (<FunctionViewer data={data} symbolTable={symbolTable}
+                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'graphdata':
                 // TODO: figure out a more principled way of showing the graphdata's properties along with the graph

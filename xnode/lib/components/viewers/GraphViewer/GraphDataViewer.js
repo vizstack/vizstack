@@ -11,7 +11,7 @@ import Typography from '@material-ui/core/Typography';
 
 
 /**
- * This dumb component renders a viewer for a graphdata object, showing its surfaced key-value pairs as a sequence.
+ * This dumb component renders a viewer for a `graphdata` object, showing its surfaced key-value pairs as a sequence.
  */
 class GraphDataViewer extends Component {
 
@@ -27,7 +27,7 @@ class GraphDataViewer extends Component {
         symbolTable: PropTypes.object.isRequired,
 
         /**
-         * Generates a sub-viewer for a particular item graphdata's surfaced properties.
+         * Generates a sub-viewer for a particular item in the graphdata's surfaced properties.
          *
          * @param symbolId
          *     Symbol ID of the element for which to create a new viewer.
@@ -45,7 +45,7 @@ class GraphDataViewer extends Component {
     }
 
     /**
-     * Renders a a `SequenceViz` after making the appropriate data transformations.
+     * Renders a `SequenceViz` after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      */
     render() {

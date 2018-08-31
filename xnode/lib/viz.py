@@ -173,13 +173,14 @@ class VisualizationEngine:
             'filename': obj.__code__.co_filename,
             'lineno': obj.__code__.co_firstlineno,
         }
+        num_args = obj.__code__.co_argcount
         argnames = obj.__code__.co_varnames
         default_arg_values = obj.__defaults__
         if default_arg_values is not None:
-            viewer_data['args'] = argnames[:-len(default_arg_values)]
+            viewer_data['args'] = argnames[:num_args-len(default_arg_values)]
             viewer_data['kwargs'] = {
                 argname: self._sanitize_for_data_object(value, refs)
-                for argname, value in zip(argnames[-len(default_arg_values)], default_arg_values)
+                for argname, value in zip(argnames[num_args-len(default_arg_values):num_args], default_arg_values)
             }
         else:
             viewer_data['args'] = []

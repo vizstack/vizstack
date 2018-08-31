@@ -351,7 +351,7 @@ class _ScriptExecutor(pdb.Pdb):
         Returns:
             (str): The name of the variable assigned to in the line being executed in `frame`.
         """
-        line_text = self._get_line_from_frame(frame)
+        line_text = self._get_line_from_frame(frame).strip()
 
         # TODO: improve parser
         has_hit_space = False

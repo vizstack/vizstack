@@ -51,23 +51,38 @@ class KeyValueViewer extends Component {
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
-        const model = contents.map((elem, idx) => {
-            return {
-                text: symbolTable[elem].str,
-                isHovered: idx === hoveredIdx,
-                isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
-                onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
-            };
+        const model = Object.entries(contents).map(([key, value], entryIdx) => {
+            const idx = entryIdx * 2;
+            return [
+                {
+                    text: symbolTable[key].str,
+                    isHovered: idx === hoveredIdx,
+                    isSelected: idx === selectedIdx,
+                    onClick: () => this.setState({selectedIdx: idx}),
+                    onDoubleClick: () => expandSubviewer(key),
+                    onMouseEnter: () => this.setState({hoveredIdx: idx}),
+                    onMouseLeave: () => this.setState({hoveredIdx: null}),
+                },
+                {
+                    text: symbolTable[value].str,
+                    isHovered: idx + 1 === hoveredIdx,
+                    isSelected: idx + 1 === selectedIdx,
+                    onClick: () => this.setState({selectedIdx: idx + 1}),
+                    onDoubleClick: () => expandSubviewer(value),
+                    onMouseEnter: () => this.setState({hoveredIdx: idx + 1}),
+                    onMouseLeave: () => this.setState({hoveredIdx: null}),
+                },
+            ];
         });
 
         return (
             <KeyValueViz model={model}
-                         startMotif="["
-                         endMotif="]"
-                         itemMaxWidth={75} />
+                         startMotif={"{"}
+                         endMotif={"}"}
+                         keyMaxWidth={75}
+                         keyMinWidth={75}
+                         valueMaxWidth={75}
+                         valueMinWidth={75} />
         );
     }
 }

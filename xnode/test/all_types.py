@@ -33,12 +33,12 @@ myRNNOutput = myRNN(myRNNInput)
 myPseudoLogLSTM = PseudoLogLSTM(myRNNBatchSize, myRNNDims)
 myPseudoLogLSTMOutput = myPseudoLogLSTM(myRNNInput)
 
-def myFn():
+def myFn(arg1, arg2=2):
     f = [1,2,3,4,5]
     q = [f,3,4,5,2]
     q[1] = 5
     q = q
     return q
 
-myFn()
-myFnOutput = myFn()
+myFnRef = myFn
+myFnOutput = myFn(0, 1)
