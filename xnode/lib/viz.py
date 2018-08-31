@@ -211,9 +211,7 @@ class VisualizationEngine:
                     contents['staticfields'][attr] = self._sanitize_for_data_object(value, refs)
             except AttributeError:
                 continue
-        return {
-            'contents': contents,
-        }, refs
+        return contents, refs
 
     def _generate_data_instance(self, obj):
         """Data generation function for object instances which do not fall into other categories."""
@@ -285,10 +283,10 @@ class VisualizationEngine:
     CLASS = VisualizationType('class', test_fn=inspect.isclass,
                               str_fn=lambda obj: 'class <{}>'.format(obj.__name__),
                               data_fn=_generate_data_class)
-    INSTANCE = VisualizationType('obj', test_fn=lambda obj: True,
+    INSTANCE = VisualizationType('object', test_fn=lambda obj: True,
                                  # TODO: this is information leakage from `graphtracker`. When we likely refactor it,
                                  # clean this up as well.
-                                 str_fn=lambda obj: '<{}>'.format(obj.__class__.__name__
+                                 str_fn=lambda obj: 'object <{}>'.format(obj.__class__.__name__
                                                                   .replace('__XNODE_GENERATED__', '')),
                                  data_fn=_generate_data_instance)
 

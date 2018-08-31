@@ -15,11 +15,12 @@ myNone = None
 
 myList = [1, 2.3, False, "hello", None, [10, 11, ["This", "is", "the", "end"]]]
 myList[0] = 100
-myDict = {"key1": "value1", "key2": "value2"}
+myDict = {"key1": "value1", "key2": "value2", 10: myList}
 myTensor1 = (torch.rand(15,20) - 0.5) * 10
 myTensor2 = torch.rand(6,7) - 0.5
 myTensor3 = (torch.randn(100, 100))
 
+myClass = Variable
 myVGGInput = Variable(torch.ones(1, 3, 32, 32))
 myVGG = vgg16()
 myVGGOutput = myVGG(myVGGInput)

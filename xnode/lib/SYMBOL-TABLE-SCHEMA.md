@@ -132,7 +132,7 @@ Note the redundancy. TODO: Can we remove it?
 }
 ```
 
-#### instance
+#### object
 ```
 "str": "object<MyAwesomeClass>",
 "data": {
@@ -142,7 +142,7 @@ Note the redundancy. TODO: Can we remove it?
 }
 ```
 
-#### function
+#### fn
 ```
 "str": "function<foo>",
 "data": {

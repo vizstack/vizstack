@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import KeyValueViz from '../viz/KeyValueViz';
+import { isAnySymbolId } from '../../services/symbol-utils';
 
 
 /**
@@ -15,7 +16,7 @@ class KeyValueViewer extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
-        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "list/tuple/set". */
+        /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "dict/class/module/object". */
         data: PropTypes.object,
 
         /** Reference to the application symbol table. */
@@ -40,49 +41,60 @@ class KeyValueViewer extends Component {
     }
 
     /**
-     * Renders a SequenceViz after making the appropriate data transformations.
+     * Builds the data model for a key or value in the KeyValueViz.
+     * @param {*} elem
+     *      The string value of the key or value, either a symbol ID or a primitive value.
+     * @param {string} idx
+     *      The index of the element.
+     * @returns {object}
+     *      The data model for the key or value.
+     */
+    buildTokenModel(elem, idx) {
+        const { symbolTable, expandSubviewer } = this.props;
+        const { hoveredIdx, selectedIdx } = this.state;
+        if (isAnySymbolId(elem)) {
+            return {
+                text: symbolTable[elem].str,
+                isHovered: idx === hoveredIdx,
+                isSelected: idx === selectedIdx,
+                onClick: () => this.setState({selectedIdx: idx}),
+                onDoubleClick: () => expandSubviewer(elem),
+                onMouseEnter: () => this.setState({hoveredIdx: idx}),
+                onMouseLeave: () => this.setState({hoveredIdx: null}),
+            }
+        }
+        else {
+            return {
+                text: elem,
+                isHovered: false,
+                isSelected: false,
+            }
+        }
+    }
+
+    /**
+     * Renders a KeyValueViz after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      * TODO: Rather than recreating separate list elements viz, refactor so that list displays the compact form of
      *     real viewers. (This also allows factoring out the "dispatch on element type" logic.)
      */
     render() {
-        const { symbolTable, expandSubviewer, data } = this.props;
+        const { data } = this.props;
         if (!data) return null;  // Empty component if no data yet
-        const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
-        const model = Object.entries(contents).map(([key, value], entryIdx) => {
-            const idx = entryIdx * 2;
-            return [
-                {
-                    text: symbolTable[key].str,
-                    isHovered: idx === hoveredIdx,
-                    isSelected: idx === selectedIdx,
-                    onClick: () => this.setState({selectedIdx: idx}),
-                    onDoubleClick: () => expandSubviewer(key),
-                    onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                    onMouseLeave: () => this.setState({hoveredIdx: null}),
-                },
-                {
-                    text: symbolTable[value].str,
-                    isHovered: idx + 1 === hoveredIdx,
-                    isSelected: idx + 1 === selectedIdx,
-                    onClick: () => this.setState({selectedIdx: idx + 1}),
-                    onDoubleClick: () => expandSubviewer(value),
-                    onMouseEnter: () => this.setState({hoveredIdx: idx + 1}),
-                    onMouseLeave: () => this.setState({hoveredIdx: null}),
-                },
-            ];
+        const model = Object.entries(contents).map(([k, v], idx) => {
+            return [this.buildTokenModel(k, `k${idx}`), this.buildTokenModel(v, `v${idx}`)];
         });
 
         return (
             <KeyValueViz model={model}
-                         startMotif={"{"}
-                         endMotif={"}"}
-                         keyMaxWidth={75}
-                         keyMinWidth={75}
-                         valueMaxWidth={75}
-                         valueMinWidth={75} />
+                        startMotif="{"
+                        endMotif="}"
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75} />
         );
     }
 }

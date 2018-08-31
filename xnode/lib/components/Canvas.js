@@ -25,20 +25,21 @@ import PrintViewerIcon from '@material-ui/icons/Print';
 // Custom data type viewers
 import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
-import KeyValueViewer from './viewers/KeyValueViewer';
 import FunctionViewer from './viewers/FunctionViewer';
-import GraphViewer from './viewers/GraphViewer';
-import GraphDataViewer from './viewers/GraphViewer/GraphDataViewer';
-import GraphOpViewer from './viewers/GraphViewer/GraphOpViewer';
+import ClassViewer from './viewers/ClassViewer';
 // import TensorViewer from './viewers/TensorViewer';
-// import GraphViewer, { assembleGraphModel }  from './viewers/GraphViewer';
 import SequenceViewer from './viewers/SequenceViewer';
+import KeyValueViewer from './viewers/KeyValueViewer';
+import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphViewer';
+// import TensorViewer from './viewers/TensorViewer';
 
 // Custom Redux actions
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
     removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
+
+// Miscellaneous utils
 import { ViewerTypes } from "../state/canvas/constants";
-import {isSnapshotSymbolId, snapshotToLiveSymbolId} from '../services/symbol-utils';
+import { isSnapshotSymbolId, snapshotToLiveSymbolId } from '../services/symbol-utils';
 
 
 /** Component to display when loading data */
@@ -144,18 +145,18 @@ class Canvas extends Component {
                                         expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'dict':
-            case 'instance':
+            case 'object':
             case 'module':
                 return (<KeyValueViewer data={data} symbolTable={symbolTable}
                                         expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
-                // TODO: return <TensorViewer/>;
+                // TODO: return <TensorViewer />;
                 return null;
 
             case 'class':
-                // TODO: return <ClassViewer/>;
-                return null;
+                return (<ClassViewer data={data} symbolTable={symbolTable}
+                                     expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'fn':
                 return (<FunctionViewer data={data} symbolTable={symbolTable}
@@ -170,6 +171,7 @@ class Canvas extends Component {
                         <GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}
                                      expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>
                     </div>);
+
             case 'graphop':
                 return (<GraphOpViewer data={data} symbolTable={symbolTable}
                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
