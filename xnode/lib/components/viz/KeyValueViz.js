@@ -51,7 +51,6 @@ class KeyValueViz extends Component {
     static defaultProps = {
         startMotif: "",
         endMotif: "",
-        itemHeight: 30, // TODO: Match with text size
     };
 
     /**
@@ -74,6 +73,7 @@ class KeyValueViz extends Component {
                               minHeight={itemHeight}
                               maxHeight={itemHeight}
                               shouldTextWrap={false}
+                              shouldTextEllipsis={true}
                               isHovered={isHovered}
                               isSelected={isSelected}
                               onClick={onClick}
@@ -93,6 +93,7 @@ class KeyValueViz extends Component {
                               minHeight={itemHeight}
                               maxHeight={itemHeight}
                               shouldTextWrap={false}
+                              shouldTextEllipsis={true}
                               isHovered={isHovered}
                               isSelected={isSelected}
                               onClick={onClick}

@@ -51,7 +51,6 @@ class SequenceViz extends Component {
         showIndices: true,
         startMotif: "",
         endMotif: "",
-        itemHeight: 30, // TODO: Match with text size
     };
 
     /**
@@ -62,35 +61,44 @@ class SequenceViz extends Component {
         const { classes, model, showIndices, startMotif, endMotif,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
 
-        const listItems = model.map((elem, idx) => {
+        const items = model.map((elem) => {
             const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = elem;
             return (
-                <div key={idx} className={classes.item}>
-                    <TokenViz model={text}
-                              minWidth={itemMinWidth}
-                              maxWidth={itemMaxWidth}
-                              minHeight={itemHeight}
-                              maxHeight={itemHeight}
-                              shouldTextWrap={false}
-                              isHovered={isHovered}
-                              isSelected={isSelected}
-                              onClick={onClick}
-                              onDoubleClick={onDoubleClick}
-                              onMouseEnter={onMouseEnter}
-                              onMouseLeave={onMouseLeave}/>
-                    {showIndices ? <span className={classes.indexText}>{idx}</span> : null}
-                </div>
+                <TokenViz model={text}
+                          minWidth={itemMinWidth}
+                          maxWidth={itemMaxWidth}
+                          minHeight={itemHeight}
+                          maxHeight={itemHeight}
+                          shouldTextWrap={false}
+                          shouldTextEllipsis={true}
+                          isHovered={isHovered}
+                          isSelected={isSelected}
+                          onClick={onClick}
+                          onDoubleClick={onDoubleClick}
+                          onMouseEnter={onMouseEnter}
+                          onMouseLeave={onMouseLeave}/>
             );
         });
 
-        const motifStyle = { height: itemHeight };
+        const idxs = items.map((_, idx) => {
+            return showIndices ? <span className={classes.indexText}>{idx}</span> : null;
+        });
 
         return (
-            <div className={classes.listBox}>
-                <div className={classes.motifText} style={motifStyle} key="startMotif">{startMotif}</div>
-                {listItems}
-                <div className={classes.motifText} style={motifStyle} key="endMotif">{endMotif}</div>
-            </div>
+            <table className={classes.grid}>
+                <tbody>
+                    <tr>
+                        <td><span className={classes.motifText}>{startMotif}</span></td>
+                        {items.map((item, i) => <td key={i}>{item}</td>)}
+                        <td><span className={classes.motifText}>{endMotif}</span></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        {idxs.map((idx, i) => <td key={i}>{idx}</td>)}
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
         );
     }
 }
@@ -102,27 +110,18 @@ class SequenceViz extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    listBox: {
-        display:        'inline-flex',
-        flexDirection:  'row',
-        flexWrap:       'nowrap',
-    },
-    item: {
-        marginLeft:     2,  // TODO: Dehardcode this
-        marginRight:    2,  // TODO: Dehardcode this
-
-        // Layout child components vertically
-        display:        'flex',
-        flexDirection:  'column',
+    grid: {
+        "& td": {
+            paddingLeft:     2,  // TODO: Dehardcode this
+            paddingRight:    2,  // TODO: Dehardcode this
+            textAlign:      'center',
+            verticalAlign:  'middle',
+        }
     },
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,
-        fontSize:       '14pt',  // TODO: Dehardcode this
-
-        // Vertically center text
-        display:        'flex',
-        flexDirection:  'column',
-        justifyContent: 'center',
+        fontSize:       '14pt',  // TODO: Dehardcode this, same as TokenViz.tokenText
+        verticalAlign:  '25%',  // Offset baseline for middle alignment
 
         // No text selection
         userSelect:     'none',

@@ -29,6 +29,13 @@ class StringViewer extends Component {
         };
     }
 
+    /** Return a beautified version of char (e.g. for non-printables) */
+    processChar(char) {
+        const code = char.charCodeAt(0);
+        if(33 <= code && code <= 126) return char;
+        return `\\x${code.toString(16)}`;  // Print hex representation
+    }
+
     /**
      * Renders a SequenceViz after making the appropriate data transformations.
      */
@@ -38,7 +45,7 @@ class StringViewer extends Component {
         const { hoveredIdx, selectedIdx } = this.state;
         const { contents } = data;
         const model = contents.split("").map((char, idx) => ({
-            text: char,
+            text: this.processChar(char),
             isHovered: idx === hoveredIdx,
             isSelected: idx === selectedIdx,
             onClick: () => this.setState({selectedIdx: idx}),
@@ -50,8 +57,7 @@ class StringViewer extends Component {
             <SequenceViz model={model}
                          startMotif='"'
                          endMotif='"'
-                         itemMinWidth={20}
-                         itemMaxWidth={20} />
+                         itemMinWidth={20} />
         );
     }
 }

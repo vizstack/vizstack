@@ -101,8 +101,8 @@ class ClassViewer extends Component {
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Static Fields</Typography>
                     <KeyValueViz model={fieldsModel}
-                                 startMotif={"{"}
-                                 endMotif={"}"}
+                                 startMotif="{"
+                                 endMotif="}"
                                  keyMaxWidth={75}
                                  keyMinWidth={75}
                                  valueMaxWidth={75}
@@ -111,8 +111,8 @@ class ClassViewer extends Component {
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Functions</Typography>
                     <KeyValueViz model={functionsModel}
-                                 startMotif={"{"}
-                                 endMotif={"}"}
+                                 startMotif="{"
+                                 endMotif="}"
                                  keyMaxWidth={75}
                                  keyMinWidth={75}
                                  valueMaxWidth={75}

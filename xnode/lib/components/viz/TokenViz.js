@@ -33,6 +33,9 @@ class TokenViz extends Component {
         /** Whether text should wrap if it exceeds token width. */
         shouldTextWrap: PropTypes.bool,
 
+        /** Whether text should display ellipsis if too long. */
+        shouldTextEllipsis: PropTypes.bool,
+
         /** Token interaction state. */
         isHovered: PropTypes.bool,
         isSelected: PropTypes.bool,
@@ -47,6 +50,7 @@ class TokenViz extends Component {
     /** Prop default values object. */
     static defaultProps = {
         shouldTextWrap: false,
+        shouldTextEllipsis: false,
         isHovered: false,
         isSelected: false,
     };
@@ -55,7 +59,7 @@ class TokenViz extends Component {
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, model, minWidth, minHeight, maxWidth, maxHeight, shouldTextWrap,
+        const { classes, model, minWidth, minHeight, maxWidth, maxHeight, shouldTextWrap, shouldTextEllipsis,
             isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
 
         // Construct style dict
@@ -78,9 +82,10 @@ class TokenViz extends Component {
                  onMouseEnter={onMouseEnter}
                  onMouseLeave={onMouseLeave}>
                 <Typography className={classNames({
-                    [classes.tokenText]:  true,
-                    [classes.textWrap]:   shouldTextWrap,
-                    [classes.textNoWrap]: !shouldTextWrap,
+                    [classes.tokenText]:    true,
+                    [classes.textWrap]:     shouldTextWrap,
+                    [classes.textNoWrap]:   !shouldTextWrap,
+                    [classes.textEllipsis]: shouldTextEllipsis,
                 })}>{model}</Typography>
             </div>
         );
@@ -95,16 +100,20 @@ class TokenViz extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     tokenBox: {
-        // Set shape properties
-        background:     '#4d78cc',  // TODO: Dehardcode this, allow conditional coloring
+        // Base shape properties
+        background:     '#31363f',  // TODO: Dehardcode this, allow conditional coloring
+
+        // Border for highlighting
+        borderRadius:   theme.shape.borderRadius.regular,
         borderColor:    'transparent',
         borderStyle:    'solid',
-        borderWidth:    2,  // TODO: Dehardcode this
-        borderRadius:   theme.shape.borderRadius.small,
+        borderWidth:    1,  // TODO: Dehardcode this
 
         // Content padding
-        paddingLeft:    2,  // TODO: Dehardcode this
-        paddingRight:   2,  // TODO: Dehardcode this
+        paddingLeft:    4,  // TODO: Dehardcode this
+        paddingRight:   4,  // TODO: Dehardcode this
+        paddingTop:     2,  // TODO: Dehardcode this
+        paddingBottom:  2,  // TODO: Dehardcode this
 
         // Vertically center text
         display:        'inline-flex',
@@ -127,17 +136,19 @@ const styles = theme => ({
     },
     tokenText: {
         textAlign:      'center',
-        textOverflow:   'ellipsis',
         overflow:       'hidden',
         fontFamily:     theme.typography.monospace.fontFamily,
         fontSize:       '10pt',  // TODO: Dehardcode this
-        color:          '#fff', // TODO: Dehardcode this
+        color:          '#d7dae0', // TODO: Dehardcode this
     },
     textWrap: {
         wordBreak:      'break-all',
     },
     textNoWrap: {
         whiteSpace:     'nowrap',
+    },
+    textEllipsis: {
+        textOverflow:   'ellipsis',
     }
 });
 
