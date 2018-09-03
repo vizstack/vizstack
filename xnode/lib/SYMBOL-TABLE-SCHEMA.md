@@ -154,6 +154,8 @@ Note the redundancy. TODO: Can we remove it?
 ```
 
 #### tensor
+TODO: Handle different precision data for contents.
+TODO: Need max and min for visualization purposes.
 ```
 "str": "tensor[3,2,1].float32",
 "data": {

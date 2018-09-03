@@ -114,6 +114,8 @@ const styles = theme => ({
         "& td": {
             paddingLeft:     2,  // TODO: Dehardcode this
             paddingRight:    2,  // TODO: Dehardcode this
+            paddingTop:     2,  // TODO: Dehardcode this
+            paddingBottom:    2,  // TODO: Dehardcode this
             textAlign:      'center',
             verticalAlign:  'middle',
         }

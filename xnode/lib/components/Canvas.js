@@ -27,11 +27,10 @@ import PrimitiveViewer from './viewers/PrimitiveViewer';
 import StringViewer from './viewers/StringViewer';
 import FunctionViewer from './viewers/FunctionViewer';
 import ClassViewer from './viewers/ClassViewer';
-// import TensorViewer from './viewers/TensorViewer';
+import TensorViewer from './viewers/TensorViewer';
 import SequenceViewer from './viewers/SequenceViewer';
 import KeyValueViewer from './viewers/KeyValueViewer';
 import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphViewer';
-// import TensorViewer from './viewers/TensorViewer';
 
 // Custom Redux actions
 import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
@@ -151,7 +150,7 @@ class Canvas extends Component {
                                         expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
-                // TODO: return <TensorViewer />;
+                return <TensorViewer data={data}/>;
                 return null;
 
             case 'class':
