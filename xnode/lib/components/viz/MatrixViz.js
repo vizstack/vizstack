@@ -9,8 +9,7 @@ import { createSelector } from 'reselect';
 import TokenViz from './TokenViz';
 
 /**
- * This dumb component renders visualization for a 1D sequence of elements.
- * TODO: Allow multi-line wrapping elements.
+ * This dumb component renders visualization for a 2D matrix of elements.
  * TODO: Allow element-type-specific background coloring.
  */
 class SequenceViz extends Component {
@@ -20,25 +19,24 @@ class SequenceViz extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viz. */
+        /** Data model rendered by this viz: 2D array of elements. */
         model: PropTypes.arrayOf(
-            PropTypes.shape({
-                text:           PropTypes.string.isRequired,
-                isHovered:      PropTypes.bool,
-                isSelected:     PropTypes.bool,
-                onClick:        PropTypes.func,
-                onDoubleClick:  PropTypes.func,
-                onMouseEnter:   PropTypes.func,
-                onMouseLeave:   PropTypes.func,
-            })
+            PropTypes.arrayOf(
+                PropTypes.shape({
+                    text:           PropTypes.string.isRequired,
+                    isHovered:      PropTypes.bool,
+                    isSelected:     PropTypes.bool,
+                    onClick:        PropTypes.func,
+                    onDoubleClick:  PropTypes.func,
+                    onMouseEnter:   PropTypes.func,
+                    onMouseLeave:   PropTypes.func,
+                })
+            )
         ),
 
         /** Whether to display element index labels. */
-        showIndices: PropTypes.bool,
-
-        /** Characters to place at start/end of sequence as decoration, e.g. "{" and "}" for sets. */
-        startMotif: PropTypes.string,
-        endMotif:   PropTypes.string,
+        showHorizontalIndices: PropTypes.bool,
+        showVerticalIndices:   PropTypes.bool,
 
         /** Individual list item dimension constraints (in px or '%'). */
         itemMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
@@ -48,20 +46,18 @@ class SequenceViz extends Component {
 
     /** Prop default values object. */
     static defaultProps = {
-        showIndices: true,
-        startMotif: "",
-        endMotif: "",
+        showHorizontalIndices: true,
+        showVerticalIndices: true,
     };
 
     /**
-     * Renders a sequence of TokenViz elements, optionally numbered with indices. The sequence can have start/end
-     * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
+     * Renders a matrix of TokenViz elements, optionally with the left/bottom edges numbered with indices.
      */
     render() {
-        const { classes, model, showIndices, startMotif, endMotif,
+        const { classes, model, showHorizontalIndices, showVerticalIndices,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
 
-        const items = model.map((elem) => {
+        const items = model.map((arr) => arr.map((elem) => {
             const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = elem;
             return (
                 <TokenViz model={text}
@@ -78,24 +74,28 @@ class SequenceViz extends Component {
                           onMouseEnter={onMouseEnter}
                           onMouseLeave={onMouseLeave}/>
             );
+        }));
+
+        const vidxs = items.map((_, idx) => {
+            return showVerticalIndices ? <span className={classes.indexText}>{idx}</span> : null;
         });
 
-        const idxs = items.map((_, idx) => {
-            return showIndices ? <span className={classes.indexText}>{idx}</span> : null;
+        const hidxs = items[0].map((_, idx) => {
+            return showHorizontalIndices ? <span className={classes.indexText}>{idx}</span> : null;
         });
 
         return (
             <table className={classes.grid}>
                 <tbody>
+                    {items.map((arr, i) => (
+                        <tr key={i}>
+                            <td>{vidxs[i]}</td>
+                            {arr.map((item, i) => <td key={i}>{item}</td>)}
+                        </tr>
+                    ))}
                     <tr>
-                        <td><span className={classes.motifText}>{startMotif}</span></td>
-                        {items.map((item, i) => <td key={i}>{item}</td>)}
-                        <td><span className={classes.motifText}>{endMotif}</span></td>
-                    </tr>
-                    <tr>
-                        <td>{/* start motif */}</td>
-                        {idxs.map((idx, i) => <td key={i}>{idx}</td>)}
-                        <td>{/* end motif */}</td>
+                        <td>{/* vertical idx */}</td>
+                        {hidxs.map((idx, i) => <td key={i}>{idx}</td>)}
                     </tr>
                 </tbody>
             </table>
@@ -117,15 +117,6 @@ const styles = theme => ({
             textAlign:      'center',
             verticalAlign:  'middle',
         }
-    },
-    motifText: {
-        fontFamily:     theme.typography.monospace.fontFamily,
-        fontSize:       '14pt',  // TODO: Dehardcode this, same as TokenViz.tokenText
-        verticalAlign:  '25%',  // Offset baseline for middle alignment
-
-        // No text selection
-        userSelect:     'none',
-        cursor:         'default',
     },
     indexText: {
         textAlign:      'center',
