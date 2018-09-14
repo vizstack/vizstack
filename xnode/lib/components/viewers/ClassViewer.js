@@ -10,8 +10,6 @@ import KeyValueViz from '../viz/KeyValueViz';
 
 import Typography from '@material-ui/core/Typography';
 
-import { isAnySymbolId } from '../../services/symbol-utils';
-
 
 /**
  * This dumb component renders a viewer for a class, showing its static values and functions.
@@ -60,7 +58,7 @@ class ClassViewer extends Component {
     buildTokenModel(elem, idx) {
         const { symbolTable, expandSubviewer } = this.props;
         const { hoveredIdx, selectedIdx } = this.state;
-        if (isAnySymbolId(elem)) {
+        if (elem in symbolTable) {
             return {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,

@@ -20,41 +20,21 @@ export function clearCanvasAction() {
 }
 
 /**
- * Action creator to add a snapshot viewer to the Canvas for the symbol with the given `snapshotSymbolId`. For a given
- * symbol, there may be many snapshots of it (each at a different point in time).
+ * Action creator to add a snapshot viewer to the Canvas for the symbol with the given `symbolId`. For a given
+ * object, there may be many snapshots of it; each at a different point in time, and each with a different `symbolId`.
  *
- * @param {string} snapshotSymbolId
- *     Symbol ID (with snapshot formatting) for backing symbol of this viewer.
- * @param {int} (optional) insertAfter
+ * @param {string} symbolId
+ *     Symbol ID for backing symbol of this viewer.
+ * @param {int} insertAfter
  *     Viewer ID of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addSnapshotViewerAction(snapshotSymbolId, insertAfter = -1) {
+export function addSnapshotViewerAction(symbolId, insertAfter = -1) {
     return {
         type: CanvasActions.ADD_VIEWER,
         viewerObj: {
             type: ViewerTypes.SNAPSHOT,
-            symbolId: snapshotSymbolId
-        },
-        insertAfter,
-    };
-}
-
-/**
- * Action creator to add a live viewer to the Canvas for the symbol with the given `liveSymbolId`. For a given
- * symbol, there may be many live inspections of it.
- *
- * @param {string} liveSymbolId
- *     Symbol ID (with live formatting) for backing symbol of this viewer.
- * @param {int} (optional) insertAfter
- * @returns {object}
- */
-export function addLiveViewerAction(liveSymbolId, insertAfter = -1) {
-    return {
-        type: CanvasActions.ADD_VIEWER,
-        viewerObj: {
-            type: ViewerTypes.LIVE,
-            symbolId: liveSymbolId
+            symbolId,
         },
         insertAfter,
     };
@@ -66,7 +46,7 @@ export function addLiveViewerAction(liveSymbolId, insertAfter = -1) {
  *
  * @param {string} text
  *     The text string to print.
- * @param {int} (optional) insertAfter
+ * @param {int} insertAfter
  * @returns {object}
  */
 export function addPrintViewerAction(text, insertAfter = -1) {
@@ -74,7 +54,7 @@ export function addPrintViewerAction(text, insertAfter = -1) {
         type: CanvasActions.ADD_VIEWER,
         viewerObj: {
             type: ViewerTypes.PRINT,
-            text: text
+            text,
         },
         insertAfter,
     };

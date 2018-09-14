@@ -5,7 +5,6 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import KeyValueViz from '../viz/KeyValueViz';
-import { isAnySymbolId } from '../../services/symbol-utils';
 
 
 /**
@@ -52,7 +51,7 @@ class KeyValueViewer extends Component {
     buildTokenModel(elem, idx) {
         const { symbolTable, expandSubviewer } = this.props;
         const { hoveredIdx, selectedIdx } = this.state;
-        if (isAnySymbolId(elem)) {
+        if (elem in symbolTable) {
             return {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,

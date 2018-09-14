@@ -81,7 +81,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         # Send a message to refresh the client's symbol table
         # TODO: is this even necessary? maybe the client can do this itself.
-        self._prepare_and_send_message(None, None, None, True, -1, None)
+        self._prepare_and_send_message(None, None, True, -1, None)
         self._runscript(_ScriptExecutor._normalize_path(script_path))
 
     def fetch_symbol_data(self, symbol_id, actions):
@@ -97,7 +97,7 @@ class _ScriptExecutor(pdb.Pdb):
             actions (dict): A dict describing the actions to be performed on the fetched symbol, of format described
                 in `ACTION-SCHEMA.md`.
         """
-        self._prepare_and_send_message(symbol_id, None, None, False, -1, actions)
+        self._prepare_and_send_message(symbol_id, None, False, -1, actions)
 
     # ==================================================================================================================
     # Message creation and sending.
@@ -105,14 +105,12 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _prepare_and_send_message(self, symbol_id, symbol_name, view_symbol_id, refresh, watch_id, actions):
+    def _prepare_and_send_message(self, symbol_id, view_symbol_id, refresh, watch_id, actions):
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
             symbol_id (str or None): The symbol whose shell, data object, and references should be included in the sent
                 slice.
-            symbol_name (str or None): A string name given to `view_symbol_id` in the namespace, or `None` if
-                there is no `view_symbol_id` or the symbol has no name.
             view_symbol_id (str or None): A symbol ID that the client should view upon receiving the message, or `None`
                 if no symbol should be viewed.
             refresh (bool): Whether the client should reset its symbol table information before incorporating the new
@@ -124,29 +122,11 @@ class _ScriptExecutor(pdb.Pdb):
         """
         symbol_slice = None
         if symbol_id:
-            symbol_slice = self._get_symbol_slice(symbol_id, symbol_name)
+            symbol_slice = self._viz_engine.get_snapshot_slice(symbol_id)
             if actions:
+                # Adds any symbols referenced in certain fields of the symbol's data object to the returned slice
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
         self._send_message(symbol_slice, view_symbol_id, refresh, watch_id, None, None)
-
-    def _get_symbol_slice(self, symbol_id, symbol_name):
-        """Generates the minimal symbol table slice containing the filled shell of `symbol_id`.
-
-        Args:
-            symbol_id (str): A symbol ID whose minimal slice should be generated.
-            symbol_name (str or None): A string name assigned to the symbol in the namespace, or `None` if no name is
-                assigned.
-
-        Returns:
-            (dict): The symbol table slice containing the shell and data for `symbol_id` as well as the shells of all
-                referenced symbols.
-        """
-        shell = self._viz_engine.get_symbol_shell(symbol_id, symbol_name)
-        data, attributes, refs = self._viz_engine.get_symbol_data(symbol_id)
-        refs.update({symbol_id: shell})
-        refs[symbol_id]['data'] = data
-        refs[symbol_id]['attributes'] = attributes
-        return refs
 
     # Action: recursion.
     # ------------------
@@ -170,7 +150,7 @@ class _ScriptExecutor(pdb.Pdb):
         """
         for recurse_path in recurse_paths:
             pointing_to = self._follow_recurse_path(symbol_slice[symbol_id]['data'], recurse_path)
-            found_symbol_ids = self._find_symbol_ids(pointing_to, [])
+            found_symbol_ids = self._find_symbol_ids(pointing_to, set(symbol_slice.keys()), [])
             for found_symbol_id in found_symbol_ids:
                 self._add_and_recurse(found_symbol_id, symbol_slice, recurse_paths, added)
 
@@ -195,31 +175,32 @@ class _ScriptExecutor(pdb.Pdb):
                 break
         return pointing_to
 
-    def _find_symbol_ids(self, obj, found):
+    def _find_symbol_ids(self, obj, symbol_ids, found):
         """Finds all symbol IDs located at any level of depth in a given object.
 
         Operates recursively on all subitems if `obj` is a `list`, or over all values if `obj` is a `dict`.
 
         Args:
             obj (list or dict or str): The object to search for symbol ID strings.
+            symbol_ids (set): A set of strings containing all possible symbol IDs which might be found in `obj`.
             found (list): A list to be updated with any found symbol ID strings.
 
         Returns:
             (list): The list of all found symbol ID strings within `obj`.
         """
-        if self._viz_engine.is_symbol_id(obj):
+        if isinstance(obj, str) and obj in symbol_ids:
             # if pointing to a symbol id, add it
             found.append(obj)
 
         elif isinstance(obj, list):
             # if pointing to a list, recurse over its elements
             for item in obj:
-                self._find_symbol_ids(item, found)
+                self._find_symbol_ids(item, symbol_ids, found)
 
         elif isinstance(obj, dict):
             # if pointing to a dict, recurse over its values
             for value in obj.values():
-                self._find_symbol_ids(value, found)
+                self._find_symbol_ids(value, symbol_ids, found)
 
         return found
 
@@ -239,12 +220,11 @@ class _ScriptExecutor(pdb.Pdb):
         if symbol_id in added:
             return
         added.add(symbol_id)
-        data, attributes, refs = self._viz_engine.get_symbol_data(symbol_id)
-        for key, value in refs.items():
-            if key not in symbol_slice:
-                symbol_slice[key] = value
-        symbol_slice[symbol_id]['data'] = data
-        symbol_slice[symbol_id]['attributes'] = attributes
+        next_symbol_slice = self._viz_engine.get_snapshot_slice(symbol_id)
+        for next_symbol_id, next_symbol_shell in next_symbol_slice.items():
+            if next_symbol_id not in symbol_slice:
+                symbol_slice[next_symbol_id] = next_symbol_shell
+        symbol_slice[symbol_id]['data'] = next_symbol_slice[symbol_id]['data']
         self._action_recurse(symbol_id, symbol_slice, recurse_paths, added)
 
     # ==================================================================================================================
@@ -447,12 +427,9 @@ class _ScriptExecutor(pdb.Pdb):
             frame (object): A `Pdb` object encapsulating the script's current execution state.
             return_value (object): The return value of the function.
         """
-        # Some feature of Pytorch causes tensor operations to occur nested within many functions before the
-        # frame
-        # returns to its original position and the operation is finally evaluated. Thus, `user_return()` is
-        # called
-        # many times before the operation completes, so we must catch them all and step through them until
-        # the final
+        # Some feature of Pytorch causes tensor operations to occur nested within many functions before the frame
+        # returns to its original position and the operation is finally evaluated. Thus, `user_return()` is called
+        # many times before the operation completes, so we must catch them all and step through them until the final
         # one returns
         if not self._is_waiting_to_eval():
             # if there is no variable to evaluate, continue
@@ -487,8 +464,8 @@ class _ScriptExecutor(pdb.Pdb):
             frame (pdb.Frame): The program state frame in which the variable should be evaluated.
         """
         obj, symbol_name, watch_id, actions = self._eval(frame)
-        symbol_id = self._viz_engine.get_symbol_id(obj)
-        self._prepare_and_send_message(symbol_id, symbol_name, symbol_id, False, watch_id, actions)
+        symbol_id = self._viz_engine.take_snapshot(obj, name=symbol_name)
+        self._prepare_and_send_message(symbol_id, symbol_id, False, watch_id, actions)
 
     # ==================================================================================================================
     # Static helper methods.

@@ -139,6 +139,7 @@ Note the redundancy. TODO: Can we remove it?
     "contents": {
         "example_fn": "@id:12345",
     },
+    "builtin": false,
 }
 ```
 

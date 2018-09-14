@@ -2,7 +2,6 @@
 
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
-import { ViewerTypes } from './constants';
 
 /**
  * State slice structure for `canvas`:
@@ -13,10 +12,6 @@ import { ViewerTypes } from './constants';
  *             type: ViewerTypes.SNAPSHOT
  *             symbolId: "@id:12345!0!"
  *         },
- *         '33': {
- *             type: ViewerTypes.LIVE
- *             symbolId: "@id:12345"
- *         }
  *         '34': {
  *             type: ViewerTypes.PRINT
  *             text: "The quick brown fox ..."
@@ -71,7 +66,6 @@ function addViewerReducer(state, action) {
         return state;
     }
     const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem.i === insertAfter);
-    console.log(viewerObj);
     return (
         state
         .setIn(['viewerObjects', `${currentViewerId}`], viewerObj, {deep: true})

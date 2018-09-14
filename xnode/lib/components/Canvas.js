@@ -33,12 +33,11 @@ import KeyValueViewer from './viewers/KeyValueViewer';
 import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphViewer';
 
 // Custom Redux actions
-import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
+import { addSnapshotViewerAction, addPrintViewerAction,
     removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
 import { ViewerTypes } from "../state/canvas/constants";
-import { isSnapshotSymbolId, snapshotToLiveSymbolId } from '../services/symbol-utils';
 
 
 /** Component to display when loading data */
@@ -66,13 +65,12 @@ class Canvas extends Component {
         fetchSymbolData: PropTypes.func.isRequired,
 
         /**
-         * Creates a new snapshot/live viewer for the specified symbol. See `actions/canvas`.
+         * Creates a new snapshot viewer for the specified symbol. See `actions/canvas`.
          *
          * @param {string} symbolId
          * @param {int} position
          */
         addSnapshotViewer: PropTypes.func.isRequired,
-        addLiveViewer: PropTypes.func.isRequired,
 
         /**
          * Creates a new print viewer for the specified text. See `actions/canvas`.
@@ -119,13 +117,12 @@ class Canvas extends Component {
      * @param {string} symbolObj
      */
     createSymbolViewer(viewerId, symbolId, symbolObj) {
-        const { symbolTable, addLiveViewer, fetchSymbolData } = this.props;
+        const { symbolTable, addSnapshotViewer, fetchSymbolData } = this.props;
         const { type, str, name, attributes, data} = symbolObj;
 
-        const inspectAnySymbol = (symbolId, viewerId) => {
-            const liveSymbolId = isSnapshotSymbolId(symbolId) ? snapshotToLiveSymbolId(symbolId) : symbolId;
-            fetchSymbolData(liveSymbolId);
-            addLiveViewer(liveSymbolId, viewerId);
+        const inspectSymbol = (symbolId, viewerId) => {
+            fetchSymbolData(symbolId);
+            addSnapshotViewer(symbolId, viewerId);
         };
 
         switch(type) {
@@ -141,39 +138,38 @@ class Canvas extends Component {
             case 'tuple':
             case 'set':
                 return (<SequenceViewer data={data} symbolTable={symbolTable}
-                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+                                        expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'dict':
             case 'object':
             case 'module':
                 return (<KeyValueViewer data={data} symbolTable={symbolTable}
-                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+                                        expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
                 return <TensorViewer data={data}/>;
-                return null;
 
             case 'class':
                 return (<ClassViewer data={data} symbolTable={symbolTable}
-                                     expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'fn':
                 return (<FunctionViewer data={data} symbolTable={symbolTable}
-                                        expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+                                        expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'graphdata':
                 // TODO: figure out a more principled way of showing the graphdata's properties along with the graph
                 return (
                     <div>
                         <GraphDataViewer data={data} symbolTable={symbolTable}
-                                    expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>
+                                    expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
                         <GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}
-                                     expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>
+                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
                     </div>);
 
             case 'graphop':
                 return (<GraphOpViewer data={data} symbolTable={symbolTable}
-                                       expandSubviewer={(symbolId) => inspectAnySymbol(symbolId, viewerId)}/>);
+                                       expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             default:
                 console.warn(`Canvas -- unrecognized data type received; got ${type}`);
@@ -189,46 +185,28 @@ class Canvas extends Component {
      * @param {object} viewer
      */
     createViewer(viewer) {
-        const { fetchSymbolData, addLiveViewer, removeViewer } = this.props;
+        const { fetchSymbolData, addSnapshotViewer, removeViewer } = this.props;
         const { viewerId, viewerType } = viewer;
 
-        const inspectLiveSymbol = (liveSymbolId, viewerId) => {
-            fetchSymbolData(liveSymbolId);
-            addLiveViewer(liveSymbolId, viewerId);
+        const inspectSymbol = (symbolId, viewerId) => {
+            fetchSymbolData(symbolId);
+            addSnapshotViewer(symbolId, viewerId);
         };
 
         switch(viewerType) {
             case ViewerTypes.SNAPSHOT: {
-                const { symbolId: snapshotSymbolId, symbolObj } = viewer;
-                const liveSymbolId = snapshotToLiveSymbolId(snapshotSymbolId);
-                const title = !symbolObj ? kLoadingMsg : `[${symbolObj.type}]  ${symbolObj.name}`;
-                const buttons = [
-                    { title: 'Inspect', icon: <InspectIcon/>, onClick: () => inspectLiveSymbol(liveSymbolId, viewerId) },
-                    // TODO: Delete should also remove corresponding watch statement
-                    { title: 'Delete',  icon: <DeleteIcon/>,  onClick: () => removeViewer(viewerId) },
-                ];
-                const component = !symbolObj ? kLoadingSpinner :
-                    this.createSymbolViewer(viewerId, snapshotSymbolId, symbolObj);
-                return (
-                    <ViewerDisplayFrame icon={<SnapshotViewerIcon/>}
-                                        title={title}
-                                        buttons={buttons}>
-                        {component}
-                    </ViewerDisplayFrame>
-                );
-            }
-            case ViewerTypes.LIVE: {
-                const { symbolId: liveSymbolId, symbolObj } = viewer;
+                const { symbolId, symbolObj } = viewer;
                 const title = !symbolObj ? kLoadingMsg : (
                     symbolObj.name !== null ? `[${symbolObj.type}]  ${symbolObj.name}` : `[${symbolObj.type}]`
                 );
                 const buttons = [
-                    // TODO: Duplicate should also replicate the existing state of a live viewer
-                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectLiveSymbol(liveSymbolId, viewerId) },
+                    // TODO: decide which icons to use
+                    // TODO: Duplicate should also replicate the existing state of a snapshot viewer
+                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectSymbol(symbolId, viewerId) },
                     { title: 'Close',     icon: <CloseIcon/>,     onClick: () => removeViewer(viewerId) },
                 ];
                 const component = !symbolObj ? kLoadingSpinner :
-                    this.createSymbolViewer(viewerId, liveSymbolId, symbolObj);
+                    this.createSymbolViewer(viewerId, symbolId, symbolObj);
                 return (
                     <ViewerDisplayFrame icon={<LiveViewerIcon/>}
                                         title={title}
@@ -254,7 +232,7 @@ class Canvas extends Component {
 
 
             default:
-                console.warn(`Unrecognized viewer type recieved; got ${viewerType}`);
+                console.warn(`Unrecognized viewer type received; got ${viewerType}`);
                 return null;
         }
     }
@@ -317,7 +295,7 @@ const styles = theme => ({
  * Creates derived data structure for `viewers`: [
  *     {
  *         viewerId: "0",
- *         viewerType: ViewerTypes.SNAPSHOT/LIVE
+ *         viewerType: ViewerTypes.SNAPSHOT,
  *         symbolId: "@id:12345",
  *         symbolObj: {
  *             type: "number",
@@ -346,7 +324,6 @@ const viewersSelector = createSelector(
             const viewerType = viewerObj.type;
 
             switch(viewerType) {
-                case ViewerTypes.LIVE:
                 case ViewerTypes.SNAPSHOT:
                     const { symbolId } = viewerObj;
                     const symbolObj = symbolTable[symbolId];
@@ -383,7 +360,6 @@ function mapStateToProps(state, props) {
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
         addSnapshotViewer:    addSnapshotViewerAction,
-        addLiveViewer:        addLiveViewerAction,
         addPrintViewer:       addPrintViewerAction,
         removeViewer:         removeViewerAction,
         updateLayout:         updateLayoutAction,

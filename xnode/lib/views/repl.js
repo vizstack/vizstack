@@ -19,10 +19,8 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import { liveToSnapshotSymbolId, snapshotSymbolTableSlice } from '../services/symbol-utils';
 import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
-import { addSnapshotViewerAction, addLiveViewerAction, addPrintViewerAction,
-    clearCanvasAction } from '../state/canvas/actions';
+import { addSnapshotViewerAction, addPrintViewerAction, clearCanvasAction } from '../state/canvas/actions';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
@@ -271,18 +269,10 @@ export default class REPL {
             // TODO: should repl even know about freezing? or should the Python side instead?
             // Handle freezing of symbol slices and symbol IDs here, so the Redux store doesn't need to know about it
             if(symbols) {
-                if(watchId >= 0) {
-                    this.store.dispatch(addSymbolsAction(snapshotSymbolTableSlice(symbols, watchId)));
-                } else {
-                    this.store.dispatch(addSymbolsAction(symbols));
-                }
+                this.store.dispatch(addSymbolsAction(symbols));
             }
             if(viewSymbol !== null) {
-                if (watchId >= 0) {
-                    this.store.dispatch(addSnapshotViewerAction(liveToSnapshotSymbolId(viewSymbol, watchId)));
-                } else {
-                    this.store.dispatch(addLiveViewerAction(viewSymbol));
-                }
+                this.store.dispatch(addSnapshotViewerAction(viewSymbol));
             }
             if (text !== null) {
                 this.store.dispatch(addPrintViewerAction(text));
