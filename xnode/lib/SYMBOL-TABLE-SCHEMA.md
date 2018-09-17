@@ -13,7 +13,7 @@
          "type": "<TYPE>",
          "str": "<STR>",
          "name": "<NAME>" || null,
-         "attributes": {} || null,
+         "attributes": null,
          "data": {} || null,
      }
 }
@@ -26,6 +26,7 @@ See "Symbol IDs" and "Symbol Objects" sections for more details.
 - `"name"`: Maps to a name string `"<NAME>"` (if the symbol has one), e.g. `"myCoolVariable"`; else, `null`.
 - `"attributes"`: Maps to an attributes object containing details of Python attributes; or `null` if still unfilled. 
 (The names of attributes are what a call to `dir(symbolName)` returns.)  See "Attribute Objects" section for more details.
+**Because of performance implications (see issue #30), `"attributes"` is currently always `null`.**
 - `"data"`: Maps to a data object containing information for visualization; or `null` if still unfilled. See "Data 
 Objects" section for more details.
 
