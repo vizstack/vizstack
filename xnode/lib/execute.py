@@ -1,10 +1,16 @@
+import dataclasses
 import json
 import pdb
+import re
 import sys
 import traceback
-import re
+from multiprocessing import Queue
 from os.path import normpath, normcase
+from types import FrameType
+from typing import Callable, Mapping, MutableMapping, Sequence, MutableSequence, Union, Any, Optional, \
+    Tuple, MutableSet, Set
 
+from constants import SymbolId, SymbolSlice, SymbolData, JsonType, Actions, SymbolShell, WatchExpression
 from viz import VisualizationEngine
 
 
@@ -24,24 +30,28 @@ class _ScriptExecutor(pdb.Pdb):
             should be called to send a message containing execution state info and instructions to the client.
     """
 
-    def __init__(self, send_message, **kwargs):
+    def __init__(self,
+                 send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
+                                         Optional[str]], None],
+                 **kwargs) -> None:
         pdb.Pdb.__init__(self, **kwargs)
         # Converts Python objects to viz schema format.
-        self._viz_engine = VisualizationEngine()
+        self._viz_engine: VisualizationEngine = VisualizationEngine()
         # A function that is called when a message should be sent to the client.
-        self._send_message = send_message
+        self._send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
+                                      Optional[str]], None] = send_message
         # A mapping of (file_name, line_number) tuples to dictionaries that describe what actions should be performed
         # at which watched lines.
-        self._watch_actions = dict()
+        self._watch_actions: MutableMapping[Tuple[str, int], Actions] = dict()
         # A mapping of (file_name, line_number) tuples to unique numerical IDs, so that identity of watch statements
         # can be maintained even after statements are moved or added
-        self._watch_ids = dict()
+        self._watch_ids: MutableMapping[Tuple[str, int], int] = dict()
         # The name of a variable that should be evaluated once defined in the running program's stack frame.
-        self._var_to_eval = None
+        self._var_to_eval: Optional[str] = None
         # A dictionary describing the actions to be performed when the variable in `self._var_to_eval` is evaluated.
-        self._actions_on_eval = None
+        self._actions_on_eval: Optional[Actions] = None
         # The ID of the watch statement which is being evaluated when the variable in `self._var_to_eval` is evaluated.
-        self._watch_id_on_eval = None
+        self._watch_id_on_eval: Optional[int] = None
 
     # ==================================================================================================================
     # Public methods.
@@ -50,7 +60,11 @@ class _ScriptExecutor(pdb.Pdb):
     # the script's namespace.
     # ==================================================================================================================
 
-    def add_watch_expression(self, watch_id, file_path, lineno, actions):
+    def add_watch_expression(self,
+                             watch_id: int,
+                             file_path: str,
+                             lineno: int,
+                             actions: Actions) -> None:
         """Adds a watch expression to a particular line of code, causing any variable assigned in that line to be
         surfaced to the client.
 
@@ -59,18 +73,19 @@ class _ScriptExecutor(pdb.Pdb):
         No behavior will change if the watched line is not executed during the running of the main script.
 
         Args:
-            watch_id (int): A unique ID for this watch statement.
-            file_path (str): The absolute path to the file.
-            lineno (int): The line number of the variable assignment in that file.
-            actions (dict): A dict describing the actions to _execute at the watched line, of format described in
+            watch_id: A unique ID for this watch statement.
+            file_path: The absolute path to the file.
+            lineno: The line number of the variable assignment in that file.
+            actions: A dict describing the actions to _execute at the watched line, of format described in
                 `ACTION-SCHEMA.md`.
         """
-        file_path = _ScriptExecutor._normalize_path(file_path)
+        file_path: str = _ScriptExecutor._normalize_path(file_path)
         self.do_break('{}:{}'.format(file_path, lineno))
         self._watch_ids[(file_path, lineno)] = watch_id
         self._watch_actions[(file_path, lineno)] = actions
 
-    def execute(self, script_path):
+    def execute(self,
+                script_path: str) -> None:
         """Execute a script within the `_ScriptExecutor` instance, allowing its flow to be controlled by the instance.
 
         `_execute()` should be called only once per `_ScriptExecutor` instance, as its behavior is unknown after
@@ -84,7 +99,9 @@ class _ScriptExecutor(pdb.Pdb):
         self._prepare_and_send_message(None, None, True, -1, None)
         self._runscript(_ScriptExecutor._normalize_path(script_path))
 
-    def fetch_symbol_data(self, symbol_id, actions):
+    def fetch_symbol_data(self,
+                          symbol_id: SymbolId,
+                          actions: Actions) -> None:
         """Fetches a symbol slice containing the symbol with id `symbol_id` and sends it to the client.
 
         Typically called from the `run_script()` loop after the `_ScriptExecutor` has finished running the main
@@ -93,8 +110,8 @@ class _ScriptExecutor(pdb.Pdb):
         Also performs the actions described in `actions` on the fetched symbol.
 
         Args:
-            symbol_id (str): The symbol ID of the object to be fetched.
-            actions (dict): A dict describing the actions to be performed on the fetched symbol, of format described
+            symbol_id: The symbol ID of the object to be fetched.
+            actions: A dict describing the actions to be performed on the fetched symbol, of format described
                 in `ACTION-SCHEMA.md`.
         """
         self._prepare_and_send_message(symbol_id, None, False, -1, actions)
@@ -105,25 +122,28 @@ class _ScriptExecutor(pdb.Pdb):
     # Functions to generate and relay messages containing new symbol slices to be added to the symbol table.
     # ==================================================================================================================
 
-    def _prepare_and_send_message(self, symbol_id, view_symbol_id, refresh, watch_id, actions):
+    def _prepare_and_send_message(self,
+                                  symbol_id: Optional[SymbolId],
+                                  view_symbol_id: Optional[SymbolId],
+                                  refresh: bool,
+                                  watch_id: int,
+                                  actions: Optional[Actions]) -> None:
         """Creates and sends a message to the client containing new symbol table information.
 
         Args:
-            symbol_id (str or None): The symbol whose shell, data object, and references should be included in the sent
-                slice.
-            view_symbol_id (str or None): A symbol ID that the client should view upon receiving the message, or `None`
-                if no symbol should be viewed.
-            refresh (bool): Whether the client should reset its symbol table information before incorporating the new
-                slice.
-            watch_id (int): An integer unique to the watch statement whose information is being sent, or -1 if the
-                message is not associated with a watch statement.
-            actions (dict or None): A dict of actions to be performed on the given symbol slice before returning,
-                in the form described in `ACTION-SCHEMA.md`.
+            symbol_id: The symbol whose shell, data object, and references should be included in the sent slice.
+            view_symbol_id: A symbol ID that the client should view upon receiving the message, or `None` if no
+                symbol should be viewed.
+            refresh: Whether the client should reset its symbol table information before incorporating the new slice.
+            watch_id: An integer unique to the watch statement whose information is being sent, or -1 if the message
+                is not associated with a watch statement.
+            actions: A dict of actions to be performed on the given symbol slice before returning, in the form
+                described in `ACTION-SCHEMA.md`.
         """
-        symbol_slice = None
+        symbol_slice: Optional[SymbolSlice] = None
         if symbol_id:
-            symbol_slice = self._viz_engine.get_snapshot_slice(symbol_id)
-            if actions:
+            symbol_slice: SymbolSlice = self._viz_engine.get_snapshot_slice(symbol_id)
+            if actions is not None:
                 # Adds any symbols referenced in certain fields of the symbol's data object to the returned slice
                 self._action_recurse(symbol_id, symbol_slice, actions['recurse'], set())
         self._send_message(symbol_slice, view_symbol_id, refresh, watch_id, None, None)
@@ -131,7 +151,11 @@ class _ScriptExecutor(pdb.Pdb):
     # Action: recursion.
     # ------------------
 
-    def _action_recurse(self, symbol_id, symbol_slice, recurse_paths, added):
+    def _action_recurse(self,
+                        symbol_id: SymbolId,
+                        symbol_slice: SymbolSlice,
+                        recurse_paths: Sequence[Sequence[str]],
+                        added: MutableSet[SymbolId]) -> None:
         """Adds any symbols referenced at a particular path in a symbol's data object to `symbol_slice`,
         and continues doing so recursively for all symbols found this way.
 
@@ -141,29 +165,30 @@ class _ScriptExecutor(pdb.Pdb):
         Operates in-place on `symbol_slice`.
 
         Args:
-            symbol_id (str): The ID of the symbol whose data object should be examined.
-            symbol_slice (dict): The symbol table slice containing the data object of `symbol_id` and to which new
+            symbol_id: The ID of the symbol whose data object should be examined.
+            symbol_slice: The symbol table slice containing the data object of `symbol_id` and to which new
                 symbols should be added.
-            recurse_paths (list): A list of lists, where each sublist is a sequence of strings indicating a path to
+            recurse_paths: A list of lists, where each sublist is a sequence of strings indicating a path to
                 follow in the data object.
-            added (set): The set of all symbol IDs already added to the symbol table via this action.
+            added: The set of all symbol IDs already added to the symbol table via this action.
         """
         for recurse_path in recurse_paths:
-            pointing_to = self._follow_recurse_path(symbol_slice[symbol_id]['data'], recurse_path)
-            found_symbol_ids = self._find_symbol_ids(pointing_to, set(symbol_slice.keys()), [])
+            pointing_to: JsonType = self._follow_recurse_path(symbol_slice[symbol_id].data, recurse_path)
+            found_symbol_ids: Sequence[SymbolId] = self._find_symbol_ids(pointing_to, set(symbol_slice.keys()), [])
             for found_symbol_id in found_symbol_ids:
                 self._add_and_recurse(found_symbol_id, symbol_slice, recurse_paths, added)
 
-    def _follow_recurse_path(self, symbol_data, recurse_path):
+    def _follow_recurse_path(self,
+                             symbol_data: SymbolData,
+                             recurse_path: Sequence[str]) -> JsonType:
         """Returns the value found by following a particular sequence of keys in `symbol_data`.
 
         Args:
-            symbol_data (dict): A dict, possibly nested, to be explored along `recurse_path`.
-            recurse_path (list): A sequence of string keys to be followed within `symbol_data`.
+            symbol_data: A dict, possibly nested, to be explored along `recurse_path`.
+            recurse_path: A sequence of string keys to be followed within `symbol_data`.
 
         Returns:
-            (list or str or dict or None): The item found at the end of the path, or None if the path cannot be
-                followed.
+            The item found at the end of the path, or None if the path cannot be followed.
         """
         pointing_to = symbol_data
         assert pointing_to is not None
@@ -175,22 +200,25 @@ class _ScriptExecutor(pdb.Pdb):
                 break
         return pointing_to
 
-    def _find_symbol_ids(self, obj, symbol_ids, found):
+    def _find_symbol_ids(self,
+                         obj: JsonType,
+                         symbol_ids: Set[SymbolId],
+                         found: MutableSequence[SymbolId]) -> Sequence[SymbolId]:
         """Finds all symbol IDs located at any level of depth in a given object.
 
         Operates recursively on all subitems if `obj` is a `list`, or over all values if `obj` is a `dict`.
 
         Args:
-            obj (list or dict or str): The object to search for symbol ID strings.
-            symbol_ids (set): A set of strings containing all possible symbol IDs which might be found in `obj`.
-            found (list): A list to be updated with any found symbol ID strings.
+            obj: The object to search for symbol ID strings.
+            symbol_ids: A set of strings containing all possible symbol IDs which might be found in `obj`.
+            found: A list to be updated with any found symbol ID strings.
 
         Returns:
-            (list): The list of all found symbol ID strings within `obj`.
+            The list of all found symbol ID strings within `obj`.
         """
         if isinstance(obj, str) and obj in symbol_ids:
             # if pointing to a symbol id, add it
-            found.append(obj)
+            found.append(SymbolId(obj))
 
         elif isinstance(obj, list):
             # if pointing to a list, recurse over its elements
@@ -204,27 +232,28 @@ class _ScriptExecutor(pdb.Pdb):
 
         return found
 
-    def _add_and_recurse(self, symbol_id, symbol_slice, recurse_paths, added):
+    def _add_and_recurse(self,
+                         symbol_id: SymbolId,
+                         symbol_slice: SymbolSlice,
+                         recurse_paths: Sequence[Sequence[str]],
+                         added: MutableSet[SymbolId]) -> None:
         """Adds the data object and referenced symbol shells of a symbol to the given slice, then repeats for any
         symbols within the data object and pointed to by `recurse_paths`.
 
         Args:
-            symbol_id (str): The ID of the symbol whose data object should be added to `symbol_slice`.
-            symbol_slice (dict): The slice of the symbol table to which the new data object and shells should be added.
-            recurse_paths (list): See `_action_recurse()` for description.
-            added (set): See `_action_recurse()` for description.
-
-        Returns:
-
+            symbol_id: The ID of the symbol whose data object should be added to `symbol_slice`.
+            symbol_slice: The slice of the symbol table to which the new data object and shells should be added.
+            recurse_paths: See `_action_recurse()` for description.
+            added: See `_action_recurse()` for description.
         """
         if symbol_id in added:
             return
         added.add(symbol_id)
-        next_symbol_slice = self._viz_engine.get_snapshot_slice(symbol_id)
+        next_symbol_slice: SymbolSlice = self._viz_engine.get_snapshot_slice(symbol_id)
         for next_symbol_id, next_symbol_shell in next_symbol_slice.items():
             if next_symbol_id not in symbol_slice:
-                symbol_slice[next_symbol_id] = next_symbol_shell
-        symbol_slice[symbol_id]['data'] = next_symbol_slice[symbol_id]['data']
+                symbol_slice[next_symbol_id]: SymbolShell = next_symbol_shell
+        symbol_slice[symbol_id].data = next_symbol_slice[symbol_id].data
         self._action_recurse(symbol_id, symbol_slice, recurse_paths, added)
 
     # ==================================================================================================================
@@ -236,7 +265,8 @@ class _ScriptExecutor(pdb.Pdb):
     # Setup and execution.
     # --------------------
 
-    def _prepare_to_eval(self, assign_frame):
+    def _prepare_to_eval(self,
+                         assign_frame: FrameType) -> None:
         """Prepare to evaluate the variable being assigned to in `assign_frame` once it has been assigned.
 
         Since the variable is not actually assigned until the next step occurs, its value cannot be immediately
@@ -244,36 +274,37 @@ class _ScriptExecutor(pdb.Pdb):
         at which point the value of the variable is evaluated.
 
         Args:
-            assign_frame (Frame): A `Pdb` frame object describing the program's stack frame at a line where a
-                variable is being assigned.
+            assign_frame: A frame object describing the program's stack frame at a line where a variable is being
+                assigned.
         """
         self._watch_id_on_eval = self._watch_ids[self._get_file_lineno(assign_frame)]
         self._actions_on_eval = self._watch_actions[self._get_file_lineno(assign_frame)]
         self._var_to_eval = self._get_var_name_from_frame(assign_frame)
 
-    def _eval(self, eval_frame):
+    def _eval(self,
+              eval_frame: FrameType) -> (Any, str, int, Actions):
         """Evaluates the variable stored in `_prepare_to_eval()`, producing its Python object, variable name,
         and associated symbol request actions.
 
         Should be called only after `_prepare_to_eval()`.
 
         Args:
-            eval_frame (Frame): A `Pdb` frame object describing the program's stack frame at a line where a variable
-                should be evaluated.
+            eval_frame: A frame object describing the program's stack frame at a line where a variable should be
+                evaluated.
 
         Raises:
             ValueError: If the variable assigned to in `assign_frame` cannot be found in `eval_frame`,
                 or `prepare_to_eval()` was not called before `eval()`.
 
         Returns:
-            (object): The object that was assigned to the variable name in `assign_frame`.
-            (str): The name of the variable which references the object.
-            (int): An ID unique to the watch statement that was evaluated.
-            (dict): Symbol request actions the client has associated with the variable's evaluation.
+            The object that was assigned to the variable name in `assign_frame`.
+            The name of the variable which references the object.
+            An ID unique to the watch statement that was evaluated.
+            Symbol request actions the client has associated with the variable's evaluation.
         """
-        obj_name = self._var_to_eval
-        obj = None
-        obj_found = False
+        obj_name: str = self._var_to_eval
+        obj: Any = None
+        obj_found: bool = False
         if obj_name in eval_frame.f_locals:
             obj = eval_frame.f_locals[obj_name]
             obj_found = True
@@ -289,53 +320,53 @@ class _ScriptExecutor(pdb.Pdb):
     # State checking.
     # ---------------
 
-    def _is_waiting_to_eval(self):
+    def _is_waiting_to_eval(self) -> bool:
         """Returns `True` if `prepare_to_eval()` has been called since the last `eval()`.
 
         When hitting a breakpoint, the `_ScriptExecutor` must know if it should evaluate some variable at that
         breakpoint, which is indicated by the value of this function.
 
         Returns:
-            (bool): Whether the `_VariableEvaluator` has prepared to evaluate a variable, but has not evaluated it.
+            Whether the `_VariableEvaluator` has prepared to evaluate a variable, but has not evaluated it.
         """
         return self._var_to_eval is not None
 
-    def _can_eval(self, frame):
+    def _can_eval(self, frame: FrameType) -> bool:
         """Returns `True` if the given frame has a defined value for the variable stored in `prepare_to_eval()`.
 
         After hitting a watch expression and calling `prepare_to_eval()`, the `_ScriptExecutor` steps until it finds a
         frame that can be used to call `eval()`. This function only returns `True` on such frames.
 
         Args:
-            frame (Frame): A `Pdb` frame object describing the program's stack frame.
+            frame: A frame object describing the program's stack frame.
 
         Returns:
-            (bool): Whether `frame` has a definition for the variable assigned in `prepare_to_eval()`.
+            Whether `frame` has a definition for the variable assigned in `prepare_to_eval()`.
         """
         return self._var_to_eval in frame.f_locals or self._var_to_eval in frame.f_globals
 
     # Frame operations.
     # -----------------
 
-    def _get_var_name_from_frame(self, frame):
+    def _get_var_name_from_frame(self, frame: FrameType) -> str:
         """Gets the name of the variable being assigned to at the line being executed in the given frame.
 
         Currently can only handle lines where a single variable is assigned and is not deconstructed.
 
         Args:
-            frame (object): A `Pdb` frame object which contains the text of the current line being executed.
+            frame: A frame object which contains the text of the current line being executed.
 
         Raises:
             ValueError: If the line is anything but a single variable being assigned to some expression.
 
         Returns:
-            (str): The name of the variable assigned to in the line being executed in `frame`.
+            The name of the variable assigned to in the line being executed in `frame`.
         """
-        line_text = self._get_line_from_frame(frame).strip()
+        line_text: str = self._get_line_from_frame(frame).strip()
 
         # TODO: improve parser
-        has_hit_space = False
-        var_name = ''
+        has_hit_space: bool = False
+        var_name: str = ''
         for c in line_text:
             if c.isalpha() or c.isdigit():
                 if has_hit_space:
@@ -350,34 +381,34 @@ class _ScriptExecutor(pdb.Pdb):
                 raise ValueError
         raise ValueError
 
-    def _get_line_from_frame(self, frame):
+    def _get_line_from_frame(self, frame: FrameType) -> str:
         """Gets the text of the line being executed at the given frame.
 
         Args:
-            frame (object): A `Pdb` frame object that describes the program's stack frame.
+            frame: A frame object that describes the program's stack frame.
 
         Returns:
-            (str): The text of the line being executed at the top of `frame`.
+            The text of the line being executed at the top of `frame`.
         """
         self.current_stack, self.current_stack_index = self.get_stack(frame, None)
         frame, lineno = self.current_stack[self.current_stack_index]
         # TODO: don't use format_stack_entry, use a custom function instead to eliminate the split-join
-        stack_entry = self.format_stack_entry((frame, lineno))
+        stack_entry: str = self.format_stack_entry((frame, lineno))
         return ':'.join(stack_entry.split('():')[1:]).strip()
 
-    def _get_file_lineno(self, frame):
+    def _get_file_lineno(self, frame: FrameType) -> (str, int):
         """Returns the number of the line being executed in the given frame, as well as the file that contains it.
 
         Args:
-            frame (Frame): A `Pdb` frame object that describes the program's stack frame.
+            frame: A `Pdb` frame object that describes the program's stack frame.
 
         Returns:
-            (string, int): The file and line number being executed.
+            The file and line number being executed.
         """
         self.current_stack, self.current_stack_index = self.get_stack(frame, None)
         frame, lineno = self.current_stack[self.current_stack_index]
         # TODO: don't use format_stack_entry, use a custom function instead to eliminate the split-join
-        stack_entry = self.format_stack_entry((frame, lineno))
+        stack_entry: str = self.format_stack_entry((frame, lineno))
         return _ScriptExecutor._normalize_path(stack_entry.split('(')[0]), int(stack_entry.split('(')[1].split(')')[0])
 
     # ==================================================================================================================
@@ -387,7 +418,7 @@ class _ScriptExecutor(pdb.Pdb):
     # logic at breakpoints.
     # ==================================================================================================================
 
-    def user_line(self, frame):
+    def user_line(self, frame: FrameType) -> None:
         """Called whenever a line of code is hit where program execution has stopped.
 
         Two behaviors, possibly both at once, are possible here. If there is a watch statement on the current line,
@@ -396,7 +427,7 @@ class _ScriptExecutor(pdb.Pdb):
         client.
 
         Args:
-            frame (object): A `Pdb` object encapsulating the program's current execution state.
+            frame: A frame object encapsulating the program's current execution state.
         """
         # check if the `_ScriptExecutor` is waiting to evaluate a variable
         if self._is_waiting_to_eval():
@@ -417,15 +448,17 @@ class _ScriptExecutor(pdb.Pdb):
                 # if no variable was found in the current line, continue
                 self.do_continue(frame)
 
-    def user_return(self, frame, return_value):
+    def user_return(self,
+                    frame: FrameType,
+                    return_value: Any):
         """Called whenever a function returns where the program execution has stopped.
 
         A watch statement cannot be set on a return, so we only need to check if a variable needs to be evaluated
         and, if so, evaluate it.
 
         Args:
-            frame (object): A `Pdb` object encapsulating the script's current execution state.
-            return_value (object): The return value of the function.
+            frame: A frame object encapsulating the script's current execution state.
+            return_value: The return value of the function.
         """
         # Some feature of Pytorch causes tensor operations to occur nested within many functions before the frame
         # returns to its original position and the operation is finally evaluated. Thus, `user_return()` is called
@@ -444,10 +477,10 @@ class _ScriptExecutor(pdb.Pdb):
 
     # `message` and `error` are called by `Pdb` to write to the respective streams. We block those messages so that
     # only object info will be sent to stdout, and thus read by the engine.
-    def message(self, msg):
+    def message(self, msg: str) -> None:
         pass
 
-    def error(self, msg):
+    def error(self, msg: str) -> None:
         pass
 
     # These are overrides that were included in `atom-python-debugger`; TODO: investigate their purpose.
@@ -457,14 +490,14 @@ class _ScriptExecutor(pdb.Pdb):
     def postcmd(self, stop, line):
         return stop
 
-    def _handle_break(self, frame):
+    def _handle_break(self, frame: FrameType) -> None:
         """Evaluates a watched variable, generates a symbol slice that contains it, and sends it to the client.
 
         Args:
-            frame (pdb.Frame): The program state frame in which the variable should be evaluated.
+            frame: The program state frame in which the variable should be evaluated.
         """
         obj, symbol_name, watch_id, actions = self._eval(frame)
-        symbol_id = self._viz_engine.take_snapshot(obj, name=symbol_name)
+        symbol_id: SymbolId = self._viz_engine.take_snapshot(obj, name=symbol_name)
         self._prepare_and_send_message(symbol_id, symbol_id, False, watch_id, actions)
 
     # ==================================================================================================================
@@ -474,57 +507,76 @@ class _ScriptExecutor(pdb.Pdb):
     # ==================================================================================================================
 
     @staticmethod
-    def _normalize_path(file_path):
+    def _normalize_path(file_path: str) -> str:
         """Normalizes a file path so it can be safely looked up in `self._watch_actions`.
 
         Args:
             file_path: A string file path.
 
         Returns:
-            (str): The normalized file path.
+            The normalized file path.
         """
         return normcase(normpath(file_path))
 
 
 class PrintOverwriter:
     """
-    An object to be used as a replacement for stdout, which uses a given function to "print" strings.
+    An object to be used as a replacement for stdout, which uses a given function to send printed strings to the client.
     """
-    def __init__(self, send_message):
-        self.send_message = send_message
+    def __init__(self, send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
+                                              Optional[str]], None]):
+        self.send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
+                                    Optional[str]], None] = send_message
 
-    def write(self, text):
+    def write(self, text: str) -> None:
         if text == '\n':
             return
         self.send_message(None, None, False, -1, '{}\n'.format(text), None)
 
-    def flush(self):
+    def flush(self) -> None:
         pass
 
 
-def _gen_send_message(send_queue):
+class DataclassJSONEncoder(json.JSONEncoder):
+    """
+    An extension of the default JSON encoder that allows data classes to be serialized, as is needed for sending
+    `SymbolShell`s to clients.
+    """
+    def default(self, o: Any):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
+
+
+def _gen_send_message(send_queue: Queue) -> Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int,
+                                                      Optional[str], Optional[str]], None]:
     """Generates a function which relays information about the program to clients in a standardized format.
 
     Args:
-        send_queue (multiprocessing.Queue): A queue to which all messages created by `_send_message()` are added.
+        send_queue: A queue to which all messages created by `_send_message()` are added.
 
     Returns:
-        (func): A function which relays information about the program to the client.
+        A function which relays information about the program to the client.
     """
-    def _send_message(symbol_slice, view_symbol_id, refresh, watch_id, text, error):
+    def _send_message(symbol_slice: Optional[SymbolSlice],
+                      view_symbol_id: Optional[SymbolId],
+                      refresh: bool,
+                      watch_id: int,
+                      text: Optional[str],
+                      error: Optional[str]) -> None:
         """Writes a message to the client containing information about symbols and the program state.
 
         Args:
-            symbol_slice (dict or None): A symbol table slice that the client should add to its local store, or `None`
+            symbol_slice: A symbol table slice that the client should add to its local store, or `None`
                 if no slice should be added.
-            view_symbol_id (str or None): A symbol ID that the client should view upon receiving the message, or `None`
+            view_symbol_id: A symbol ID that the client should view upon receiving the message, or `None`
                 if no symbol should be viewed.
-            refresh (bool): Whether the client should reset its symbol table information before incorporating the new
+            refresh: Whether the client should reset its symbol table information before incorporating the new
                 slice.
-            watch_id (int): An integer unique to the watch statement whose information is being sent, or -1 if the
+            watch_id: An integer unique to the watch statement whose information is being sent, or -1 if the
                 message is not associated with a watch statement.
-            text (str or None): A string printed by the user-specified script.
-            error (str or None): The full text of an exception message that should be relayed to the client.
+            text: A string printed by the user-specified script.
+            error: The full text of an exception message that should be relayed to the client.
         """
         message = {
             'symbols': symbol_slice,
@@ -534,7 +586,7 @@ def _gen_send_message(send_queue):
             'text': text,
             'error': error,
         }
-        send_queue.put(json.dumps(message))
+        send_queue.put(json.dumps(message, cls=DataclassJSONEncoder))
     return _send_message
 
 
@@ -545,7 +597,10 @@ def _gen_send_message(send_queue):
 # its namespace.
 # ======================================================================================================================
 
-def run_script(receive_queue, send_queue, script_path, watches):
+def run_script(receive_queue: Queue,
+               send_queue: Queue,
+               script_path: str,
+               watches: Sequence[WatchExpression]) -> None:
     """Runs a given script, writing the value of watched variables to a queue and then writing the values of
     additional variables requested by a client to another queue.
 
@@ -557,29 +612,30 @@ def run_script(receive_queue, send_queue, script_path, watches):
 
     TODO: update args format and content
     Args:
-        receive_queue (Queue): A queue shared with the calling process to which requests for new symbol schemas are
+        receive_queue: A queue shared with the calling process to which requests for new symbol schemas are
             written by the parent.
-        send_queue (Queue): A queue shared with the calling process to which this process writes symbol schema strings.
-        script_path (str): The absolute path to a user-written script to be executed.
-        watches (list): A list of watch expression objects of form {'file': str, 'lineno': str, 'action': dict}.
+        send_queue: A queue shared with the calling process to which this process writes symbol schema strings.
+        script_path: The absolute path to a user-written script to be executed.
+        watches: A list of watch expression objects of form {'file': str, 'lineno': str, 'action': dict}.
     """
 
     send_queue.put('wat')  # gotta send some junk once for some reason
-    send_message = _gen_send_message(send_queue)
+    send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str], Optional[str]],
+                           None] = _gen_send_message(send_queue)
 
     # Replace stdout with an object that conveys all statements printed by the user script as messages
     sys.stdout = PrintOverwriter(send_message)
 
-    executor = _ScriptExecutor(send_message)
+    executor: _ScriptExecutor = _ScriptExecutor(send_message)
     for watch in watches:
-        executor.add_watch_expression(watch['id'], watch['file'], watch['lineno'], watch['actions'])
+        executor.add_watch_expression(watch.id, watch.file, watch.lineno, watch.actions)
     try:
         executor.execute(script_path)
         while True:
-            request = receive_queue.get(True)
+            request: Mapping[str, Union[SymbolId, Actions]] = receive_queue.get(True)
             executor.fetch_symbol_data(request['symbol_id'], request['actions'])
     except:
-        raw_error_msg = traceback.format_exc()
+        raw_error_msg: str = traceback.format_exc()
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg, re.DOTALL)
-        clean_error_msg = result.group(1) + result.group(3)
+        clean_error_msg: str = result.group(1) + result.group(3)
         send_message(None, None, False, -1, None, clean_error_msg)

@@ -55,7 +55,7 @@ class FunctionViewer extends Component {
         const { hoveredIdx, selectedIdx } = this.state;
 
         // TODO: figure out how to use filename and lineno
-        const { args, kwargs, filename, lineno } = data;
+        const { args, kwargs} = data;
         const argsModel = args.map((argName) => {
            return {
                text: argName,

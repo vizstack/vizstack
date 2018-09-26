@@ -150,8 +150,6 @@ Note the redundancy. TODO: Can we remove it?
 "data": {
     "args":["hi", "hi"],
     "kwargs":{"kwarg1": "@id:1234"},
-    "filename": "hihi.py",
-    "lineno": 2,
 }
 ```
 
