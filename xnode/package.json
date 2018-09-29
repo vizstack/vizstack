@@ -1,6 +1,6 @@
 {
   "name": "xnode",
-  "main": "./lib/main",
+  "main": "./build/main",
   "version": "0.0.0",
   "description": "Quick and painless prototyping, experimenting, and sharing for neural network research.",
   "keywords": [],
