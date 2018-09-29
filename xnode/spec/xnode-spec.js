@@ -1,6 +1,4 @@
-'use babel';
-
-import Xnode from '../lib/main';
+import Xnode from '../src/main';
 
 // Use the command `window:run-package-specs` (cmd-alt-ctrl-p) to run specs.
 //

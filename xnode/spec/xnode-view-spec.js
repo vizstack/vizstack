@@ -1,6 +1,4 @@
-'use babel';
-
-import XnodeView from '../lib/xnode-view';
+import XnodeView from '../src/xnode-view';
 
 describe('XnodeView', () => {
   it('has one valid test', () => {
