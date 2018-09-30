@@ -140,6 +140,7 @@ export default class REPL {
                 marker.setProperties({
                     lineNum: currentPosition,
                 });
+                console.debug(`repl -- shifting ${lineNum} to ${currentPosition}`)
                 this.executionEngine.send(`shift:${filePath}?${lineNum}?${currentPosition}`);
             }
         });
@@ -341,6 +342,7 @@ export default class REPL {
     onFileChanged(file, changes) {
         changes = '';
         this._shiftWatchStatements();
+        console.debug(`repl -- change to ${file}`);
         this.executionEngine.send(`change:${file}?${changes}`);
     }
 }

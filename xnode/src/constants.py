@@ -41,8 +41,13 @@ Actions = NewType('Actions', Mapping[str, Action])
 
 
 # A description of a client's request to send a symbol table slice at a particular line of the program
-class WatchExpression(NamedTuple):
-    id: int
-    file: str
-    lineno: int
-    actions: Actions
+class WatchExpression:
+    def __init__(self,
+                 id: int,
+                 file: str,
+                 lineno: int,
+                 actions: Actions) -> None:
+        self.id: int = id
+        self.file: str = file
+        self.lineno: int = lineno
+        self.actions: Actions = actions

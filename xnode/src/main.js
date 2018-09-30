@@ -53,6 +53,7 @@ export default {
                     editor.onDidStopChanging(() => {
                         editor.save();
                         this.repls.forEach(repl => {
+                            console.debug('root -- signaling change to REPL');
                             repl.onFileChanged(editor.getPath(), changes);
                         });
                     });
