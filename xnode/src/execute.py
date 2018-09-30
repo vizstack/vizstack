@@ -1,4 +1,3 @@
-import dataclasses
 import json
 import pdb
 import re
@@ -523,10 +522,11 @@ class PrintOverwriter:
     """
     An object to be used as a replacement for stdout, which uses a given function to send printed strings to the client.
     """
+
     def __init__(self, send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
-                                              Optional[str]], None]):
+                                               Optional[str]], None]):
         self.send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int, Optional[str],
-                                    Optional[str]], None] = send_message
+                                     Optional[str]], None] = send_message
 
     def write(self, text: str) -> None:
         if text == '\n':
@@ -539,13 +539,15 @@ class PrintOverwriter:
 
 class DataclassJSONEncoder(json.JSONEncoder):
     """
-    An extension of the default JSON encoder that allows data classes to be serialized, as is needed for sending
-    `SymbolShell`s to clients.
+    An extension of the default JSON encoder that can serialize pseudo-dataclasses (regular Python objects whose field
+    values are all serializable).
     """
+
     def default(self, o: Any):
-        if dataclasses.is_dataclass(o):
-            return dataclasses.asdict(o)
-        return super().default(o)
+        try:
+            return super().default(o)
+        except TypeError:
+            return o.__dict__
 
 
 def _gen_send_message(send_queue: Queue) -> Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, int,
@@ -558,6 +560,7 @@ def _gen_send_message(send_queue: Queue) -> Callable[[Optional[SymbolSlice], Opt
     Returns:
         A function which relays information about the program to the client.
     """
+
     def _send_message(symbol_slice: Optional[SymbolSlice],
                       view_symbol_id: Optional[SymbolId],
                       refresh: bool,
@@ -587,6 +590,7 @@ def _gen_send_message(send_queue: Queue) -> Callable[[Optional[SymbolSlice], Opt
             'error': error,
         }
         send_queue.put(json.dumps(message, cls=DataclassJSONEncoder))
+
     return _send_message
 
 
@@ -636,6 +640,7 @@ def run_script(receive_queue: Queue,
             executor.fetch_symbol_data(request['symbol_id'], request['actions'])
     except:
         raw_error_msg: str = traceback.format_exc()
-        result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg, re.DOTALL)
+        result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,
+                           re.DOTALL)
         clean_error_msg: str = result.group(1) + result.group(3)
         send_message(None, None, False, -1, None, clean_error_msg)

@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Union, NewType, MutableMapping, Mapping, NamedTuple, Optional
 
 # The Python equivalents of the values allowed in JSON
@@ -16,13 +15,18 @@ SymbolData = NewType('SymbolData', Mapping[str, JsonType])
 
 # The data structure which is sent to clients to describe a symbol. We use a data class here instead of a named tuple
 # since the shell should be mutable.
-@dataclass
 class SymbolShell:
-    type: str
-    str: str
-    name: Optional[str]
-    data: Optional[SymbolData]
-    attributes: None
+    def __init__(self,
+                 type: str,
+                 str: str,
+                 name: Optional[str],
+                 data: Optional[SymbolData],
+                 attributes: None) -> None:
+        self.type: str = type
+        self.str: str = str
+        self.name: Optional[str] = name
+        self.data: Optional[SymbolData] = data
+        self.attributes: None = attributes
 
 
 # A slice of a symbol table, mapping symbol IDs to their shells

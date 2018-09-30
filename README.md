@@ -3,5 +3,5 @@ Xnode facilitates quick and painless prototyping, experimenting, and sharing thr
  for researchers.
  
  ## Requirements
-  - Sandboxes must be run with Python 3.7+, as our code uses data classes.
+  - Sandboxes must be run with Python 3.6+, as our code uses type hinting.
   - The `wrapt` package must be installed for whatever Python environment is used, as it is used by `graphtracker.py`.
