@@ -8,6 +8,7 @@
     "@babel/plugin-proposal-class-properties"
   ],
   "ignore": [
-    "*.md"
+    "*.md",
+    "src/main.js"
   ]
 }

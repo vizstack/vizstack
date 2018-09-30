@@ -43,7 +43,7 @@
     "remote-redux-devtools": "^0.5.13"
   },
   "scripts": {
-    "build": "babel src/ -d build/ --copy-files --ignore 'src/main.js'",
+    "build": "babel src/ -d build/ --ignore 'src/main.js' --copy-files",
     "flow": "(cd src/; flow)"
   }
 }
