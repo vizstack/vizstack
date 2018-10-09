@@ -1,4 +1,5 @@
 import torch
+import xn
 from xntorch.autograd import Variable
 import sys
 import os
@@ -14,6 +15,7 @@ myString = "The quick brown fox jumps over the lazy dog"
 myNone = None
 
 myList = [1, 2.3, False, "hello", None, [10, 11, ["This", "is", "the", "end"]]]
+xn.view(myList)
 myList[0] = 100
 myDict = {"key1": "value1", "key2": "value2", 10: myList}
 myTensor1 = torch.rand(2, 3, 4, 5)

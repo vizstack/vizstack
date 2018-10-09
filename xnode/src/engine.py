@@ -3,9 +3,9 @@ import json
 import sys
 import threading
 from multiprocessing import Process, Queue
-from typing import NoReturn, MutableSequence, Optional
+from typing import NoReturn, Optional
 
-from constants import SymbolId, WatchExpression, Actions
+from constants import SymbolId, Actions
 from execute import run_script
 
 # ======================================================================================================================
@@ -15,16 +15,10 @@ from execute import run_script
 # determines how the script should interpret the remainder of the input string.
 # ======================================================================================================================
 
-# A new watch statement should be added to a particular line.
-_WATCH_HEADER: str = 'watch:'
-# An existing watch statement should be removed.
-_UNWATCH_HEADER: str = 'unwatch:'
 # A change was made to some file that may warrant a re-execution.
 _EDIT_HEADER: str = 'change:'
 # A symbol with given ID should have its shell fetched.
 _FETCH_HEADER: str = 'fetch:'
-# A watch statement has moved to a new line because of a file edit.
-_SHIFT_HEADER: str = 'shift:'
 
 
 class _ExecutionManager:
@@ -47,16 +41,13 @@ class _ExecutionManager:
     _THREAD_QUIT: str = 'quit'
 
     def __init__(self,
-                 script_path: str,
-                 watches: MutableSequence[WatchExpression]) -> None:
+                 script_path: str) -> None:
         """Creates a process to execute the user-written script and a thread to read the returned schemas.
 
         Args:
             script_path: the absolute path to the user-written script to be executed
-            watches: a list of watch statement objects, as produced by `get_watch_expression()`.
         """
-        self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(script_path,
-                                                                                                      watches)
+        self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(script_path)
         self.print_thread = threading.Thread(target=_ExecutionManager._start_print_thread, args=(self.exec_process,
                                                                                                  self.print_queue))
         self.print_thread.start()
@@ -92,8 +83,7 @@ class _ExecutionManager:
         })
 
     @staticmethod
-    def _start_exec_process(script_path: str,
-                            watches: MutableSequence[WatchExpression]) -> (Process, Queue, Queue):
+    def _start_exec_process(script_path: str) -> (Process, Queue, Queue):
         """Starts a new process, which runs a user-written script inside of a Pdb instance.
 
         Two queues are created to communicate with the new process; one is filled by the subprocess with symbol schemas
@@ -102,7 +92,6 @@ class _ExecutionManager:
 
         Args:
             script_path: The path to a user-written script to be executed in the subprocess.
-            watches: A list of watch statement objects, as produced by `get_watch_expression()`.
 
         Returns:
             The handle to the subprocess.
@@ -111,7 +100,7 @@ class _ExecutionManager:
         """
         fetch_queue: Queue = Queue()
         print_queue: Queue = Queue()
-        process: Process = Process(target=run_script, args=(fetch_queue, print_queue, script_path, watches))
+        process: Process = Process(target=run_script, args=(fetch_queue, print_queue, script_path))
         process.daemon: bool = True
         process.start()
         print_queue.get()  # gotta do this here once for some reason
@@ -143,78 +132,6 @@ class _ExecutionManager:
 
 
 # ======================================================================================================================
-# Watch expressions.
-# ------------------
-# Control how watch expressions are created, removed, and shifted.
-# ======================================================================================================================
-
-def _add_watch(watches: MutableSequence[WatchExpression],
-               message: str) -> None:
-    """Adds a new watch expression to `watches`.
-
-    Args:
-        watches: A list of existing watch expression dicts; updated in-place.
-        message: A string received from the client describing the new watch expression, in format
-            "{WATCH_HEADER}{file_path}?{line_no}?{actions}"
-            where `actions` is the JSON string of an action dict as described in `ACTION-SCHEMA.md`.
-    """
-    contents: str = message.replace(_WATCH_HEADER, '').split('?')
-
-    watch_expression: WatchExpression = WatchExpression(
-        # TODO: use a better system for assigning the next ID
-        id=max([watch.id + 1 for watch in watches]) if len(watches) > 0 else 0,
-        file=contents[0],
-        lineno=int(contents[1]),
-        actions=json.loads(contents[2])
-    )
-
-    watches.append(watch_expression)
-
-
-def _remove_watch(watches: MutableSequence[WatchExpression],
-                  message: str) -> None:
-    """Removes a watch expression from `watches`.
-
-    The line number supplied by `message` should reflect the current position of the watch statement after any shifts in
-    buffer, not necessarily the originally given position.
-
-    Args:
-        watches: A list of existing watch expression dicts; updated in-place.
-        message: A string received from the client describing the watch expression to remove, in format
-            "{UNWATCH_HEADER}{file_path}?{line_no}"
-    """
-    contents: str = message.replace(_UNWATCH_HEADER, '').split('?')
-    file_path: str = contents[0]
-    lineno: int = int(contents[1])
-
-    to_remove: MutableSequence[WatchExpression] = [watch_expression for watch_expression in watches if
-                                                   watch_expression.file == file_path and
-                                                   watch_expression.lineno == lineno]
-    for watch_expression in to_remove:
-        watches.remove(watch_expression)
-
-        
-def _shift_watch(watches: MutableSequence[WatchExpression],
-                 message: str) -> None:
-    """Shifts the position of a watch expression to a new line.
-
-    Watch expressions are hard-coded to point to a particular line number, which causes problems when new lines are
-    inserted or old lines deleted. Allowing for shifts, as opposed to deleting and re-adding watch statements,
-    prevents unnecessary re-executions.
-
-    Args:
-        watches: A list of existing watch expression dicts; updated in-place.
-        message: A string received from the client describing watch expression shift, in format
-            "{SHIFT_HEADER}{file_path}?{old_lineno}?{new_lineno}"
-    """
-    file_path, old_lineno, new_lineno = message.replace(_SHIFT_HEADER, '').split('?')
-
-    for watch_expression in watches:
-        if watch_expression.file == file_path and watch_expression.lineno == int(old_lineno):
-            watch_expression.lineno = int(new_lineno)
-
-
-# ======================================================================================================================
 # Execution control.
 # ------------------
 # Determine whether the user-written script associated with the engine should be re-run, do so, and then submit
@@ -222,7 +139,6 @@ def _shift_watch(watches: MutableSequence[WatchExpression],
 # ======================================================================================================================
 
 def _should_execute(script_path: str,
-                    watches: MutableSequence[WatchExpression],
                     message) -> bool:
     """Determines if a new execution is necessary after a file has been edited.
 
@@ -230,7 +146,6 @@ def _should_execute(script_path: str,
 
     Args:
         script_path: The path to the user-written script to (potentially) be executed.
-        watches: A list of watch expression objects the user has currently defined.
         message: A message received from stdin describing the edit to a file, in format
             "{EDIT_HEADER}{file_path}?{edit}"
             where the format of `edit` has not yet been defined.
@@ -244,8 +159,7 @@ def _should_execute(script_path: str,
 
 
 def _execute(exec_manager: Optional[_ExecutionManager],
-             script_path: str,
-             watches: MutableSequence[WatchExpression]) -> _ExecutionManager:
+             script_path: str) -> _ExecutionManager:
     """Creates a new `_ExecutionManager` to run a given script, printing its watched variable schemas to stdout.
 
     If an `_ExecutionManager` already exists, it is first killed, so that only information from the most recent run
@@ -254,14 +168,13 @@ def _execute(exec_manager: Optional[_ExecutionManager],
     Args:
         exec_manager: The existing `_ExecutionManager`, if one exists.
         script_path: Absolute path to the user-written script to be executed.
-        watches: A list of watch expression dicts.
 
     Returns:
         A new manager which will run `script_path` and print its watched expressions.
     """
     if exec_manager:
         exec_manager.terminate()
-    exec_manager: _ExecutionManager = _ExecutionManager(script_path, watches)
+    exec_manager: _ExecutionManager = _ExecutionManager(script_path)
     return exec_manager
 
 
@@ -312,27 +225,15 @@ def main() -> NoReturn:
 
     script_path: str = _read_args()
     exec_manager: Optional[_ExecutionManager] = None
-    watches: MutableSequence[WatchExpression] = []
     while True:
         message: str = input()
-        if message.startswith(_WATCH_HEADER):
-            _add_watch(watches, message)
-            exec_manager: _ExecutionManager = _execute(exec_manager, script_path, watches)
-
-        elif message.startswith(_UNWATCH_HEADER):
-            _remove_watch(watches, message)
-            exec_manager: _ExecutionManager = _execute(exec_manager, script_path, watches)
-
-        elif message.startswith(_EDIT_HEADER):
-            if _should_execute(script_path, watches, message):
-                exec_manager: _ExecutionManager = _execute(exec_manager, script_path, watches)
+        if message.startswith(_EDIT_HEADER):
+            if _should_execute(script_path, message):
+                exec_manager: _ExecutionManager = _execute(exec_manager, script_path)
 
         elif message.startswith(_FETCH_HEADER):
             if exec_manager:
                 _fetch_symbol(exec_manager, message)
-
-        elif message.startswith(_SHIFT_HEADER):
-            _shift_watch(watches, message)
 
 
 if __name__ == '__main__':

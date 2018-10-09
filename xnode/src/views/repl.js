@@ -140,7 +140,7 @@ export default class REPL {
                 marker.setProperties({
                     lineNum: currentPosition,
                 });
-                console.debug(`repl -- shifting ${lineNum} to ${currentPosition}`)
+                console.debug(`repl -- shifting ${lineNum} to ${currentPosition}`);
                 this.executionEngine.send(`shift:${filePath}?${lineNum}?${currentPosition}`);
             }
         });
@@ -260,7 +260,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
             console.debug('repl -- received message', JSON.parse(message));
-            let { viewSymbol, symbols, refresh, watchId, text, error } = JSON.parse(message);
+            let { viewSymbol, symbols, refresh, text, error } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearSymbolTableAction());
