@@ -110,10 +110,6 @@ export default class REPL {
         return 'right';
     }
 
-    /** Used by Atom to place the pane in the window. */
-    getAllowedLocations() {
-        return ['left', 'right', 'bottom'];
-    }
 
     /** Used by Atom to get the DOM element to be rendered. */
     getElement() {
