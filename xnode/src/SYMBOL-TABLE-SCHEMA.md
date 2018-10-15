@@ -106,13 +106,14 @@ Note the redundancy. TODO: Can we remove it?
 "data": {
     "contents": {
         "@id:12345": "@id:4345",
-    }
+    },
+    "length": 4
 }
 ```
 
 #### class
 ```
-"str": "class<MyAwesomeClass>",
+"str": "class <MyAwesomeClass>",
 "data": {
     "functions": {
         "name": "@id:12345",  // functions are symbols too
@@ -157,7 +158,7 @@ Note the redundancy. TODO: Can we remove it?
 TODO: Handle different precision data for contents.
 TODO: Need max and min for visualization purposes.
 ```
-"str": "tensor[3,2,1].float32",
+"str": "tensor <float32>[3,2,1]",
 "data": {
     "contents": [[1,2,3],[2,3,4]],
     "size": [1,2,3],

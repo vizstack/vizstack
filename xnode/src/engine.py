@@ -3,7 +3,7 @@ import json
 import sys
 import threading
 from multiprocessing import Process, Queue
-from typing import NoReturn, Optional
+from typing import Optional
 
 from constants import SymbolId, Actions
 from execute import run_script
@@ -19,6 +19,8 @@ from execute import run_script
 _EDIT_HEADER: str = 'change:'
 # A symbol with given ID should have its shell fetched.
 _FETCH_HEADER: str = 'fetch:'
+# The engine should terminate.
+_END_HEADER: str = 'end:'
 
 
 class _ExecutionManager:
@@ -214,7 +216,7 @@ def _read_args() -> str:
     return args.script
 
 
-def main() -> NoReturn:
+def main() -> None:
     """Reads commands from the client and adds watch expressions, reruns the user's script, and fetches symbol data
     accordingly.
 
@@ -234,6 +236,9 @@ def main() -> NoReturn:
         elif message.startswith(_FETCH_HEADER):
             if exec_manager:
                 _fetch_symbol(exec_manager, message)
+
+        elif message.startswith(_END_HEADER):
+            break
 
 
 if __name__ == '__main__':

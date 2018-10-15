@@ -214,14 +214,16 @@ def run_script(receive_queue: Queue,
         send_queue: A queue shared with the calling process to which this process writes symbol schema strings.
         script_path: The absolute path to a user-written script to be executed.
     """
-
-    send_queue.put('wat')  # gotta send some junk once for some reason
     send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, Optional[str], Optional[str]],
                            None] = functools.partial(_send_message, send_queue)
+
+    # this won't be processed by the engine, a "junk" message must be sent for some reason
+    send_message(None, None, False, None, None)
+
     engine: VisualizationEngine = VisualizationEngine()
     xn.set_view_fn(functools.partial(_execute_watch, engine, send_message))
 
-    # Replace stdout with an object that conveys all statements printed by the user script as messages
+    # Replace stdout with an object that queues all statements printed by the user script as messages
     sys.stdout = _PrintOverwriter(send_message)
 
     executor: _ScriptExecutor = _ScriptExecutor()
@@ -229,7 +231,9 @@ def run_script(receive_queue: Queue,
         send_message(None, None, True, None, None)
         executor.execute(script_path)
         while True:
-            request: Mapping[str, Union[SymbolId, Actions]] = receive_queue.get(True)
+            request: Optional[Mapping[str, Union[SymbolId, Actions]]] = receive_queue.get(True)
+            if request is None:
+                break
             _fetch_symbol(engine, send_message, request['symbol_id'])
     except:
         raw_error_msg: str = traceback.format_exc()

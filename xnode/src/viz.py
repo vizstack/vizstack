@@ -216,8 +216,8 @@ def _generate_data_object(obj: Any,
     contents: MutableMapping[str, SymbolId] = dict()
     refs: _RefsDict = dict()
     for attr in dir(obj):
-        value: Any = getattr(obj, attr)
         try:
+            value: Any = getattr(obj, attr)
             if not _FUNCTION.test_fn(value) and (
                             attr not in instance_class_attrs or getattr(instance_class, attr, None) != value):
                 contents[attr]: SymbolId = _sanitize_for_data_object(getattr(obj, attr), refs, snapshot_id)

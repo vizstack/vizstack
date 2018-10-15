@@ -345,9 +345,10 @@ def has_graphdata(obj):
     """
     try:
         return hasattr(obj, 'xnode_graphdata')
-    except NotImplementedError:
+    except Exception:
         # PyTorch variables throw a NotImplementedError if you do a `getattr` on a non-existent attribute,
         # which breaks hasattr.
+        # Other classes, like Namespace, throw an exception if you `getattr` on any attribute.
         return False
 
 

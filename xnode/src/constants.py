@@ -28,6 +28,17 @@ class SymbolShell:
         self.data: Optional[SymbolData] = data
         self.attributes: None = attributes
 
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, other):
+        """Define two `SymbolShell`s as equal if all of their fields are equal."""
+        return isinstance(other, SymbolShell) and self.type == other.type and self.str == other.str and \
+            self.name == other.name and self.data == other.data and self.attributes == other.attributes
+
 
 # A slice of a symbol table, mapping symbol IDs to their shells
 SymbolSlice = NewType('SymbolSlice', MutableMapping[SymbolId, SymbolShell])
