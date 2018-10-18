@@ -43,12 +43,12 @@ export default class REPL {
     /**
      * Constructor.
      *
-     * @param {string} pythonPath
-     *      The path to the Python executable that should be used to execute the requeested script.
-     * @param {string} scriptPath
+     * @param pythonPath
+     *      The path to the Python executable that should be used to execute the requested script.
+     * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(pythonPath, scriptPath) {
+    constructor(pythonPath: string, scriptPath: string) {
         // Initialize REPL state
         this.watchMarkers = [];  // List of `atom.Marker`, one for each watch statement
         this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
@@ -110,7 +110,6 @@ export default class REPL {
         return 'right';
     }
 
-
     /** Used by Atom to get the DOM element to be rendered. */
     getElement() {
         return this.element;
@@ -152,7 +151,7 @@ export default class REPL {
      * @returns {number}
      *      The index of the marker in `this.watchMarkers`, or -1 if not found.
      */
-    _indexOfMarker(filePath, lineNum) {
+    _indexOfMarker(filePath: string, lineNum: number): number {
         for(let i = 0; i < this.watchMarkers.length; i++) {
             const marker = this.watchMarkers[i];
             if(marker.getProperties().filePath === filePath && marker.getHeadBufferPosition().row === lineNum - 1) {
@@ -176,7 +175,7 @@ export default class REPL {
      * @param {number} lineNum
      *      The number of the watched line at the time of marker creation.
      */
-    _addWatchMarker(filePath, lineNum) {
+    _addWatchMarker(filePath: string, lineNum: number) {
         // see https://github.com/willyelm/xatom-debug/blob/master/lib/breakpoint/BreakpointManager.js
         let editor = atom.workspace.getActiveTextEditor();
         let cursorPosition = editor.getCursorBufferPosition();

@@ -7,17 +7,18 @@ import { withStyles } from '@material-ui/core/styles';
 import classNames from 'classnames';
 
 // Grid layout
-import GridLayout from 'react-grid-layout';
+import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import type { DropResult, HookProvided,
+    DroppableProvided, DroppableStateSnapshot,
+    DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd';
 import { SizeMe } from 'react-sizeme'
 
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
-import InspectIcon from '@material-ui/icons/Search';
-import DeleteIcon from '@material-ui/icons/DeleteOutlined';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
+import DeleteIcon from '@material-ui/icons/DeleteOutlined';
 import CloseIcon from '@material-ui/icons/Close';
 import LiveViewerIcon from '@material-ui/icons/PageView';
-import SnapshotViewerIcon from '@material-ui/icons/CameraAlt';
 import PrintViewerIcon from '@material-ui/icons/Print';
 
 // Custom data type viewers
@@ -63,7 +64,7 @@ class Canvas extends Component {
         fetchSymbolData: PropTypes.func.isRequired,
 
         /**
-         * Creates a new snapshot viewer for the specified symbol. See `actions/canvas`.
+         * Creates a new snapshot viewer for the specified symbol. See `state/canvas/actions`.
          *
          * @param {string} symbolId
          * @param {int} position
@@ -71,7 +72,7 @@ class Canvas extends Component {
         addSnapshotViewer: PropTypes.func.isRequired,
 
         /**
-         * Creates a new print viewer for the specified text. See `actions/canvas`.
+         * Creates a new print viewer for the specified text. See `state/canvas/actions`.
          *
          * @param {string} text
          * @param {int} position
@@ -95,10 +96,10 @@ class Canvas extends Component {
         /** See `viewersSelector` in `Canvas`. */
         viewers: PropTypes.array.isRequired,
 
-        /** See `viewerPositions` in `reducers/canvas`. */
+        /** See `viewerPositions` in `canvas/reducers`. */
         layout:  PropTypes.array.isRequired,
 
-        /** See `symbolTable` in `reducers/program`. */
+        /** See `symbolTable` in `program/reducers`. */
         symbolTable: PropTypes.object.isRequired,
 
     };
@@ -127,10 +128,10 @@ class Canvas extends Component {
             case 'none':
             case 'bool':
             case 'number':
-                return <PrimitiveViewer str={str}/>;
+                return (<PrimitiveViewer str={str}/>);
 
             case 'string':
-                return <StringViewer data={data}/>;
+                return (<StringViewer data={data}/>);
 
             case 'list':
             case 'tuple':
@@ -145,7 +146,7 @@ class Canvas extends Component {
                                         expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
-                return <TensorViewer data={data}/>;
+                return (<TensorViewer data={data}/>);
 
             case 'class':
                 return (<ClassViewer data={data} symbolTable={symbolTable}
@@ -235,34 +236,44 @@ class Canvas extends Component {
         }
     }
 
+    onDragEnd(result: DropResult, provided: HookProvided) {
+
+    }
+
     /**
      * Renders the inspector canvas and any viewers currently registered to it.
      */
     render() {
         const { classes, viewers, layout, updateLayout} = this.props;
-        const frames = viewers.map((viewer) => {
+        const frames = viewers.map((viewer, idx) => {
             return (
-                <div key={viewer.viewerId} className={classes.frameContainer}>
-                    {this.createViewer(viewer)}
-                </div>
+                <Draggable key={viewer.viewerId} draggableId={viewer.viewerId} index={idx}>
+                    {(provided: DraggableProvided, snapshot: DraggableStateSnapshot) => (
+                        <div ref={provided.innerRef}
+                             className={classes.frameContainer}
+                             {...provided.draggableProps}
+                             {...provided.dragHandleProps} >
+                            {this.createViewer(viewer)}
+                        </div>
+                    )}
+                </Draggable>
             )
         });
 
         console.debug(`Canvas -- rendering ${frames.length} viewer frame(s)`, viewers);
 
-        // Lightweight grid layout component that adjusts width according to `size`
-        const FlexibleGridLayout = ({ size }) => {
-            return (
-                <GridLayout width={size.width} cols={1} rowHeight={25} autosize={true} containerPadding={[0, 0]}
-                            layout={layout} onLayoutChange={updateLayout} draggableCancel='.ReactGridLayoutNoDrag'>
-                    {frames}
-                </GridLayout>
-            );
-        };
-
         return (
             <div className={classNames(classes.canvasContainer)}>
-                <SizeMe>{FlexibleGridLayout}</SizeMe>
+                <DragDropContext onDragEnd={this.onDragEnd}>
+                    <Droppable droppableId="canvas">
+                        {(provided: DroppableProvided, snapshot: DroppableStateSnapshot) => (
+                            <div ref={provided.innerRef} {...provided.droppableProps}>
+                                {frames}
+                                {provided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             </div>
         );
     }

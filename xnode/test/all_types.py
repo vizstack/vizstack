@@ -10,6 +10,7 @@ from vgg import vgg16
 myInt = 86
 myInt2 = 87
 myFloat = 3.1415926535897
+xn.view(myFloat)
 myBool = True
 myString = "The quick brown fox jumps over the lazy dog"
 myNone = None
@@ -22,6 +23,7 @@ myTensor1 = torch.rand(2, 3, 4, 5)
 myTensor2 = myTensor1[0, 0]
 myTensor3 = myTensor1[0, 0, 0]
 myFloat2 = myTensor1[0, 0, 0, 0]
+xn.view(myTensor1)
 
 myClass = Variable
 myVGGInput = Variable(torch.ones(1, 3, 32, 32))

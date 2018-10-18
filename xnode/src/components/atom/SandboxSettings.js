@@ -26,7 +26,7 @@ class SandboxSettingsModal extends Component {
         super(props);
         console.debug(props.defaultScriptPath);
         this.state = {
-            pythonPath: 'python',
+            pythonPath: 'python3',
             scriptPath: props.defaultScriptPath,
         }
     }
