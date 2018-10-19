@@ -18,11 +18,11 @@ def set_view_fn(fn: Callable[[Any], None]) -> None:
     _VIEW_FN = fn
 
 
-def view(obj: Any) -> None:
+def view(*args: Any) -> None:
     """Performs some action, as defined by a call to `set_view_fn()`, that allows an object to be visualized.
 
     Args:
-        obj: The object to be visualized.
+        args: The object(s) to be visualized.
     """
-    _VIEW_FN(obj)
+    _VIEW_FN(*args)
 

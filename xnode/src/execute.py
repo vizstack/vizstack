@@ -156,20 +156,21 @@ def _send_message(send_queue: Queue,
 def _execute_watch(engine: VisualizationEngine,
                    send_message: Callable[[Optional[SymbolSlice], Optional[SymbolId], bool, Optional[str],
                                            Optional[str]], None],
-                   obj: Any) -> None:
+                   *args: Any) -> None:
     """Executes a watch statement on a given object, taking a snapshot of it and sending the symbol slice to the
     client to be viewed.
 
     Args:
         engine: A VisualizationEngine which should be used to generate the object's symbol slice.
         send_message: A function which sends a symbol slice and other information to the client.
-        obj: An object whose symbol slice should be created and sent.
+        args: Object(s) whose symbol slice should be created and sent.
     """
-    frame_info = getframeinfo(currentframe().f_back.f_back)
-    filename, lineno = frame_info.filename, frame_info.lineno
-    symbol_id: SymbolId = engine.take_snapshot(obj, name='{}: {}'.format(filename, lineno))
-    symbol_slice: SymbolSlice = engine.get_snapshot_slice(symbol_id)
-    send_message(symbol_slice, symbol_id, False, None, None)
+    for arg in args:
+        frame_info = getframeinfo(currentframe().f_back.f_back)
+        filename, lineno = frame_info.filename, frame_info.lineno
+        symbol_id: SymbolId = engine.take_snapshot(arg, name='{}: {}'.format(filename, lineno))
+        symbol_slice: SymbolSlice = engine.get_snapshot_slice(symbol_id)
+        send_message(symbol_slice, symbol_id, False, None, None)
 
 
 def _fetch_symbol(engine: VisualizationEngine,
