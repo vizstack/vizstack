@@ -45,8 +45,8 @@
     "remote-redux-devtools": "^0.5.13"
   },
   "scripts": {
-    "build": "npm run test && babel src/ -d build/ --ignore 'src/main.js' --copy-files",
-    "flow": "(cd src/; flow)",
-    "test": "cd src/ && py.test"
+    "all": "npm run test && npm run build",
+    "build": "babel src/ -d build/ --ignore 'src/main.js' --copy-files",
+    "test": "cd src/ && python3 -m pytest && flow"
   }
 }
