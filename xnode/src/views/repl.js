@@ -39,6 +39,8 @@ export default class REPL {
     /**
      * Constructor.
      *
+     * @param name
+     *      A name for the REPL, unique among all REPLs.
      * @param pythonPath
      *      The path to the Python executable that should be used to execute the requested script.
      * @param scriptPath
@@ -46,6 +48,7 @@ export default class REPL {
      */
     constructor(name: string, pythonPath: string, scriptPath: string) {
         this.name = name;
+        this.isDestroyed = false;
         // Initialize REPL state
         this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
 
@@ -74,7 +77,9 @@ export default class REPL {
      * Tear down state and detach.
      */
     destroy() {
+        this.isDestroyed = true;
         // TODO: do we need to destroy the execution engine as well?
+        this.executionEngine.terminate();
         this.element.remove();
         console.debug(`repl ${this.name} -- destroy()`);
     }

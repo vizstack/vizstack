@@ -64,7 +64,7 @@ export default {
                             this.changeStack -= 1;
                             if (this.changeStack === 0) {
                                 editor.save();
-                                this.repls.forEach(repl => {
+                                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
                                     console.debug('root -- signaling change to REPL');
                                     repl.onFileChanged(editor.getPath(), changes);
                                 });
