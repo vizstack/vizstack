@@ -44,7 +44,7 @@ export default {
                 if(uri.startsWith('atom://xnode-sandbox')) {
                     this.sandboxSettingsPanel.hide();
                     const tokens = uri.split('/');
-                    const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
+                    const repl = new REPL(`${this.repls.length}`, decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
                     this.repls.push(repl);
                     console.debug('root -- new REPL added');
                     return repl;
@@ -59,10 +59,8 @@ export default {
                     }
                     const changes = null;  // TODO: get changes from last edit
                     editor.onDidChange(() => {
-                        console.debug(`root -- change made to editor; ${this.changeStack} pending`);
                         this.changeStack += 1;
                         setTimeout(() => {
-                            console.debug(`root -- change stack decrementing`);
                             this.changeStack -= 1;
                             if (this.changeStack === 0) {
                                 editor.save();
@@ -71,7 +69,6 @@ export default {
                                     repl.onFileChanged(editor.getPath(), changes);
                                 });
                             }
-                            console.debug(`root -- change stack set to ${this.changeStack}`);
                         }, RERUN_DELAY);
                     });
                 }
