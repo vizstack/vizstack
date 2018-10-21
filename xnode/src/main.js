@@ -4,6 +4,8 @@ import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './views/repl';
 
+import { getMinimalUniquePaths } from "./services/path-utils";
+
 // How long, in milliseconds, the editor must be untouched before sandboxes are re-run
 let RERUN_DELAY = 1000;
 
@@ -44,8 +46,12 @@ export default {
                 if(uri.startsWith('atom://xnode-sandbox')) {
                     this.sandboxSettingsPanel.hide();
                     const tokens = uri.split('/');
-                    const repl = new REPL(`${this.repls.length}`, decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
+                    const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
                     this.repls.push(repl);
+                    const minimalUniquePaths = getMinimalUniquePaths(this.repls.filter(repl => !repl.isDestroyed).map(repl => repl.scriptPath));
+                    this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
+                       repl.name = minimalUniquePaths[repl.scriptPath];
+                    });
                     console.debug('root -- new REPL added');
                     return repl;
                 }

@@ -39,16 +39,15 @@ export default class REPL {
     /**
      * Constructor.
      *
-     * @param name
-     *      A name for the REPL, unique among all REPLs.
      * @param pythonPath
      *      The path to the Python executable that should be used to execute the requested script.
      * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(name: string, pythonPath: string, scriptPath: string) {
-        this.name = name;
+    constructor(pythonPath: string, scriptPath: string) {
+        this.name = '';
         this.isDestroyed = false;
+        this.scriptPath = scriptPath;
         // Initialize REPL state
         this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
 
@@ -67,7 +66,7 @@ export default class REPL {
             this.element,
         );
 
-        console.debug('constructor() -- REPL instance created');
+        console.debug(`repl ${this.name} - constructed`);
     }
 
     /** Returns an object that can be retrieved when package is activated. */
@@ -91,7 +90,7 @@ export default class REPL {
 
     /** Used by Atom to show title in a tab. */
     getTitle() {
-        return 'Xnode Sandbox';
+        return `[sandbox] ${this.name}`;
     }
 
     /** Used by Atom to show icon next to title in a tab. */
@@ -139,7 +138,8 @@ export default class REPL {
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message) => {
-            console.debug(`repl ${this.name} -- received message`, JSON.parse(message));
+            console.debug(`repl ${this.name} -- received message`, 
+                JSON.parse(message));
             let { viewSymbol, symbols, refresh, text, error } = JSON.parse(message);
             if (refresh) {
                 this.store.dispatch(clearCanvasAction());
