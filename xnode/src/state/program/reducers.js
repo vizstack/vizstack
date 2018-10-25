@@ -1,19 +1,14 @@
 import Immutable from 'seamless-immutable';
-import { SymbolTableActions } from './actions';
+import { kSymbolTableActions } from './actions';
+import type { SymbolId, SymbolObject } from './outputs';
 
-/**
- * State slice structure for `program`: {
- *     symbolTable: {
- *         "@id:12345" : {
- *             type: "number",
- *             str:  "86",
- *             name: "myInt",
- *             attributes: { ... }
- *             data: null | { ... }
- *         }
- *     }
- * }
- */
+/** Root reducer's state slice shape. */
+export type ProgramState = {
+    // Map of symbol IDs to symbol objects.
+    symbolTable: {
+        [SymbolId]: SymbolObject,
+    }
+}
 
 /** Root reducer's initial state slice. */
 const initialState = Immutable({
@@ -23,11 +18,11 @@ const initialState = Immutable({
 /**
  * Root reducer for state related to the paused program's state and symbols that have been loaded.
  */
-export default function rootReducer(state = initialState, action) {
+export function programReducer(state = initialState, action = {}) {
     const { type } = action;
     switch(type) {
-        case SymbolTableActions.ADD_SYMBOLS:   return addSymbolTableSlice(state, action);
-        case SymbolTableActions.CLEAR_TABLE:   return clearSymbolTableReducer(state, action);
+        case kSymbolTableActions.ADD_SYMBOLS:   return addSymbolTableSlice(state, action);
+        case kSymbolTableActions.CLEAR_TABLE:   return clearSymbolTableReducer(state, action);
     }
     return state;  // No effect by default
 };

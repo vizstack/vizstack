@@ -33,10 +33,12 @@ import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphView
 
 // Custom Redux actions
 import { addSnapshotViewerAction, addPrintViewerAction,
-    removeViewerAction, updateLayoutAction } from '../state/canvas/actions';
+    removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { ViewerTypes } from "../state/canvas/constants";
+import { getViewerPositions, getViewerObjects, kViewerType} from "../state/canvas/outputs";
+import { getSymbolTable} from "../state/program/outputs";
+import type {SymbolId, SymbolObject} from "../state/program/outputs";
 
 
 /** Component to display when loading data */
@@ -45,8 +47,7 @@ const kLoadingMsg = "Loading ...";
 
 /**
  * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
- * of `ViewerFrame` objects using React Grid Layout.
- * TODO: Refactor viewer remove based on viewerId not symbolId, because of clone.
+ * of `ViewerFrame` objects that can be moved with drag-and-drop.
  */
 class Canvas extends Component {
 
@@ -55,9 +56,14 @@ class Canvas extends Component {
         /** CSS-in-JS styling object (from `withStyles`). */
         classes: PropTypes.object.isRequired,
 
+        /** Viewer objects for rendering. See `viewersSelector` in `Canvas`. */
+        viewers: PropTypes.array.isRequired,
+
+        /** See `symbolTable` in `program/reducers`. */
+        symbolTable: PropTypes.object.isRequired,
+
         /**
          * See `REPL.fetchSymbolData(symbolId)`.
-         *
          * @param {string} symbolId
          * @param {?object} action
          */
@@ -65,7 +71,6 @@ class Canvas extends Component {
 
         /**
          * Creates a new snapshot viewer for the specified symbol. See `state/canvas/actions`.
-         *
          * @param {string} symbolId
          * @param {int} position
          */
@@ -73,36 +78,30 @@ class Canvas extends Component {
 
         /**
          * Creates a new print viewer for the specified text. See `state/canvas/actions`.
-         *
          * @param {string} text
          * @param {int} position
          */
         addPrintViewer: PropTypes.func.isRequired,
 
         /**
-         * Removes the viewer with the specified symbol from the Canvas.
-         *
-         * @param symbolId
+         * Removes the viewer with the specified viewer ID.
+         * @param viewerId
          */
         removeViewer: PropTypes.func.isRequired,
 
         /**
-         * Updates the react-grid-layout model for the Canvas.
-         *
-         * @param layout
+         * Moves the viewer at `startIdx` to the position at `endIdx`.
+         * @param startIdx
+         * @param endIdx
          */
-        updateLayout: PropTypes.func.isRequired,
-
-        /** See `viewersSelector` in `Canvas`. */
-        viewers: PropTypes.array.isRequired,
-
-        /** See `viewerPositions` in `canvas/reducers`. */
-        layout:  PropTypes.array.isRequired,
-
-        /** See `symbolTable` in `program/reducers`. */
-        symbolTable: PropTypes.object.isRequired,
-
+        reorderViewer: PropTypes.func.isRequired,
     };
+
+    /** Constructor. */
+    constructor(props) {
+        super(props);
+        this.onDragEnd = this.onDragEnd.bind(this);
+    }
 
     // =================================================================================================================
     // Canvas rendering
@@ -117,7 +116,7 @@ class Canvas extends Component {
      */
     createSymbolViewer(viewerId, symbolId, symbolObj) {
         const { symbolTable, addSnapshotViewer, fetchSymbolData } = this.props;
-        const { type, str, name, attributes, data} = symbolObj;
+        const { type, str, name, attributes, data } = symbolObj;
 
         const inspectSymbol = (symbolId, viewerId) => {
             fetchSymbolData(symbolId);
@@ -179,7 +178,7 @@ class Canvas extends Component {
     }
 
     /**
-     * Returns a viewer of the correct type. (See `ViewerTypes` in `state/canvas/constants`).
+     * Returns a viewer of the correct type. (See `kViewerType` in `state/canvas/constants`).
      *
      * @param {object} viewer
      */
@@ -193,7 +192,7 @@ class Canvas extends Component {
         };
 
         switch(viewerType) {
-            case ViewerTypes.SNAPSHOT: {
+            case kViewerType.SNAPSHOT: {
                 const { symbolId, symbolObj } = viewer;
                 const title = !symbolObj ? kLoadingMsg : (
                     symbolObj.name !== null ? `[${symbolObj.type}]  ${symbolObj.name}` : `[${symbolObj.type}]`
@@ -215,7 +214,7 @@ class Canvas extends Component {
                 );
             }
 
-            case ViewerTypes.PRINT: {
+            case kViewerType.PRINT: {
                 const { text } = viewer;
                 const buttons = [
                     { title: 'Close', icon: <CloseIcon/>, onClick: () => removeViewer(viewerId) },
@@ -237,14 +236,16 @@ class Canvas extends Component {
     }
 
     onDragEnd(result: DropResult, provided: HookProvided) {
-
+        const { reorderViewer } = this.props;
+        if (!result.destination) return;
+        reorderViewer(result.source.index, result.destination.index);
     }
 
     /**
      * Renders the inspector canvas and any viewers currently registered to it.
      */
     render() {
-        const { classes, viewers, layout, updateLayout} = this.props;
+        const { classes, viewers } = this.props;
         const frames = viewers.map((viewer, idx) => {
             return (
                 <Draggable key={viewer.viewerId} draggableId={viewer.viewerId} index={idx}>
@@ -252,7 +253,7 @@ class Canvas extends Component {
                         <div ref={provided.innerRef}
                              className={classes.frameContainer}
                              {...provided.draggableProps}
-                             {...provided.dragHandleProps} >
+                             {...provided.dragHandleProps}>
                             {this.createViewer(viewer)}
                         </div>
                     )}
@@ -300,40 +301,32 @@ const styles = theme => ({
 // To inject application state into component
 // ------------------------------------------
 
-/**
- * Creates derived data structure for `viewers`: [
- *     {
- *         viewerId: "0",
- *         viewerType: ViewerTypes.SNAPSHOT,
- *         symbolId: "@id:12345",
- *         symbolObj: {
- *             type: "number",
- *             str:  "86",
- *             name: "myInt",
- *             attributes: {...}
- *             data: {...}
- *         }
- *     },
- *     {
- *         viewerId: "1",
- *         viewerType: ViewerTypes.PRINT
- *         text: "The quick brown fox ...",
- *     }
- * ]
- */
-// TODO: This selector doesn't seem to be very effective because it's still rerendering each elem in the Canvas
-// whenever the symbol table changes.
-// TODO: Refactor this according to ducks format (selector file)
-const viewersSelector = createSelector(
-    [(state) => state.canvas.viewerObjects, (state) => state.canvas.viewerPositions, (state) => state.program.symbolTable],
-    (viewerObjects, viewerPositions, symbolTable) => {
-        return viewerPositions.map((viewerPosition) => {
-            const viewerId = viewerPosition.i;
-            const viewerObj = viewerObjects[viewerId];
+type SnapshotViewer = {
+    viewerType: kViewerType.SNAPSHOT,
+    viewerId: string,
+    symbolId: SymbolId,
+    symbolObj: SymbolObject,
+}
+
+type PrintViewer = {
+    viewerType: kViewerType.PRINT,
+    viewerId: string,
+    text: string,
+}
+
+type Viewer = SnapshotViewer | PrintViewer;
+
+const getViewers: ({}) => Array<Viewer> = createSelector(
+    (state) => getViewerPositions(state.canvas),
+    (state) => getViewerObjects(state.canvas),
+    (state) => getSymbolTable(state.program),
+    (viewerIds: string[], viewerObjs, symbolTable): Array<Viewer> => {
+        return viewerIds.map((viewerId) => {
+            const viewerObj = viewerObjs[viewerId];
             const viewerType = viewerObj.type;
 
             switch(viewerType) {
-                case ViewerTypes.SNAPSHOT:
+                case kViewerType.SNAPSHOT:
                     const { symbolId } = viewerObj;
                     const symbolObj = symbolTable[symbolId];
                     return {
@@ -343,7 +336,7 @@ const viewersSelector = createSelector(
                         symbolObj,
                     };
 
-                case ViewerTypes.PRINT:
+                case kViewerType.PRINT:
                     const { text } = viewerObj;
                     return {
                         viewerId,
@@ -359,9 +352,8 @@ const viewersSelector = createSelector(
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers:        viewersSelector(state),
-        layout:         state.canvas.viewerPositions,
-        symbolTable:    state.program.symbolTable,
+        viewers:        getViewers(state),
+        symbolTable:    getSymbolTable(state.program),
     };
 }
 
@@ -371,7 +363,7 @@ function mapDispatchToProps(dispatch) {
         addSnapshotViewer:    addSnapshotViewerAction,
         addPrintViewer:       addPrintViewerAction,
         removeViewer:         removeViewerAction,
-        updateLayout:         updateLayoutAction,
+        reorderViewer:        reorderViewerAction,
     }, dispatch);
 }
 

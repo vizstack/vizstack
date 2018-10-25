@@ -1,27 +1,27 @@
 import { handle } from 'redux-pack';
 import Immutable from 'seamless-immutable';
-import { ExampleActions } from './actions';
+import { kExampleActions } from './actions';
 
-/**
- * State slice structure for `example`:
- * {
- *     subslice: {},
- *     subarray: [],
- * }
- */
+/** Root reducer's state slice shape. */
+export type ExampleState = {
+    // Description of data member.
+    data: number,
+};
 
 /** Root reducer's initial state slice. */
-const initialState = Immutable({
+const initialState: ExampleState = Immutable({
 
 });
 
-/** TODO: Short description of root reducer for state slice. */
-export default function rootReducer(state = initialState, action) {
+/**
+ * Root reducer for state related to ____.
+ */
+export function exampleReducer(state: ExampleState = initialState, action = {}) {
     const { type } = action;
     switch(type) {
-        case ExampleActions.SYNC_ACTION:
+        case kExampleActions.SYNC_ACTION:
             return syncReducer(state, action);
-        case ExampleActions.ASYNC_ACTION:
+        case kExampleActions.ASYNC_ACTION:
             return asyncReducer(state, action);
     }
     return state;  // No effect by default

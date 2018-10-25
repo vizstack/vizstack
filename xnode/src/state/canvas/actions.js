@@ -1,11 +1,11 @@
-import { ViewerTypes } from './constants';
+import { kViewerType } from './outputs';
 
 /** Action type definitions. */
-export const CanvasActions = Object.freeze({
-    CLEAR_CANVAS:        "CANVAS::CLEAR_CANVAS",
-    ADD_VIEWER:          "CANVAS::ADD_VIEWER",
-    REMOVE_VIEWER:       "CANVAS::REMOVE_VIEWER",
-    UPDATE_LAYOUT:       "CANVAS::UPDATE_LAYOUT",
+export const kCanvasActions = Object.freeze({
+    CLEAR_CANVAS:        'canvas::CLEAR_CANVAS',
+    ADD_VIEWER:          'canvas::ADD_VIEWER',
+    REMOVE_VIEWER:       'canvas::REMOVE_VIEWER',
+    REORDER_VIEWER:      'canvas::REORDER_VIEWER',
 });
 
 /**
@@ -13,7 +13,7 @@ export const CanvasActions = Object.freeze({
  */
 export function clearCanvasAction() {
     return {
-        type: CanvasActions.CLEAR_CANVAS,
+        type: kCanvasActions.CLEAR_CANVAS,
     }
 }
 
@@ -27,11 +27,11 @@ export function clearCanvasAction() {
  *     Viewer ID of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addSnapshotViewerAction(symbolId, insertAfter = -1) {
+export function addSnapshotViewerAction(symbolId: string, insertAfter = -1) {
     return {
-        type: CanvasActions.ADD_VIEWER,
+        type: kCanvasActions.ADD_VIEWER,
         viewerObj: {
-            type: ViewerTypes.SNAPSHOT,
+            type: kViewerType.SNAPSHOT,
             symbolId,
         },
         insertAfter,
@@ -47,11 +47,11 @@ export function addSnapshotViewerAction(symbolId, insertAfter = -1) {
  * @param {int} insertAfter
  * @returns {object}
  */
-export function addPrintViewerAction(text, insertAfter = -1) {
+export function addPrintViewerAction(text: string, insertAfter = -1) {
     return {
-        type: CanvasActions.ADD_VIEWER,
+        type: kCanvasActions.ADD_VIEWER,
         viewerObj: {
-            type: ViewerTypes.PRINT,
+            type: kViewerType.PRINT,
             text,
         },
         insertAfter,
@@ -65,22 +65,24 @@ export function addPrintViewerAction(text, insertAfter = -1) {
  * @param {int} viewerId
  * @returns {object}
  */
-export function removeViewerAction(viewerId) {
+export function removeViewerAction(viewerId: number) {
     return {
-        type: CanvasActions.REMOVE_VIEWER,
+        type: kCanvasActions.REMOVE_VIEWER,
         viewerId
     };
 }
 
 /**
- * Action created to update the layout of the Canvas.
+ * Action creator to move a viewer from the original `startIdx` to the updated `endIdx`.
  *
- * @param layout
+ * @param startIdx
+ * @param endIdx
  * @returns {object}
  */
-export function updateLayoutAction(layout) {
+export function reorderViewerAction(startIdx: number, endIdx: number) {
     return {
-        type: CanvasActions.UPDATE_LAYOUT,
-        layout
+        type: kCanvasActions.REORDER_VIEWER,
+        startIdx,
+        endIdx,
     };
 }

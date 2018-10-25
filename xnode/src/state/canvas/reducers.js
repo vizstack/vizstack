@@ -1,28 +1,23 @@
 import Immutable from 'seamless-immutable';
-import { CanvasActions } from './actions';
+import { kCanvasActions } from './actions';
+import type { PrintViewerObject, SnapshotViewerObject } from './outputs';
 
-/**
- * State slice structure for `canvas`:
- * {
- *     'currentViewerId': 35,
- *     'viewerObjects': {
- *         '32': {
- *             type: ViewerTypes.SNAPSHOT
- *             symbolId: "@id:12345!0!"
- *         },
- *         '34': {
- *             type: ViewerTypes.PRINT
- *             text: "The quick brown fox ..."
- *         }
- *     },
- *     'viewerPositions': [{
- *         i, x, y, w, h, ...
- *     }],
- * }
- */
+/** Root reducer's state slice shape. */
+export type CanvasState = {
+    // Unique viewer ID, incremented on each add.
+    currentViewerId: number,
+
+    // Map from viewer ID to viewer objects.
+    viewerObjects: {
+        [string]: SnapshotViewerObject | PrintViewerObject,
+    },
+
+    // List of viewer ID strings in order of display.
+    viewerPositions: string[],
+};
 
 /** Root reducer's initial state slice. */
-const initialState = Immutable({
+const initialState: CanvasState = Immutable({
     currentViewerId: 0,
     viewerObjects: {},
     viewerPositions: [],
@@ -31,30 +26,26 @@ const initialState = Immutable({
 /**
  * Root reducer for updating the canvas view state.
  */
-export default function rootReducer(state = initialState, action) {
+export function canvasReducer(state: CanvasState = initialState, action = {}) {
     const { type } = action;
     switch(type) {
-        case CanvasActions.ADD_VIEWER:          return addViewerReducer(state, action);
-        case CanvasActions.REMOVE_VIEWER:       return removeViewerReducer(state, action);
-        case CanvasActions.UPDATE_LAYOUT:       return updateLayoutReducer(state, action);
-        case CanvasActions.CLEAR_CANVAS:        return clearCanvasReducer(state, action);
+        case kCanvasActions.ADD_VIEWER:          return addViewerReducer(state, action);
+        case kCanvasActions.REMOVE_VIEWER:       return removeViewerReducer(state, action);
+        case kCanvasActions.REORDER_VIEWER:      return reorderViewerReducer(state, action);
+        case kCanvasActions.CLEAR_CANVAS:        return clearCanvasReducer(state, action);
     }
     return state;  // No effect by default
 };
 
-/* Constants for default React Grid Layout element sizes. */
-const DEFAULT_H = 3;
-const DEFAULT_MIN_H = 2;
-
 /**
- * Reset the canvas, removing all viewers.
+ * Resets the canvas, removing all viewers.
  */
 function clearCanvasReducer(state, action) {
     return initialState;
 }
 
 /**
- * Add a viewer to Canvas. Assumes `data` for symbol is already loaded.
+ * Adds a viewer to the canvas. Assumes `data` for symbol object is already loaded.
  */
 function addViewerReducer(state, action) {
     const { viewerObj, insertAfter } = action;
@@ -63,22 +54,13 @@ function addViewerReducer(state, action) {
         console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
         return state;
     }
-    const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem.i === insertAfter);
+    const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem === insertAfter);
     return (
         state
         .setIn(['viewerObjects', `${currentViewerId}`], viewerObj, {deep: true})
         .update('viewerPositions', (prev) => Immutable([]).concat(
             insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-            [{
-                i:    `${state.currentViewerId}`,  // Required by API to be string
-                x:    0,
-                y:    Infinity,
-                w:    1,
-                h:    DEFAULT_H,
-                minW: 1,
-                maxW: 1,
-                minH: DEFAULT_MIN_H,
-            }],
+            [`${state.currentViewerId}`],
             insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
         ))
         .update('currentViewerId', (prev) => prev + 1)
@@ -86,11 +68,11 @@ function addViewerReducer(state, action) {
 }
 
 /**
- * Remove a viewer from `Canvas`.
+ * Removes a viewer from the canvas.
  */
 function removeViewerReducer(state, action) {
     const { viewerId } = action;
-    const removeIdx = state.viewerPositions.findIndex((elem) => elem.i === viewerId);
+    const removeIdx = state.viewerPositions.findIndex((elem) => elem === viewerId);
     if(removeIdx === -1) {
         console.error("Could not find viewer with specified `viewerId` to remove; got ", viewerId);
         return state;
@@ -103,9 +85,17 @@ function removeViewerReducer(state, action) {
 }
 
 /**
- * Update the `viewerPositions` in `canvas`.
+ * Moves a viewer from the start to end position in the canvas layout.
  */
-function updateLayoutReducer(state, action) {
-    const { layout } = action;
-    return state.set('viewerPositions', layout);
+function reorderViewerReducer(state, action) {
+    const { startIdx, endIdx } = action;
+    return (
+        state
+        .update('viewerPositions', (viewerPositions) => {
+            const arr = viewerPositions.asMutable();
+            const [removed] = arr.splice(startIdx, 1);
+            arr.splice(endIdx, 0, removed);
+            return arr;
+        })
+    );
 }

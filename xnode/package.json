@@ -47,6 +47,7 @@
   "scripts": {
     "all": "npm run test && npm run build",
     "build": "babel src/ -d build/ --ignore 'src/main.js' --copy-files",
-    "test": "cd src/ && python3 -m pytest && flow"
+    "test": "cd src/ && python3 -m pytest",
+    "lint": "cd src/ && flow && mypy *.py"
   }
 }

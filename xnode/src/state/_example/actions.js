@@ -1,7 +1,7 @@
 /** Action type definitions. */
-export const ExampleActions = Object.freeze({  // Must take form of `[Feature]Actions`
-    SYNC_ACTION:  "EXAMPLE::SYNC_ACTION",
-    ASYNC_ACTION: "EXAMPLE::ASYNC_ACTION",
+export const kExampleActions = Object.freeze({  // Must take form of `[Feature]Actions`
+    SYNC_ACTION:  'path/to/example::SYNC_ACTION',
+    ASYNC_ACTION: 'path/to/example::ASYNC_ACTION',
 });
 
 // TODO: Feature grouping
@@ -10,7 +10,7 @@ export const ExampleActions = Object.freeze({  // Must take form of `[Feature]Ac
 /** Action creator to __. */
 export function syncAction(value) {  // Must take form of `[name]Action`
     return {
-        type: ExampleActions.SYNC_ACTION,
+        type: kExampleActions.SYNC_ACTION,
         value  // ES6 shorthand for `value: value`
     };
 };
@@ -18,7 +18,7 @@ export function syncAction(value) {  // Must take form of `[name]Action`
 /** Action creator to __. */
 export function asyncAction(value) {
     return {
-        type: ExampleActions.ASYNC_ACTION,
+        type: kExampleActions.ASYNC_ACTION,
         promise: null,  // e.g. `fetch(value)` or some other async action that returns Promise (see redux-pack docs)
         meta: {
             onSuccess: (result, getState) => {

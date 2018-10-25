@@ -36,6 +36,7 @@ myRNNInput = [Variable(torch.ones(5, myRNNDims[0])) for _ in range(4)]
 myRNN = StackLSTM(myRNNBatchSize, myRNNDims)
 myRNNOutput = myRNN(myRNNInput)
 
+
 myPseudoLogLSTM = PseudoLogLSTM(myRNNBatchSize, myRNNDims)
 myPseudoLogLSTMOutput = myPseudoLogLSTM(myRNNInput)
 
