@@ -53,6 +53,7 @@ export default {
                     this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
                        repl.name = minimalUniquePaths[repl.scriptPath];
                     });
+                    this.waitAndRerun(null, null, 0);
                     console.debug('root -- new REPL added');
                     return repl;
                 }
@@ -66,17 +67,8 @@ export default {
                     }
                     const changes = null;  // TODO: get changes from last edit
                     editor.onDidChange(() => {
-                        this.lastChangedTime = new Date();
-                        setTimeout(() => {
-                            const now = new Date();
-                            if (now - this.lastChangedTime >= RERUN_DELAY) {
-                                editor.save();
-                                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
-                                    console.debug('root -- signaling change to REPL');
-                                    repl.onFileChanged(editor.getPath(), changes);
-                                });
-                            }
-                        }, RERUN_DELAY + 10);  // Allow some buffer time
+                        editor.save();
+                        this.waitAndRerun(editor.getPath(), changes, RERUN_DELAY);
                     });
                 }
             }),
@@ -128,4 +120,17 @@ export default {
         this.sandboxSettingsPanel.show();
         console.debug('root -- sandbox settings panel opened');
     },
+
+    waitAndRerun(changedPath, changes, delay) {
+        this.lastChangedTime = new Date();
+        setTimeout(() => {
+            const now = new Date();
+            if (now - this.lastChangedTime >= delay) {
+                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
+                    console.debug('root -- signaling change to REPL');
+                    repl.onFileChanged(changedPath, changes);
+                });
+            }
+        }, delay + 10);  // Allow some buffer time
+    }
 };

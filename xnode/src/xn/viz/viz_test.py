@@ -2,7 +2,7 @@ from importlib import reload
 import json
 
 import xn
-from xn.viz import TokenAtom, SequenceLayout
+from xn.viz import TokenPrimitive, SequenceLayout
 
 
 class _TokenTest:
@@ -10,7 +10,7 @@ class _TokenTest:
         self.data = data
 
     def xn(self):
-        return TokenAtom(self.data)
+        return TokenPrimitive(self.data)
 
 
 class _SequenceTest:
@@ -71,13 +71,13 @@ class _SequenceTest:
 #         'fileName': 'none',
 #         'lineNumber': 0,
 #         'compactVizModel': {
-#             'type': 'TokenAtom',
+#             'type': 'TokenPrimitive',
 #             'contents': {
 #                 'text': '10'
 #             }
 #         },
 #         'fullVizModel': {
-#             'type': 'TokenAtom',
+#             'type': 'TokenPrimitive',
 #             'contents': {
 #                 'text': '10'
 #             }

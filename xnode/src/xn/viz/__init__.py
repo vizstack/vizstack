@@ -2,7 +2,7 @@ from typing import Union, Sequence, Any, Mapping, Iterable, List, Dict, ClassVar
     MutableSet, MutableMapping, NewType
 from enum import Enum
 from copy import copy
-from xn.constants import VizId, VizModel, SnapshotId, JsonType, VizEntry, VizSlice
+from xn.constants import VizId, VizModel, SnapshotId, JsonType, VizSpec, VizSlice
 
 # TODO: potentially use these remnants of the old viz engine
 # TENSOR_TYPES: Mapping[str, str] = {
@@ -38,10 +38,10 @@ class VisualizationEngine:
 
     class _CacheEntry:
         def __init__(self,
-                     viz_entry: VizEntry,
+                     viz_entry: VizSpec,
                      full_viz_model: VizModel,
                      viz_refs: List[VizId]):
-            self.viz_entry: VizEntry = viz_entry
+            self.viz_entry: VizSpec = viz_entry
             self.full_viz_model: VizModel = full_viz_model
             self.viz_refs: List[VizId] = viz_refs
 
@@ -78,7 +78,7 @@ class VisualizationEngine:
 
     def _cache_slice(self,
                      obj: Any,
-                     file_name: str,
+                     file_path: str,
                      line_number: int,
                      snapshot_id: SnapshotId) -> VizId:
         """Creates and caches empty shells and data objects for `obj`, every object referenced by `obj`, every object
@@ -110,8 +110,8 @@ class VisualizationEngine:
                 snapshot_id
             )
             self._cache[viz_id]: VisualizationEngine._CacheEntry = VisualizationEngine._CacheEntry(
-                VizEntry(
-                    file_name,
+                VizSpec(
+                    file_path,
                     line_number,
                     viz_obj.compile_compact(),
                     None
@@ -135,7 +135,7 @@ class VisualizationEngine:
 
     def take_snapshot(self,
                       obj: Any,
-                      file_name: str,
+                      file_path: str,
                       line_number: int,
                       name: Optional[str]=None) -> VizId:
         # TODO: use or remove name
@@ -154,7 +154,7 @@ class VisualizationEngine:
             The symbol ID of `obj` at the current point in the program's execution.
         """
         self._next_snapshot_id += 1
-        return self._cache_slice(obj, file_name, line_number, self._next_snapshot_id)
+        return self._cache_slice(obj, file_path, line_number, self._next_snapshot_id)
 
     def get_snapshot_slice(self,
                            viz_id: VizId) -> VizSlice:
@@ -176,7 +176,7 @@ class VisualizationEngine:
             viz_id: copy(self._cache[viz_id].viz_entry)
         }
 
-        viz_slice[viz_id].full_viz_model = self._cache[viz_id].full_viz_model
+        viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
 
         for referenced_viz_id in self._cache[viz_id].viz_refs:
             if referenced_viz_id != viz_id:
@@ -191,7 +191,7 @@ def _get_viz(o: Any) -> '_Viz':
         return o.xn()
     else:
         # TODO: use a better generic viz
-        return TokenAtom(o)
+        return TokenPrimitive(o)
 
 
 # TODO: use newtypes for viz models
@@ -206,7 +206,7 @@ class _Viz:
         raise NotImplementedError
 
 
-class TokenAtom(_Viz):
+class TokenPrimitive(_Viz):
     def __init__(self,
                  val: Any,
                  color: Color = Color.PRIMARY) -> None:
@@ -219,7 +219,7 @@ class TokenAtom(_Viz):
 
     def compile_compact(self) -> VizModel:
         return {
-            'type': 'TokenAtom',
+            'type': 'TokenPrimitive',
             'contents': {
                 'text': self._text
             }

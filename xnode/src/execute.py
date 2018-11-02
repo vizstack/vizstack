@@ -15,8 +15,7 @@ from xn.viz import VisualizationEngine
 from xn.constants import VizSlice, VizId, Actions
 
 # The type of the function which is called to send a message to the parent process.
-_SendMessage = NewType('_SendMessage', Callable[[Optional[VizSlice], Optional[VizId], bool, Optional[str],
-                                                 Optional[str]], None])
+_SendMessage = Callable[[Optional[VizSlice], Optional[VizId], bool], None]
 
 
 # Taken from atom-python-debugger
@@ -102,13 +101,19 @@ class _PrintOverwriter:
     """
 
     def __init__(self,
+                 engine: VisualizationEngine,
                  send_message: _SendMessage) -> None:
-        self.send_message = send_message
+        self._engine: VisualizationEngine = engine
+        self._send_message: _SendMessage = send_message
 
     def write(self, text: str) -> None:
         if text == '\n':
             return
-        self.send_message(None, None, False, '{}\n'.format(text), None)
+        frame_info = getframeinfo(currentframe().f_back)
+        filename, lineno = frame_info.filename, frame_info.lineno
+        viz_id: VizId = self._engine.take_snapshot(text, filename, lineno)
+        viz_slice: VizSlice = self._engine.get_snapshot_slice(viz_id)
+        self._send_message(viz_slice, viz_id, False)
 
     def flush(self) -> None:
         pass
@@ -130,9 +135,7 @@ class _DataclassJSONEncoder(json.JSONEncoder):
 def _send_message(send_queue: Queue,
                   viz_slice: Optional[VizSlice],
                   view_viz_id: Optional[VizId],
-                  refresh: bool,
-                  text: Optional[str],
-                  error: Optional[str]) -> None:
+                  refresh: bool) -> None:
     """Writes a message to the client containing information about symbols and the program state.
 
     Args:
@@ -147,11 +150,9 @@ def _send_message(send_queue: Queue,
         error: The full text of an exception message that should be relayed to the client.
     """
     message = {
-        'symbols': viz_slice,
-        'viewSymbol': view_viz_id,
-        'refresh': refresh,
-        'text': text,
-        'error': error,
+        'vizTableSlice': viz_slice,
+        'viewedVizId': view_viz_id,
+        'shouldRefresh': refresh,
     }
     send_queue.put(json.dumps(message, cls=_DataclassJSONEncoder))
 
@@ -172,7 +173,7 @@ def _execute_watch(send_message: _SendMessage,
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = engine.take_snapshot(obj, filename, lineno)
         viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
-        send_message(viz_slice, viz_id, False, None, None)
+        send_message(viz_slice, viz_id, False)
 
 
 def _fetch_viz(send_message: _SendMessage,
@@ -188,7 +189,7 @@ def _fetch_viz(send_message: _SendMessage,
         viz_id: The symbol ID of the object whose slice should be sent.
     """
     viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
-    send_message(viz_slice, None, False, None, None)
+    send_message(viz_slice, None, False)
 
 
 # ======================================================================================================================
@@ -219,17 +220,17 @@ def run_script(receive_queue: Queue,
     send_message: _SendMessage = functools.partial(_send_message, send_queue)
 
     # this won't be processed by the engine, a "junk" message must be sent for some reason
-    send_message(None, None, False, None, None)
+    send_message(None, None, False)
 
     engine: VisualizationEngine = VisualizationEngine()
     xn.set_view_fn(functools.partial(_execute_watch, send_message, engine))
 
     # Replace stdout with an object that queues all statements printed by the user script as messages
-    sys.stdout = _PrintOverwriter(send_message)
+    sys.stdout = _PrintOverwriter(engine, send_message)
 
     executor: _ScriptExecutor = _ScriptExecutor()
     try:
-        send_message(None, None, True, None, None)
+        send_message(None, None, True)
         executor.execute(script_path)
         while True:
             request: Mapping[str, Union[Actions, VizId]] = receive_queue.get(True)
@@ -241,4 +242,8 @@ def run_script(receive_queue: Queue,
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,
                            re.DOTALL)
         clean_error_msg: str = result.group(1) + result.group(3)
-        send_message(None, None, False, None, clean_error_msg)
+        result = re.search(r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$", clean_error_msg,
+                           re.DOTALL)
+        viz_id: VizId = engine.take_snapshot(clean_error_msg, result.group(1), int(result.group(2)))
+        viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
+        send_message(viz_slice, viz_id, False)
