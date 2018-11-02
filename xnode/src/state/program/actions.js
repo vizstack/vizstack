@@ -1,8 +1,8 @@
 
 /** Action type definitions. */
-export const SymbolTableActions = Object.freeze({
-    ADD_SYMBOLS:   "SYMBOLTABLE::ADD_SYMBOLS",
-    CLEAR_TABLE:   "SYMBOLTABLE::CLEAR_TABLE",
+export const kSymbolTableActions = Object.freeze({
+    ADD_SYMBOLS:   'symboltable::ADD_SYMBOLS',
+    CLEAR_TABLE:   'symboltable::CLEAR_TABLE',
 });
 
 /**
@@ -12,7 +12,7 @@ export const SymbolTableActions = Object.freeze({
  */
 export function clearSymbolTableAction() {
     return {
-        type: SymbolTableActions.CLEAR_TABLE,
+        type: kSymbolTableActions.CLEAR_TABLE,
     }
 }
 
@@ -25,7 +25,7 @@ export function clearSymbolTableAction() {
  */
 export function addSymbolsAction(symbolTableSlice) {
     return {
-        type: SymbolTableActions.ADD_SYMBOLS,
+        type: kSymbolTableActions.ADD_SYMBOLS,
         symbolTableSlice,
     }
 }

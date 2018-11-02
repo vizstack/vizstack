@@ -87,12 +87,12 @@ class SequenceViz extends Component {
                 <tbody>
                     <tr>
                         <td><span className={classes.motifText}>{startMotif}</span></td>
-                        {items.map((item, i) => <td key={i}>{item}</td>)}
+                        {items.map((item, i) => <td key={i} className={classes.elemCell}>{item}</td>)}
                         <td><span className={classes.motifText}>{endMotif}</span></td>
                     </tr>
                     <tr>
                         <td>{/* start motif */}</td>
-                        {idxs.map((idx, i) => <td key={i}>{idx}</td>)}
+                        {idxs.map((idx, i) => <td key={i} className={classes.indexCell}>{idx}</td>)}
                         <td>{/* end motif */}</td>
                     </tr>
                 </tbody>
@@ -109,12 +109,17 @@ class SequenceViz extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     grid: {
-        "& td": {
-            paddingLeft:     2,  // TODO: Dehardcode this
-            paddingRight:    2,  // TODO: Dehardcode this
-            textAlign:      'center',
-            verticalAlign:  'middle',
-        }
+        textAlign:      'center',
+        verticalAlign:  'middle',
+    },
+    elemCell: {
+        paddingLeft:     1,  // TODO: Dehardcode this
+        paddingRight:    1,  // TODO: Dehardcode this
+        paddingTop:      1,  // TODO: Dehardcode this
+        paddingBottom:   1,  // TODO: Dehardcode this
+    },
+    indexCell: {
+        lineHeight:      '6pt', // TODO: Dehardcode this
     },
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,
@@ -126,8 +131,7 @@ const styles = theme => ({
         cursor:         'default',
     },
     indexText: {
-        textAlign:      'center',
-        fontSize:       '8pt',  // TODO: Dehardcode this
+        fontSize:       '6pt',  // TODO: Dehardcode this
         userSelect:     'none',
         cursor:         'default',
     }

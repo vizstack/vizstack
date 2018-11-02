@@ -40,3 +40,6 @@ ENV/
 
 # Atom
 *.tags
+
+# MyPy
+*.mypy_cache

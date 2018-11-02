@@ -113,7 +113,7 @@ Note the redundancy. TODO: Can we remove it?
 
 #### class
 ```
-"str": "class <MyAwesomeClass>",
+"str": "class<MyAwesomeClass>",
 "data": {
     "functions": {
         "name": "@id:12345",  // functions are symbols too

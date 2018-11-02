@@ -27,9 +27,6 @@ class ViewerDisplayFrame extends Component {
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
 
-        /** Left-justified icon element to display in header. */
-        icon: PropTypes.element,
-
         /** Left-justified text string/element to display in header. */
         title: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
 
@@ -52,21 +49,17 @@ class ViewerDisplayFrame extends Component {
         ));
 
         return (
-            <DisplayFrame>
-                <DisplayFrameHeader>
-                    <span className={classes.bundle}>
-                        {icon ? <span className={classes.icon}>{icon}</span> : null}
-                        {title ? <span className={classes.title}>{title}</span> : null}
-                    </span>
-                    <span className={classes.buttons}>
-                        {buttonsComponents}
-                    </span>
-                </DisplayFrameHeader>
-
-                <DisplayFrameContent className='ReactGridLayoutNoDrag'>
-                    {children}
-                </DisplayFrameContent>
-            </DisplayFrame>
+            <div>
+                {title ? <span className={classes.title}>{title}</span> : null}
+                <DisplayFrame>
+                    <DisplayFrameContent>
+                        {children}
+                        <div className={classes.buttons}>
+                            {buttonsComponents}
+                        </div>
+                    </DisplayFrameContent>
+                </DisplayFrame>
+            </div>
         );
     }
 }
@@ -77,7 +70,7 @@ class ViewerDisplayFrame extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     bundle: {
-       display: 'inline-flex',
+        display: 'inline-flex',
     },
     icon: {
         textAlign: 'left',
@@ -90,7 +83,9 @@ const styles = theme => ({
         textAlign: 'left',
     },
     buttons: {
-        textAlign: 'right',
+        position: 'absolute',
+        right: 2, // TODO: Dehardcode this
+        top: 2,   // TODO: Dehardcode this
     }
 });
 

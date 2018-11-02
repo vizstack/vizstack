@@ -46,6 +46,9 @@ const styles = theme => ({
         // Fill rest of vertical space in DisplayFrame container
         flexGrow:       1,
 
+        // Allow absolute positioning of children
+        position:       'relative',
+
         // Layout child components vertically
         display:        'flex',
         flexDirection:  'column',

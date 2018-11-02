@@ -87,13 +87,13 @@ class SequenceViz extends Component {
                 <tbody>
                     {items.map((arr, i) => (
                         <tr key={i}>
-                            <td>{vidxs[i]}</td>
-                            {arr.map((item, i) => <td key={i}>{item}</td>)}
+                            <td className={classes.indexCell}>{vidxs[i]}</td>
+                            {arr.map((item, i) => <td key={i} className={classes.elemCell}>{item}</td>)}
                         </tr>
                     ))}
                     <tr>
-                        <td>{/* vertical idx */}</td>
-                        {hidxs.map((idx, i) => <td key={i}>{idx}</td>)}
+                        <td className={classes.indexCell}>{/* vertical idx */}</td>
+                        {hidxs.map((idx, i) => <td key={i} className={classes.indexCell}>{idx}</td>)}
                     </tr>
                 </tbody>
             </table>
@@ -109,18 +109,25 @@ class SequenceViz extends Component {
 /** CSS-in-JS styling function. */
 const styles = theme => ({
     grid: {
-        "& td": {
-            paddingLeft:     2,  // TODO: Dehardcode this
-            paddingRight:    2,  // TODO: Dehardcode this
-            paddingTop:     2,  // TODO: Dehardcode this
-            paddingBottom:    2,  // TODO: Dehardcode this
-            textAlign:      'center',
-            verticalAlign:  'middle',
-        }
+        textAlign:      'center',
+        verticalAlign:  'middle',
+    },
+    elemCell: {
+        paddingLeft:     1,  // TODO: Dehardcode this
+        paddingRight:    1,  // TODO: Dehardcode this
+        paddingTop:      1,  // TODO: Dehardcode this
+        paddingBottom:   1,  // TODO: Dehardcode this
+    },
+    indexCell: {
+        paddingLeft:     4,  // TODO: Dehardcode this
+        paddingRight:    4,  // TODO: Dehardcode this
+        paddingTop:      4,  // TODO: Dehardcode this
+        paddingBottom:   4,  // TODO: Dehardcode this
+        lineHeight:      '6pt', // TODO: Dehardcode this
     },
     indexText: {
         textAlign:      'center',
-        fontSize:       '8pt',  // TODO: Dehardcode this
+        fontSize:       '6pt',  // TODO: Dehardcode this
         userSelect:     'none',
         cursor:         'default',
     }
