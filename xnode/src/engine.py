@@ -5,7 +5,7 @@ import threading
 from multiprocessing import Process, Queue
 from typing import Optional
 
-from constants import SymbolId, Actions
+from xn.constants import VizId, Actions
 from execute import run_script
 
 # ======================================================================================================================
@@ -17,26 +17,26 @@ from execute import run_script
 
 # A change was made to some file that may warrant a re-execution.
 _EDIT_HEADER: str = 'change:'
-# A symbol with given ID should have its shell fetched.
+# A viz with given ID should have its viz slice fetched.
 _FETCH_HEADER: str = 'fetch:'
 # The engine should terminate.
 _END_HEADER: str = 'end:'
 
 
 class _ExecutionManager:
-    """Runs the user's Python script in a subprocess and prints requested symbol schemas to stdout.
+    """Runs the user's Python script in a subprocess and prints requested viz slices to stdout.
 
     On creation, the `_ExecutionManager` starts a new process and a new thread. The new process runs
-    `execute.run_script()`, which in turn runs the user-written script within a `Pdb` instance. The symbol schemas
+    `execute.run_script()`, which in turn runs the user-written script within a `Pdb` instance. The messages
     produced by any evaluated watch expressions are added to a queue. The thread reads this queue, printing any
-    schemas to stdout as they are added. Client programs, such as `repl.js`, can read these printed schemas.
+    messages to stdout as they are added. Client programs, such as `repl.js`, can read these printed schemas.
 
     The thread is necessary to prevent blocking; otherwise, the engine would either have to block until script execution
-    is done, preventing re-runs, or schemas would only be output after the process completes, which would produce long
+    is done, preventing re-runs, or messages would only be output after the process completes, which would produce long
     delays in longer scripts. The subprocess cannot write to stdout itself, so the thread must do so instead.
 
-    Once the user-written script has executed, `execute.run_script()` waits for the user to request the data objects of
-    additional symbols. Those requests are sent from the client to stdin, and then sent to the `_ExecutionManager`,
+    Once the user-written script has executed, `execute.run_script()` waits for the user to request the models of
+    additional vizzes. Those requests are sent from the client to stdin, and then sent to the `_ExecutionManager`,
     which adds the request to a queue that is read by `execute.run_script()`.
     """
 
@@ -44,10 +44,10 @@ class _ExecutionManager:
 
     def __init__(self,
                  script_path: str) -> None:
-        """Creates a process to execute the user-written script and a thread to read the returned schemas.
+        """Creates a process to execute the user-written script and a thread to read the returned viz slices.
 
         Args:
-            script_path: the absolute path to the user-written script to be executed
+            script_path: the absolute path to the user-written script to be executed.
         """
         self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(script_path)
         self.print_thread = threading.Thread(target=_ExecutionManager._start_print_thread, args=(self.exec_process,
@@ -64,23 +64,23 @@ class _ExecutionManager:
         self.print_queue.put(_ExecutionManager._THREAD_QUIT)
         self.print_thread.join()
 
-    def fetch_symbol(self,
-                     symbol_id: SymbolId,
-                     actions: Actions) -> None:
-        """Fetches the data object for a symbol from the subprocess.
+    def fetch_viz(self,
+                  viz_id: VizId,
+                  actions: Actions) -> None:
+        """Fetches the data object for a viz from the subprocess.
 
-        The subprocess holds the ground-truth of all objects in the script's namespace, so requests must be forwarded
-        to the process itself. These requests are only processed after the script has finished running, and reflect
-        the value of symbols at the program's end.
+        The subprocess holds the visualizations for all objects in the script's namespace, so requests must be
+        forwarded to the process itself. These requests are only processed after the script has finished running,
+        and visualizes the object at the time `viz_id` was generated.
 
-        The fetched symbol schema is written to the `print_queue`, which is printed by the printing thread.
+        The fetched viz slice is written to the `print_queue`, which is printed by the printing thread.
 
         Args:
-            symbol_id: The ID of the symbol whose data should be returned.
+            viz_id: The ID of the visualization whose corresponding viz slice should be printed.
             actions: Actions that should be performed on the returned data; see `ACTION-SCHEMA.md`.
         """
         self.fetch_queue.put({
-            'symbol_id': symbol_id,
+            'viz_id': viz_id,
             'actions': actions,
         })
 
@@ -88,17 +88,17 @@ class _ExecutionManager:
     def _start_exec_process(script_path: str) -> (Process, Queue, Queue):
         """Starts a new process, which runs a user-written script inside of a Pdb instance.
 
-        Two queues are created to communicate with the new process; one is filled by the subprocess with symbol schemas
-        as they are encountered in watch statements or after they are requested by `_fetch_symbol()`. The other queue is
-        filled by the `_ExecutionManager` with the IDs of symbols to be fetched.
+        Two queues are created to communicate with the new process; one is filled by the subprocess with viz slices
+        as they are encountered in watch statements or after they are requested by `_fetch_viz()`. The other queue is
+        filled by the `_ExecutionManager` with the IDs of vizzes to be fetched.
 
         Args:
             script_path: The path to a user-written script to be executed in the subprocess.
 
         Returns:
             The handle to the subprocess.
-            The queue filled with symbol schemas by the process.
-            The queue filled with requested symbol IDs by the `_ExecutionManager`.
+            The queue filled with messages sent by the process.
+            The queue filled with requested viz IDs by the `_ExecutionManager`.
         """
         fetch_queue: Queue = Queue()
         print_queue: Queue = Queue()
@@ -114,8 +114,8 @@ class _ExecutionManager:
                             print_queue: Queue) -> None:
         """Starts a new thread, which reads from a queue and prints any found strings.
 
-        An `_ExecutionManager` will create a print thread to pipe all schemas produced by its execution subprocess to
-        stdout, where it can be read by client programs.
+        An `_ExecutionManager` will create a print thread to pipe all viz slices produced by its execution
+        subprocess to stdout, where it can be read by client programs.
 
         Note that the thread blocks between each item added to the queue.
 
@@ -137,7 +137,7 @@ class _ExecutionManager:
 # Execution control.
 # ------------------
 # Determine whether the user-written script associated with the engine should be re-run, do so, and then submit
-# additional symbol data requests after execution completes.
+# additional viz model requests after execution completes.
 # ======================================================================================================================
 
 def _should_execute(script_path: str,
@@ -180,21 +180,21 @@ def _execute(exec_manager: Optional[_ExecutionManager],
     return exec_manager
 
 
-def _fetch_symbol(exec_manager: _ExecutionManager,
-                  message: str) -> None:
-    """Fetches a symbol table slice containing the data of a requested symbol.
+def _fetch_viz(exec_manager: _ExecutionManager,
+               message: str) -> None:
+    """Fetches a viz slice containing the data of a requested viz.
 
     Args:
         exec_manager: The `_ExecutionManager` to which the request should be proxied.
         message: A string sent by the client to stdin of the format
-            "{FETCH_HEADER}{symbol_id}?{actions}"
+            "{FETCH_HEADER}{viz_id}?{actions}"
             where `actions` is the JSON string of an action dict, as described in `ACTION-SCHEMA.md`.
     """
     contents: str = message.replace(_FETCH_HEADER, '').split('?')
-    symbol_id: SymbolId = contents[0]
+    viz_id: VizId = contents[0]
     actions: Actions = json.loads(contents[1])
 
-    exec_manager.fetch_symbol(symbol_id, actions)
+    exec_manager.fetch_viz(viz_id, actions)
 
 
 # ======================================================================================================================
@@ -217,7 +217,7 @@ def _read_args() -> str:
 
 
 def main() -> None:
-    """Reads commands from the client and adds watch expressions, reruns the user's script, and fetches symbol data
+    """Reads commands from the client and adds watch expressions, reruns the user's script, and fetches viz models
     accordingly.
 
     The function runs on a loop until terminated, consuming inputs from stdin and performing actions based on the
@@ -235,7 +235,7 @@ def main() -> None:
 
         elif message.startswith(_FETCH_HEADER):
             if exec_manager:
-                _fetch_symbol(exec_manager, message)
+                _fetch_viz(exec_manager, message)
 
         elif message.startswith(_END_HEADER):
             break
