@@ -1,0 +1,1 @@
+export { viztableReducer } from './reducers';

@@ -1,38 +1,20 @@
 import type { CanvasState } from './reducers';
-import type { SymbolId } from '../program/outputs';
-
-/** Constants for viewer types. */
-export const kViewerType = Object.freeze({
-    SNAPSHOT: 'canvas/kViewerType::SNAPSHOT',
-    PRINT:    'canvas/kViewerType::PRINT',
-});
-
+import type { VizId } from '../viztable/outputs';
 
 /** Creates derived data structure for viewers. */
-export type SnapshotViewerObject = {
-    // Viewer type enum.
-    type: kViewerType.SNAPSHOT,
-
+export type Viewer = {
     // Symbol ID of snapshot symbol.
-    symbolId: SymbolId,
+    symbolId: VizId,
 }
-export type PrintViewerObject = {
-    // Viewer type enum.
-    type: kViewerType.PRINT,
-
-    // Text string to print.
-    text: string,
-}
-export type ViewerObject = SnapshotViewerObject | PrintViewerObject;
 
 export function getViewerPositions(state: CanvasState): string[] {
     return state.viewerPositions;
 }
 
-export function getViewerObjects(state: CanvasState): { [string]: ViewerObject } {
+export function getViewers(state: CanvasState): { [string]: Viewer } {
     return state.viewerObjects;
 }
 
-export function getViewerObject(state: CanvasState, viewerId: string): ViewerObject | undefined {
+export function getViewer(state: CanvasState, viewerId: string): Viewer | undefined {
     return state.viewerObjects[viewerId];
 }

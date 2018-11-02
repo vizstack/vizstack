@@ -1,1 +1,0 @@
-export { programReducer } from './reducers';

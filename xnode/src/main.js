@@ -7,7 +7,7 @@ import REPL from './views/repl';
 import { getMinimalUniquePaths } from "./services/path-utils";
 
 // Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
-let RERUN_DELAY = 1000;
+let RERUN_DELAY = 2000;
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
@@ -23,7 +23,7 @@ export default {
     subscriptions: null,
 
     // Time that the active editor was last changed.
-    lastChangedTime: 0,
+    lastChangedTime: new Date(),
 
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
@@ -58,7 +58,7 @@ export default {
                 }
             }),
 
-            // Register listener for whenever the active editor is edited
+            // Register listener for whenever the active editor is changed
             atom.workspace.observeActiveTextEditor(editor => {
                 if(editor) {
                     if(editor.gutterWithName('xnode-watch-gutter') === null) {

@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom';
 import { createStore, applyMiddleware } from 'redux';
 import thunk from 'redux-thunk';
 import { Provider as ReduxProvider } from 'react-redux';
-import { composeWithDevTools } from 'remote-redux-devtools';
 
 // Material UI services
 import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
@@ -17,12 +16,24 @@ import path from 'path';
 // Custom top-level React/Redux components
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import { addSymbolsAction, clearSymbolTableAction } from '../state/program/actions';
-import { addSnapshotViewerAction, addPrintViewerAction, clearCanvasAction } from '../state/canvas/actions';
+import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
+import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
+import type {VizId, VizSpec} from "../state/viztable/outputs";
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
 
+type ExecutionEngineMessage = {
+    // Top-level viz created directly from a `xn.view()` call. Is displayed in its own Viewer in the Canvas.
+    viewedVizId?: VizId,
+
+    // VizTable slice to add into central VizTable.
+    vizTableSlice?: { [VizId]: VizSpec },
+
+    // Whether the VizTable should be cleared. The backend may determine that the changes to files are
+    // irrelevant for visualization, and so the current VizTable can be maintained.
+    shouldRefresh: boolean,
+};
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -46,8 +57,9 @@ export default class REPL {
      */
     constructor(pythonPath: string, scriptPath: string) {
         this.name = '';
-        this.isDestroyed = false;
+        this.isDestroyed = false;  // TODO: Why do we need this?
         this.scriptPath = scriptPath;
+
         // Initialize REPL state
         this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
 
@@ -90,12 +102,12 @@ export default class REPL {
 
     /** Used by Atom to show title in a tab. */
     getTitle() {
-        return `[sandbox] ${this.name}`;
+        return `[canvas] ${this.name}`;
     }
 
     /** Used by Atom to show icon next to title in a tab. */
     getIconName () {
-        return 'beaker';
+        return 'paintcan';
     }
 
     /** Used by Atom to identify the view when opening. */
@@ -131,31 +143,24 @@ export default class REPL {
      * @returns {PythonShell}
      *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
-    _createEngine(pythonPath, scriptPath) {
+    _createEngine(pythonPath: string, scriptPath: string) {
         let options = {
             args: [scriptPath],
             pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
-        executionEngine.on('message', (message) => {
-            console.debug(`repl ${this.name} -- received message`, 
-                JSON.parse(message));
-            let { viewSymbol, symbols, refresh, text, error } = JSON.parse(message);
-            if (refresh) {
+        executionEngine.on('message', (message: ExecutionEngineMessage) => {
+            console.debug(`repl ${this.name} -- received message: `, JSON.parse(message));
+            const { viewedVizId, vizTableSlice, shouldRefresh } = JSON.parse(message);
+            if(shouldRefresh) {
                 this.store.dispatch(clearCanvasAction());
-                this.store.dispatch(clearSymbolTableAction());
+                this.store.dispatch(clearVizTableAction());
             }
-            if(symbols) {
-                this.store.dispatch(addSymbolsAction(symbols));
+            if(vizTableSlice) {
+                this.store.dispatch(addVizTableSliceAction(vizTableSlice));
             }
-            if(viewSymbol !== null) {
-                this.store.dispatch(addSnapshotViewerAction(viewSymbol));
-            }
-            if (text !== null) {
-                this.store.dispatch(addPrintViewerAction(text));
-            }
-            if (error !== null) {
-                this.store.dispatch(addPrintViewerAction(error));
+            if(viewedVizId) {
+                this.store.dispatch(addViewerAction(viewedVizId));
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
             // focus so the user can keep typing.

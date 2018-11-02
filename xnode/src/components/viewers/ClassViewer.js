@@ -54,7 +54,7 @@ class ClassViewer extends Component {
      *      The data model for the key or value.
      */
     buildTokenModel(elem, idx) {
-        const { symbolTable, expandSubviewer } = this.props;
+        const { vizTable, expandSubviewer } = this.props;
         const { hoveredIdx, selectedIdx } = this.state;
         if (elem in symbolTable) {
             return {

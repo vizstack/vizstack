@@ -16,10 +16,7 @@ import { SizeMe } from 'react-sizeme'
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
-import CloseIcon from '@material-ui/icons/Close';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
-import LiveViewerIcon from '@material-ui/icons/PageView';
-import PrintViewerIcon from '@material-ui/icons/Print';
 
 // Custom data type viewers
 import PrimitiveViewer from './viewers/PrimitiveViewer';
@@ -32,13 +29,12 @@ import KeyValueViewer from './viewers/KeyValueViewer';
 import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphViewer';
 
 // Custom Redux actions
-import { addSnapshotViewerAction, addPrintViewerAction,
-    removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
+import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getViewerPositions, getViewerObjects, kViewerType} from "../state/canvas/outputs";
-import { getSymbolTable} from "../state/program/outputs";
-import type {SymbolId, SymbolObject} from "../state/program/outputs";
+import { getViewerPositions, getViewers } from "../state/canvas/outputs";
+import { getVizTable } from "../state/viztable/outputs";
+import type { VizId, VizSpec } from "../state/viztable/outputs";
 
 
 /** Component to display when loading data */
@@ -59,29 +55,22 @@ class Canvas extends Component {
         /** Viewer objects for rendering. See `viewersSelector` in `Canvas`. */
         viewers: PropTypes.array.isRequired,
 
-        /** See `symbolTable` in `program/reducers`. */
-        symbolTable: PropTypes.object.isRequired,
+        /** See `vizTable` in `viztable/reducers`. */
+        vizTable: PropTypes.object.isRequired,
 
         /**
          * See `REPL.fetchSymbolData(symbolId)`.
-         * @param {string} symbolId
-         * @param {?object} action
+         * @param symbolId
+         * @param action
          */
         fetchSymbolData: PropTypes.func.isRequired,
 
         /**
-         * Creates a new snapshot viewer for the specified symbol. See `state/canvas/actions`.
-         * @param {string} symbolId
-         * @param {int} position
+         * Creates a new viewer for the specified symbol. See `state/canvas/actions`.
+         * @param vizId
+         * @param position
          */
-        addSnapshotViewer: PropTypes.func.isRequired,
-
-        /**
-         * Creates a new print viewer for the specified text. See `state/canvas/actions`.
-         * @param {string} text
-         * @param {int} position
-         */
-        addPrintViewer: PropTypes.func.isRequired,
+        addViewer: PropTypes.func.isRequired,
 
         /**
          * Removes the viewer with the specified viewer ID.
@@ -115,12 +104,12 @@ class Canvas extends Component {
      * @param {string} symbolObj
      */
     createSymbolViewer(viewerId, symbolId, symbolObj) {
-        const { symbolTable, addSnapshotViewer, fetchSymbolData } = this.props;
+        const { vizTable, addViewer, fetchSymbolData } = this.props;
         const { type, str, name, attributes, data } = symbolObj;
 
         const inspectSymbol = (symbolId, viewerId) => {
             fetchSymbolData(symbolId);
-            addSnapshotViewer(symbolId, viewerId);
+            addViewer(symbolId, viewerId);
         };
 
         switch(type) {
@@ -135,38 +124,38 @@ class Canvas extends Component {
             case 'list':
             case 'tuple':
             case 'set':
-                return (<SequenceViewer data={data} symbolTable={symbolTable}
+                return (<SequenceViewer data={data} symbolTable={vizTable}
                                         expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'dict':
             case 'object':
             case 'module':
-                return (<KeyValueViewer data={data} symbolTable={symbolTable}
+                return (<KeyValueViewer data={data} symbolTable={vizTable}
                                         expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'tensor':
                 return (<TensorViewer data={data}/>);
 
             case 'class':
-                return (<ClassViewer data={data} symbolTable={symbolTable}
+                return (<ClassViewer data={data} symbolTable={vizTable}
                                      expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'fn':
-                return (<FunctionViewer data={data} symbolTable={symbolTable}
+                return (<FunctionViewer data={data} symbolTable={vizTable}
                                         expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             case 'graphdata':
                 // TODO: figure out a more principled way of showing the graphdata's properties along with the graph
                 return (
                     <div>
-                        <GraphDataViewer data={data} symbolTable={symbolTable}
+                        <GraphDataViewer data={data} symbolTable={vizTable}
                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
-                        <GraphViewer symbolId={symbolId} data={data} symbolTable={symbolTable}
+                        <GraphViewer symbolId={symbolId} data={data} symbolTable={vizTable}
                                      expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
                     </div>);
 
             case 'graphop':
-                return (<GraphOpViewer data={data} symbolTable={symbolTable}
+                return (<GraphOpViewer data={data} symbolTable={vizTable}
                                        expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
 
             default:
@@ -178,61 +167,38 @@ class Canvas extends Component {
     }
 
     /**
-     * Returns a viewer of the correct type. (See `kViewerType` in `state/canvas/constants`).
+     * Returns a viewer of the correct type. (See `ViewerType` in `state/canvas/constants`).
      *
      * @param {object} viewer
      */
     createViewer(viewer) {
-        const { fetchSymbolData, addSnapshotViewer, removeViewer } = this.props;
-        const { viewerId, viewerType } = viewer;
+        const { fetchSymbolData, addViewer, removeViewer } = this.props;
+        const { viewerId } = viewer;
 
         const inspectSymbol = (symbolId, viewerId) => {
             fetchSymbolData(symbolId);
-            addSnapshotViewer(symbolId, viewerId);
+            addViewer(symbolId, viewerId);
         };
+        
+        const { symbolId, symbolObj } = viewer;
+        const title = !symbolObj ? kLoadingMsg : (
+            symbolObj.name !== null ? `[${symbolObj.type}]  ${symbolObj.name}` : `[${symbolObj.type}]`
+        );
+        const buttons = [
+            // TODO: decide which icons to use
+            // TODO: Duplicate should also replicate the existing state of a snapshot viewer
+            { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectSymbol(symbolId, viewerId) },
+            { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => removeViewer(viewerId) },
+        ];
+        const component = !symbolObj ? kLoadingSpinner :
+            this.createSymbolViewer(viewerId, symbolId, symbolObj);
 
-        switch(viewerType) {
-            case kViewerType.SNAPSHOT: {
-                const { symbolId, symbolObj } = viewer;
-                const title = !symbolObj ? kLoadingMsg : (
-                    symbolObj.name !== null ? `[${symbolObj.type}]  ${symbolObj.name}` : `[${symbolObj.type}]`
-                );
-                const buttons = [
-                    // TODO: decide which icons to use
-                    // TODO: Duplicate should also replicate the existing state of a snapshot viewer
-                    { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectSymbol(symbolId, viewerId) },
-                    { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => removeViewer(viewerId) },
-                ];
-                const component = !symbolObj ? kLoadingSpinner :
-                    this.createSymbolViewer(viewerId, symbolId, symbolObj);
-                return (
-                    <ViewerDisplayFrame icon={<LiveViewerIcon/>}
-                                        title={title}
-                                        buttons={buttons}>
-                        {component}
-                    </ViewerDisplayFrame>
-                );
-            }
-
-            case kViewerType.PRINT: {
-                const { text } = viewer;
-                const buttons = [
-                    { title: 'Close', icon: <CloseIcon/>, onClick: () => removeViewer(viewerId) },
-                ];
-                return (
-                    <ViewerDisplayFrame icon={<PrintViewerIcon/>}
-                                        title={`output`}
-                                        buttons={buttons}>
-                        <pre>{text}</pre>
-                    </ViewerDisplayFrame>
-                );
-            }
-
-
-            default:
-                console.warn(`Unrecognized viewer type received; got ${viewerType}`);
-                return null;
-        }
+        return (
+            <ViewerDisplayFrame title={title}
+                                buttons={buttons}>
+                {component}
+            </ViewerDisplayFrame>
+        );
     }
 
     onDragEnd(result: DropResult, provided: HookProvided) {
@@ -301,49 +267,26 @@ const styles = theme => ({
 // To inject application state into component
 // ------------------------------------------
 
-type SnapshotViewer = {
-    viewerType: kViewerType.SNAPSHOT,
+type Viewer = {
     viewerId: string,
-    symbolId: SymbolId,
-    symbolObj: SymbolObject,
+    vizId: VizId,
+    vizSpec: VizSpec,
 }
 
-type PrintViewer = {
-    viewerType: kViewerType.PRINT,
-    viewerId: string,
-    text: string,
-}
-
-type Viewer = SnapshotViewer | PrintViewer;
-
-const getViewers: ({}) => Array<Viewer> = createSelector(
+const assembleViewers: ({}) => Array<Viewer> = createSelector(
     (state) => getViewerPositions(state.canvas),
-    (state) => getViewerObjects(state.canvas),
-    (state) => getSymbolTable(state.program),
-    (viewerIds: string[], viewerObjs, symbolTable): Array<Viewer> => {
+    (state) => getViewers(state.canvas),
+    (state) => getVizTable(state.viztable),
+    (viewerIds: string[], viewerObjs, vizTable): Array<Viewer> => {
         return viewerIds.map((viewerId) => {
             const viewerObj = viewerObjs[viewerId];
-            const viewerType = viewerObj.type;
-
-            switch(viewerType) {
-                case kViewerType.SNAPSHOT:
-                    const { symbolId } = viewerObj;
-                    const symbolObj = symbolTable[symbolId];
-                    return {
-                        viewerId,
-                        viewerType,
-                        symbolId,
-                        symbolObj,
-                    };
-
-                case kViewerType.PRINT:
-                    const { text } = viewerObj;
-                    return {
-                        viewerId,
-                        viewerType,
-                        text,
-                    };
-            }
+            const { vizId } = viewerObj;
+            const vizSpec = vizTable[vizId];
+            return {
+                viewerId,
+                vizId,
+                vizSpec,
+            };
 
         });
     }
@@ -352,18 +295,17 @@ const getViewers: ({}) => Array<Viewer> = createSelector(
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers:        getViewers(state),
-        symbolTable:    getSymbolTable(state.program),
+        viewers:   assembleViewers(state),
+        vizTable:  getVizTable(state.viztable),
     };
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addSnapshotViewer:    addSnapshotViewerAction,
-        addPrintViewer:       addPrintViewerAction,
-        removeViewer:         removeViewerAction,
-        reorderViewer:        reorderViewerAction,
+        addViewer:      addViewerAction,
+        removeViewer:   removeViewerAction,
+        reorderViewer:  reorderViewerAction,
     }, dispatch);
 }
 

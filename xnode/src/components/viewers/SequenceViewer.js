@@ -42,7 +42,7 @@ class SequenceViewer extends Component {
      * TODO: Use selectors for transformation.
      */
     render() {
-        const { symbolTable, expandSubviewer, data } = this.props;
+        const { vizTable, expandSubviewer, data } = this.props;
         if (!data) return null;  // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 

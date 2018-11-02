@@ -1,7 +1,8 @@
-import { kViewerType } from './outputs';
+import { ViewerType } from './outputs';
+import type {VizId} from "../viztable/outputs";
 
 /** Action type definitions. */
-export const kCanvasActions = Object.freeze({
+export const CanvasActions = Object.freeze({
     CLEAR_CANVAS:        'canvas::CLEAR_CANVAS',
     ADD_VIEWER:          'canvas::ADD_VIEWER',
     REMOVE_VIEWER:       'canvas::REMOVE_VIEWER',
@@ -13,51 +14,29 @@ export const kCanvasActions = Object.freeze({
  */
 export function clearCanvasAction() {
     return {
-        type: kCanvasActions.CLEAR_CANVAS,
+        type: CanvasActions.CLEAR_CANVAS,
     }
 }
 
 /**
- * Action creator to add a snapshot viewer to the Canvas for the symbol with the given `symbolId`. For a given
- * object, there may be many snapshots of it; each at a different point in time, and each with a different `symbolId`.
+ * Action creator to add a viewer to the Canvas for the viz with the given `vizId`. For a given backend
+ * symbol/expression, there may be many snapshots of it from different points in time, each with a unique `vizId`.
  *
- * @param {string} symbolId
- *     Symbol ID for backing symbol of this viewer.
- * @param {int} insertAfter
- *     Viewer ID of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
+ * @param vizId
+ *     VizId for top-level viz in this Viewer.
+ * @param insertAfter
+ *     ViewerId of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addSnapshotViewerAction(symbolId: string, insertAfter = -1) {
+export function addViewerAction(vizId: VizId, insertAfter: number = -1) {
     return {
-        type: kCanvasActions.ADD_VIEWER,
+        type: CanvasActions.ADD_VIEWER,
         viewerObj: {
-            type: kViewerType.SNAPSHOT,
-            symbolId,
+            vizId,
         },
         insertAfter,
     };
 }
-
-/**
- * Action creator to add a snapshot viewer to the Canvas for the symbol with the given `snapshotSymbolId`. For a given
- * symbol, there may be many snapshots of it (each at a different point in time).
- *
- * @param {string} text
- *     The text string to print.
- * @param {int} insertAfter
- * @returns {object}
- */
-export function addPrintViewerAction(text: string, insertAfter = -1) {
-    return {
-        type: kCanvasActions.ADD_VIEWER,
-        viewerObj: {
-            type: kViewerType.PRINT,
-            text,
-        },
-        insertAfter,
-    };
-}
-
 
 /**
  * Action creator to remove a viewer from the Canvas.
@@ -67,7 +46,7 @@ export function addPrintViewerAction(text: string, insertAfter = -1) {
  */
 export function removeViewerAction(viewerId: number) {
     return {
-        type: kCanvasActions.REMOVE_VIEWER,
+        type: CanvasActions.REMOVE_VIEWER,
         viewerId
     };
 }
@@ -81,7 +60,7 @@ export function removeViewerAction(viewerId: number) {
  */
 export function reorderViewerAction(startIdx: number, endIdx: number) {
     return {
-        type: kCanvasActions.REORDER_VIEWER,
+        type: CanvasActions.REORDER_VIEWER,
         startIdx,
         endIdx,
     };

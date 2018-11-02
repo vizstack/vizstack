@@ -1,6 +1,6 @@
 import Immutable from 'seamless-immutable';
-import { kCanvasActions } from './actions';
-import type { PrintViewerObject, SnapshotViewerObject } from './outputs';
+import { CanvasActions } from './actions';
+import type { Viewer } from './outputs';
 
 /** Root reducer's state slice shape. */
 export type CanvasState = {
@@ -9,11 +9,11 @@ export type CanvasState = {
 
     // Map from viewer ID to viewer objects.
     viewerObjects: {
-        [string]: SnapshotViewerObject | PrintViewerObject,
+        [viewerId: string]: Viewer,
     },
 
     // List of viewer ID strings in order of display.
-    viewerPositions: string[],
+    viewerPositions: Array<string>,
 };
 
 /** Root reducer's initial state slice. */
@@ -29,10 +29,10 @@ const initialState: CanvasState = Immutable({
 export function canvasReducer(state: CanvasState = initialState, action = {}) {
     const { type } = action;
     switch(type) {
-        case kCanvasActions.ADD_VIEWER:          return addViewerReducer(state, action);
-        case kCanvasActions.REMOVE_VIEWER:       return removeViewerReducer(state, action);
-        case kCanvasActions.REORDER_VIEWER:      return reorderViewerReducer(state, action);
-        case kCanvasActions.CLEAR_CANVAS:        return clearCanvasReducer(state, action);
+        case CanvasActions.ADD_VIEWER:          return addViewerReducer(state, action);
+        case CanvasActions.REMOVE_VIEWER:       return removeViewerReducer(state, action);
+        case CanvasActions.REORDER_VIEWER:      return reorderViewerReducer(state, action);
+        case CanvasActions.CLEAR_CANVAS:        return clearCanvasReducer(state, action);
     }
     return state;  // No effect by default
 };

@@ -61,7 +61,7 @@ class GraphOpViewer extends Component {
      *      The data model for a `KeyValueViz`.
      */
     buildArgModel(argList, startIdx) {
-        const { symbolTable, expandSubviewer } = this.props;
+        const { vizTable, expandSubviewer } = this.props;
         const { hoveredIdx, selectedIdx } = this.state;
 
         const model = [];
@@ -99,7 +99,7 @@ class GraphOpViewer extends Component {
      * TODO: Use selectors for transformation.
      */
     render() {
-        const { classes, symbolTable, expandSubviewer, data } = this.props;
+        const { classes, vizTable, expandSubviewer, data } = this.props;
         if (!data) return null;  // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 

@@ -59,7 +59,7 @@ class _ComputationGraph {
         // the same symbol in a graph (as many as one per connected op)
         this._dataNodes = {};
 
-        // Helper functions for extracting information about symbols in the graph. A reference to `symbolTable` should
+        // Helper functions for extracting information about symbols in the graph. A reference to `vizTable` should
         // not be directly stored, so we have a better idea of why `_ComputationGraph` needs it at all.
         this._getContainerSymbolId = (symbolId) => symbolTable[symbolId].data.container;
         this._getTemporalStep = (symbolId) => symbolTable[symbolId].data.temporalstep;
@@ -368,7 +368,7 @@ class GraphViewer extends Component {
      * the information to do so, build the DAG.
      */
     componentDidUpdate() {
-        const { symbolId, symbolTable, data } = this.props;
+        const { symbolId, vizTable, data } = this.props;
         const { built } = this.state;
         if (!built && symbolId in symbolTable && data !== null) {
             this.buildDAG(symbolId);
@@ -386,7 +386,7 @@ class GraphViewer extends Component {
      *      A `_ComputationGraph` object to which all encountered nodes and edges have been added.
      */
     loadGraphBackwards(headSymbolId) {
-        const { symbolTable } = this.props;
+        const { vizTable } = this.props;
         const getCreatorOp = (symbolId) => symbolTable[symbolId].data.creatorop;
         const getCreatorPos = (symbolId) => symbolTable[symbolId].data.creatorpos;
         const getArgs = (symbolId) => symbolTable[symbolId].data.args;
