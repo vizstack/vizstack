@@ -16,8 +16,8 @@ import { SizeMe } from 'react-sizeme'
 // Common viewer frame
 import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
-import DeleteIcon from '@material-ui/icons/DeleteOutlined';
 import CloseIcon from '@material-ui/icons/Close';
+import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 import LiveViewerIcon from '@material-ui/icons/PageView';
 import PrintViewerIcon from '@material-ui/icons/Print';
 
@@ -201,7 +201,7 @@ class Canvas extends Component {
                     // TODO: decide which icons to use
                     // TODO: Duplicate should also replicate the existing state of a snapshot viewer
                     { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => inspectSymbol(symbolId, viewerId) },
-                    { title: 'Close',     icon: <CloseIcon/>,     onClick: () => removeViewer(viewerId) },
+                    { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => removeViewer(viewerId) },
                 ];
                 const component = !symbolObj ? kLoadingSpinner :
                     this.createSymbolViewer(viewerId, symbolId, symbolObj);

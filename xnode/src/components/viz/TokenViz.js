@@ -108,10 +108,10 @@ const styles = theme => ({
         borderWidth:    1,  // TODO: Dehardcode this
 
         // Content padding
-        paddingLeft:    4,  // TODO: Dehardcode this
-        paddingRight:   4,  // TODO: Dehardcode this
-        paddingTop:     2,  // TODO: Dehardcode this
-        paddingBottom:  2,  // TODO: Dehardcode this
+        paddingLeft:    2,  // TODO: Dehardcode this
+        paddingRight:   2,  // TODO: Dehardcode this
+        paddingTop:     0,  // TODO: Dehardcode this
+        paddingBottom:  0,  // TODO: Dehardcode this
 
         // Vertically center text
         display:        'inline-flex',

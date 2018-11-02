@@ -51,7 +51,7 @@ class TensorViewer extends Component {
             const model = contents.map((arr, r) => arr.map((val, c) => this.buildVal(val, [...idxs, r, c])));
             return (
                 <div key={idxs.join(',')}>
-                    {idxs.length > 0 ? <div><br/>{`[${idxs.join(', ')}, :, :] =`}</div> : null}
+                    {idxs.length > 0 ? <div>{`[${idxs.join(', ')}, :, :] =`}</div> : null}
                     <MatrixViz model={model} />
                 </div>
             );
