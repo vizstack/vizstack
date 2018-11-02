@@ -13,6 +13,7 @@ myFloat = 3.1415926535897
 xn.view(myFloat)
 myBool = True
 myString = "The quick brown fox jumps over the lazy dog"
+xn.view(myString)
 myNone = None
 
 myList = [1, 2.3, False, "hello", None, [10, 11, ["This", "is", "the", "end"]]]

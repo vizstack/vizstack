@@ -4,11 +4,8 @@
             {
                 "type": "separator"
             }, {
-                "label": "Create Sandbox",
+                "label": "Create New Sandbox",
                 "command": "xnode:create-sandbox"
-            }, {
-                "label": "Toggle Watch for Line",
-                "command": "xnode:watch-line"
             }, {
                 "type": "separator"
             }
@@ -22,11 +19,8 @@
                     "label": "Xnode",
                     "submenu": [
                         {
-                          "label": "Create Sandbox",
+                          "label": "Create New Sandbox",
                           "command": "xnode:create-sandbox"
-                        }, {
-                          "label": "Toggle Watch for Line",
-                          "command": "xnode:watch-line"
                         }
                     ]
                 }

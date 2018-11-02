@@ -41,5 +41,7 @@ ENV/
 # Atom
 *.tags
 
-# MyPy
+# Caches
+*.cache
 *.mypy_cache
+*.pytest_cache

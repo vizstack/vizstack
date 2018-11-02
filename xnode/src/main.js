@@ -6,7 +6,7 @@ import REPL from './views/repl';
 
 import { getMinimalUniquePaths } from "./services/path-utils";
 
-// How long, in milliseconds, the editor must be untouched before sandboxes are re-run
+// Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
 let RERUN_DELAY = 1000;
 
 /**
@@ -16,12 +16,14 @@ let RERUN_DELAY = 1000;
  */
 export default {
 
+    // List of REPL objects that are active.
     repls: [],
+
+    // Object that manages event listener/subscriber resources and is disposed on package close.
     subscriptions: null,
-    // Whenever a change is made to the file, this is incremented; after RERUN_DELAY, it is decremented, and the REPLs
-    // are re-run if it is 0 after that decrement. This ensures that the REPLs are re-run RERUN_DELAY ms after the last
-    // edit.
-    changeStack: 0,
+
+    // Time that the active editor was last changed.
+    lastChangedTime: 0,
 
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
@@ -29,9 +31,8 @@ export default {
      *     Object holding serialized state from last session, created through `serialize()`, if defined.
      */
     activate(state) {
-        // Array of all REPL objects created by the package
-        // TODO: how to destroy REPLs that are no longer open
-        this.repls = [];
+        // Attach settings panel.
+        // TODO: Integrate into canvas tab.
         this.sandboxSettingsView = new SandboxSettingsView();
         this.sandboxSettingsPanel = atom.workspace.addModalPanel({
             item: this.sandboxSettingsView.getElement(),
@@ -65,17 +66,17 @@ export default {
                     }
                     const changes = null;  // TODO: get changes from last edit
                     editor.onDidChange(() => {
-                        this.changeStack += 1;
+                        this.lastChangedTime = new Date();
                         setTimeout(() => {
-                            this.changeStack -= 1;
-                            if (this.changeStack === 0) {
+                            const now = new Date();
+                            if (now - this.lastChangedTime >= RERUN_DELAY) {
                                 editor.save();
                                 this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
                                     console.debug('root -- signaling change to REPL');
                                     repl.onFileChanged(editor.getPath(), changes);
                                 });
                             }
-                        }, RERUN_DELAY);
+                        }, RERUN_DELAY + 10);  // Allow some buffer time
                     });
                 }
             }),
@@ -83,7 +84,6 @@ export default {
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
                 'xnode:create-sandbox': () => this.openSandboxSettings(),
-                'xnode:watch-line': () => this.watchLine()
             }),
 
             // Destroy additional objects on package deactivation
@@ -127,21 +127,5 @@ export default {
         this.sandboxSettingsView.resetElement(atom.workspace.getActiveTextEditor().getPath());
         this.sandboxSettingsPanel.show();
         console.debug('root -- sandbox settings panel opened');
-    },
-
-    /**
-     * Adds a watch expression to the selected line for the selected REPL. No-op if no REPLs have been created yet.
-     * TODO: send the watch expression to selected REPL, use icon at line
-     */
-    watchLine() {
-        // No-op if no repls/sandboxes created yet
-        if(this.repls.length === 0) return;
-
-        let editor = atom.workspace.getActiveTextEditor();
-        let cursorPosition = editor.getCursorBufferPosition();
-        let selectedRepl = 0; // TODO: have a "selected repl" to add watches to
-
-        // Buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
-        this.repls[selectedRepl].toggleWatchStatement(editor.getPath(), cursorPosition.row + 1);
     },
 };
