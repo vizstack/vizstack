@@ -52,6 +52,7 @@ export default {
                     this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
                        repl.name = minimalUniquePaths[repl.scriptPath];
                     });
+                    this.waitAndRerun(null, null);
                     console.debug('root -- new REPL added');
                     return repl;
                 }
@@ -64,19 +65,8 @@ export default {
                         editor.addGutter({name: 'xnode-watch-gutter'});
                     }
                     const changes = null;  // TODO: get changes from last edit
-                    editor.onDidChange(() => {
-                        this.changeStack += 1;
-                        setTimeout(() => {
-                            this.changeStack -= 1;
-                            if (this.changeStack === 0) {
-                                editor.save();
-                                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
-                                    console.debug('root -- signaling change to REPL');
-                                    repl.onFileChanged(editor.getPath(), changes);
-                                });
-                            }
-                        }, RERUN_DELAY);
-                    });
+                    editor.save();
+                    this.waitAndRerun(editor.getPath(), changes);
                 }
             }),
 
@@ -144,4 +134,17 @@ export default {
         // Buffer coordinates are 0-indexed, but line numbers in Python are 1-indexed
         this.repls[selectedRepl].toggleWatchStatement(editor.getPath(), cursorPosition.row + 1);
     },
+
+    waitAndRerun(changedPath, changes) {
+        this.changeStack += 1;
+        setTimeout(() => {
+            this.changeStack -= 1;
+            if (this.changeStack === 0) {
+                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
+                    console.debug('root -- signaling change to REPL');
+                    repl.onFileChanged(changedPath, changes);
+                });
+            }
+        }, RERUN_DELAY);
+    }
 };
