@@ -4,14 +4,24 @@ import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './views/repl';
 
+import { getMinimalUniquePaths } from "./services/path-utils";
+
+// How long, in milliseconds, the editor must be untouched before sandboxes are re-run
+let RERUN_DELAY = 1000;
+
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
  * activated by Atom, including the consumption of other services, the creation/destruction of the views, and state
  * serialization.
  */
 export default {
+
     repls: [],
     subscriptions: null,
+    // Whenever a change is made to the file, this is incremented; after RERUN_DELAY, it is decremented, and the REPLs
+    // are re-run if it is 0 after that decrement. This ensures that the REPLs are re-run RERUN_DELAY ms after the last
+    // edit.
+    changeStack: 0,
 
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
@@ -38,6 +48,10 @@ export default {
                     const tokens = uri.split('/');
                     const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
                     this.repls.push(repl);
+                    const minimalUniquePaths = getMinimalUniquePaths(this.repls.filter(repl => !repl.isDestroyed).map(repl => repl.scriptPath));
+                    this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
+                       repl.name = minimalUniquePaths[repl.scriptPath];
+                    });
                     console.debug('root -- new REPL added');
                     return repl;
                 }
@@ -50,12 +64,18 @@ export default {
                         editor.addGutter({name: 'xnode-watch-gutter'});
                     }
                     const changes = null;  // TODO: get changes from last edit
-                    editor.onDidStopChanging(() => {
-                        editor.save();
-                        this.repls.forEach(repl => {
-                            console.debug('root -- signaling change to REPL');
-                            repl.onFileChanged(editor.getPath(), changes);
-                        });
+                    editor.onDidChange(() => {
+                        this.changeStack += 1;
+                        setTimeout(() => {
+                            this.changeStack -= 1;
+                            if (this.changeStack === 0) {
+                                editor.save();
+                                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
+                                    console.debug('root -- signaling change to REPL');
+                                    repl.onFileChanged(editor.getPath(), changes);
+                                });
+                            }
+                        }, RERUN_DELAY);
                     });
                 }
             }),

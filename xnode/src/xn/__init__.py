@@ -25,4 +25,3 @@ def view(*args: Any) -> None:
         args: The object(s) to be visualized.
     """
     _VIEW_FN(*args)
-
