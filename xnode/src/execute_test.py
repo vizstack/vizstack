@@ -4,7 +4,7 @@ from multiprocessing import Queue
 
 import execute
 
-_RESET_MESSAGE: str = json.dumps({'symbols': None, 'viewSymbol': None, 'refresh': True, 'text': None, 'error': None})
+_RESET_MESSAGE: str = {'viewedVizId': None, 'vizTableSlice': None, 'shouldRefresh': True}
 
 
 class _RunScriptThread(threading.Thread):
@@ -33,20 +33,21 @@ SCRIPT_ONE_WATCH: str = '../test/script_with_one_watch.py'
 SCRIPT_ONE_WATCH_MULTIPLE_OBJECTS: str = '../test/script_with_one_watch_multiple_objects.py'
 SCRIPT_ONE_WATCH_NO_OBJECTS: str = '../test/script_with_one_watch_no_objects.py'
 SCRIPT_ERROR: str = '../test/script_with_error.py'
+SCRIPT_PRINT: str = '../test/script_with_print.py'
 
 
 def test_run_script_with_one_watch_should_send_refresh_request() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH)
     request_queue.put(None)
     thread.join()
-    assert _RESET_MESSAGE in [output_queue.get() for _ in range(output_queue.qsize())]
+    assert _RESET_MESSAGE in [json.loads(output_queue.get()) for _ in range(output_queue.qsize())]
 
 
 def test_run_script_with_one_watch_should_send_one_view_symbol() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH)
     request_queue.put(None)
     thread.join()
-    assert sum([1 if json.loads(message)['viewSymbol'] is not None else 0 for message in
+    assert sum([1 if json.loads(message)['viewedVizId'] is not None else 0 for message in
                 [output_queue.get() for _ in range(output_queue.qsize())]]) == 1
 
 
@@ -54,7 +55,7 @@ def test_run_script_with_one_watch_multiple_objects_should_send_multiple_view_sy
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH_MULTIPLE_OBJECTS)
     request_queue.put(None)
     thread.join()
-    assert sum([1 if json.loads(message)['viewSymbol'] is not None else 0 for message in
+    assert sum([1 if json.loads(message)['viewedVizId'] is not None else 0 for message in
                 [output_queue.get() for _ in range(output_queue.qsize())]]) == 2
 
 
@@ -62,7 +63,7 @@ def test_run_script_with_one_watch_no_objects_should_send_no_view_symbols() -> N
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH_NO_OBJECTS)
     request_queue.put(None)
     thread.join()
-    assert sum([1 if json.loads(message)['viewSymbol'] is not None else 0 for message in
+    assert sum([1 if json.loads(message)['viewedVizId'] is not None else 0 for message in
                 [output_queue.get() for _ in range(output_queue.qsize())]]) == 0
 
 
@@ -70,15 +71,26 @@ def test_run_script_with_fetch_request_should_send_symbol_slice() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH)
     for _ in range(3):
         symbol_slice_str: str = output_queue.get()
-    request_queue.put({'viz_id': json.loads(symbol_slice_str)['symbols'].popitem()[0]})
+    request_queue.put({'viz_id': json.loads(symbol_slice_str)['vizTableSlice'].popitem()[0]})
     request_queue.put(None)
     thread.join()
-    assert json.loads(output_queue.get())['symbols'] is not None
+    assert json.loads(output_queue.get())['vizTableSlice'] is not None
 
 
 def test_run_script_with_error_should_send_traceback() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ERROR)
     request_queue.put(None)
     thread.join()
-    assert any([json.loads(response)['error'] is not None for response in
+    # TODO: add check for file name, line number
+    assert any([json.loads(response)['viewedVizId'] is not None for response in
                 [output_queue.get() for _ in range(output_queue.qsize())]])
+
+
+def test_run_script_with_print_should_send_text() -> None:
+    thread, request_queue, output_queue = _start_script_thread(SCRIPT_PRINT)
+    request_queue.put(None)
+    thread.join()
+    # TODO: add check for file name, line number
+    assert any([json.loads(response)['viewedVizId'] is not None for response in
+                [output_queue.get() for _ in range(output_queue.qsize())]])
+
