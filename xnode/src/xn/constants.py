@@ -10,7 +10,7 @@ VizId = NewType('VizId', str)
 SnapshotId = NewType('SnapshotId', int)
 
 # A set of key-value pairs which describe all of the properties of a viz
-VizModel = NewType('VizModel', Mapping[str, JsonType])
+VizModel = NewType('VizModel', MutableMapping[str, JsonType])
 
 
 # The format of objects which describe a particular visualization and its metadata that are sent to clients. We use a
@@ -20,11 +20,13 @@ class VizSpec:
     def __init__(self,
                  file_path: str,
                  line_number: int,
-                 compact_viz_model: VizModel,
+                 summary_viz_model: VizModel,
+                 compact_viz_model: Optional[VizModel],
                  full_viz_model: Optional[VizModel]):
         self.filePath: str = file_path
         self.lineNumber: int = line_number
-        self.compactModel: VizModel = compact_viz_model
+        self.summaryModel: VizModel = summary_viz_model
+        self.compactModel: Optional[VizModel] = compact_viz_model
         self.fullModel: Optional[VizModel] = full_viz_model
 
     def __str__(self):
@@ -38,6 +40,7 @@ class VizSpec:
         return isinstance(other, VizSpec) and \
             self.filePath == other.filePath and \
             self.lineNumber == other.lineNumber and \
+            self.summaryModel == other.summaryModel and \
             self.compactModel == other.compactModel and \
             self.fullModel == other.fullModel
 

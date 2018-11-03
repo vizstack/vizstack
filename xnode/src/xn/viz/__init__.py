@@ -31,6 +31,14 @@ class Color(Enum):
     BACKGROUND = 3
 
 
+class ViewMode(Enum):
+    # No specified view, use Xnode defaults
+    NONE = 0
+    FULL = 1
+    COMPACT = 2
+    SUMMARY = 3
+
+
 # TODO: maybe move this to a different module, so there's a module of just the Viz objects?
 class VisualizationEngine:
     """A stateful object which creates symbol shells for Python objects, which can be used by clients to render
@@ -38,12 +46,19 @@ class VisualizationEngine:
 
     class _CacheEntry:
         def __init__(self,
-                     viz_entry: VizSpec,
+                     viz_spec: VizSpec,
                      full_viz_model: VizModel,
-                     viz_refs: List[VizId]):
-            self.viz_entry: VizSpec = viz_entry
+                     compact_viz_model: VizModel,
+                     full_viz_refs: List[VizId],
+                     compact_viz_refs: List[VizId],
+                     default_view: ViewMode):
+            self.viz_spec: VizSpec = viz_spec
             self.full_viz_model: VizModel = full_viz_model
-            self.viz_refs: List[VizId] = viz_refs
+            self.compact_viz_model: VizModel = compact_viz_model
+            self.full_viz_refs: List[VizId] = full_viz_refs
+            # must be subset of full refs
+            self.compact_viz_refs: List[VizId] = compact_viz_refs
+            self.default_view: ViewMode = default_view
 
     def __init__(self) -> None:
         """Constructor."""
@@ -104,22 +119,36 @@ class VisualizationEngine:
             if obj_viz_id is None:
                 obj_viz_id: VizId = viz_id
             added.add(viz_id)
-            full_viz, refs = viz_obj.compile_full()
+            full_viz, full_refs = viz_obj.compile_full()
             full_viz['contents']: VizModel = VisualizationEngine._replace_viz_with_viz_ids(
                 full_viz['contents'],
+                snapshot_id
+            )
+            compact_viz, compact_refs = viz_obj.compile_compact()
+            compact_viz['contents']: VizModel = VisualizationEngine._replace_viz_with_viz_ids(
+                compact_viz['contents'],
+                snapshot_id
+            )
+            summary_viz = viz_obj.compile_summary()
+            summary_viz['contents']: VizModel = VisualizationEngine._replace_viz_with_viz_ids(
+                summary_viz['contents'],
                 snapshot_id
             )
             self._cache[viz_id]: VisualizationEngine._CacheEntry = VisualizationEngine._CacheEntry(
                 VizSpec(
                     file_path,
                     line_number,
-                    viz_obj.compile_compact(),
+                    summary_viz,
+                    None,
                     None
                 ),
                 full_viz,
-                [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in refs],
+                compact_viz,
+                [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in full_refs],
+                [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in compact_refs],
+                viz_obj.default_view,
             )
-            to_cache += refs
+            to_cache += full_refs
         return obj_viz_id
 
     # ==================================================================================================================
@@ -172,15 +201,27 @@ class VisualizationEngine:
             A mapping of symbol IDs to shells; the shell for `symbol_id` will be filled, while all others
                 will be empty.
         """
-        viz_slice: VizSlice = {
-            viz_id: copy(self._cache[viz_id].viz_entry)
-        }
+        # TODO: add mode argument to determine what should be retrieved
+        viz_slice: VizSlice = dict()
+        to_add: MutableSequence[(VizId, ViewMode)] = [(viz_id, ViewMode.NONE)]
+        while len(to_add) > 0:
+            viz_id, parent_view_mode = to_add.pop()
+            if viz_id in viz_slice:
+                continue
+            viz_slice[viz_id] = copy(self._cache[viz_id].viz_spec)
+            view_mode: ViewMode = (self._cache[viz_id].default_view
+                                   if self._cache[viz_id].default_view != ViewMode.NONE
+                                   else ViewMode.FULL if parent_view_mode == ViewMode.NONE
+                                   else ViewMode.COMPACT if parent_view_mode == ViewMode.FULL
+                                   else ViewMode.SUMMARY)
 
-        viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
-
-        for referenced_viz_id in self._cache[viz_id].viz_refs:
-            if referenced_viz_id != viz_id:
-                viz_slice[referenced_viz_id] = copy(self._cache[referenced_viz_id].viz_entry)
+            if view_mode == ViewMode.COMPACT:
+                viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
+                to_add += [(viz_id, view_mode) for viz_id in self._cache[viz_id].compact_viz_refs]
+            if view_mode == ViewMode.FULL:
+                viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
+                viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
+                to_add += [(viz_id, view_mode) for viz_id in self._cache[viz_id].full_viz_refs]
         return viz_slice
 
 
@@ -196,11 +237,24 @@ def _get_viz(o: Any) -> '_Viz':
 
 # TODO: use newtypes for viz models
 class _Viz:
+    FULL = 0
+    COMPACT = 1
+    SUMMARY = 2
+
+    def __init__(self,
+                 name: Optional[str],
+                 default_view: ViewMode):
+        self._name = name
+        self.default_view = default_view
+
     def compile_full(self) -> (VizModel, Iterable['_Viz']):
         raise NotImplementedError
 
-    def compile_compact(self) -> VizModel:
+    def compile_compact(self) -> (VizModel, Iterable['_Viz']):
         raise NotImplementedError
+
+    def compile_summary(self) -> VizModel:
+        return TokenPrimitive(str(self) if self._name is None else self._name).compile_summary()
 
     def __str__(self) -> str:
         raise NotImplementedError
@@ -209,15 +263,31 @@ class _Viz:
 class TokenPrimitive(_Viz):
     def __init__(self,
                  val: Any,
-                 color: Color = Color.PRIMARY) -> None:
+                 color: Color = Color.PRIMARY,
+                 name: Optional[str]=None,
+                 default_view: ViewMode=ViewMode.NONE) -> None:
+        super(TokenPrimitive, self).__init__(name, default_view)
         # TODO: smarter strings
         self._text: str = str(val)
         self._color: Color = color
 
     def compile_full(self) -> (VizModel, Iterable[_Viz]):
-        return self.compile_compact(), []
+        return {
+           'type': 'TokenPrimitive',
+           'contents': {
+               'text': self._text
+           }
+        }, []
 
-    def compile_compact(self) -> VizModel:
+    def compile_compact(self) -> (VizModel, Iterable[_Viz]):
+        return {
+            'type': 'TokenPrimitive',
+            'contents': {
+                'text': self._text
+            }
+        }, []
+
+    def compile_summary(self) -> VizModel:
         return {
             'type': 'TokenPrimitive',
             'contents': {
@@ -230,10 +300,13 @@ class TokenPrimitive(_Viz):
 
 
 class SequenceLayout(_Viz):
-    COMPACT_LEN = 3
+    COMPACT_LEN = 2
 
     def __init__(self,
-                 elements: Sequence[Any]) -> None:
+                 elements: Sequence[Any],
+                 name: Optional[str]=None,
+                 default_view: ViewMode=ViewMode.NONE) -> None:
+        super(SequenceLayout, self).__init__(name, default_view)
         self._elements: Sequence[_Viz] = [_get_viz(elem) for elem in elements]
 
     def compile_full(self) -> (VizModel, Iterable[_Viz]):
@@ -244,13 +317,13 @@ class SequenceLayout(_Viz):
             }
         }, self._elements
 
-    def compile_compact(self) -> VizModel:
+    def compile_compact(self) -> (VizModel, Iterable[_Viz]):
         return {
             'type': 'SequenceLayout',
             'contents': {
-                'elements': [str(elem) for elem in self._elements[:SequenceLayout.COMPACT_LEN]]
+                'elements': self._elements[:SequenceLayout.COMPACT_LEN]
             }
-        }
+        }, self._elements[:SequenceLayout.COMPACT_LEN]
 
     def __str__(self) -> str:
         return 'seq[{}]'.format(len(self._elements))
@@ -260,7 +333,10 @@ class KeyValueLayout(_Viz):
     COMPACT_LEN = 3
 
     def __init__(self,
-                 key_value_mapping: Mapping[Any, Any]) -> None:
+                 key_value_mapping: Mapping[Any, Any],
+                 name: Optional[str]=None,
+                 default_view: ViewMode=ViewMode.NONE) -> None:
+        super(KeyValueLayout, self).__init__(name, default_view)
         self._key_value_mapping: Mapping[_Viz, _Viz] = {
             _get_viz(key): _get_viz(value) for key, value in key_value_mapping.items()
         }
@@ -273,15 +349,16 @@ class KeyValueLayout(_Viz):
             }
         }, list(self._key_value_mapping.keys()) + list(self._key_value_mapping.values())
 
-    def compile_compact(self) -> VizModel:
+    def compile_compact(self) -> (VizModel, Iterable[_Viz]):
+        items = self._key_value_mapping.items()[:KeyValueLayout.COMPACT_LEN]
         return {
             'type': 'KeyValueLayout',
             'contents': {
                 'elements': {
-                    str(key): str(value) for key, value in self._key_value_mapping.items()[:KeyValueLayout.COMPACT_LEN]
+                    key: value for key, value in items
                 }
             }
-        }
+        }, [key for key, _ in items] + [value for _, value in items]
 
     def __str__(self) -> str:
         return 'dict[{}]'.format(len(self._key_value_mapping))
