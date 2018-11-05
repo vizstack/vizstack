@@ -34,23 +34,46 @@ export type VizSpec = {
     fullModel?: VizModel,
 };
 
-// TODO: Refactor with types
 /** Visual "building blocks". */
 export type Primitive = (
-    'TokenPrimitive'
+    TokenPrimitiveModel
 );
 
 /** Visual "configurations" of "building blocks". */
 export type Layout = (
-    'SequenceLayout' |
-    'KeyValueLayout'
+    SequenceLayoutModel |
+    KeyValueLayoutModel
 );
 
 /** A mode of visualization for a viz. */
-export type VizModel = {
-    type: Primitive | Layout,
-    contents: {},
-};
+export type VizModel = (
+    Primitive |
+    Layout
+);
+
+export type TokenPrimitiveModel = {
+    type: 'TokenPrimitive',
+    contents: {
+        text: string,
+    },
+}
+
+export type SequenceLayoutModel = {
+    type: 'SequenceLayout',
+    contents: {
+        elements: VizId[],
+        orientation?: 'horizontal' | 'vertical',
+    },
+}
+
+export type KeyValueLayoutModel = {
+    type: 'KeyValueLayout',
+    contents: {
+        elements: {
+            [VizId]: VizId,
+        }
+    },
+}
 
 /**
  * Get the entire viz table.
