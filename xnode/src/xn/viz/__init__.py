@@ -2,7 +2,7 @@ from typing import Union, Sequence, Any, Mapping, Iterable, List, Dict, ClassVar
     MutableSet, MutableMapping, NewType
 from enum import Enum
 from copy import copy
-from xn.constants import VizId, VizModel, SnapshotId, JsonType, VizSpec, VizSlice
+from xn.constants import VizId, VizModel, SnapshotId, JsonType, VizSpec, VizTableSlice
 
 # TODO: potentially use these remnants of the old viz engine
 # TENSOR_TYPES: Mapping[str, str] = {
@@ -186,7 +186,7 @@ class VisualizationEngine:
         return self._cache_slice(obj, file_path, line_number, self._next_snapshot_id)
 
     def get_snapshot_slice(self,
-                           viz_id: VizId) -> VizSlice:
+                           viz_id: VizId) -> VizTableSlice:
         """Returns a filled shell for the symbol with ID `symbol_id`, as well as the empty shells and symbol IDs of
         every symbol referenced in the shell's data object.
 
@@ -202,7 +202,7 @@ class VisualizationEngine:
                 will be empty.
         """
         # TODO: add mode argument to determine what should be retrieved
-        viz_slice: VizSlice = dict()
+        viz_slice: VizTableSlice = dict()
         to_add: MutableSequence[(VizId, ViewMode)] = [(viz_id, ViewMode.NONE)]
         while len(to_add) > 0:
             viz_id, parent_view_mode = to_add.pop()
@@ -304,15 +304,18 @@ class SequenceLayout(_Viz):
 
     def __init__(self,
                  elements: Sequence[Any],
+                 orientation: str="horizontal",
                  name: Optional[str]=None,
                  default_view: ViewMode=ViewMode.NONE) -> None:
         super(SequenceLayout, self).__init__(name, default_view)
+        self._orientation: str = orientation
         self._elements: Sequence[_Viz] = [_get_viz(elem) for elem in elements]
 
     def compile_full(self) -> (VizModel, Iterable[_Viz]):
         return {
             'type': 'SequenceLayout',
             'contents': {
+                'orientation': self._orientation,
                 'elements': self._elements
             }
         }, self._elements
@@ -321,6 +324,7 @@ class SequenceLayout(_Viz):
         return {
             'type': 'SequenceLayout',
             'contents': {
+                'orientation': self._orientation,
                 'elements': self._elements[:SequenceLayout.COMPACT_LEN]
             }
         }, self._elements[:SequenceLayout.COMPACT_LEN]

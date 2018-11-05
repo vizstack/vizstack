@@ -46,7 +46,7 @@ class VizSpec:
 
 
 # A collection of `VizSpec`s mapped to their respective IDs.
-VizSlice = NewType('VizSlice', MutableMapping[VizId, VizSpec])
+VizTableSlice = NewType('VizSlice', MutableMapping[VizId, VizSpec])
 
 # A description of an action that should be performed on a constructed viz slice before being sent to the client
 Action = NewType('Action', JsonType)

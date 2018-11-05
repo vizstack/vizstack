@@ -12,10 +12,10 @@ from typing import Callable, Mapping, Union, Any, Optional, NewType
 
 import xn
 from xn.viz import VisualizationEngine
-from xn.constants import VizSlice, VizId, Actions
+from xn.constants import VizTableSlice, VizId, Actions
 
 # The type of the function which is called to send a message to the parent process.
-_SendMessage = Callable[[Optional[VizSlice], Optional[VizId], bool], None]
+_SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool], None]
 
 
 # Taken from atom-python-debugger
@@ -112,7 +112,7 @@ class _PrintOverwriter:
         frame_info = getframeinfo(currentframe().f_back)
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = self._engine.take_snapshot(text, filename, lineno)
-        viz_slice: VizSlice = self._engine.get_snapshot_slice(viz_id)
+        viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
         self._send_message(viz_slice, viz_id, False)
 
     def flush(self) -> None:
@@ -133,7 +133,7 @@ class _DataclassJSONEncoder(json.JSONEncoder):
 
 
 def _send_message(send_queue: Queue,
-                  viz_slice: Optional[VizSlice],
+                  viz_slice: Optional[VizTableSlice],
                   view_viz_id: Optional[VizId],
                   refresh: bool) -> None:
     """Writes a message to the client containing information about symbols and the program state.
@@ -172,7 +172,7 @@ def _execute_watch(send_message: _SendMessage,
         frame_info = getframeinfo(currentframe().f_back.f_back)
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = engine.take_snapshot(obj, filename, lineno)
-        viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
+        viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
         send_message(viz_slice, viz_id, False)
 
 
@@ -188,7 +188,7 @@ def _fetch_viz(send_message: _SendMessage,
         send_message: A function which sends a symbol slice and other information to the client.
         viz_id: The symbol ID of the object whose slice should be sent.
     """
-    viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
+    viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
     send_message(viz_slice, None, False)
 
 
@@ -236,6 +236,7 @@ def run_script(receive_queue: Queue,
             request: Mapping[str, Union[Actions, VizId]] = receive_queue.get(True)
             if request is None:
                 break
+            # TODO: use request['mode']
             _fetch_viz(send_message, engine, request['viz_id'])
     except:
         raw_error_msg: str = traceback.format_exc()
@@ -245,5 +246,5 @@ def run_script(receive_queue: Queue,
         result = re.search(r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$", clean_error_msg,
                            re.DOTALL)
         viz_id: VizId = engine.take_snapshot(clean_error_msg, result.group(1), int(result.group(2)))
-        viz_slice: VizSlice = engine.get_snapshot_slice(viz_id)
+        viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
         send_message(viz_slice, viz_id, False)

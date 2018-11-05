@@ -1,205 +1,80 @@
 # Schema Format
 **This document described the schemas for the JSON passed between the `ExecutionEngine` and the `REPL`, for visualization
  purposes.**
- 
- ## Symbol table slice
- 
- The top-level format of a _symbol table slice_ sent between the `ExecutionEngine` (Python backend) and the 
- `REPL` (Javascript frontend) is a JSON object structured like:
- 
-```json
+
+## VizContents
+A _viz contents_ object describes the properties of a single Viz -- either a Primitive or a Layout. VizContents can reference other VizSpecs by ID, creating a nested visualization. The format of VizContents depends on the Viz type:
+
+### TokenPrimitive
+A contiguous, inseparable block which might contain text.
+```
 {
-     "<ID>": {
-         "type": "<TYPE>",
-         "str": "<STR>",
-         "name": "<NAME>" || null,
-         "attributes": null,
-         "data": {} || null,
-     }
+    "text": str,
 }
 ```
-- `"<ID>"`: Unique string identifier for a symbol, e.g. `"@id:123456"`. Maps to a symbol object.  
-See "Symbol IDs" and "Symbol Objects" sections for more details.
-- `"type"`: Maps to a data-type string `<TYPE>` drawn from the set `{"number", "string", "bool", "list", "tuple", 
-"set", "dict", "class", "module", "object", "function", "tensor", "graphdata", "graphop", "graphcontainer"}`
-- `"str"`: Maps to a display string `"<STR>"`, e.g. `"List[4]"`.
-- `"name"`: Maps to a name string `"<NAME>"` (if the symbol has one), e.g. `"myCoolVariable"`; else, `null`.
-- `"attributes"`: Maps to an attributes object containing details of Python attributes; or `null` if still unfilled. 
-(The names of attributes are what a call to `dir(symbolName)` returns.)  See "Attribute Objects" section for more details.
-**Because of performance implications (see issue #30), `"attributes"` is currently always `null`.**
-- `"data"`: Maps to a data object containing information for visualization; or `null` if still unfilled. See "Data 
-Objects" section for more details.
+- `"text"` is the string that should be displayed in the token.
 
-## Symbol IDs (TODO)
-Symbol IDs (aka. `symbolID`s) are unique string identifiers for a symbol. Symbol IDs are used as keys in a symbol 
-table that keeps track of the symbol objects that have been generated (backend) or received (frontend).
-They are also used in the representation of symbols that reference/"hold-onto" other symbols (e.g. a symbol of type 
-`"list"` "holds-onto" its elements, which could be `"number"`, `"string"`, or even other `"list"` symbols).
-
-A symbol ID takes the following form: `"@id:" + <symbolId> + ":" + <symbolVersion>`
-
-### Primitives vs. non-primitives (TODO)
+### SequenceLayout
+Arranges a list of other Vizzes into a vertical or horizontal sequence.
 ```
-If primitive (id(x) == id(y) iff eval(x) == eval(y); e.g. number, string, bool), direct representation.
-If non-primitive (e.g. list, set, dict), indirect representation.
- // CONSTRAINT: Since storing numbers directly, any subclass of, say, `int` will not display instance fields when loaded
- // in-plae (outside of the namespace).
-```
-Are strings escaped if they look like a symbol ID?
-
-## Symbol objects (TODO)
-Symbol objects are not always sent all at once: `"attributes"` and `"data"` objects are initially left _unfilled_ 
-(`null`) until symbol data is requested
-
-Data objects and attributes objects are separated because a Python symbol might have an attribute with the same name 
-as one of the keywords used to store visualization information, causing a collision.
-
-### Symbol type-specific data objects
-The only ways in which symbols of different types differ are in their `"str"` and `"data"` values, so only 
-examples of those are shown.
-
-#### none
-```
-"str": "None",
-"data": {
-    "contents": null,
+{
+    "orientation": "vertical" | "horizontal",
+    "elements": [<VizId>, ...]
 }
 ```
+- `"orientation"` is the direction in which the elements should be laid out.
+- `"elements"` is a list of VizIds which should be displayed sequentially.
 
-#### bool
+## VizModel
+A _viz model_ contains the information needed to render a particular visualization, and is a JSON object of the format
 ```
-"str": "False",
-"data": {
-    "contents": false,
+{
+    "type": "TokenPrimitive" | "SequenceLayout" | ...,
+    "contents": <VizContents>
 }
 ```
+- `"type"` is a string which dictates which visualization primitive or layout should be rendered.
+- `"contents"` is a VizContents object which describes the properties of the visualization, with format determined by `"type"`.
 
-#### number
-TODO: Deal with Python `complex` primitive.
+## VizSpec
+A _viz spec_ describes a particular object which is being visualized, including VizModels and metadata. It is a JSON object of the format:
 ```
-"str": "3.14",
-"data": {
-    "contents": 3.14,
+{
+    "filePath": str,
+    "lineNumber": int,
+    "summaryModel": <VizModel>,
+    "compactModel": <VizModel> | null,
+    "fullModel": <VizModel> | null
 }
 ```
+- `"filePath"` is the full path of the file in which the Python backend was instructed to visualize the object (via a call to `xn.view()`).
+- `"lineNumber"` is the integer number of the line in `"filePath"` where the object was visualized (via `xn.view()`).
+- `"summaryModel"` is the VizModel which captures a fixed-size representation of the visualized object; currently, it is always a `TokenPrimitive`. It cannot reference other VizSpecs.
+- `"compactModel"` is the VizModel which captures a small glimpse of the visualized object, such as the first few elements of a sequence. It can reference other VizSpecs by their VizId. It is `null` if the model has not yet been requested by the frontend.
+- `"fullModel"` is the VizModel which captures the visualized object in its entirety, It can reference other VizSpecs by their VizId. It is `null` if the model has not yet been requested by the frontend. If non-`null`, `"compactModel"` is also non-`null`.
 
-#### string
-Note the redundancy. TODO: Can we remove it?
+## VizId
+A _viz ID_ is a string which uniquely identifies a VizSpec. The frontend does not know anything about its format, only that it is a unique identifier.
+The backend is aware that it is of the form `"@id:{OBJECT_ID}!{SNAPSHOT_ID}!"`, where `"OBJECT_ID"` uniquely identifies the object being visualized and
+`"SNAPSHOT_ID"` uniquely identifies the call to `xn.view()` where it was visualized.
+
+## VizTableSlice
+A _viz table slice_ maps VizIds to VizSpecs. Any new VizSpecs sent by the backend to the frontend will be in the form of a VizSlice.
+
+## VizTable
+The _viz table_ maps VizIds to VizSpecs. It is maintained by the frontend, and is updated when new VizTableSlices are sent by the backend. Those VizSlices are inserted into the VizTable by the frontend.
+
+## ExecutionEngineMessage
+The `ExecutionEngine` (Python backend) communicates with the `REPL` (Javascript frontend) by sending _execution engine messages_.
+Each message is a JSON object of the form:
+
 ```
-"str": "Hello world!",
-"data": {
-    "contents": "Hello world!",
+{
+    "viewedVizId": <VizId> || null,
+    "vizTableSlice": <VizTableSlice> || null,
+    "shouldRefresh": true || false
 }
 ```
-
-#### list/tuple/set
-```
-"str": "list[5]",
-"data": {
-    "contents": ["@id:1234", "@id:4345"],
-}
-```
-
-#### dict
-```
-"str": "dict[4]",
-"data": {
-    "contents": {
-        "@id:12345": "@id:4345",
-    },
-    "length": 4
-}
-```
-
-#### class
-```
-"str": "class<MyAwesomeClass>",
-"data": {
-    "functions": {
-        "name": "@id:12345",  // functions are symbols too
-    },
-    "staticfields": {
-        "name": "@id:23456"
-    }
-}
-```
-
-#### module
-```
-"str": "module<torch.autograd>",
-"data": {
-    "contents": {
-        "example_fn": "@id:12345",
-    },
-}
-```
-
-#### object
-```
-"str": "object<MyAwesomeClass>",
-"data": {
-    "contents": {
-        "example_fn": "@id:12345",
-    },
-    "builtin": false,
-}
-```
-
-#### fn
-```
-"str": "function<foo>",
-"data": {
-    "args":["hi", "hi"],
-    "kwargs":{"kwarg1": "@id:1234"},
-}
-```
-
-#### tensor
-TODO: Handle different precision data for contents.
-TODO: Need max and min for visualization purposes.
-```
-"str": "tensor <float32>[3,2,1]",
-"data": {
-    "contents": [[1,2,3],[2,3,4]],
-    "size": [1,2,3],
-    "type": "float32", // "float16", "float32", "float64", "uint8", "int8", "int16", "int32", "int64"
-}
-```
-
-#### graphdata
-```
-"str": "GraphData",
-"data": {
-    "creatorop": null, // reference to graphop symbol, or None if leaf
-    "creatorpos": 0, // the index in the creator op's output tuple, or -1 if leaf
-    "kvpairs": {
-        // user-defined key-value pairs
-        "key": "@id:871432193874"
-    }
-}
-```
-
-#### graphop
-```
-"str": "GraphOp",
-"data": {
-    "function": "@id:9875089" // reference to function which performed the operation represented by graphop
-    "args": [["arg1"], ["arg2", "@id:023958"], ["arg3", ["@id:8787", "@id:4564"]] // list of arguments to the op, containing only references to graphdata or lists of references to graphdata
-    "kwargs": [["kwarg1", "@id:023958"], ["kwarg2", ["@id:8787", "@id:4564"]] // list of keyword arguments to the op, containing only references to graphdata or lists of references to graphdata
-    "container":"@id:98750897202", // symbol ID of graphcontainer, or null if no container
-    "functionname": "funky_the_function",
-    "outputs": ["@id:23509321590"] // list of graphdata objects output by the op
-}
-```
-
-#### graphcontainer
-```
-"str": "GraphContainer",
-"data": {
-    "contents": ["@id:98750", "@id:97750"], // list of graphop.graphcontainer grouped by this container.
-    "container": "@id:3032099235", // symbol ID of graphcontainer, or null if no container
-    "temporalstep": 1,  // -1 for abstractive containers, >=0 for temporal
-    "height": 5, // length of longest chain of descendants
-    "functionname": "funky_the_function", // name of associated function, or null if there is none (like for temporal containers)
-}
-```
+- `"viewedVizId"` is the VizId associated with a VizSpec that `REPL` should render in a new viewer, or `null` if no new viewer should be opened.
+- `"vizTableSlice"` is a VizTableSlice that `REPL` should add to the frontend's VizTable, or `null` if no new VizSpecs should be added.
+- `"shouldRefresh"` is a boolean that dictates whether `REPL` should clear the canvas upon receiving the message.
