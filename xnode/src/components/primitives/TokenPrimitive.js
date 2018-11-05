@@ -12,7 +12,7 @@ import ColorBlue from '@material-ui/core/colors/blue';
 /**
  * This dumb component renders visualization for a text string that represents a token.
  */
-class TokenViz extends Component {
+class TokenPrimitive extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -150,4 +150,4 @@ const styles = theme => ({
     }
 });
 
-export default withStyles(styles)(TokenViz);
+export default withStyles(styles)(TokenPrimitive);

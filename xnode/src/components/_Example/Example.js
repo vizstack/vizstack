@@ -8,7 +8,7 @@ import { createSelector } from 'reselect';
 
 
 /**
- * This [pure dumb / statful dumb / smart] component ___.
+ * This [pure dumb / stateful dumb / smart] component ___.
  */
 class Example extends Component {
 

@@ -5,7 +5,7 @@ import { withStyles } from '@material-ui/core/styles';
 
 import SequenceViz from '../../viz/SequenceViz';
 import KeyValueViz from '../../viz/KeyValueViz';
-import TokenViz from '../../viz/TokenViz';
+import TokenViz from '../../primitives/TokenPrimitive';
 
 import Typography from '@material-ui/core/Typography';
 

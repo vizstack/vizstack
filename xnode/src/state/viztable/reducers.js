@@ -4,6 +4,7 @@ import type { VizId, VizSpec } from './outputs';
 
 /** Root reducer's state slice shape. */
 export type VizTableState = {
+
     // Map of symbol IDs to symbol objects.
     vizTable: {
         [VizId]: VizSpec,

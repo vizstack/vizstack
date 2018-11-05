@@ -1,25 +1,26 @@
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
-import type { Viewer } from './outputs';
+import type { ViewerId, ViewerSpec } from './outputs';
 
 /** Root reducer's state slice shape. */
 export type CanvasState = {
-    // Unique viewer ID, incremented on each add.
+
+    // Unique number used to generated ViewerId, incremented on each time a new viewer is added.
     currentViewerId: number,
 
-    // Map from viewer ID to viewer objects.
-    viewerObjects: {
-        [viewerId: string]: Viewer,
+    // Map from ViewerId to viewer objects.
+    viewerTable: {
+        [ViewerId]: ViewerSpec,
     },
 
-    // List of viewer ID strings in order of display.
-    viewerPositions: Array<string>,
+    // List of ViewerIds in order of display.
+    viewerPositions: Array<ViewerId>,
 };
 
 /** Root reducer's initial state slice. */
 const initialState: CanvasState = Immutable({
     currentViewerId: 0,
-    viewerObjects: {},
+    viewerTable: {},
     viewerPositions: [],
 });
 
@@ -48,7 +49,7 @@ function clearCanvasReducer(state, action) {
  * Adds a viewer to the canvas. Assumes `data` for symbol object is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { viewerObj, insertAfter } = action;
+    const { vizId, insertAfter } = action;
     const { currentViewerId } = state;
     if(insertAfter < -1) {
         console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
@@ -57,7 +58,7 @@ function addViewerReducer(state, action) {
     const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem === insertAfter);
     return (
         state
-        .setIn(['viewerObjects', `${currentViewerId}`], viewerObj, {deep: true})
+        .setIn(['viewerTable', `${currentViewerId}`], { vizId, }, { deep: true })
         .update('viewerPositions', (prev) => Immutable([]).concat(
             insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
             [`${state.currentViewerId}`],
@@ -80,7 +81,7 @@ function removeViewerReducer(state, action) {
     return (
         state
         .update('viewerPositions', (arr) => arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)))
-        .setIn(['viewerObjects', viewerId], undefined)
+        .setIn(['viewerTable', viewerId], undefined)
     );
 }
 

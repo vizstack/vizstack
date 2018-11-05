@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import TokenViz from './TokenViz';
+import TokenViz from '../primitives/TokenPrimitive';
 
 /**
  * This dumb component renders visualization for a 1D sequence of elements.
@@ -52,7 +52,7 @@ class SequenceViz extends Component {
     };
 
     /**
-     * Renders a sequence of TokenViz elements, optionally numbered with indices. The sequence can have start/end
+     * Renders a sequence of TokenPrimitive elements, optionally numbered with indices. The sequence can have start/end
      * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
@@ -123,7 +123,7 @@ const styles = theme => ({
     },
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,
-        fontSize:       '14pt',  // TODO: Dehardcode this, same as TokenViz.tokenText
+        fontSize:       '14pt',  // TODO: Dehardcode this, same as TokenPrimitive.tokenText
         verticalAlign:  '25%',  // Offset baseline for middle alignment
 
         // No text selection

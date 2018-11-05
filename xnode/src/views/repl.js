@@ -19,12 +19,13 @@ import mainReducer from '../state';
 import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
 import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
 import type {VizId, VizSpec} from "../state/viztable/outputs";
+import { getVizSpec } from "../state/viztable/outputs";
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
 
 type ExecutionEngineMessage = {
-    // Top-level viz created directly from a `xn.view()` call. Is displayed in its own Viewer in the Canvas.
+    // Top-level viz created directly from a `xn.view()` call. Is displayed in its own ViewerSpec in the Canvas.
     viewedVizId?: VizId,
 
     // VizTable slice to add into central VizTable.
@@ -72,7 +73,7 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
-                    <Canvas fetchSymbolData={(symbolId) => this.fetchSymbolData(symbolId)} />
+                    <Canvas fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)} />
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element,
@@ -170,35 +171,34 @@ export default class REPL {
     }
 
     /**
-     * Fetches the data object for a given symbol from the execution engine.
+     * Fetches from the execution engine a model for a viz.
      *
-     * The data object is not directly returned, but will eventually be sent by the execution engine to REPL as a
-     * message, at which point it is added to the symbol table.
+     * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will preserve the invariant
+     * for `VizSpec` (e.g. if "full" is the model name, both `fullModel` and `compactModel` will be filled).
      *
-     * @param {string} symbolId
-     *      The identifier of the symbol, as acquired from a reference in the symbol table.
-     * @param {?object} action
-     *      Actions that the execution engine should perform on the generated symbol table slice before sending it to
-     *      `REPL`, in the format described in `ACTION-SCHEMA.md`.
+     * @param vizId
+     * @param modelType
+     *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
      */
-    fetchSymbolData(symbolId, action = null) {
-        // TODO: check to make sure the data isn't already there
-        console.debug(`repl ${this.name} -- fetching symbol (${symbolId})`);
-        this.executionEngine.send(`fetch:${symbolId}?${JSON.stringify(this._mergeActions(action, DEFAULT_ACTION))}`);
+    fetchVizModel(vizId: VizId, modelType: 'compact' | 'both') {
+        const existingSpec = getVizSpec(this.store.getState().viztable, vizId)
+        if(existingSpec)
+        console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
+        this.executionEngine.send(`fetch:${vizId}?${modelType}`);
     }
 
     /**
      * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main script (or certain parts
      * of it).
      *
-     * @param  {string} file
-     *     Path of file that was changed.
-     * @param  {object} changes
+     * @param  filePath
+     *     Absolute path of file that was changed.
+     * @param  changes
      *     Indicates what parts of the file changed. TODO: define this format and use it
      */
-    onFileChanged(file, changes) {
-        changes = '';
-        console.debug(`repl ${this.name} -- change to ${file}`);
-        this.executionEngine.send(`change:${file}?${changes}`);
+    onFileChanged(filePath: string, changes: {}) {
+        changes = '';  // TOOD: Right now not sending specific changes.
+        console.debug(`repl ${this.name} -- change to ${filePath}`);
+        this.executionEngine.send(`change:${filePath}?${changes}`);
     }
 }

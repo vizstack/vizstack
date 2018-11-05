@@ -6,14 +6,14 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 
-import DisplayFrame, { DisplayFrameHeader, DisplayFrameContent } from '../DisplayFrame';
+import DisplayFrame, { DisplayFrameContent } from '../DisplayFrame';
 import Tooltip from '@material-ui/core/Tooltip';
 import IconButton from '@material-ui/core/IconButton';
 
 
 /**
  * This dumb component renders a `DisplayFrame` and `DisplayFrameHeader`, which together factor out the elements and
- * functions common to all `[*]Viewer`.
+ * functions common to all `[*]ViewerSpec`.
  * TODO: Add viewerId for easy identification
  * TODO: Add save to image button.
  */
@@ -27,10 +27,10 @@ class ViewerDisplayFrame extends Component {
         /** React components within opening & closing tags. */
         children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
 
-        /** Left-justified text string/element to display in header. */
+        /** Left-justified text string/element to display before frame. */
         title: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
 
-        /** Right-justified button elements to display in header, with the following data schema:
+        /** Right-justified button elements to overlay on content, with the following data schema:
          * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */
         buttons: PropTypes.array,
     };
@@ -40,7 +40,7 @@ class ViewerDisplayFrame extends Component {
      * providing any viewer-specific modifications to header.
      */
     render() {
-        const { classes, children, icon, title, buttons } = this.props;
+        const { classes, children, title, buttons } = this.props;
 
         const buttonsComponents = buttons.map((button, idx) => (
             <Tooltip key={idx} placement='bottom' title={button.title}>
@@ -71,13 +71,6 @@ class ViewerDisplayFrame extends Component {
 const styles = theme => ({
     bundle: {
         display: 'inline-flex',
-    },
-    icon: {
-        textAlign: 'left',
-
-        // Vertically center icon
-        display: 'inline-flex',
-        paddingRight: theme.spacing.unit,
     },
     title: {
         textAlign: 'left',

@@ -2,12 +2,12 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../viz/TokenViz';
+import TokenViz from '../primitives/TokenPrimitive';
 
 
 /**
  * This dumb component renders a viewer for a Python primitive (none, float, int, complex, bool). A string is the
- * explicit data model expected by `TokenViz`.
+ * explicit data model expected by `TokenPrimitive`.
  */
 class PrimitiveViewer extends Component {
 
@@ -26,7 +26,7 @@ class PrimitiveViewer extends Component {
     }
 
     /**
-     * Renders a TokenViz with the given string.
+     * Renders a TokenPrimitive with the given string.
      */
     render() {
         const { str } = this.props;

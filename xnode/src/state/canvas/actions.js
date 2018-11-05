@@ -1,4 +1,3 @@
-import { ViewerType } from './outputs';
 import type {VizId} from "../viztable/outputs";
 
 /** Action type definitions. */
@@ -23,7 +22,7 @@ export function clearCanvasAction() {
  * symbol/expression, there may be many snapshots of it from different points in time, each with a unique `vizId`.
  *
  * @param vizId
- *     VizId for top-level viz in this Viewer.
+ *     VizId for top-level viz in this ViewerSpec.
  * @param insertAfter
  *     ViewerId of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
@@ -31,9 +30,7 @@ export function clearCanvasAction() {
 export function addViewerAction(vizId: VizId, insertAfter: number = -1) {
     return {
         type: CanvasActions.ADD_VIEWER,
-        viewerObj: {
-            vizId,
-        },
+        vizId,
         insertAfter,
     };
 }
@@ -47,7 +44,7 @@ export function addViewerAction(vizId: VizId, insertAfter: number = -1) {
 export function removeViewerAction(viewerId: number) {
     return {
         type: CanvasActions.REMOVE_VIEWER,
-        viewerId
+        viewerId,
     };
 }
 
