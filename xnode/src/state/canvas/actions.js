@@ -30,12 +30,13 @@ export function clearCanvasAction() {
  *     ViewerId of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addViewerAction(vizId: VizId, expansionState: ExpansionState, addToCanvas: boolean,
+export function addViewerAction(vizId: VizId, expansionState: ExpansionState, childOf?: string,
                                 insertAfter: number = -1) {
     return {
         type: CanvasActions.ADD_VIEWER,
         vizId,
-        addToCanvas,
+        expansionState,
+        childOf,
         insertAfter,
     };
 }

@@ -6,10 +6,12 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
 import type {VizId, VizSpec} from "../state/viztable/outputs";
-import { VizModel } from "../state/viztable/outputs";
+import {getVizTable, VizModel} from "../state/viztable/outputs";
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
+import {addViewerAction, removeViewerAction, reorderViewerAction} from "../state/canvas/actions";
+import {getViewer} from "../state/canvas/outputs";
 
 // Viz layouts
 
@@ -39,17 +41,27 @@ class Viewer extends Component {
     /**
      * Recursively parse and assemble a nested visualization from the VizSpec.
      */
-    createVizComponent(vizId: VizId) {
-        const { vizTable } = this.props;
+    createVizComponent() {
+        const { viewer, viewerId, vizTable, addViewer } = this.props;
+        const { vizId, expansionState, children } = viewer;
 
-        const vizSpec = vizTable[vizId];
+        const vizSpec: VizSpec = vizTable[vizId];
         if(!vizSpec) {
             return null;  // TODO: What to do?
         }
 
-        // TODO: Which model is currently using?
-        const model: VizModel = vizSpec.summaryModel;
-        console.log("HEHRHEHE", vizSpec);
+        let model: VizModel = undefined;
+        switch(expansionState) {
+            case 'summary':
+                model = vizSpec.summaryModel;
+                break;
+            case 'compact':
+                model = vizSpec.compactModel;
+                break;
+            case 'full':
+                model = vizSpec.fullModel;
+                break;
+        }
 
         switch(model.type) {
             case 'TokenPrimitive':
@@ -60,6 +72,21 @@ class Viewer extends Component {
                         onMouseEnter={() => this.setState({isHovered: true})}
                         onMouseLeave={() => this.setState({isHovered: false})}/>
                 );
+            case 'SequenceLayout':
+                model.contents.elements.forEach((childVizId: VizId) => {
+                    if (!(childVizId in children)) {
+                        // TODO: this logic also exists in repl. merge them
+                        let expansionState = 'summary';
+                        if (vizTable[childVizId].compactModel !== null) {
+                            expansionState = 'compact';
+                        }
+                        if (vizTable[childVizId].fullModel !== null) {
+                            expansionState = 'full';
+                        }
+                        addViewer(childVizId, expansionState, viewerId)
+                    }
+                });
+                return null;
         }
     }
 
@@ -78,4 +105,21 @@ const styles = theme => ({
     // css-key: value,
 });
 
-export default withStyles(styles)(Viewer);
+/** Connects application state objects to component props. */
+function mapStateToProps(state, props) {
+    return {
+        viewer:    getViewer(state.canvas, props.viewerId),
+        vizTable:  getVizTable(state.viztable),
+    };
+}
+
+/** Connects bound action creator functions to component props. */
+function mapDispatchToProps(dispatch) {
+    return bindActionCreators({
+        addViewer:      addViewerAction,
+        removeViewer:   removeViewerAction,
+        reorderViewer:  reorderViewerAction,
+    }, dispatch);
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(Viewer));

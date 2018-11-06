@@ -230,6 +230,8 @@ def _get_viz(o: Any) -> '_Viz':
         return o
     if hasattr(o, 'xn'):
         return o.xn()
+    elif isinstance(o, list):
+        return SequenceLayout(o)
     else:
         # TODO: use a better generic viz
         return TokenPrimitive(o)

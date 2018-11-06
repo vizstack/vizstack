@@ -49,17 +49,17 @@ function clearCanvasReducer(state, action) {
  * Adds a viewer to the canvas. Assumes `data` for symbol object is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { vizId, expansionState, addToCanvas, insertAfter } = action;
+    const { vizId, expansionState, childOf, insertAfter } = action;
     const { currentViewerId } = state;
     if(insertAfter < -1) {
         console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
         return state;
     }
     const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem === insertAfter);
-    if (addToCanvas) {
+    if (childOf === null) {
         return (
             state
-                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, }, { deep: true })
+                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, children: {}}, { deep: true })
                 .update('viewerPositions', (prev) => Immutable([]).concat(
                     insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
                     [`${state.currentViewerId}`],
@@ -69,9 +69,11 @@ function addViewerReducer(state, action) {
         );
     }
     else {
+        console.log('adding', vizId, 'to', childOf);
         return (
             state
-                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, }, { deep: true })
+                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, children: {}}, { deep: true })
+                .setIn(['viewerTable', childOf, 'children', vizId], currentViewerId, { deep: true })
                 .update('currentViewerId', (prev) => prev + 1)
         );
     }
