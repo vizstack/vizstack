@@ -33,7 +33,7 @@ import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphView
 import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getViewerPositions, getViewerTable } from "../state/canvas/outputs";
+import { getViewerPositions, getViewerTable, ExpansionState } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
 import type {ViewerId, ViewerSpec} from "../state/canvas/outputs";
@@ -178,10 +178,11 @@ class Canvas extends Component {
 
         const openViewer = (vizId, insertAfterViewerId = -1) => {
             fetchVizModel(vizId);
-            addViewer(vizId, insertAfterViewerId);
+            // TODO: figure out what type to show here, don't add to canvas
+            addViewer(vizId, true, 'full', insertAfterViewerId);
         };
 
-        const { vizId, vizSpec } = viewer;
+        const { vizId, vizSpec, expansionState } = viewer;
         const title = !vizSpec ? kLoadingMsg : `${vizSpec.filePath}:${vizSpec.lineNumber}`;
         const buttons = [
             // TODO: Duplicate should also replicate the existing state of a snapshot viewer
@@ -284,6 +285,8 @@ type ViewerModel = {
 
     // Specification of
     vizSpec: VizSpec,
+
+    expansionState: ExpansionState,
 }
 
 /**
@@ -298,12 +301,13 @@ const assembleViewers: ({}) => Array<ViewerModel> = createSelector(
      viewerTable : {[ViewerId]: ViewerSpec},
      vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
         return viewerPositions.map((viewerId) => {
-            const { vizId } = viewerTable[viewerId];
+            const { vizId, expansionState } = viewerTable[viewerId];
             const vizSpec = vizTable[vizId];
             return {
                 viewerId,
                 vizId,
                 vizSpec,
+                expansionState,
             };
 
         });

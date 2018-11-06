@@ -161,7 +161,14 @@ export default class REPL {
                 this.store.dispatch(addVizTableSliceAction(vizTableSlice));
             }
             if(viewedVizId) {
-                this.store.dispatch(addViewerAction(viewedVizId));
+                let expansionState = 'summary';
+                if (vizTableSlice[viewedVizId].compactModel !== null) {
+                    expansionState = 'compact';
+                }
+                if (vizTableSlice[viewedVizId].fullModel !== null) {
+                    expansionState = 'full';
+                }
+                this.store.dispatch(addViewerAction(viewedVizId, expansionState, true));
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
             // focus so the user can keep typing.

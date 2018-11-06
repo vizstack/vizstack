@@ -49,23 +49,32 @@ function clearCanvasReducer(state, action) {
  * Adds a viewer to the canvas. Assumes `data` for symbol object is already loaded.
  */
 function addViewerReducer(state, action) {
-    const { vizId, insertAfter } = action;
+    const { vizId, expansionState, addToCanvas, insertAfter } = action;
     const { currentViewerId } = state;
     if(insertAfter < -1) {
         console.error("Invalid `insertAfter` parameter to `addViewerReducer`; got ", insertAfter);
         return state;
     }
     const insertAfterIdx = insertAfter === -1 ? -1 : state.viewerPositions.findIndex((elem) => elem === insertAfter);
-    return (
-        state
-        .setIn(['viewerTable', `${currentViewerId}`], { vizId, }, { deep: true })
-        .update('viewerPositions', (prev) => Immutable([]).concat(
-            insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-            [`${state.currentViewerId}`],
-            insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
-        ))
-        .update('currentViewerId', (prev) => prev + 1)
-    );
+    if (addToCanvas) {
+        return (
+            state
+                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, }, { deep: true })
+                .update('viewerPositions', (prev) => Immutable([]).concat(
+                    insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
+                    [`${state.currentViewerId}`],
+                    insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
+                ))
+                .update('currentViewerId', (prev) => prev + 1)
+        );
+    }
+    else {
+        return (
+            state
+                .setIn(['viewerTable', `${currentViewerId}`], { vizId, expansionState, }, { deep: true })
+                .update('currentViewerId', (prev) => prev + 1)
+        );
+    }
 }
 
 /**
