@@ -33,7 +33,7 @@ import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphView
 import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getCanvasViewers, ViewerModel, getViewerPositions, getViewerTable, ExpansionState } from "../state/canvas/outputs";
+import { getViewerPositions, getViewerTable, ExpansionState } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
 import type {ViewerId, ViewerSpec} from "../state/canvas/outputs";
@@ -251,6 +251,45 @@ class Canvas extends Component {
     }
 }
 
+type ViewerModel = {
+
+    // Unique ViewerId that identifies this viewer.
+    viewerId: ViewerId,
+
+    // Unique VizId of top-level viz.
+    vizId: VizId,
+
+    // Specification of
+    vizSpec: VizSpec,
+
+    expansionState: ExpansionState,
+}
+
+// TODO: check if this has issues with multiple canvases accessing the same selector
+/**
+ * Selector to assemble a Viewer object from the current Redux state.
+ * @param state
+ */
+const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
+    (state) => getViewerPositions(state.canvas),
+    (state) => getViewerTable(state.canvas),
+    (state) => getVizTable(state.viztable),
+    (viewerPositions: Array<ViewerId>,
+     viewerTable : {[ViewerId]: ViewerSpec},
+     vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
+        return viewerPositions.map((viewerId) => {
+            const { vizId, expansionState } = viewerTable[viewerId];
+            const vizSpec = vizTable[vizId];
+            return {
+                viewerId,
+                vizId,
+                vizSpec,
+                expansionState,
+            };
+
+        });
+    }
+);
 
 // To inject styles into component
 // -------------------------------
