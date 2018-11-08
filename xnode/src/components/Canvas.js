@@ -21,7 +21,7 @@ import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getViewerPositions, getViewerTable } from "../state/canvas/outputs";
+import { getViewerPositions, getViewerTable, ExpansionState } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
 import type {ViewerId, ViewerSpec} from "../state/canvas/outputs";
@@ -107,7 +107,8 @@ class Canvas extends Component {
 
         const openViewer = (vizId, insertAfterViewerId = -1) => {
             fetchVizModel(vizId);
-            addViewer(vizId, insertAfterViewerId);
+            // TODO: figure out what type to show here, don't add to canvas
+            addViewer(vizId, 'full', null, insertAfterViewerId);
         };
 
         const { vizId, vizSpec } = viewer;
@@ -170,6 +171,45 @@ class Canvas extends Component {
     }
 }
 
+type ViewerModel = {
+
+    // Unique ViewerId that identifies this viewer.
+    viewerId: ViewerId,
+
+    // Unique VizId of top-level viz.
+    vizId: VizId,
+
+    // Specification of
+    vizSpec: VizSpec,
+
+    expansionState: ExpansionState,
+}
+
+// TODO: check if this has issues with multiple canvases accessing the same selector
+/**
+ * Selector to assemble a Viewer object from the current Redux state.
+ * @param state
+ */
+const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
+    (state) => getViewerPositions(state.canvas),
+    (state) => getViewerTable(state.canvas),
+    (state) => getVizTable(state.viztable),
+    (viewerPositions: Array<ViewerId>,
+     viewerTable : {[ViewerId]: ViewerSpec},
+     vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
+        return viewerPositions.map((viewerId) => {
+            const { vizId, expansionState } = viewerTable[viewerId];
+            const vizSpec = vizTable[vizId];
+            return {
+                viewerId,
+                vizId,
+                vizSpec,
+                expansionState,
+            };
+
+        });
+    }
+);
 
 // To inject styles into component
 // -------------------------------
@@ -191,46 +231,10 @@ const styles = theme => ({
 // To inject application state into component
 // ------------------------------------------
 
-type ViewerModel = {
-
-    // Unique ViewerId that identifies this viewer.
-    viewerId: ViewerId,
-
-    // Unique VizId of top-level viz.
-    vizId: VizId,
-
-    // Specification of
-    vizSpec: VizSpec,
-}
-
-/**
- * Selector to assemble a Viewer object from the current Redux state.
- * @param state
- */
-const assembleViewers: ({}) => Array<ViewerModel> = createSelector(
-    (state) => getViewerPositions(state.canvas),
-    (state) => getViewerTable(state.canvas),
-    (state) => getVizTable(state.viztable),
-    (viewerPositions: Array<ViewerId>,
-     viewerTable : {[ViewerId]: ViewerSpec},
-     vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
-        return viewerPositions.map((viewerId) => {
-            const { vizId } = viewerTable[viewerId];
-            const vizSpec = vizTable[vizId];
-            return {
-                viewerId,
-                vizId,
-                vizSpec,
-            };
-
-        });
-    }
-);
-
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers:   assembleViewers(state),
+        viewers:   getCanvasViewers(state),
         vizTable:  getVizTable(state.viztable),
     };
 }

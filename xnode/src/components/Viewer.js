@@ -6,10 +6,12 @@ import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
 import type {TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
-import { VizModel } from "../state/viztable/outputs";
+import { getVizTable, VizModel } from "../state/viztable/outputs";
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
+import {addViewerAction, removeViewerAction, reorderViewerAction} from "../state/canvas/actions";
+import {getViewer} from "../state/canvas/outputs";
 
 // Viz layouts
 import SequenceLayout from './layouts/SequenceLayout';
@@ -37,17 +39,27 @@ class Viewer extends Component {
     /**
      * Recursively parse and assemble a nested visualization from the VizSpec.
      */
-    createVizComponent(vizId: VizId) {
-        const { vizTable } = this.props;
+    createVizComponent() {
+        const { viewer, viewerId, vizTable, addViewer } = this.props;
+        const { vizId, expansionState, children } = viewer;
 
-        const vizSpec = vizTable[vizId];
+        const vizSpec: VizSpec = vizTable[vizId];
         if(!vizSpec) {
             return null;  // TODO: What to do?
         }
 
-        // TODO: Which model is currently using?
-        const model: VizModel = vizSpec.summaryModel;
-
+        let model: VizModel = undefined;
+        switch(expansionState) {
+            case 'summary':
+                model = vizSpec.summaryModel;
+                break;
+            case 'compact':
+                model = vizSpec.compactModel;
+                break;
+            case 'full':
+                model = vizSpec.fullModel;
+                break;
+        }
         switch(model.type) {
 
             // Primitives
@@ -64,6 +76,19 @@ class Viewer extends Component {
             // -------
 
             case 'SequenceLayout':
+                model.contents.elements.forEach((childVizId: VizId) => {
+                    if (!(childVizId in children)) {
+                        // TODO: this logic also exists in repl. merge them
+                        let expansionState = 'summary';
+                        if (vizTable[childVizId].compactModel !== null) {
+                            expansionState = 'compact';
+                        }
+                        if (vizTable[childVizId].fullModel !== null) {
+                            expansionState = 'full';
+                        }
+                        addViewer(childVizId, expansionState, viewerId)
+                    }
+                });
                 return null;
 
             case 'KeyValueLayout':
@@ -90,17 +115,19 @@ const styles = theme => ({
 // ------------------------------------------
 
 /** Connects application state objects to component props. */
-function mapStateToProps(state, props) {  // Second argument `props` is manually set prop
-    return (state, props) => {
-        // propName1: state.subslice,
-        // propName2: doSomethingSelector(state)
+function mapStateToProps(state, props) {
+    return {
+        viewer:    getViewer(state.canvas, props.viewerId),
+        vizTable:  getVizTable(state.viztable),
     };
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        // propName: doSomethingAction,
+        addViewer:      addViewerAction,
+        removeViewer:   removeViewerAction,
+        reorderViewer:  reorderViewerAction,
     }, dispatch);
 }
 

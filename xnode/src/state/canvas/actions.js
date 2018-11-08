@@ -1,4 +1,5 @@
 import type {VizId} from "../viztable/outputs";
+import type {ViewerId, ExpansionState} from "../canvas/outputs";
 
 /** Action type definitions. */
 export const CanvasActions = Object.freeze({
@@ -23,14 +24,19 @@ export function clearCanvasAction() {
  *
  * @param vizId
  *     VizId for top-level viz in this ViewerSpec.
+ * @param addToCanvas
+ *     Whether to show the new viewer as a top-level viewer in the canvas.
  * @param insertAfter
  *     ViewerId of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addViewerAction(vizId: VizId, insertAfter: number = -1) {
+export function addViewerAction(vizId: VizId, expansionState: ExpansionState, childOf?: ViewerId,
+                                insertAfter: number = -1) {
     return {
         type: CanvasActions.ADD_VIEWER,
         vizId,
+        expansionState,
+        childOf,
         insertAfter,
     };
 }
