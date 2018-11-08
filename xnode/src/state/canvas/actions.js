@@ -1,5 +1,5 @@
 import type {VizId} from "../viztable/outputs";
-import type {ViewerId, ExpansionState} from "../canvas/outputs";
+import type {ViewerId} from "../canvas/outputs";
 
 /** Action type definitions. */
 export const CanvasActions = Object.freeze({
@@ -21,21 +21,24 @@ export function clearCanvasAction() {
 /**
  * Action creator to add a viewer to the Canvas for the viz with the given `vizId`. For a given backend
  * symbol/expression, there may be many snapshots of it from different points in time, each with a unique `vizId`.
- *
  * @param vizId
  *     VizId for top-level viz in this ViewerSpec.
- * @param addToCanvas
- *     Whether to show the new viewer as a top-level viewer in the canvas.
+ * @param viewerState
+ *     Whether 'summary', 'compact', or 'full'.
+ * @param childOf
+ *     `ViewerId` of parent viewer.
  * @param insertAfter
  *     ViewerId of viewer in Canvas layout after which to add new a viewer. (Default of -1 means add to end).
  * @returns {object}
  */
-export function addViewerAction(vizId: VizId, expansionState: ExpansionState, childOf?: ViewerId,
+export function addViewerAction(vizId: VizId,
+                                viewerState: string,
+                                childOf?: ViewerId,
                                 insertAfter: number = -1) {
     return {
         type: CanvasActions.ADD_VIEWER,
         vizId,
-        expansionState,
+        viewerState,
         childOf,
         insertAfter,
     };
@@ -43,7 +46,6 @@ export function addViewerAction(vizId: VizId, expansionState: ExpansionState, ch
 
 /**
  * Action creator to remove a viewer from the Canvas.
- *
  * @param {int} viewerId
  * @returns {object}
  */
@@ -56,7 +58,6 @@ export function removeViewerAction(viewerId: number) {
 
 /**
  * Action creator to move a viewer from the original `startIdx` to the updated `endIdx`.
- *
  * @param startIdx
  * @param endIdx
  * @returns {object}

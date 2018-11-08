@@ -6,17 +6,16 @@ import {getVizTable} from "../viztable/outputs";
 /** Unique identifier of a viz from a snapshot in time. */
 export type ViewerId = string;
 
-export type ExpansionState = 'summary' | 'compact' | 'full';
-
 /** Specification of a viz from a snapshot in time. */
 export type ViewerSpec = {
 
     // VizId of the top-level viz rendered by this viewer.
     vizId: VizId,
 
-    // Whether the viewer is a summary, compact, or full.
-    expansionState: ExpansionState,
+    // Whether the viewer displays a summary, compact, or full model.
+    viewerState: 'summary' | 'compact' | 'full',
 
+    // Map from `VizId` to
     children: {
         [VizId]: ViewerId,
     }

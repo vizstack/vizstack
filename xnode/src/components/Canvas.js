@@ -9,7 +9,6 @@ import classNames from 'classnames';
 // Grid layout
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
 import type { DropResult, HookProvided, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
-import { SizeMe } from 'react-sizeme'
 
 // Viewer and frame
 import Viewer from './Viewer';
@@ -21,7 +20,7 @@ import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getViewerPositions, getViewerTable, ExpansionState } from "../state/canvas/outputs";
+import { getViewerPositions, getViewerTable } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
 import type {ViewerId, ViewerSpec} from "../state/canvas/outputs";
@@ -182,7 +181,7 @@ type ViewerModel = {
     // Specification of
     vizSpec: VizSpec,
 
-    expansionState: ExpansionState,
+    viewerState: string,
 }
 
 // TODO: check if this has issues with multiple canvases accessing the same selector
