@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
@@ -10,17 +10,25 @@ import ColorBlue from '@material-ui/core/colors/blue';
 
 
 /**
- * This dumb component renders visualization for a text string that represents a token.
+ * This pure dumb component renders visualization for a text string that represents a token.
  */
-class TokenPrimitive extends Component {
+class TokenPrimitive extends PureComponent {
 
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viz. */
-        model: PropTypes.string.isRequired,
+        // =============================================================================================================
+        // Data props
+
+        /** Text string displayed by token. */
+        text: PropTypes.string.isRequired,
+
+        /** Pass-through props to `Viewer` subcomponents. */
+        viewerProps: PropTypes.object,
+
+        // =============================================================================================================
 
         /** Token box dimension constraints (in px or '%'). */
         minWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
@@ -57,7 +65,7 @@ class TokenPrimitive extends Component {
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, model, minWidth, minHeight, maxWidth, maxHeight, shouldTextWrap, shouldTextEllipsis,
+        const { classes, text, minWidth, minHeight, maxWidth, maxHeight, shouldTextWrap, shouldTextEllipsis,
             isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
 
         // Construct style dict
@@ -84,7 +92,7 @@ class TokenPrimitive extends Component {
                     [classes.textWrap]:     shouldTextWrap,
                     [classes.textNoWrap]:   !shouldTextWrap,
                     [classes.textEllipsis]: shouldTextEllipsis,
-                })}>{model}</Typography>
+                })}>{text}</Typography>
             </div>
         );
     }

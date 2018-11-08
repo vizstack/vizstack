@@ -69,4 +69,6 @@ function mapDispatchToProps(dispatch) {
     }, dispatch);
 }
 
-// export default connect(mapStateToProps, mapDispatchToProps)(withStyles(styles)(Example));
+// export default connect(mapStateToProps, mapDispatchToProps)(
+//     withStyles(styles)(Example)
+// );

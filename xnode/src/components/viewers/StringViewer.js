@@ -2,12 +2,12 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import SequenceViz from '../viz/SequenceViz';
+import SequenceViz from '../layouts/SequenceLayout';
 
 
 /**
  * This dumb component renders a viewer for a Python string (list, tuple, set). It converts the string into a
- * character sequence in the format of the explicit data model expected by `SequenceViz`.
+ * character sequence in the format of the explicit data model expected by `SequenceLayout`.
  * TODO: Make robust to weird characters (e.g. newlines, non-renderable, Unicode, emoji, etc)
  */
 class StringViewer extends Component {
@@ -35,7 +35,7 @@ class StringViewer extends Component {
     }
 
     /**
-     * Renders a SequenceViz after making the appropriate data transformations.
+     * Renders a SequenceLayout after making the appropriate data transformations.
      */
     render() {
         const { data } = this.props;

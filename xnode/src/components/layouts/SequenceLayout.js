@@ -11,25 +11,23 @@ import TokenViz from '../primitives/TokenPrimitive';
  * TODO: Allow multi-line wrapping elements.
  * TODO: Allow element-type-specific background coloring.
  */
-class SequenceViz extends Component {
+class SequenceLayout extends Component {
 
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Data model rendered by this viz. */
-        model: PropTypes.arrayOf(
-            PropTypes.shape({
-                text:           PropTypes.string.isRequired,
-                isHovered:      PropTypes.bool,
-                isSelected:     PropTypes.bool,
-                onClick:        PropTypes.func,
-                onDoubleClick:  PropTypes.func,
-                onMouseEnter:   PropTypes.func,
-                onMouseLeave:   PropTypes.func,
-            })
-        ),
+        // =============================================================================================================
+        // Data props
+
+        /** Elements */
+        elements: PropTypes.array.isRequired,
+
+        /** Pass-through props to `Viewer` subcomponents. */
+        viewerProps: PropTypes.object,
+
+        // =============================================================================================================
 
         /** Whether to display element index labels. */
         showIndices: PropTypes.bool,
@@ -137,4 +135,4 @@ const styles = theme => ({
     }
 });
 
-export default withStyles(styles)(SequenceViz);
+export default withStyles(styles)(SequenceLayout);

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 import { withStyles } from '@material-ui/core/styles';
 
-import SequenceViz from '../../viz/SequenceViz';
+import SequenceViz from '../../layouts/SequenceLayout';
 import KeyValueViz from '../../viz/KeyValueViz';
 import TokenViz from '../../primitives/TokenPrimitive';
 
@@ -95,7 +95,7 @@ class GraphOpViewer extends Component {
     }
 
     /**
-     * Renders a composition of `KeyValueViz`-s and a `SequenceViz` after making the appropriate data transformations.
+     * Renders a composition of `KeyValueViz`-s and a `SequenceLayout` after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      */
     render() {
@@ -104,7 +104,7 @@ class GraphOpViewer extends Component {
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { args, kwargs, outputs, functionname } = data;
-        // TODO: for iterable argument values, show just "argName": <SequenceViz />, instead of separating them
+        // TODO: for iterable argument values, show just "argName": <SequenceLayout />, instead of separating them
         // TODO: update `graphtracker` so that non-graphdata values can be sent over
         const argsModel = this.buildArgModel(args, 0);
         const kwargsModel = this.buildArgModel(kwargs, argsModel.length);

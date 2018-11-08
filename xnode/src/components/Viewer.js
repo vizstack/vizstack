@@ -5,17 +5,17 @@ import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
-import type {VizId, VizSpec} from "../state/viztable/outputs";
+import type {TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
 import { VizModel } from "../state/viztable/outputs";
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
 
 // Viz layouts
-
+import SequenceLayout from './layouts/SequenceLayout';
 
 /**
- * This pure dumb component recursively parses a VizSpec and assembles a nested Viz rendering.
+ * This smart component recursively parses a VizSpec and assembles a nested Viz rendering.
  */
 class Viewer extends Component {
 
@@ -24,7 +24,7 @@ class Viewer extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Unique ViewerId for this viewer. */
+        /** Unique ViewerId for this viewer's root viewer. */
         viewerId: PropTypes.string.isRequired,
 
         /** TODO: State. */
@@ -32,8 +32,6 @@ class Viewer extends Component {
 
         /** Unique VizId for top-level viz. */
         vizId: PropTypes.string.isRequired,
-
-        vizTable: PropTypes.object.isRequired,
     };
 
     /**
@@ -49,17 +47,27 @@ class Viewer extends Component {
 
         // TODO: Which model is currently using?
         const model: VizModel = vizSpec.summaryModel;
-        console.log("HEHRHEHE", vizSpec);
 
         switch(model.type) {
+
+            // Primitives
+            // ----------
+
             case 'TokenPrimitive':
+                const { text } = (model: TokenPrimitiveModel).contents;
                 return (
-                    <TokenPrimitive
-                        model={model.contents.text}
-                        shouldTextWrap={true}
-                        onMouseEnter={() => this.setState({isHovered: true})}
-                        onMouseLeave={() => this.setState({isHovered: false})}/>
+                    <TokenPrimitive text={text}
+                                    shouldTextWrap={true} />
                 );
+
+            // Layouts
+            // -------
+
+            case 'SequenceLayout':
+                return null;
+
+            case 'KeyValueLayout':
+                return null;
         }
     }
 
@@ -78,4 +86,24 @@ const styles = theme => ({
     // css-key: value,
 });
 
-export default withStyles(styles)(Viewer);
+// To inject application state into component
+// ------------------------------------------
+
+/** Connects application state objects to component props. */
+function mapStateToProps(state, props) {  // Second argument `props` is manually set prop
+    return (state, props) => {
+        // propName1: state.subslice,
+        // propName2: doSomethingSelector(state)
+    };
+}
+
+/** Connects bound action creator functions to component props. */
+function mapDispatchToProps(dispatch) {
+    return bindActionCreators({
+        // propName: doSomethingAction,
+    }, dispatch);
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(
+    withStyles(styles)(Viewer)
+);

@@ -2,12 +2,12 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import SequenceViz from '../viz/SequenceViz';
+import SequenceViz from '../layouts/SequenceLayout';
 
 
 /**
  * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
- * Canvas data structures to the explicit data model expected by `SequenceViz`.
+ * Canvas data structures to the explicit data model expected by `SequenceLayout`.
  */
 class SequenceViewer extends Component {
 
@@ -38,7 +38,7 @@ class SequenceViewer extends Component {
     }
 
     /**
-     * Renders a SequenceViz after making the appropriate data transformations.
+     * Renders a SequenceLayout after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      */
     render() {

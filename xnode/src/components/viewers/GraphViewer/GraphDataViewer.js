@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 import { withStyles } from '@material-ui/core/styles';
 
-import SequenceViz from '../../viz/SequenceViz';
+import SequenceViz from '../../layouts/SequenceLayout';
 
 import Typography from '@material-ui/core/Typography';
 
@@ -43,7 +43,7 @@ class GraphDataViewer extends Component {
     }
 
     /**
-     * Renders a `SequenceViz` after making the appropriate data transformations.
+     * Renders a `SequenceLayout` after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      */
     render() {

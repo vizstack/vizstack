@@ -6,7 +6,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 
-import DisplayFrame, { DisplayFrameContent } from '../DisplayFrame';
+import DisplayFrame, { DisplayFrameContent } from './DisplayFrame/index';
 import Tooltip from '@material-ui/core/Tooltip';
 import IconButton from '@material-ui/core/IconButton';
 

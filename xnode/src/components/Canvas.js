@@ -8,26 +8,14 @@ import classNames from 'classnames';
 
 // Grid layout
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import type { DropResult, HookProvided,
-    DroppableProvided, DroppableStateSnapshot,
-    DraggableProvided, DraggableStateSnapshot } from 'react-beautiful-dnd';
+import type { DropResult, HookProvided, DroppableProvided, DraggableProvided } from 'react-beautiful-dnd';
 import { SizeMe } from 'react-sizeme'
 
-// Common viewer frame
-import ViewerDisplayFrame from './viewers/ViewerDisplayFrame';
+// Viewer and frame
 import Viewer from './Viewer';
+import ViewerDisplayFrame from './ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
-
-// Custom data type viewers
-import PrimitiveViewer from './viewers/PrimitiveViewer';
-import StringViewer from './viewers/StringViewer';
-import FunctionViewer from './viewers/FunctionViewer';
-import ClassViewer from './viewers/ClassViewer';
-import TensorViewer from './viewers/TensorViewer';
-import SequenceViewer from './viewers/SequenceViewer';
-import KeyValueViewer from './viewers/KeyValueViewer';
-import GraphViewer, { GraphDataViewer, GraphOpViewer } from './viewers/GraphViewer';
 
 // Custom Redux actions
 import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
@@ -98,75 +86,16 @@ class Canvas extends Component {
     // Canvas rendering
     // =================================================================================================================
 
-    // /**
-    //  * Returns a viewer for a symbol of the correct type. (See `SYMBOL-TABLE-SCHEMA.md`).
-    //  *
-    //  * @param {string} viewerId
-    //  * @param {string} symbolId
-    //  * @param {string} symbolObj
-    //  */
-    // createSymbolViewer(viewerId, symbolId, symbolObj) {
-    //     const { vizTable, addViewer, fetchVizModel } = this.props;
-    //     const { type, str, name, attributes, data } = symbolObj;
-    //
-    //     const inspectSymbol = (symbolId, viewerId) => {
-    //         fetchVizModel(symbolId);
-    //         addViewer(symbolId, viewerId);
-    //     };
-    //
-    //     switch(type) {
-    //         case 'none':
-    //         case 'bool':
-    //         case 'number':
-    //             return (<PrimitiveViewer str={str}/>);
-    //
-    //         case 'string':
-    //             return (<StringViewer data={data}/>);
-    //
-    //         case 'list':
-    //         case 'tuple':
-    //         case 'set':
-    //             return (<SequenceViewer data={data} symbolTable={vizTable}
-    //                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
-    //
-    //         case 'dict':
-    //         case 'object':
-    //         case 'module':
-    //             return (<KeyValueViewer data={data} symbolTable={vizTable}
-    //                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
-    //
-    //         case 'tensor':
-    //             return (<TensorViewer data={data}/>);
-    //
-    //         case 'class':
-    //             return (<ClassViewer data={data} symbolTable={vizTable}
-    //                                  expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
-    //
-    //         case 'fn':
-    //             return (<FunctionViewer data={data} symbolTable={vizTable}
-    //                                     expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
-    //
-    //         case 'graphdata':
-    //             // TODO: figure out a more principled way of showing the graphdata's properties along with the graph
-    //             return (
-    //                 <div>
-    //                     <GraphDataViewer data={data} symbolTable={vizTable}
-    //                                 expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
-    //                     <GraphViewer symbolId={symbolId} data={data} symbolTable={vizTable}
-    //                                  expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>
-    //                 </div>);
-    //
-    //         case 'graphop':
-    //             return (<GraphOpViewer data={data} symbolTable={vizTable}
-    //                                    expandSubviewer={(symbolId) => inspectSymbol(symbolId, viewerId)}/>);
-    //
-    //         default:
-    //             console.warn(`Canvas -- unrecognized data type received; got ${type}`);
-    //             return null;
-    //
-    //         // TODO: Add more viewers
-    //     }
-    // }
+    /**
+     * Function to call after a Draggable framed Viewer has been dropped in a target location.
+     * @param result
+     * @param provided
+     */
+    onDragEnd(result: DropResult, provided: HookProvided) {
+        const { reorderViewer } = this.props;
+        if (!result.destination) return;
+        reorderViewer(result.source.index, result.destination.index);
+    }
 
     /**
      * Returns a viewer of the correct type. (See `ViewerType` in `state/canvas/constants`).
@@ -188,30 +117,18 @@ class Canvas extends Component {
             { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => openViewer(vizId, viewerId) },
             { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => removeViewer(viewerId) },
         ];
-        const component = !vizSpec ? kLoadingSpinner : (
-            <Viewer viewerId={viewerId}
-                    viewerState={{}}
-                    vizId={vizId}
-                    vizTable={vizTable} />
-        );
 
         return (
             <ViewerDisplayFrame title={title}
                                 buttons={buttons}>
-                {component}
+                {!vizSpec ? kLoadingSpinner : (
+                    <Viewer viewerId={viewerId}
+                            viewerState={{}}
+                            vizId={vizId}
+                            vizTable={vizTable} />
+                )}
             </ViewerDisplayFrame>
         );
-    }
-
-    /**
-     * Function to call after a Draggable framed Viewer has been dropped in a target location.
-     * @param result
-     * @param provided
-     */
-    onDragEnd(result: DropResult, provided: HookProvided) {
-        const { reorderViewer } = this.props;
-        if (!result.destination) return;
-        reorderViewer(result.source.index, result.destination.index);
     }
 
     /**

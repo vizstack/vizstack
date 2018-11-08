@@ -34,23 +34,20 @@ export type VizSpec = {
     fullModel?: VizModel,
 };
 
-/** Visual "building blocks". */
-export type Primitive = (
+/** A mode of visualization for a viz. */
+export type VizModel = PrimitiveModel | LayoutModel;
+
+// =====================================================================================================================
+// Viz primitives
+// --------------
+// Visual "building blocks".
+
+/** Any primitive model. */
+export type PrimitiveModel = (
     TokenPrimitiveModel
 );
 
-/** Visual "configurations" of "building blocks". */
-export type Layout = (
-    SequenceLayoutModel |
-    KeyValueLayoutModel
-);
-
-/** A mode of visualization for a viz. */
-export type VizModel = (
-    Primitive |
-    Layout
-);
-
+/** Token primitive is __. */
 export type TokenPrimitiveModel = {
     type: 'TokenPrimitive',
     contents: {
@@ -58,14 +55,27 @@ export type TokenPrimitiveModel = {
     },
 }
 
+// =====================================================================================================================
+// Viz layouts
+// -----------
+// Visual "configurations" of "building blocks".
+
+/** Any layout model. */
+export type LayoutModel = (
+    SequenceLayoutModel |
+    KeyValueLayoutModel
+);
+
+/** Sequence layout is __. */
 export type SequenceLayoutModel = {
     type: 'SequenceLayout',
     contents: {
-        elements: VizId[],
+        elements: Array<VizId>,
         orientation?: 'horizontal' | 'vertical',
     },
 }
 
+/** KeyValue layout is __. */
 export type KeyValueLayoutModel = {
     type: 'KeyValueLayout',
     contents: {
@@ -74,6 +84,9 @@ export type KeyValueLayoutModel = {
         }
     },
 }
+
+// =====================================================================================================================
+// Public functions
 
 /**
  * Get the entire viz table.

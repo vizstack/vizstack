@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 import { withStyles } from '@material-ui/core/styles';
 
-import SequenceViz from '../viz/SequenceViz';
+import SequenceViz from '../layouts/SequenceLayout';
 import KeyValueViz from '../viz/KeyValueViz';
 
 import Typography from '@material-ui/core/Typography';
@@ -44,7 +44,7 @@ class FunctionViewer extends Component {
     }
 
     /**
-     * Renders a `SequenceViz` and `KeyValueViz` after making the appropriate data transformations.
+     * Renders a `SequenceLayout` and `KeyValueViz` after making the appropriate data transformations.
      * TODO: Use selectors for transformation.
      */
     render() {
