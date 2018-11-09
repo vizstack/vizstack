@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { PureComponent } from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
@@ -7,11 +7,11 @@ import { createSelector } from 'reselect';
 import TokenViz from '../primitives/TokenPrimitive';
 
 /**
- * This dumb component renders visualization for a 1D sequence of elements.
+ * This pure dumb component renders visualization for a 1D sequence of elements.
  * TODO: Allow multi-line wrapping elements.
  * TODO: Allow element-type-specific background coloring.
  */
-class SequenceLayout extends Component {
+class SequenceLayout extends PureComponent {
 
     /** Prop expected types object. */
     static propTypes = {
@@ -122,7 +122,7 @@ const styles = theme => ({
     motifText: {
         fontFamily:     theme.typography.monospace.fontFamily,
         fontSize:       '14pt',  // TODO: Dehardcode this, same as TokenPrimitive.tokenText
-        verticalAlign:  '25%',  // Offset baseline for middle alignment
+        verticalAlign:  '25%',   // Offset baseline for middle alignment
 
         // No text selection
         userSelect:     'none',

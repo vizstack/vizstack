@@ -17,10 +17,15 @@ import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 
 // Custom Redux actions
-import { addViewerAction, removeViewerAction, reorderViewerAction } from '../state/canvas/actions';
+import {
+    createViewerAction,
+    showViewerInCanvasAction,
+    hideViewerInCanvasAction,
+    reorderViewerInCanvasAction,
+} from '../state/canvas/actions';
 
 // Miscellaneous utils
-import { getViewerPositions, getViewerTable } from "../state/canvas/outputs";
+import { getCanvasLayout, getViewerTable } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
 import type {ViewerId, ViewerSpec} from "../state/canvas/outputs";
@@ -55,20 +60,29 @@ class Canvas extends Component {
         fetchVizModel: PropTypes.func.isRequired,
 
         /**
-         * Creates a new viewer for the viz with the specified VizId. See `state/canvas/actions`.
+         * See `state/canvas/actions/createViewerAction`.
+         * @param viewerId
          * @param vizId
-         * @param position
+         * @param expansionState?
+         * @param parentViewerId?
          */
-        addViewer: PropTypes.func.isRequired,
+        createViewer: PropTypes.func.isRequired,
 
         /**
-         * Removes the viewer with the specified ViewerId. See `state/canvas/actions`.
+         * See `state/canvas/actions/showViewerInCanvasAction`.
+         * @param viewerId
+         * @param insertAfterIdx?
+         */
+        showViewer: PropTypes.func.isRequired,
+
+        /**
+         * See `state/canvas/actions/hideViewerInCanvasAction`.
          * @param viewerId
          */
-        removeViewer: PropTypes.func.isRequired,
+        hideViewer: PropTypes.func.isRequired,
 
         /**
-         * Moves the viewer positioned at `startIdx` to `endIdx` instead. See `state/canvas/actions`.
+         * See `state/canvas/actions/reorderViewerInCanvasAction`.
          * @param startIdx
          * @param endIdx
          */
@@ -99,23 +113,18 @@ class Canvas extends Component {
     /**
      * Returns a viewer of the correct type. (See `ViewerType` in `state/canvas/constants`).
      * @param viewer
+     * @param idx
      */
-    createFramedViewerComponent(viewer: ViewerModel) {
-        const { fetchVizModel, vizTable, addViewer, removeViewer } = this.props;
+    createFramedViewerComponent(viewer: ViewerModel, idx: number) {
+        const { vizTable, showViewer, hideViewer } = this.props;
         const { viewerId } = viewer;
-
-        const openViewer = (vizId, insertAfterViewerId = -1) => {
-            fetchVizModel(vizId);
-            // TODO: figure out what type to show here, don't add to canvas
-            addViewer(vizId, 'full', null, insertAfterViewerId);
-        };
 
         const { vizId, vizSpec } = viewer;
         const title = !vizSpec ? kLoadingMsg : `${vizSpec.filePath}:${vizSpec.lineNumber}`;
         const buttons = [
-            // TODO: Duplicate should also replicate the existing state of a snapshot viewer
-            { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => openViewer(vizId, viewerId) },
-            { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => removeViewer(viewerId) },
+            // TODO: Duplicate should also replicate the existing state of a viewer
+            { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => showViewer(viewerId, idx) },
+            { title: 'Remove',    icon: <RemoveIcon/>,    onClick: () => hideViewer(viewerId) },
         ];
 
         return (
@@ -144,7 +153,7 @@ class Canvas extends Component {
                              className={classes.frameContainer}
                              {...provided.draggableProps}
                              {...provided.dragHandleProps}>
-                            {this.createFramedViewerComponent(viewer)}
+                            {this.createFramedViewerComponent(viewer, idx)}
                         </div>
                     )}
                 </Draggable>
@@ -170,46 +179,6 @@ class Canvas extends Component {
     }
 }
 
-type ViewerModel = {
-
-    // Unique ViewerId that identifies this viewer.
-    viewerId: ViewerId,
-
-    // Unique VizId of top-level viz.
-    vizId: VizId,
-
-    // Specification of
-    vizSpec: VizSpec,
-
-    viewerState: string,
-}
-
-// TODO: check if this has issues with multiple canvases accessing the same selector
-/**
- * Selector to assemble a Viewer object from the current Redux state.
- * @param state
- */
-const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
-    (state) => getViewerPositions(state.canvas),
-    (state) => getViewerTable(state.canvas),
-    (state) => getVizTable(state.viztable),
-    (viewerPositions: Array<ViewerId>,
-     viewerTable : {[ViewerId]: ViewerSpec},
-     vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
-        return viewerPositions.map((viewerId) => {
-            const { vizId, expansionState } = viewerTable[viewerId];
-            const vizSpec = vizTable[vizId];
-            return {
-                viewerId,
-                vizId,
-                vizSpec,
-                expansionState,
-            };
-
-        });
-    }
-);
-
 // To inject styles into component
 // -------------------------------
 
@@ -230,6 +199,48 @@ const styles = theme => ({
 // To inject application state into component
 // ------------------------------------------
 
+type ViewerModel = {
+
+    // Unique ViewerId that identifies this viewer.
+    viewerId: ViewerId,
+
+    // Unique VizId of top-level Viz.
+    vizId: VizId,
+
+    // Specification of top-level Viz.
+    vizSpec: VizSpec,
+
+    // Stores state related to this viewer.
+    viewerState: string,
+}
+
+
+/**
+ * Selector to assemble a Viewer object from the current Redux state.
+ * TODO: check if this has issues with multiple canvases accessing the same selector
+ * @param state
+ */
+const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
+    (state) => getCanvasLayout(state.canvas),
+    (state) => getViewerTable(state.canvas),
+    (state) => getVizTable(state.viztable),
+    (viewerPositions: Array<ViewerId>,
+     viewerTable : {[ViewerId]: ViewerSpec},
+     vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
+        return viewerPositions.map((viewerId) => {
+            const { vizId, viewerState } = viewerTable[viewerId];
+            const vizSpec = vizTable[vizId];
+            return {
+                viewerId,
+                vizId,
+                vizSpec,
+                viewerState,
+            };
+
+        });
+    }
+);
+
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
@@ -241,9 +252,10 @@ function mapStateToProps(state, props) {
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addViewer:      addViewerAction,
-        removeViewer:   removeViewerAction,
-        reorderViewer:  reorderViewerAction,
+        createViewer:   createViewerAction,
+        showViewer:     showViewerInCanvasAction,
+        hideViewer:     hideViewerInCanvasAction,
+        reorderViewer:  reorderViewerInCanvasAction,
     }, dispatch);
 }
 

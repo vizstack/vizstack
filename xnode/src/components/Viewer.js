@@ -5,12 +5,15 @@ import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
-import type {TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
+import type {SequenceLayoutModel, TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
 import { getVizTable, VizModel } from "../state/viztable/outputs";
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
-import {addViewerAction, removeViewerAction, reorderViewerAction} from "../state/canvas/actions";
+import {
+    createViewerAction, hideViewerInCanvasAction, reorderViewerInCanvasAction,
+    showViewerInCanvasAction
+} from "../state/canvas/actions";
 import {getViewer} from "../state/canvas/outputs";
 
 // Viz layouts
@@ -26,22 +29,25 @@ class Viewer extends Component {
         /** CSS-in-JS styling object. */
         classes: PropTypes.object.isRequired,
 
-        /** Unique ViewerId for this viewer's root viewer. */
+        /** Unique `ViewerId` for this Viewer. */
         viewerId: PropTypes.string.isRequired,
 
-        /** TODO: State. */
-        viewerState: PropTypes.object,
+        /** Specification of this `Viewer`, including its state. See 'canvas/outputs/ViewerSpec'. */
+        viewerSpec: PropTypes.object.isRequired,
 
-        /** Unique VizId for top-level viz. */
-        vizId: PropTypes.string.isRequired,
+        /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
+        vizTable: PropTypes.string.isRequired,
+
+        /** Functions for creating viewers and updating Canvas layout. See 'canvas/outputs'. */
+        createViewer: PropTypes.func.isRequired,
+        showViewer: PropTypes.func.isRequired,
+        hideViewer: PropTypes.func.isRequired,
     };
 
-    /**
-     * Recursively parse and assemble a nested visualization from the VizSpec.
-     */
-    createVizComponent() {
-        const { viewer, viewerId, vizTable, addViewer } = this.props;
-        const { vizId, expansionState, children } = viewer;
+    /** Renderer. */
+    render() {
+        const { viewerId, viewerSpec, vizTable } = this.props;
+        const { vizId, viewerState, children } = viewerSpec;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if(!vizSpec) {
@@ -49,7 +55,7 @@ class Viewer extends Component {
         }
 
         let model: VizModel = undefined;
-        switch(expansionState) {
+        switch(viewerState) {
             case 'summary':
                 model = vizSpec.summaryModel;
                 break;
@@ -60,6 +66,7 @@ class Viewer extends Component {
                 model = vizSpec.fullModel;
                 break;
         }
+
         switch(model.type) {
 
             // Primitives
@@ -76,17 +83,13 @@ class Viewer extends Component {
             // -------
 
             case 'SequenceLayout':
-                model.contents.elements.forEach((childVizId: VizId) => {
+                const { elements } = (model: SequenceLayoutModel).contents;
+                elements.forEach((childVizId: VizId) => {
                     if (!(childVizId in children)) {
-                        // TODO: this logic also exists in repl. merge them
-                        let expansionState = 'summary';
-                        if (vizTable[childVizId].compactModel !== null) {
-                            expansionState = 'compact';
-                        }
-                        if (vizTable[childVizId].fullModel !== null) {
-                            expansionState = 'full';
-                        }
-                        addViewer(childVizId, expansionState, viewerId)
+                        let viewerState = 'summary';
+                        viewerState = vizTable[childVizId].compactModel ? 'compact' : viewerState;
+                        viewerState = vizTable[childVizId].fullModel ? 'full' : viewerState;
+                        addViewer(childVizId, viewerState, -1, viewerId);
                     }
                 });
                 return null;
@@ -94,12 +97,6 @@ class Viewer extends Component {
             case 'KeyValueLayout':
                 return null;
         }
-    }
-
-    /** Renderer. */
-    render() {
-        const { vizId } = this.props;
-        return this.createVizComponent(vizId);
     }
 }
 
@@ -117,17 +114,17 @@ const styles = theme => ({
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewer:    getViewer(state.canvas, props.viewerId),
-        vizTable:  getVizTable(state.viztable),
+        viewerSpec:    getViewer(state.canvas, props.viewerId),
+        vizTable:      getVizTable(state.viztable),
     };
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        addViewer:      addViewerAction,
-        removeViewer:   removeViewerAction,
-        reorderViewer:  reorderViewerAction,
+        createViewer:   createViewerAction,
+        showViewer:     showViewerInCanvasAction,
+        hideViewer:     hideViewerInCanvasAction,
     }, dispatch);
 }
 

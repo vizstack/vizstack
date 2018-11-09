@@ -13,18 +13,22 @@ import XnodeMuiTheme from '../theme';
 import PythonShell from 'python-shell';
 import path from 'path';
 
+// UUID services
+import cuid from 'cuid';
+
 // Custom top-level React/Redux components
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
-import { addViewerAction, clearCanvasAction } from '../state/canvas/actions';
-import type {VizId, VizSpec} from "../state/viztable/outputs";
+import { createViewerAction, clearCanvasAction, showViewerInCanvasAction } from '../state/canvas/actions';
+import type { VizId, VizSpec } from "../state/viztable/outputs";
 import { getVizSpec } from "../state/viztable/outputs";
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
 
 type ExecutionEngineMessage = {
+
     // Top-level viz created directly from a `xn.view()` call. Is displayed in its own ViewerSpec in the Canvas.
     viewedVizId?: VizId,
 
@@ -50,7 +54,6 @@ export default class REPL {
 
     /**
      * Constructor.
-     *
      * @param pythonPath
      *      The path to the Python executable that should be used to execute the requested script.
      * @param scriptPath
@@ -82,7 +85,9 @@ export default class REPL {
         console.debug(`repl ${this.name} - constructed`);
     }
 
-    /** Returns an object that can be retrieved when package is activated. */
+    /**
+     * Returns an object that can be retrieved when package is activated.
+     */
     serialize() {}
 
     /**
@@ -136,7 +141,6 @@ export default class REPL {
      * The engine is a spawned Python process that persists for the lifespan of the Sandbox. Changes to files and
      * watch statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any
      * watched data to REPL, which stores that data.
-     *
      * @param {string} pythonPath
      *      The path to the Python executable that should be used to run the script.
      * @param {string} scriptPath
@@ -161,14 +165,12 @@ export default class REPL {
                 this.store.dispatch(addVizTableSliceAction(vizTableSlice));
             }
             if(viewedVizId) {
+                const viewerId: string = cuid();
                 let expansionState = 'summary';
-                if (vizTableSlice[viewedVizId].compactModel !== null) {
-                    expansionState = 'compact';
-                }
-                if (vizTableSlice[viewedVizId].fullModel !== null) {
-                    expansionState = 'full';
-                }
-                this.store.dispatch(addViewerAction(viewedVizId, expansionState, null));
+                expansionState = vizTableSlice[viewedVizId].compactModel ? 'compact' : expansionState;
+                expansionState = vizTableSlice[viewedVizId].fullModel ? 'full' : expansionState;
+                this.store.dispatch(createViewerAction(viewerId, viewedVizId, expansionState));
+                this.store.dispatch(showViewerInCanvasAction(viewerId));
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
             // focus so the user can keep typing.
@@ -182,14 +184,12 @@ export default class REPL {
      *
      * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will preserve the invariant
      * for `VizSpec` (e.g. if "full" is the model name, both `fullModel` and `compactModel` will be filled).
-     *
      * @param vizId
      * @param modelType
      *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
      */
     fetchVizModel(vizId: VizId, modelType: 'compact' | 'both') {
-        const existingSpec = getVizSpec(this.store.getState().viztable, vizId)
-        if(existingSpec)
+        const existingSpec = getVizSpec(this.store.getState().viztable, vizId);  // TODO: What is this for?
         console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
         this.executionEngine.send(`fetch:${vizId}?${modelType}`);
     }
@@ -197,7 +197,6 @@ export default class REPL {
     /**
      * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main script (or certain parts
      * of it).
-     *
      * @param  filePath
      *     Absolute path of file that was changed.
      * @param  changes
