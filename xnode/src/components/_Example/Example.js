@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
@@ -10,15 +9,23 @@ import { createSelector } from 'reselect';
 /**
  * This [pure dumb / stateful dumb / smart] component ___.
  */
-class Example extends Component {
+class Example extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** React components within opening & closing tags. */
-        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+    /** React components within opening & closing tags. */
+    children: React.Node,
+
+}, {
+
+    // Optional
+
+}> {
+
+    /** Prop default values. */
+    static defaultProps = {
+        // key: value,
     };
 
     /** Constructor. */

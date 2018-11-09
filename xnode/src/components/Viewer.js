@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
@@ -20,30 +19,45 @@ import {getViewer} from "../state/canvas/outputs";
 import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
 
+
+/** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
+ *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the
+ *  context to its `Viewer` sub-components; a Primitive Viz is terminal and so does not need to pass-through. */
+export type ViewerContext = {
+
+    // Size category to render the top-level Viz.
+    displaySize?: 'regular' | 'small',
+};
+
 /**
  * This smart component recursively parses a VizSpec and assembles a nested Viz rendering.
  */
-class Viewer extends Component {
+class Viewer extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** Unique `ViewerId` for this Viewer. */
-        vizId: PropTypes.string.isRequired,
+    /** Unique `ViewerId` for this Viewer. */
+    vizId: string,
 
-        /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
-        vizTable: PropTypes.object.isRequired,
+    /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
+    vizTable: {[VizId]: VizSpec},
 
-        // TODO: viz props
-    };
+    /** Information passed down from direct parent Viewer. */
+    viewerContext?: ViewerContext,
 
+}, {
 
-    // whenever the vizid first enters the viztable, we need to set the initial state
+    /** What expansion mode the viewer is in. */
+    viewerState: string,
+
+}> {
+
     constructor(props) {
         super(props);
         const { vizTable, vizId } = this.props;
+
+        // Set initial state based on what model is available.
         let viewerState = 'summary';
         viewerState = vizTable[vizId].compactModel ? 'compact' : viewerState;
         viewerState = vizTable[vizId].fullModel ? 'full' : viewerState;
@@ -54,13 +68,11 @@ class Viewer extends Component {
 
     /** Renderer. */
     render() {
-        const { vizId, vizTable } = this.props;
+        const { vizId, vizTable, viewerContext } = this.props;
         const { viewerState } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
-        if(!vizSpec) {
-            return null;  // TODO: What to do?
-        }
+        if(!vizSpec) return null;
 
         let model: VizModel = undefined;
         switch(viewerState) {
@@ -83,7 +95,8 @@ class Viewer extends Component {
             case 'TokenPrimitive':
                 const { text } = (model: TokenPrimitiveModel).contents;
                 return (
-                    <TokenPrimitive text={text}
+                    <TokenPrimitive viewerContext={viewerContext}
+                                    text={text}
                                     shouldTextWrap={true} />
                 );
 
@@ -93,13 +106,8 @@ class Viewer extends Component {
             case 'SequenceLayout':
                 const { elements } = (model: SequenceLayoutModel).contents;
                 return (
-                    <SequenceLayout elements={
-                        elements.map((vizId: VizId) => {
-                            return {
-                                vizId,
-                            };
-                        })
-                    }/>
+                    <SequenceLayout viewerContext={viewerContext}
+                                    elements={elements.map((vizId: VizId) => ({ vizId }))}/>
                 );
 
             case 'KeyValueLayout':
@@ -128,13 +136,14 @@ const styles = theme => ({
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        vizTable:      getVizTable(state.viztable),
+        vizTable:  getVizTable(state.viztable),
     };
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
+
     }, dispatch);
 }
 

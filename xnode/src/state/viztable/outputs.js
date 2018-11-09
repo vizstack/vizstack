@@ -18,19 +18,19 @@ export type VizId = string;
  */
 export type VizSpec = {
 
-    // Absolute path of the file in which this viz was viewed.
+    /** Absolute path of the file in which this viz was viewed. */
     filePath: string,
 
-    // Line number of view statement within file at `filePath`.
+    /** Line number of view statement within file at `filePath`. */
     lineNumber: number,
 
-    // Model that is just string summary of the object and does not allow references (i.e. it "bottoms-out").
+    /** Model that is just string summary of the object and does not allow references (i.e. it "bottoms-out"). */
     summaryModel: VizModel,
 
-    // Model that visualizes a tiny subset of the object data and allows references.
+    /** Model that visualizes a tiny subset of the object data and allows references. */
     compactModel?: VizModel,
 
-    // Model that visualizes all the object data and allows references.
+    /** Model that visualizes all the object data and allows references. */
     fullModel?: VizModel,
 };
 

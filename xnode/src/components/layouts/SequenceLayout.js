@@ -1,47 +1,42 @@
-import React, { PureComponent } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
 import TokenViz from '../primitives/TokenPrimitive';
+import type {VizId} from "../../state/viztable/outputs";
+import type {ViewerContext} from "../Viewer";
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
  * TODO: Allow multi-line wrapping elements.
  * TODO: Allow element-type-specific background coloring.
  */
-class SequenceLayout extends PureComponent {
+class SequenceLayout extends React.PureComponent<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        // =============================================================================================================
-        // Data props
+    /** Elements of the sequence. */
+    elements: Array<{vizId: VizId}>,
 
-        /** Elements */
-        elements: PropTypes.array.isRequired,
+    /** Pass-through context to `Viewer` sub-components. */
+    viewerContext?: ViewerContext,
 
-        /** Pass-through props to `Viewer` subcomponents. */
-        viewerProps: PropTypes.object,
+    /** Whether to display element index labels. */
+    showIndices?: boolean,
 
-        // =============================================================================================================
+    /** Characters to place at start/end of sequence as decoration, e.g. "{" and "}" for sets. */
+    startMotif?: string,
+    endMotif?:   string,
 
-        /** Whether to display element index labels. */
-        showIndices: PropTypes.bool,
+    /** Individual list item dimension constraints (in px or '%'). */
+    itemMinWidth?: number | string,
+    itemMaxWidth?: number | string,
+    itemHeight?:   number | string,
 
-        /** Characters to place at start/end of sequence as decoration, e.g. "{" and "}" for sets. */
-        startMotif: PropTypes.string,
-        endMotif:   PropTypes.string,
-
-        /** Individual list item dimension constraints (in px or '%'). */
-        itemMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemHeight:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-    };
+}> {
 
     /** Prop default values object. */
     static defaultProps = {
@@ -55,13 +50,15 @@ class SequenceLayout extends PureComponent {
      * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, showIndices, startMotif, endMotif,
+        const { classes, elements, viewerContext,
+            showIndices, startMotif, endMotif,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
 
         const items = elements.map((elem) => {
             const { vizId } = elem;
             return (
-                <Viewer vizId={vizId} />
+                <Viewer vizId={vizId}
+                        viewerContext={viewerContext} />
             );
         });
 

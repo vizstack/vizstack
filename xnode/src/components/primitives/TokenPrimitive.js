@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import * as React from 'react';
 import PropTypes from 'prop-types';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
@@ -12,48 +12,39 @@ import ColorBlue from '@material-ui/core/colors/blue';
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
-class TokenPrimitive extends PureComponent {
+class TokenPrimitive extends React.PureComponent<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        // =============================================================================================================
-        // Data props
+    /** Text string displayed by token. */
+    text: string,
 
-        /** Text string displayed by token. */
-        text: PropTypes.string.isRequired,
+    /** Token box dimension constraints (in px or '%'). */
+    minWidth?: number | string,
+    maxWidth?: number | string,
+    minHeight?: number | string,
+    maxHeight?: number | string,
 
-        /** Pass-through props to `Viewer` subcomponents. */
-        viewerProps: PropTypes.object,
+    /** Whether text should wrap if it exceeds token width. */
+    shouldTextWrap?: boolean,
 
-        // =============================================================================================================
+    /** Whether text should display ellipsis if too long. */
+    shouldTextEllipsis?: boolean,
 
-        /** Token box dimension constraints (in px or '%'). */
-        minWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        maxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        minHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        maxHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    /** Token interaction state. */
+    isHovered?: boolean,
+    isSelected?: boolean,
 
-        /** Whether text should wrap if it exceeds token width. */
-        shouldTextWrap: PropTypes.bool,
+    /** Mouse handler functions. */
+    onClick?: () => void,
+    onDoubleClick?: () => void,
+    onMouseEnter?: () => void,
+    onMouseLeave?: () => void,
 
-        /** Whether text should display ellipsis if too long. */
-        shouldTextEllipsis: PropTypes.bool,
+}> {
 
-        /** Token interaction state. */
-        isHovered: PropTypes.bool,
-        isSelected: PropTypes.bool,
-
-        /** Mouse handler functions. */
-        onClick: PropTypes.func,
-        onDoubleClick: PropTypes.func,
-        onMouseEnter: PropTypes.func,
-        onMouseLeave: PropTypes.func,
-    };
-
-    /** Prop default values object. */
+    /** Prop default values. */
     static defaultProps = {
         shouldTextWrap: false,
         shouldTextEllipsis: false,
