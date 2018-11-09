@@ -5,7 +5,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
-import type {SequenceLayoutModel, TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
+import type {SequenceLayoutModel, KeyValueLayoutModel, TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
 import { getVizTable, VizModel } from "../state/viztable/outputs";
 
 // Viz primitives
@@ -17,6 +17,7 @@ import {
 import {getViewer} from "../state/canvas/outputs";
 
 // Viz layouts
+import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
 
 /**
@@ -30,24 +31,31 @@ class Viewer extends Component {
         classes: PropTypes.object.isRequired,
 
         /** Unique `ViewerId` for this Viewer. */
-        viewerId: PropTypes.string.isRequired,
-
-        /** Specification of this `Viewer`, including its state. See 'canvas/outputs/ViewerSpec'. */
-        viewerSpec: PropTypes.object.isRequired,
+        vizId: PropTypes.string.isRequired,
 
         /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
-        vizTable: PropTypes.string.isRequired,
+        vizTable: PropTypes.object.isRequired,
 
-        /** Functions for creating viewers and updating Canvas layout. See 'canvas/outputs'. */
-        createViewer: PropTypes.func.isRequired,
-        showViewer: PropTypes.func.isRequired,
-        hideViewer: PropTypes.func.isRequired,
+        // TODO: viz props
     };
+
+
+    // whenever the vizid first enters the viztable, we need to set the initial state
+    constructor(props) {
+        super(props);
+        const { vizTable, vizId } = this.props;
+        let viewerState = 'summary';
+        viewerState = vizTable[vizId].compactModel ? 'compact' : viewerState;
+        viewerState = vizTable[vizId].fullModel ? 'full' : viewerState;
+        this.state = {
+            viewerState,
+        }
+    }
 
     /** Renderer. */
     render() {
-        const { viewerId, viewerSpec, vizTable } = this.props;
-        const { vizId, viewerState, children } = viewerSpec;
+        const { vizId, vizTable } = this.props;
+        const { viewerState } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if(!vizSpec) {
@@ -84,17 +92,23 @@ class Viewer extends Component {
 
             case 'SequenceLayout':
                 const { elements } = (model: SequenceLayoutModel).contents;
-                elements.forEach((childVizId: VizId) => {
-                    if (!(childVizId in children)) {
-                        let viewerState = 'summary';
-                        viewerState = vizTable[childVizId].compactModel ? 'compact' : viewerState;
-                        viewerState = vizTable[childVizId].fullModel ? 'full' : viewerState;
-                        addViewer(childVizId, viewerState, -1, viewerId);
-                    }
-                });
-                return null;
+                return (
+                    <SequenceLayout elements={
+                        elements.map((vizId: VizId) => {
+                            return {
+                                vizId,
+                            };
+                        })
+                    }/>
+                );
 
             case 'KeyValueLayout':
+                // const { elements } = (model: KeyValueLayoutModel).contents;
+                // return (
+                //     <KeyValueLayout elements={
+                //         Object.entries(elements).map(([key: VizId, value: VizId]))
+                //     }/>
+                // )
                 return null;
         }
     }
@@ -114,7 +128,6 @@ const styles = theme => ({
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewerSpec:    getViewer(state.canvas, props.viewerId),
         vizTable:      getVizTable(state.viztable),
     };
 }
@@ -122,9 +135,6 @@ function mapStateToProps(state, props) {
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-        createViewer:   createViewerAction,
-        showViewer:     showViewerInCanvasAction,
-        hideViewer:     hideViewerInCanvasAction,
     }, dispatch);
 }
 

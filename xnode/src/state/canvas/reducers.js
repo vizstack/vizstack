@@ -47,7 +47,7 @@ function clearCanvasReducer(state, action) {
  */
 function showViewerInCanvasReducer(state, action) {
     const { vizId, insertAfterIdx } = action;
-    return state.setIn('layout', (prev) => Immutable([]).concat(
+    return state.update('layout', (prev) => Immutable([]).concat(
         insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
         [ vizId ],
         insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),

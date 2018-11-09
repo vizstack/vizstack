@@ -4,6 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
+import Viewer from '../Viewer';
 import TokenViz from '../primitives/TokenPrimitive';
 
 /**
@@ -54,25 +55,13 @@ class SequenceLayout extends PureComponent {
      * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, model, showIndices, startMotif, endMotif,
+        const { classes, elements, showIndices, startMotif, endMotif,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
 
-        const items = model.map((elem) => {
-            const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = elem;
+        const items = elements.map((elem) => {
+            const { vizId } = elem;
             return (
-                <TokenViz model={text}
-                          minWidth={itemMinWidth}
-                          maxWidth={itemMaxWidth}
-                          minHeight={itemHeight}
-                          maxHeight={itemHeight}
-                          shouldTextWrap={false}
-                          shouldTextEllipsis={true}
-                          isHovered={isHovered}
-                          isSelected={isSelected}
-                          onClick={onClick}
-                          onDoubleClick={onDoubleClick}
-                          onMouseEnter={onMouseEnter}
-                          onMouseLeave={onMouseLeave}/>
+                <Viewer vizId={vizId} />
             );
         });
 

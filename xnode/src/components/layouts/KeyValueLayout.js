@@ -19,19 +19,7 @@ class KeyValueViz extends Component {
         /** Data model rendered by this viz (an array of length-2 arrays representing key value pairs). Uses an array
          *  instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
          *  between renderings. */
-        model: PropTypes.arrayOf(
-            PropTypes.arrayOf(
-                PropTypes.shape({
-                    text:           PropTypes.string.isRequired,
-                    isHovered:      PropTypes.bool,
-                    isSelected:     PropTypes.bool,
-                    onClick:        PropTypes.func,
-                    onDoubleClick:  PropTypes.func,
-                    onMouseEnter:   PropTypes.func,
-                    onMouseLeave:   PropTypes.func,
-                })
-            )
-        ),
+        elements: PropTypes.array.isRequired,
 
         /** Characters to place at start/end of the key-value sequence as decoration, e.g. "{" and "}" for dicts. */
         startMotif: PropTypes.string,
@@ -56,10 +44,10 @@ class KeyValueViz extends Component {
      * be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, model, startMotif, endMotif, keyMinWidth, keyMaxWidth, valueMinWidth, valueMaxWidth,
+        const { classes, elements, startMotif, endMotif, keyMinWidth, keyMaxWidth, valueMinWidth, valueMaxWidth,
             itemHeight } = this.props;
 
-        const kvPairs = model.map(([key, value], idx) => {
+        const kvPairs = elements.map(([key, value], idx) => {
 
             let keyComponent;
             {

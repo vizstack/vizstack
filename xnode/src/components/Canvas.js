@@ -105,7 +105,7 @@ class Canvas extends Component {
      * @param idx
      */
     createFramedViewerComponent(viewer: ViewerModel, idx: number) {
-        const { vizTable, showViewer, hideViewer } = this.props;
+        const { showViewer, hideViewer } = this.props;
         const { vizId, vizSpec } = viewer;
         const title = !vizSpec ? kLoadingMsg : `${vizSpec.filePath}:${vizSpec.lineNumber}`;
         const buttons = [
@@ -214,7 +214,6 @@ const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
 function mapStateToProps(state, props) {
     return {
         viewers:   getCanvasViewers(state),
-        vizTable:  getVizTable(state.viztable),
     };
 }
 
