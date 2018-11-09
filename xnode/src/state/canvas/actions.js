@@ -1,11 +1,8 @@
 import type {VizId} from "../viztable/outputs";
-import type {ViewerId} from "./outputs";
 
 /** Action type definitions. */
 export const CanvasActions = Object.freeze({
     CLEAR_CANVAS:                'canvas::CLEAR_CANVAS',
-    CREATE_VIEWER:               'canvas::CREATE_VIEWER',
-    DESTROY_VIEWER:              'canvas::DESTROY_VIEWER',
     SHOW_VIEWER_IN_CANVAS:       'canvas::SHOW_VIEWER_IN_CANVAS',
     HIDE_VIEWER_IN_CANVAS:       'canvas::HIDE_VIEWER_IN_CANVAS',
     REORDER_VIEWER_IN_CANVAS:    'canvas::REORDER_VIEWER_IN_CANVAS',
@@ -22,67 +19,30 @@ export function clearCanvasAction() {
 }
 
 /**
- * Action creator to add a viewer (at any level of nesting) for a particular top-level Viz.
- * @param viewerId
- *     A string ID that uniquely identifies the created viewer.
+ * Action creator to show a (top-level) viz viewer in the Canvas.
  * @param vizId
- *     `VizId` for top-level Viz rendered by the viewer.
- * @param expansionState?
- *     Whether in 'summary', 'compact', or 'full' display expansion state. (Optional)
- * @param parentViewerId?
- *     The unique ID of the parent viewer, this viewer is nested. (Optional)
- * @returns {object}
- */
-export function createViewerAction(viewerId: string,
-                                   vizId: VizId,
-                                   expansionState?: 'summary' | 'compact' | 'full',
-                                   parentViewerId?: string) {
-    return {
-        type: CanvasActions.CREATE_VIEWER,
-        viewerId,
-        vizId,
-        expansionState,
-        parentViewerId,
-    };
-}
-
-/**
- * Action creator to destroy a viewer (at any level of nesting) and all its related information.
- * @param viewerId
- * @returns {object}
- */
-export function destroyViewerAction(viewerId: string | ViewerId) {
-    return {
-        type: CanvasActions.DESTROY_VIEWER,
-        viewerId,
-    };
-}
-
-/**
- * Action creator to show a (top-level) viewer in the Canvas.
- * @param viewerId
  * @param insertAfterIdx
  *     Index in layout after which to add the new viewer. (Optional, default: -1 adds to end).
  * @returns {object}
  */
-export function showViewerInCanvasAction(viewerId: string | ViewerId,
+export function showViewerInCanvasAction(vizId: VizId,
                                          insertAfterIdx?: number = -1) {
     return {
         type: CanvasActions.SHOW_VIEWER_IN_CANVAS,
-        viewerId,
+        vizId,
         insertAfterIdx,
     };
 }
 
 /**
- * Action creator to hide a single (top-level) viewer currently in the Canvas.
- * @param viewerId
+ * Action creator to hide a single (top-level) viz viewer in the Canvas.
+ * @param vizId
  * @returns {object}
  */
-export function hideViewerInCanvasAction(viewerId: string | ViewerId) {
+export function hideViewerInCanvasAction(vizId: VizId) {
     return {
         type: CanvasActions.HIDE_VIEWER_IN_CANVAS,
-        viewerId,
+        vizId,
     };
 }
 

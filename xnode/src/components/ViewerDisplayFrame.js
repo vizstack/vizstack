@@ -14,7 +14,6 @@ import IconButton from '@material-ui/core/IconButton';
 /**
  * This dumb component renders a `DisplayFrame` and `DisplayFrameHeader`, which together factor out the elements and
  * functions common to all `[*]ViewerSpec`.
- * TODO: Add viewerId for easy identification
  * TODO: Add save to image button.
  */
 class ViewerDisplayFrame extends Component {

@@ -1,22 +1,16 @@
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
-import type { ViewerId, ViewerSpec } from './outputs';
+import type {VizId} from "../viztable/outputs";
 
 /** Root reducer's state slice shape. */
 export type CanvasState = {
 
-    // Map from viewer IDs to `ViewerSpec` specifications.
-    viewerTable: {
-        [ViewerId]: ViewerSpec,
-    },
-
-    // List of ViewerIds in order of display.
-    layout: Array<ViewerId>,
+    // List of VizIds in order of display.
+    layout: Array<VizId>,
 };
 
 /** Root reducer's initial state slice. */
 const initialState: CanvasState = Immutable({
-    viewerTable: {},
     layout: [],
 });
 
@@ -29,8 +23,6 @@ export function canvasReducer(state: CanvasState = initialState, action = {}) {
     const { type } = action;
     switch(type) {
         case CanvasActions.CLEAR_CANVAS:                return clearCanvasReducer(state, action);
-        case CanvasActions.CREATE_VIEWER:               return createViewerReducer(state, action);
-        case CanvasActions.DESTROY_VIEWER:              return destroyViewerReducer(state, action);
         case CanvasActions.SHOW_VIEWER_IN_CANVAS:       return showViewerInCanvasReducer(state, action);
         case CanvasActions.HIDE_VIEWER_IN_CANVAS:       return hideViewerInCanvasReducer(state, action);
         case CanvasActions.REORDER_VIEWER_IN_CANVAS:    return reorderViewerInCanvasReducer(state, action);
@@ -49,45 +41,15 @@ function clearCanvasReducer(state, action) {
 }
 
 /**
- * Creates a new `ViewerSpec` and adds it to the `viewerTable`. If applicable, registers self with parent.
- * `ViewerSpec`.
- * @param state
- * @param action
- */
-function createViewerReducer(state, action) {
-    const { viewerId, vizId, expansionState, parentViewerId } = action;
-    const viewerSpec: ViewerSpec = {
-        vizId,
-        viewerState: expansionState,
-        childViewerTable: {},
-    };
-    state = state.setIn(['viewerTable', viewerId], viewerSpec, { deep: true });
-    if(parentViewerId) {
-        state = state.setIn(['viewerTable', parentViewerId, 'childViewerTable', vizId], viewerId);
-    }
-    return state;
-}
-
-/**
- * Removes the viewer from the `viewerTable`.
- * @param state
- * @param action
- */
-function destroyViewerReducer(state, action) {
-    const { viewerId } = action;
-    return state.setIn(['viewerTable', viewerId], undefined);
-}
-
-/**
  * Show a top-level viewer in the Canvas layout.
  * @param state
  * @param action
  */
 function showViewerInCanvasReducer(state, action) {
-    const { viewerId, insertAfterIdx } = action;
+    const { vizId, insertAfterIdx } = action;
     return state.setIn('layout', (prev) => Immutable([]).concat(
         insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-        [ viewerId ],
+        [ vizId ],
         insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
     ));
 }
@@ -98,10 +60,10 @@ function showViewerInCanvasReducer(state, action) {
  * @param action
  */
 function hideViewerInCanvasReducer(state, action) {
-    const { viewerId } = action;
-    const removeIdx = state.layout.findIndex((elem) => elem === viewerId);
+    const { vizId } = action;
+    const removeIdx = state.layout.findIndex((id) => id === vizId);
     if(removeIdx === -1) {
-        console.error("Could not hide viewer; no viewer with `viewerId` ", viewerId);
+        console.error("Could not hide viewer; no viewer with `vizId` ", vizId);
         return state;
     }
     return state.update('layout', (arr) => arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)));
