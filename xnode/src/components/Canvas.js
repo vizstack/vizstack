@@ -44,11 +44,8 @@ class Canvas extends Component {
         /** CSS-in-JS styling object (from `withStyles`). */
         classes: PropTypes.object.isRequired,
 
-        /** `Viewer` objects for rendering. See `assembleViewers()`. */
+        /** `Viewer` objects for rendering. See `getCanvasViewers()`. */
         viewers: PropTypes.array.isRequired,
-
-        /** See `vizTable` in `viztable/reducers`. */
-        vizTable: PropTypes.object.isRequired,
 
         /**
          * See `views/repl/fetchVizModel(vizId)`.
