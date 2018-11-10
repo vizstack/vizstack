@@ -53,6 +53,8 @@ class Viewer extends React.Component<{
     /** Information passed down from direct parent Viewer. */
     viewerContext?: ViewerContext,
 
+    fetchVizModel: (VizId, 'compact' | 'full') => undefined
+
 }, {
 
     /** What expansion mode the viewer is in. */
@@ -75,6 +77,7 @@ class Viewer extends React.Component<{
     }
 
     getVizComponent(model: VizModel) {
+        const { fetchVizModel } = this.props;
         switch(model.type) {
 
             // Primitives
@@ -83,8 +86,7 @@ class Viewer extends React.Component<{
             case 'TokenPrimitive':
                 const { text } = (model: TokenPrimitiveModel).contents;
                 return (
-                    <TokenPrimitive viewerContext={viewerContext}
-                                    text={text}
+                    <TokenPrimitive text={text}
                                     shouldTextWrap={true} />
                 );
 
@@ -96,6 +98,7 @@ class Viewer extends React.Component<{
                 return (
                     <SequenceLayout elements={elements.map((vizId: VizId) => ({
                         vizId,
+                        fetchVizModel: fetchVizModel,
                         viewerContext: {
                             displaySize: 'small',
                         },
@@ -115,7 +118,7 @@ class Viewer extends React.Component<{
 
     /** Renderer. */
     render() {
-        const { vizId, vizTable, viewerContext, classes } = this.props;
+        const { vizId, vizTable, viewerContext, classes, fetchVizModel } = this.props;
         const { viewerState, isHovered } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
@@ -129,10 +132,23 @@ class Viewer extends React.Component<{
                 model = vizSpec.summaryModel;
                 break;
             case 'compact':
-                model = vizSpec.compactModel;
+                if (vizSpec.compactModel) {
+                    model = vizSpec.compactModel;
+                }
+                else {
+                    model = vizSpec.summaryModel;
+                }
                 break;
             case 'full':
-                model = vizSpec.fullModel;
+                if (vizSpec.fullModel) {
+                    model = vizSpec.fullModel;
+                }
+                else if (vizSpec.compactModel) {
+                    model = vizSpec.compactModel;
+                }
+                else {
+                    model = vizSpec.summaryModel;
+                }
                 break;
         }
         return (
@@ -142,10 +158,12 @@ class Viewer extends React.Component<{
             })}
                  onClick={(e) => {
                      e.stopPropagation();
+                     const newState = viewerState === 'summary' ? 'compact' :
+                         (viewerState === 'compact' ? 'full' : 'summary');
+                     fetchVizModel(vizId, newState);
                      this.setState((state) => ({
                          ...state,
-                         viewerState: viewerState === 'summary' ? 'compact' :
-                             (viewerState === 'compact' ? 'full' : 'summary')
+                         viewerState: newState,
                      }))
                  }}
                  onMouseOver={(e) => {
@@ -192,7 +210,6 @@ function mapStateToProps(state, props) {
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators({
-
     }, dispatch);
 }
 

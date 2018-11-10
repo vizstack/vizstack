@@ -105,7 +105,7 @@ class Canvas extends Component {
      * @param idx
      */
     createFramedViewerComponent(viewer: ViewerModel, idx: number) {
-        const { showViewer, hideViewer } = this.props;
+        const { showViewer, hideViewer, fetchVizModel } = this.props;
         const { vizId, vizSpec } = viewer;
         const title = !vizSpec ? kLoadingMsg : `${vizSpec.filePath}:${vizSpec.lineNumber}`;
         const buttons = [
@@ -118,7 +118,7 @@ class Canvas extends Component {
             <ViewerDisplayFrame title={title}
                                 buttons={buttons}>
                 {!vizSpec ? kLoadingSpinner : (
-                    <Viewer vizId={vizId} />
+                    <Viewer vizId={vizId} fetchVizModel={fetchVizModel} />
                 )}
             </ViewerDisplayFrame>
         );

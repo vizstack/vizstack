@@ -186,7 +186,8 @@ class VisualizationEngine:
         return self._cache_slice(obj, file_path, line_number, self._next_snapshot_id)
 
     def get_snapshot_slice(self,
-                           viz_id: VizId) -> VizTableSlice:
+                           viz_id: VizId,
+                           view_mode: Optional[ViewMode]=None) -> VizTableSlice:
         """Returns a filled shell for the symbol with ID `symbol_id`, as well as the empty shells and symbol IDs of
         every symbol referenced in the shell's data object.
 
@@ -201,15 +202,15 @@ class VisualizationEngine:
             A mapping of symbol IDs to shells; the shell for `symbol_id` will be filled, while all others
                 will be empty.
         """
-        # TODO: add mode argument to determine what should be retrieved
         viz_slice: VizTableSlice = dict()
-        to_add: MutableSequence[(VizId, ViewMode)] = [(viz_id, ViewMode.NONE)]
+        to_add: MutableSequence[(VizId, ViewMode, Optional[ViewMode])] = [(viz_id, ViewMode.NONE, view_mode)]
         while len(to_add) > 0:
-            viz_id, parent_view_mode = to_add.pop()
+            viz_id, parent_view_mode, force_view_mode = to_add.pop()
             if viz_id in viz_slice:
                 continue
             viz_slice[viz_id] = copy(self._cache[viz_id].viz_spec)
-            view_mode: ViewMode = (self._cache[viz_id].default_view
+            view_mode: ViewMode = (force_view_mode if force_view_mode is not None
+                                   else self._cache[viz_id].default_view
                                    if self._cache[viz_id].default_view != ViewMode.NONE
                                    else ViewMode.FULL if parent_view_mode == ViewMode.NONE
                                    else ViewMode.COMPACT if parent_view_mode == ViewMode.FULL
@@ -217,11 +218,11 @@ class VisualizationEngine:
 
             if view_mode == ViewMode.COMPACT:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
-                to_add += [(viz_id, view_mode) for viz_id in self._cache[viz_id].compact_viz_refs]
+                to_add += [(viz_id, view_mode, None) for viz_id in self._cache[viz_id].compact_viz_refs]
             if view_mode == ViewMode.FULL:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
                 viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
-                to_add += [(viz_id, view_mode) for viz_id in self._cache[viz_id].full_viz_refs]
+                to_add += [(viz_id, view_mode, None) for viz_id in self._cache[viz_id].full_viz_refs]
         return viz_slice
 
 

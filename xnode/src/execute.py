@@ -11,7 +11,7 @@ from types import FrameType
 from typing import Callable, Mapping, Union, Any, Optional, NewType
 
 import xn
-from xn.viz import VisualizationEngine
+from xn.viz import VisualizationEngine, ViewMode
 from xn.constants import VizTableSlice, VizId, Actions
 
 # The type of the function which is called to send a message to the parent process.
@@ -178,7 +178,8 @@ def _execute_watch(send_message: _SendMessage,
 
 def _fetch_viz(send_message: _SendMessage,
                engine: VisualizationEngine,
-               viz_id: VizId) -> None:
+               viz_id: VizId,
+               mode) -> None:
     """Fetches the symbol slice of a given symbol and sends it to the client.
 
     Does not signal to the client to create a viewer for the requested symbol.
@@ -188,7 +189,7 @@ def _fetch_viz(send_message: _SendMessage,
         send_message: A function which sends a symbol slice and other information to the client.
         viz_id: The symbol ID of the object whose slice should be sent.
     """
-    viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
+    viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id, mode)
     send_message(viz_slice, None, False)
 
 
@@ -236,8 +237,12 @@ def run_script(receive_queue: Queue,
             request: Mapping[str, Union[Actions, VizId]] = receive_queue.get(True)
             if request is None:
                 break
-            # TODO: use request['mode']
-            _fetch_viz(send_message, engine, request['viz_id'])
+            mode = ViewMode.SUMMARY
+            if request['mode'] == 'compact':
+                mode = ViewMode.COMPACT
+            elif request['mode'] == 'full':
+                mode = ViewMode.FULL
+            _fetch_viz(send_message, engine, request['viz_id'], mode)
     except:
         raw_error_msg: str = traceback.format_exc()
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,
