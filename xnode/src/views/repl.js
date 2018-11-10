@@ -184,9 +184,12 @@ export default class REPL {
      *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
      */
     fetchVizModel(vizId: VizId, modelType: 'compact' | 'full') {
-        const existingSpec = getVizSpec(this.store.getState().viztable, vizId);  // TODO: What is this for?
-        console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
-        this.executionEngine.send(`fetch:${vizId}?${modelType}`);
+        const existingSpec = getVizSpec(this.store.getState().viztable, vizId);
+        if ((existingSpec.compactModel === null && modelType === 'compact') ||
+            (existingSpec.fullModel === null && modelType === 'full')) {
+            console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
+            this.executionEngine.send(`fetch:${vizId}?${modelType}`);
+        }
     }
 
     /**
