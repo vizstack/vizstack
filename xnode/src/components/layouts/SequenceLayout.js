@@ -4,9 +4,6 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
-import TokenViz from '../primitives/TokenPrimitive';
-import type {VizId} from "../../state/viztable/outputs";
-import type {ViewerContext} from "../Viewer";
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -18,11 +15,8 @@ class SequenceLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    /** Elements of the sequence. */
-    elements: Array<{vizId: VizId}>,
-
-    /** Pass-through context to `Viewer` sub-components. */
-    viewerContext?: ViewerContext,
+    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    elements: Array<{}>,
 
     /** Whether to display element index labels. */
     showIndices?: boolean,
@@ -46,23 +40,15 @@ class SequenceLayout extends React.PureComponent<{
     };
 
     /**
-     * Renders a sequence of TokenPrimitive elements, optionally numbered with indices. The sequence can have start/end
+     * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can have start/end
      * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerContext,
-            showIndices, startMotif, endMotif,
+        const { classes, elements, showIndices, startMotif, endMotif,
             itemMinWidth, itemMaxWidth, itemHeight } = this.props;
 
-        const items = elements.map((elem) => {
-            const { vizId } = elem;
-            return (
-                <Viewer vizId={vizId}
-                        viewerContext={viewerContext} />
-            );
-        });
-
-        const idxs = items.map((_, idx) => {
+        const items = elements.map((elem) => <Viewer {...elem} />);
+        const idxs = elements.map((_, idx) => {
             return showIndices ? <span className={classes.indexText}>{idx}</span> : null;
         });
 
