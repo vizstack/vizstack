@@ -4,7 +4,13 @@ import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
-import type {SequenceLayoutModel, KeyValueLayoutModel, TokenPrimitiveModel, VizId, VizSpec} from "../state/viztable/outputs";
+import type {
+    VizId,
+    VizSpec,
+    TokenPrimitiveModel,
+    SequenceLayoutModel,
+    KeyValueLayoutModel,
+} from "../state/viztable/outputs";
 import { getVizTable, VizModel } from "../state/viztable/outputs";
 
 // Viz primitives
@@ -88,8 +94,12 @@ class Viewer extends React.Component<{
             case 'SequenceLayout':
                 const { elements } = (model: SequenceLayoutModel).contents;
                 return (
-                    <SequenceLayout viewerContext={viewerContext}
-                                    elements={elements.map((vizId: VizId) => ({ vizId }))}/>
+                    <SequenceLayout elements={elements.map((vizId: VizId) => ({
+                        vizId,
+                        viewerContext: {
+                            displaySize: 'small',
+                        },
+                    }))}/>
                 );
 
             case 'KeyValueLayout':
