@@ -100,15 +100,6 @@ export default {
     },
 
     // =================================================================================================================
-    // Consuming services
-    // ------------------
-    // Functions that are used by `package.json` to specify Atom services to consume.
-    // =================================================================================================================
-
-    // TODO: consume Ink
-
-
-    // =================================================================================================================
     // Xnode-specific commands
     // =================================================================================================================
 
@@ -121,6 +112,12 @@ export default {
         console.debug('root -- sandbox settings panel opened');
     },
 
+    /**
+     * Rerun the REPL script if `delay` has elapsed since last change.
+     * @param changedPath
+     * @param changes
+     * @param delay
+     */
     waitAndRerun(changedPath, changes, delay) {
         this.lastChangedTime = new Date();
         setTimeout(() => {
