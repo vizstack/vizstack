@@ -18,6 +18,7 @@ import {getViewer} from "../state/canvas/outputs";
 // Viz layouts
 import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
+import ColorLightBlue from "@material-ui/core/colors/lightBlue";
 
 
 /** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
@@ -63,30 +64,11 @@ class Viewer extends React.Component<{
         viewerState = vizTable[vizId].fullModel ? 'full' : viewerState;
         this.state = {
             viewerState,
+            isHovered: false,
         }
     }
 
-    /** Renderer. */
-    render() {
-        const { vizId, vizTable, viewerContext } = this.props;
-        const { viewerState } = this.state;
-
-        const vizSpec: VizSpec = vizTable[vizId];
-        if(!vizSpec) return null;
-
-        let model: VizModel = undefined;
-        switch(viewerState) {
-            case 'summary':
-                model = vizSpec.summaryModel;
-                break;
-            case 'compact':
-                model = vizSpec.compactModel;
-                break;
-            case 'full':
-                model = vizSpec.fullModel;
-                break;
-        }
-
+    getVizComponent(model: VizModel) {
         switch(model.type) {
 
             // Primitives
@@ -120,6 +102,54 @@ class Viewer extends React.Component<{
                 return null;
         }
     }
+
+    /** Renderer. */
+    render() {
+        const { vizId, vizTable, viewerContext, classes } = this.props;
+        const { viewerState, isHovered } = this.state;
+
+        const vizSpec: VizSpec = vizTable[vizId];
+        if(!vizSpec) {
+            return null;  // TODO: What to do?
+        }
+
+        let model: VizModel = undefined;
+        switch(viewerState) {
+            case 'summary':
+                model = vizSpec.summaryModel;
+                break;
+            case 'compact':
+                model = vizSpec.compactModel;
+                break;
+            case 'full':
+                model = vizSpec.fullModel;
+                break;
+        }
+        return (
+            <div className={classNames({
+                [classes.box]    :  true,
+                [classes.hovered]:  isHovered,
+            })}
+                 onClick={(e) => {
+                     e.stopPropagation();
+                     this.setState((state) => ({
+                         ...state,
+                         viewerState: viewerState === 'summary' ? 'compact' :
+                             (viewerState === 'compact' ? 'full' : 'summary')
+                     }))
+                 }}
+                 onMouseOver={(e) => {
+                     e.stopPropagation();
+                     this.setState((state) => ({...state, isHovered: true}));
+                 }}
+                 onMouseOut={(e) => {
+                     e.stopPropagation();
+                     this.setState((state) => ({...state, isHovered: false}));
+                 }}>
+                {this.getVizComponent(model)}
+            </div>
+        )
+    }
 }
 
 // To inject styles into component
@@ -127,7 +157,16 @@ class Viewer extends React.Component<{
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    // css-key: value,
+    // css-key: value,// Border for highlighting
+    box: {
+        borderRadius:   theme.shape.borderRadius.regular,
+        borderColor:    'transparent',
+        borderStyle:    'solid',
+        borderWidth:    1,  // TODO: Dehardcode this
+    },
+    hovered: {
+        borderColor:    ColorLightBlue[400],
+    },
 });
 
 // To inject application state into component
