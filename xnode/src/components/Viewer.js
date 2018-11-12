@@ -53,7 +53,8 @@ class Viewer extends React.Component<{
     /** Information passed down from direct parent Viewer. */
     viewerContext?: ViewerContext,
 
-    fetchVizModel: (VizId, 'compact' | 'full') => undefined
+    /** See 'repl/fetchVizModel'. */
+    fetchVizModel: (VizId, 'compact' | 'full') => void,
 
 }, {
 

@@ -20,9 +20,6 @@ class ViewerDisplayFrame extends React.Component<{
     /** React components within opening & closing tags. */
     children: React.Node,
 
-    /** Left-justified text string/element to display before frame. */
-    title?: string | React.Node,
-
     /** Right-justified button elements to overlay on content, with the following data schema:
      * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */
     buttons?: Array<{
@@ -38,7 +35,7 @@ class ViewerDisplayFrame extends React.Component<{
      * providing any viewer-specific modifications to header.
      */
     render() {
-        const { classes, children, title, buttons } = this.props;
+        const { classes, children, buttons } = this.props;
 
         const buttonsComponents = buttons.map((button, idx) => (
             <Tooltip key={idx} placement='bottom' title={button.title}>
@@ -47,8 +44,7 @@ class ViewerDisplayFrame extends React.Component<{
         ));
 
         return (
-            <div>
-                {title ? <span className={classes.title}>{title}</span> : null}
+            <div className={classes.container}>
                 <DisplayFrame>
                     <DisplayFrameContent>
                         {children}
@@ -67,11 +63,9 @@ class ViewerDisplayFrame extends React.Component<{
 
 /** CSS-in-JS styling function. */
 const styles = theme => ({
-    bundle: {
-        display: 'inline-flex',
-    },
-    title: {
-        textAlign: 'left',
+    container: {
+        paddingTop:    1,  // TODO: Dehardcode this
+        paddingBottom: 1,  // TODO: Dehardcode this
     },
     buttons: {
         position: 'absolute',
