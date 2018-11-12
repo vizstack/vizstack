@@ -1,8 +1,10 @@
 import json
 import threading
+import os
 from multiprocessing import Queue
 
 import execute
+from xn.constants import ExpansionState
 
 _RESET_MESSAGE: str = {'viewedVizId': None, 'vizTableSlice': None, 'shouldRefresh': True}
 
@@ -71,7 +73,8 @@ def test_run_script_with_fetch_request_should_send_symbol_slice() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ONE_WATCH)
     for _ in range(3):
         symbol_slice_str: str = output_queue.get()
-    request_queue.put({'viz_id': json.loads(symbol_slice_str)['vizTableSlice'].popitem()[0]})
+    request_queue.put({'viz_id': json.loads(symbol_slice_str)['vizTableSlice'].popitem()[0],
+                       'expansion_state': ExpansionState.SUMMARY})
     request_queue.put(None)
     thread.join()
     assert json.loads(output_queue.get())['vizTableSlice'] is not None
@@ -81,9 +84,12 @@ def test_run_script_with_error_should_send_traceback() -> None:
     thread, request_queue, output_queue = _start_script_thread(SCRIPT_ERROR)
     request_queue.put(None)
     thread.join()
+    responses = [json.loads(output_queue.get()) for _ in range(output_queue.qsize())]
     # TODO: add check for file name, line number
-    assert any([json.loads(response)['viewedVizId'] is not None for response in
-                [output_queue.get() for _ in range(output_queue.qsize())]])
+    assert sum([response['viewedVizId'] is not None for response in responses]) == 1
+    assert all([os.path.basename(SCRIPT_ERROR) in response['vizTableSlice'][response['viewedVizId']]['filePath']
+                for response in responses
+                if response['viewedVizId'] is not None])
 
 
 def test_run_script_with_print_should_send_text() -> None:

@@ -1,7 +1,5 @@
 from typing import Callable, Any
 
-# TODO: actions, like recurse?
-
 # A function which takes as input any Python object and performs some action that allows it to be viewed by the client.
 # By default, this prints it to stdout, but it can be changed via `set_view_fn()` to write objects as Xnode symbol
 # schemas to a client, or to do nothing.

@@ -1,11 +1,10 @@
 import argparse
-import json
 import sys
 import threading
 from multiprocessing import Process, Queue
 from typing import Optional
 
-from xn.constants import VizId, Actions
+from xn.constants import VizId, ExpansionState
 from execute import run_script
 
 # ======================================================================================================================
@@ -27,9 +26,10 @@ class _ExecutionManager:
     """Runs the user's Python script in a subprocess and prints requested viz slices to stdout.
 
     On creation, the `_ExecutionManager` starts a new process and a new thread. The new process runs
-    `execute.run_script()`, which in turn runs the user-written script within a `Pdb` instance. The messages
-    produced by any evaluated watch expressions are added to a queue. The thread reads this queue, printing any
-    messages to stdout as they are added. Client programs, such as `repl.js`, can read these printed schemas.
+    `execute.run_script()`, which in turn runs the user-written script within a `Pdb` instance. The
+    ExecutionEngineMessages produced by any evaluated watch expressions are added to a queue. The thread reads this
+    queue, printing any messages to stdout as they are added. Client programs, such as `repl.js`, can read these
+    printed schemas.
 
     The thread is necessary to prevent blocking; otherwise, the engine would either have to block until script execution
     is done, preventing re-runs, or messages would only be output after the process completes, which would produce long
@@ -66,31 +66,32 @@ class _ExecutionManager:
 
     def fetch_viz(self,
                   viz_id: VizId,
-                  mode) -> None:
-        """Fetches the data object for a viz from the subprocess.
+                  expansion_state: ExpansionState) -> None:
+        """Fetches an ExecutionEngineMessage from the subprocess which includes a VizTableSlice with the VizModel for
+        the given VizId in the given ExpansionState.
 
         The subprocess holds the visualizations for all objects in the script's namespace, so requests must be
         forwarded to the process itself. These requests are only processed after the script has finished running,
         and visualizes the object at the time `viz_id` was generated.
 
-        The fetched viz slice is written to the `print_queue`, which is printed by the printing thread.
+        The fetched ExecutionEngineMessage is written to the `print_queue`, which is printed by the printing thread.
 
         Args:
-            viz_id: The ID of the visualization whose corresponding viz slice should be printed.
-            actions: Actions that should be performed on the returned data; see `ACTION-SCHEMA.md`.
+            viz_id: The VizId whose model should be included in the sent VizTableSlice.
+            expansion_state: The expansion state of the model for viz_id which is in the VizTableSlice.
         """
         self.fetch_queue.put({
             'viz_id': viz_id,
-            'mode': mode,
+            'expansion_state': expansion_state,
         })
 
     @staticmethod
     def _start_exec_process(script_path: str) -> (Process, Queue, Queue):
         """Starts a new process, which runs a user-written script inside of a Pdb instance.
 
-        Two queues are created to communicate with the new process; one is filled by the subprocess with viz slices
-        as they are encountered in watch statements or after they are requested by `_fetch_viz()`. The other queue is
-        filled by the `_ExecutionManager` with the IDs of vizzes to be fetched.
+        Two queues are created to communicate with the new process; one is filled by the subprocess with
+        ExecutionEngineMessages as they are encountered in watch statements or after they are requested by
+        `_fetch_viz()`. The other queue is filled by the `_ExecutionManager` with VizIds to be fetched.
 
         Args:
             script_path: The path to a user-written script to be executed in the subprocess.
@@ -114,7 +115,7 @@ class _ExecutionManager:
                             print_queue: Queue) -> None:
         """Starts a new thread, which reads from a queue and prints any found strings.
 
-        An `_ExecutionManager` will create a print thread to pipe all viz slices produced by its execution
+        An `_ExecutionManager` will create a print thread to pipe all ExecutionEngineMessages produced by its execution
         subprocess to stdout, where it can be read by client programs.
 
         Note that the thread blocks between each item added to the queue.
@@ -162,7 +163,8 @@ def _should_execute(script_path: str,
 
 def _execute(exec_manager: Optional[_ExecutionManager],
              script_path: str) -> _ExecutionManager:
-    """Creates a new `_ExecutionManager` to run a given script, printing its watched variable schemas to stdout.
+    """Creates a new `_ExecutionManager` to run a given script, printing any watched objects to stdout as
+    ExecutionEngineMessages.
 
     If an `_ExecutionManager` already exists, it is first killed, so that only information from the most recent run
     is sent to the client.
@@ -182,19 +184,22 @@ def _execute(exec_manager: Optional[_ExecutionManager],
 
 def _fetch_viz(exec_manager: _ExecutionManager,
                message: str) -> None:
-    """Fetches a viz slice containing the data of a requested viz.
+    """Sends a new ExecutionEngineMessage to the client containing a VizTableSlice which includes a requested viz in
+    a specified expansion state.
 
     Args:
         exec_manager: The `_ExecutionManager` to which the request should be proxied.
         message: A string sent by the client to stdin of the format
-            "{FETCH_HEADER}{viz_id}?{actions}"
-            where `actions` is the JSON string of an action dict, as described in `ACTION-SCHEMA.md`.
+            "{FETCH_HEADER}{viz_id}?{expansion_state}"
+            where `expansion_state` is one of "summary", "compact", or "full", indicating the particular model which
+            should be fetched.
     """
     contents: str = message.replace(_FETCH_HEADER, '').split('?')
     viz_id: VizId = contents[0]
-    mode = contents[1]
+    expansion_state: ExpansionState = ExpansionState.FULL if contents[1] == 'full' else ExpansionState.COMPACT if \
+        contents[1] == 'compact' else ExpansionState.SUMMARY
 
-    exec_manager.fetch_viz(viz_id, mode)
+    exec_manager.fetch_viz(viz_id, expansion_state)
 
 
 # ======================================================================================================================
@@ -217,8 +222,7 @@ def _read_args() -> str:
 
 
 def main() -> None:
-    """Reads commands from the client and adds watch expressions, reruns the user's script, and fetches viz models
-    accordingly.
+    """Runs the user's script when appropriate and fetches VizSpecs afterwards according to user requests.
 
     The function runs on a loop until terminated, consuming inputs from stdin and performing actions based on the
     read inputs. None of the called functions are blocking, so the loop immediately returns to wait for the next

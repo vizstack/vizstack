@@ -37,7 +37,7 @@ export type ViewerContext = {
 };
 
 /**
- * This smart component recursively parses a VizSpec and assembles a nested Viz rendering.
+ * This smart component parses a VizSpec and assembles a corresponding Viz rendering.
  */
 class Viewer extends React.Component<{
 
@@ -53,15 +53,25 @@ class Viewer extends React.Component<{
     /** Information passed down from direct parent Viewer. */
     viewerContext?: ViewerContext,
 
+    /** Function which requests a particular model for a particular Viz from the backend if not already present in the
+     * Redux viz table.*/
     fetchVizModel: (VizId, 'compact' | 'full') => undefined
 
 }, {
 
     /** What expansion mode the viewer is in. */
-    viewerState: string,
+    viewerState: 'summary' | 'compact' | 'full',
 
 }> {
 
+    /**
+     * Constructor.
+     *
+     * Assigns the viewer a state (summary, compact, or full) according to the highest-level model available in its viz
+     * table entry.
+     *
+     * @param props
+     */
     constructor(props) {
         super(props);
         const { vizTable, vizId } = this.props;
@@ -76,7 +86,14 @@ class Viewer extends React.Component<{
         }
     }
 
-    getVizComponent(model: VizModel) {
+    /**
+     * Returns a component which renders the Viz associated with this viewer.
+     * @param model
+     *      The model to be rendered.
+     * @returns
+     *      The Viz component which renders the model.
+     */
+    getVizComponent(model: VizModel): React.Component {
         const { fetchVizModel } = this.props;
         switch(model.type) {
 
@@ -207,12 +224,6 @@ function mapStateToProps(state, props) {
     };
 }
 
-/** Connects bound action creator functions to component props. */
-function mapDispatchToProps(dispatch) {
-    return bindActionCreators({
-    }, dispatch);
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(
+export default connect(mapStateToProps)(
     withStyles(styles)(Viewer)
 );
