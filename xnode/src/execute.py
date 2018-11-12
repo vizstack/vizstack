@@ -3,16 +3,16 @@ import json
 import pdb
 import re
 import sys
-import traceback
 from inspect import currentframe, getframeinfo
 from multiprocessing import Queue
 from os.path import normpath, normcase
 from types import FrameType
-from typing import Callable, Mapping, Union, Any, Optional, NewType
+from typing import Callable, Mapping, Union, Any, Optional
 
+import traceback
 import xn
-from xn.viz import VisualizationEngine, ViewMode
-from xn.constants import VizTableSlice, VizId, Actions
+from xn.constants import VizTableSlice, VizId, ExpansionState, ExecutionEngineMessage
+from xn.viz.engine import VisualizationEngine
 
 # The type of the function which is called to send a message to the parent process.
 _SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool], None]
@@ -140,20 +140,18 @@ def _send_message(send_queue: Queue,
 
     Args:
         send_queue: A queue to which all messages created by `_send_message()` are added.
-        viz_slice: A symbol table slice that the client should add to its local store, or `None`
+        viz_slice: A viz table slice that the client should add to its local store, or `None`
             if no slice should be added.
-        view_viz_id: A symbol ID that the client should view upon receiving the message, or `None`
+        view_viz_id: A viz ID that the client should view upon receiving the message, or `None`
             if no symbol should be viewed.
-        refresh: Whether the client should reset its symbol table information before incorporating the new
-            slice.
-        text: A string printed by the user-specified script.
-        error: The full text of an exception message that should be relayed to the client.
+        refresh: Whether the client should clear its renderings and reset its viz table information before
+            incorporating the new slice.
     """
-    message = {
-        'vizTableSlice': viz_slice,
-        'viewedVizId': view_viz_id,
-        'shouldRefresh': refresh,
-    }
+    message = ExecutionEngineMessage(
+        view_viz_id,
+        viz_slice,
+        refresh,
+    )
     send_queue.put(json.dumps(message, cls=_DataclassJSONEncoder))
 
 
@@ -179,7 +177,7 @@ def _execute_watch(send_message: _SendMessage,
 def _fetch_viz(send_message: _SendMessage,
                engine: VisualizationEngine,
                viz_id: VizId,
-               mode) -> None:
+               expansion_state: ExpansionState) -> None:
     """Fetches the symbol slice of a given symbol and sends it to the client.
 
     Does not signal to the client to create a viewer for the requested symbol.
@@ -189,7 +187,7 @@ def _fetch_viz(send_message: _SendMessage,
         send_message: A function which sends a symbol slice and other information to the client.
         viz_id: The symbol ID of the object whose slice should be sent.
     """
-    viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id, mode)
+    viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id, expansion_state)
     send_message(viz_slice, None, False)
 
 
@@ -234,15 +232,10 @@ def run_script(receive_queue: Queue,
         send_message(None, None, True)
         executor.execute(script_path)
         while True:
-            request: Mapping[str, Union[Actions, VizId]] = receive_queue.get(True)
+            request: Mapping[str, Union[VizId, ExpansionState]] = receive_queue.get(True)
             if request is None:
                 break
-            mode = ViewMode.SUMMARY
-            if request['mode'] == 'compact':
-                mode = ViewMode.COMPACT
-            elif request['mode'] == 'full':
-                mode = ViewMode.FULL
-            _fetch_viz(send_message, engine, request['viz_id'], mode)
+            _fetch_viz(send_message, engine, request['viz_id'], request['expansion_state'])
     except:
         raw_error_msg: str = traceback.format_exc()
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,

@@ -1,4 +1,5 @@
-from typing import Union, NewType, MutableMapping, Mapping, Optional
+from typing import Union, NewType, MutableMapping, Optional, Mapping, Any
+from enum import Enum
 
 # The Python equivalents of the values allowed in JSON
 JsonType = Union[str, float, int, bool, None, list, dict]
@@ -9,14 +10,34 @@ VizId = NewType('VizId', str)
 # Integers which uniquely identify points in execution at which symbol IDs were created
 SnapshotId = NewType('SnapshotId', int)
 
-# A set of key-value pairs which describe all of the properties of a viz
-VizModel = NewType('VizModel', MutableMapping[str, JsonType])
+
+class _Dataclass:
+    def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def __eq__(self, other):
+        """Define two `_Dataclass`s as equal if all of their member fields are equal."""
+        return isinstance(other, type(self)) and vars(self) == vars(other)
+
+
+VizContents = Mapping[str, Any]
+
+
+class VizModel(_Dataclass):
+    def __init__(self,
+                 type: str,
+                 contents: VizContents):
+        self.type: str = type
+        self.contents: VizContents = contents
 
 
 # The format of objects which describe a particular visualization and its metadata that are sent to clients. We use a
 # pseudo-dataclass instead of a named tuple for mutability, and instead of a real dataclass to ensure compliance with
 # Python 3.6.
-class VizSpec:
+class VizSpec(_Dataclass):
     def __init__(self,
                  file_path: str,
                  line_number: int,
@@ -28,28 +49,57 @@ class VizSpec:
         self.summaryModel: VizModel = summary_viz_model
         self.compactModel: Optional[VizModel] = compact_viz_model
         self.fullModel: Optional[VizModel] = full_viz_model
-
-    def __str__(self):
-        return str(self.__dict__)
-
-    def __repr__(self):
-        return str(self.__dict__)
-
-    def __eq__(self, other):
-        """Define two `VizSpec`s as equal if all of their fields are equal."""
-        return isinstance(other, VizSpec) and \
-            self.filePath == other.filePath and \
-            self.lineNumber == other.lineNumber and \
-            self.summaryModel == other.summaryModel and \
-            self.compactModel == other.compactModel and \
-            self.fullModel == other.fullModel
+    #
+    # def __str__(self):
+    #     return str(self.__dict__)
+    #
+    # def __repr__(self):
+    #     return str(self.__dict__)
+    #
+    # def __eq__(self, other):
+    #     """Define two `VizSpec`s as equal if all of their fields are equal."""
+    #     return isinstance(other, VizSpec) and \
+    #         self.filePath == other.filePath and \
+    #         self.lineNumber == other.lineNumber and \
+    #         self.summaryModel == other.summaryModel and \
+    #         self.compactModel == other.compactModel and \
+    #         self.fullModel == other.fullModel
 
 
 # A collection of `VizSpec`s mapped to their respective IDs.
 VizTableSlice = NewType('VizSlice', MutableMapping[VizId, VizSpec])
 
-# A description of an action that should be performed on a constructed viz slice before being sent to the client
-Action = NewType('Action', JsonType)
 
-# A mapping of action names to the descriptions of the requested behavior
-Actions = NewType('Actions', Mapping[str, Action])
+# A message which should be sent to the client, describing a viz to render, a new VizTableSlice to store, and whether
+# the client should clear all existing renders. We use a pseudo-dataclass instead of a named tuple for mutability,
+# and instead of a real dataclass to ensure compliance with Python 3.6.
+class ExecutionEngineMessage(_Dataclass):
+    def __init__(self,
+                 viewed_viz_id: Optional[VizId],
+                 viz_table_slice: Optional[VizTableSlice],
+                 should_refresh: bool) -> None:
+        self.viewedVizId: Optional[VizId] = viewed_viz_id
+        self.vizTableSlice: Optional[VizTableSlice] = viz_table_slice
+        self.shouldRefresh: bool = should_refresh
+
+    # def __str__(self):
+    #     return str(self.__dict__)
+    #
+    # def __repr__(self):
+    #     return str(self.__dict__)
+    #
+    # def __eq__(self, other):
+    #     """Define two `VizSpec`s as equal if all of their fields are equal."""
+    #     return isinstance(other, ExecutionEngineMessage) and \
+    #         self.viewedVizId == other.viewedVizId and \
+    #         self.vizTableSlice == other.vizTableSlice and \
+    #         self.shouldRefresh == other.shouldRefesh
+
+
+# Identifies the summary, compact, and full models of a particular `VizSpec`.
+class ExpansionState(Enum):
+    # No specified view, use Xnode defaults
+    DEFAULT = 0
+    FULL = 1
+    COMPACT = 2
+    SUMMARY = 3
