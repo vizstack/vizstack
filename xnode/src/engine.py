@@ -66,7 +66,7 @@ class _ExecutionManager:
 
     def fetch_viz(self,
                   viz_id: VizId,
-                  actions: Actions) -> None:
+                  mode) -> None:
         """Fetches the data object for a viz from the subprocess.
 
         The subprocess holds the visualizations for all objects in the script's namespace, so requests must be
@@ -81,7 +81,7 @@ class _ExecutionManager:
         """
         self.fetch_queue.put({
             'viz_id': viz_id,
-            'actions': actions,
+            'mode': mode,
         })
 
     @staticmethod
@@ -192,9 +192,9 @@ def _fetch_viz(exec_manager: _ExecutionManager,
     """
     contents: str = message.replace(_FETCH_HEADER, '').split('?')
     viz_id: VizId = contents[0]
-    actions: Actions = json.loads(contents[1])
+    mode = contents[1]
 
-    exec_manager.fetch_viz(viz_id, actions)
+    exec_manager.fetch_viz(viz_id, mode)
 
 
 # ======================================================================================================================
