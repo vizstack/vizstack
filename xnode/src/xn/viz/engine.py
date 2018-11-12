@@ -1,7 +1,7 @@
 from copy import copy
-from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple
+from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple, cast
 
-from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice
+from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice, VizContents
 from xn.viz import _Viz, _get_viz
 
 
@@ -109,20 +109,23 @@ class VisualizationEngine:
                 obj_viz_id = viz_id
             added.add(viz_id)
             full_viz, full_refs = viz_obj.compile_full()
-            full_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
+            # These need to be explicitly cast to VizContents because the function returns a union of different
+            # types, but we know that it will return a VizContents given a VizContents
+            # TODO: maybe use generics here?
+            full_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
                 full_viz.contents,
                 snapshot_id
-            )
+            ))
             compact_viz, compact_refs = viz_obj.compile_compact()
-            compact_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
+            compact_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
                 compact_viz.contents,
                 snapshot_id
-            )
+            ))
             summary_viz = viz_obj.compile_summary()
-            summary_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
+            summary_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
                 summary_viz.contents,
                 snapshot_id
-            )
+            ))
             self._cache[viz_id] = VisualizationEngine._CacheEntry(
                 VizSpec(
                     file_path,
