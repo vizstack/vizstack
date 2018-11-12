@@ -53,9 +53,8 @@ class Viewer extends React.Component<{
     /** Information passed down from direct parent Viewer. */
     viewerContext?: ViewerContext,
 
-    /** Function which requests a particular model for a particular Viz from the backend if not already present in the
-     * Redux viz table.*/
-    fetchVizModel: (VizId, 'compact' | 'full') => undefined
+    /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
+    fetchVizModel: (VizId, 'compact' | 'full') => void,
 
 }, {
 

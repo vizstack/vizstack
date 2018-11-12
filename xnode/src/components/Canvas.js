@@ -26,6 +26,7 @@ import {
 import { getCanvasLayout } from "../state/canvas/outputs";
 import { getVizTable } from "../state/viztable/outputs";
 import type { VizId, VizSpec } from "../state/viztable/outputs";
+import {getMinimalDisambiguatedPaths} from "../services/path-utils";
 
 
 /** Component to display when loading data */
@@ -41,8 +42,8 @@ class Canvas extends React.Component<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    /** `ViewerModel` objects for rendering. See `getCanvasViewers()`. */
-    viewers: Array<ViewerModel>,
+    /** `ViewerModel` objects for rendering. See `assembleViewerModels()`. */
+    viewerModels: Array<ViewerModel>,
 
     /**
      * See `views/repl/fetchVizModel(vizId)`.
@@ -52,20 +53,20 @@ class Canvas extends React.Component<{
     fetchVizModel: (vizId: VizId, modelType: string) => void,
 
     /**
-     * See `state/canvas/actions/showViewerInCanvasAction`.
+     * See `state/canvas/actions/showViewerInCanvasAction()`.
      * @param vizId
      * @param insertAfterIdx?
      */
     showViewer: (vizId: VizId, insertAfterIdx?: number) => void,
 
     /**
-     * See `state/canvas/actions/hideViewerInCanvasAction`.
+     * See `state/canvas/actions/hideViewerInCanvasAction()`.
      * @param vizId
      */
     hideViewer: (vizId: VizId) => void,
 
     /**
-     * See `state/canvas/actions/reorderViewerInCanvasAction`.
+     * See `state/canvas/actions/reorderViewerInCanvasAction()`.
      * @param startIdx
      * @param endIdx
      */
@@ -99,10 +100,10 @@ class Canvas extends React.Component<{
      * @param viewer
      * @param idx
      */
-    createFramedViewerComponent(viewer: ViewerModel, idx: number) {
+    createFramedViewerComponent(viewerModel: ViewerModel, idx: number) {
         const { showViewer, hideViewer, fetchVizModel } = this.props;
-        const { vizId, vizSpec } = viewer;
-        const title = !vizSpec ? kLoadingMsg : `${vizSpec.filePath}:${vizSpec.lineNumber}`;
+        const { vizId, vizSpec } = viewerModel;
+
         const buttons = [
             // TODO: Duplicate should also replicate the existing state of a viewer
             { title: 'Duplicate', icon: <DuplicateIcon/>, onClick: () => showViewer(vizId, idx) },
@@ -110,8 +111,7 @@ class Canvas extends React.Component<{
         ];
 
         return (
-            <ViewerDisplayFrame title={title}
-                                buttons={buttons}>
+            <ViewerDisplayFrame buttons={buttons}>
                 {!vizSpec ? kLoadingSpinner : (
                     <Viewer vizId={vizId} fetchVizModel={fetchVizModel} />
                 )}
@@ -123,31 +123,43 @@ class Canvas extends React.Component<{
      * Renders the inspector canvas and all viewers managed by it.
      */
     render() {
-        const { classes, viewers } = this.props;
-        const frames = viewers.map((viewer: ViewerModel, idx: number) => {
+        const { classes, viewerModels } = this.props;
+
+        // Only display minimal disambiguated paths, and collapse consecutive identical paths.
+        const fullPaths = viewerModels.map((viewerModel: ViewerModel) => viewerModel.vizSpec.filePath);
+        const fullToMinimal = getMinimalDisambiguatedPaths(fullPaths);
+        let minimalPaths = [];
+        for (let i = 0; i < fullPaths.length; i++) {
+            minimalPaths[i] = fullPaths[i-1] != fullPaths[i] ? fullToMinimal[fullPaths[i]] : null;
+        }
+
+        // Construct draggable viewers within frames.
+        const framedViewers = viewerModels.map((viewerModel: ViewerModel, idx: number) => {
             return (
-                <Draggable key={viewer.vizId} draggableId={viewer.vizId} index={idx}>
+                <Draggable key={viewerModel.vizId} draggableId={viewerModel.vizId} index={idx}>
                     {(provided: DraggableProvided) => (
                         <div ref={provided.innerRef}
                              className={classes.frameContainer}
                              {...provided.draggableProps}
                              {...provided.dragHandleProps}>
-                            {this.createFramedViewerComponent(viewer, idx)}
+                            <span>{minimalPaths[idx]}</span>
+                            {this.createFramedViewerComponent(viewerModel, idx)}
                         </div>
                     )}
                 </Draggable>
             )
         });
 
-        console.debug(`Canvas -- rendering ${frames.length} viewer frame(s)`, viewers);
+        console.debug(`Canvas -- rendering ${viewerModels.length} viewer models`, viewerModels);
 
         return (
             <div className={classNames(classes.canvasContainer)}>
                 <DragDropContext onDragEnd={this.onDragEnd}>
                     <Droppable droppableId="canvas">
                         {(provided: DroppableProvided) => (
-                            <div ref={provided.innerRef} {...provided.droppableProps}>
-                                {frames}
+                            <div ref={provided.innerRef}
+                                 {...provided.droppableProps}>
+                                {framedViewers}
                                 {provided.placeholder}
                             </div>
                         )}
@@ -192,7 +204,7 @@ type ViewerModel = {
  * TODO: check if this has issues with multiple canvases accessing the same selector
  * @param state
  */
-const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
+const assembleViewerModels: ({}) => Array<ViewerModel> = createSelector(
     (state) => getCanvasLayout(state.canvas),
     (state) => getVizTable(state.viztable),
     (layout: Array<VizId>, vizTable: {[VizId]: VizSpec}): Array<ViewerModel> => {
@@ -208,7 +220,7 @@ const getCanvasViewers: ({}) => Array<ViewerModel> = createSelector(
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        viewers:   getCanvasViewers(state),
+        viewerModels:   assembleViewerModels(state),
     };
 }
 

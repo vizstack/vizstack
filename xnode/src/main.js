@@ -4,7 +4,7 @@ import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './views/repl';
 
-import { getMinimalUniquePaths } from "./services/path-utils";
+import { getMinimalDisambiguatedPaths } from "./services/path-utils";
 
 // Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
 let RERUN_DELAY = 2000;
@@ -49,7 +49,7 @@ export default {
                     const tokens = uri.split('/');
                     const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
                     this.repls.push(repl);
-                    const minimalUniquePaths = getMinimalUniquePaths(this.repls.filter(repl => !repl.isDestroyed).map(repl => repl.scriptPath));
+                    const minimalUniquePaths = getMinimalDisambiguatedPaths(this.repls.filter(repl => !repl.isDestroyed).map(repl => repl.scriptPath));
                     this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
                        repl.name = minimalUniquePaths[repl.scriptPath];
                     });
