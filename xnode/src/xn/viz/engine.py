@@ -1,5 +1,5 @@
 from copy import copy
-from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple, cast
+from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple, overload, Dict
 
 from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice, VizContents
 from xn.viz import _Viz, _get_viz
@@ -54,8 +54,26 @@ class VisualizationEngine:
         return VizId('@id:{}!{}!'.format(str(id(obj)), snapshot_id))
 
     @staticmethod
-    def _replace_viz_with_viz_ids(o: Union[JsonType, '_Viz'],
-                                  snapshot_id: SnapshotId) -> Union[JsonType, VizId]:
+    @overload
+    def _replace_viz_with_viz_ids(o: '_Viz',
+                                  snapshot_id: SnapshotId) -> VizId:
+        ...
+
+    @staticmethod
+    @overload
+    def _replace_viz_with_viz_ids(o: Dict[str, Any],
+                                  snapshot_id: SnapshotId) -> Dict[str, Any]:
+        ...
+
+    @staticmethod
+    @overload
+    def _replace_viz_with_viz_ids(o: List[Any],
+                                  snapshot_id: SnapshotId) -> List[Any]:
+        ...
+
+    @staticmethod
+    def _replace_viz_with_viz_ids(o,
+                                  snapshot_id):
         """Recursively generates a version of `o` where all _Viz objects are replaced by their respective _VizIds.
 
         No changes are made to `o`.
@@ -109,23 +127,20 @@ class VisualizationEngine:
                 obj_viz_id = viz_id
             added.add(viz_id)
             full_viz, full_refs = viz_obj.compile_full()
-            # These need to be explicitly cast to VizContents because the function returns a union of different
-            # types, but we know that it will return a VizContents given a VizContents
-            # TODO: maybe use generics here?
-            full_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
+            full_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
                 full_viz.contents,
                 snapshot_id
-            ))
+            )
             compact_viz, compact_refs = viz_obj.compile_compact()
-            compact_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
+            compact_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
                 compact_viz.contents,
                 snapshot_id
-            ))
+            )
             summary_viz = viz_obj.compile_summary()
-            summary_viz.contents = cast(VizContents, VisualizationEngine._replace_viz_with_viz_ids(
+            summary_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
                 summary_viz.contents,
                 snapshot_id
-            ))
+            )
             self._cache[viz_id] = VisualizationEngine._CacheEntry(
                 VizSpec(
                     file_path,
