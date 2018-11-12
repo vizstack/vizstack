@@ -32,7 +32,7 @@ class SequenceLayout extends React.PureComponent<{
 
 }> {
 
-    /** Prop default values object. */
+    /** Prop default values. */
     static defaultProps = {
         showIndices: true,
         startMotif: "",

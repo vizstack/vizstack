@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from "prop-types";
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
@@ -8,16 +7,18 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 
 
-class SandboxSettingsModal extends Component {
+class SandboxSettingsModal extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        children: PropTypes.object,
-        classes:  PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /* The default content of the `scriptPath` parameter. */
-        defaultScriptPath: PropTypes.string.isRequired,
-    };
+    /** React components within opening & closing tags. */
+    children: React.Node,
+
+    /** The default path of the created sandbox's script. */
+    defaultScriptPath: string,
+
+}> {
 
     /**
      * Constructor.

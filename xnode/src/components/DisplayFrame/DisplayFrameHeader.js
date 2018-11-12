@@ -1,25 +1,23 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
 
 /**
- * This dumb component creates a header bar for a display frame that horizontally lays out its children components.
+ * This pure dumb component creates a header bar for a display frame that horizontally lays out its children components.
  * A header is thicker and is emphasized with an accent color; it will typically contain title/subtitle text and icons,
  * grouped with `div`s appropriately for the desired spacing.
  * TODO: Allow style overrides with 'classes'
  */
-class DisplayFrameHeader extends Component {
+class DisplayFrameHeader extends React.PureComponent<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes:  PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** React components within opening & closing tags. */
-        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
-    };
+    /** React components within opening & closing tags. */
+    children: React.Node,
+
+}> {
 
     /**
      * Renders a header container with specific styling and horizontal layout properties.

@@ -1,10 +1,6 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import classNames from 'classnames';
-
+import * as React from 'react';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
-
 
 import DisplayFrame, { DisplayFrameContent } from './DisplayFrame/index';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -16,23 +12,26 @@ import IconButton from '@material-ui/core/IconButton';
  * functions common to all `[*]ViewerSpec`.
  * TODO: Add save to image button.
  */
-class ViewerDisplayFrame extends Component {
+class ViewerDisplayFrame extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** React components within opening & closing tags. */
-        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+    /** React components within opening & closing tags. */
+    children: React.Node,
 
-        /** Left-justified text string/element to display before frame. */
-        title: PropTypes.oneOfType([PropTypes.string, PropTypes.element]),
+    /** Left-justified text string/element to display before frame. */
+    title?: string | React.Node,
 
-        /** Right-justified button elements to overlay on content, with the following data schema:
-         * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */
-        buttons: PropTypes.array,
-    };
+    /** Right-justified button elements to overlay on content, with the following data schema:
+     * [{title: "Click  Me", onClick: myFn, icon: <MyIcon/>},...] */
+    buttons?: Array<{
+        title: string,
+        onClick: () => mixed,
+        icon: React.Node,
+    }>,
+
+}> {
 
     /**
      * Renders child components inside the common frame/header/content, with `additionalIcons`/`additionalText`

@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
@@ -37,43 +36,42 @@ const kLoadingMsg = "Loading ...";
  * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
  * of `ViewerFrame` objects that can be moved with drag-and-drop.
  */
-class Canvas extends Component {
+class Canvas extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object (from `withStyles`). */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** `Viewer` objects for rendering. See `getCanvasViewers()`. */
-        viewers: PropTypes.array.isRequired,
+    /** `ViewerModel` objects for rendering. See `getCanvasViewers()`. */
+    viewers: Array<ViewerModel>,
 
-        /**
-         * See `views/repl/fetchVizModel(vizId)`.
-         * @param vizId
-         * @param modelType
-         */
-        fetchVizModel: PropTypes.func.isRequired,
+    /**
+     * See `views/repl/fetchVizModel(vizId)`.
+     * @param vizId
+     * @param modelType
+     */
+    fetchVizModel: (vizId: VizId, modelType: string) => void,
 
-        /**
-         * See `state/canvas/actions/showViewerInCanvasAction`.
-         * @param vizId
-         * @param insertAfterIdx?
-         */
-        showViewer: PropTypes.func.isRequired,
+    /**
+     * See `state/canvas/actions/showViewerInCanvasAction`.
+     * @param vizId
+     * @param insertAfterIdx?
+     */
+    showViewer: (vizId: VizId, insertAfterIdx?: number) => void,
 
-        /**
-         * See `state/canvas/actions/hideViewerInCanvasAction`.
-         * @param vizId
-         */
-        hideViewer: PropTypes.func.isRequired,
+    /**
+     * See `state/canvas/actions/hideViewerInCanvasAction`.
+     * @param vizId
+     */
+    hideViewer: (vizId: VizId) => void,
 
-        /**
-         * See `state/canvas/actions/reorderViewerInCanvasAction`.
-         * @param startIdx
-         * @param endIdx
-         */
-        reorderViewer: PropTypes.func.isRequired,
-    };
+    /**
+     * See `state/canvas/actions/reorderViewerInCanvasAction`.
+     * @param startIdx
+     * @param endIdx
+     */
+    reorderViewer: (startIdx: number, endIdx: number) => void,
+
+}> {
 
     /** Constructor. */
     constructor(props) {

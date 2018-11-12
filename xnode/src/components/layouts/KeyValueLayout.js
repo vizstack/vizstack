@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
@@ -9,31 +8,30 @@ import TokenViz from '../primitives/TokenPrimitive';
 /**
  * This dumb component renders visualization for a sequence of arbitrary key-value pairs.
  */
-class KeyValueViz extends Component {
+class KeyValueLayout extends React.Component<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes: PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** Data model rendered by this viz (an array of length-2 arrays representing key value pairs). Uses an array
-         *  instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
-         *  between renderings. */
-        elements: PropTypes.array.isRequired,
+    /** Data model rendered by this viz (an array of length-2 arrays representing key value pairs). Uses an array
+     *  instead of an object so that non-string keys can be used, and to maintain the order of key-value pairs
+     *  between renderings. */
+    elements: Array<{}>,
 
-        /** Characters to place at start/end of the key-value sequence as decoration, e.g. "{" and "}" for dicts. */
-        startMotif: PropTypes.string,
-        endMotif:   PropTypes.string,
+    /** Characters to place at start/end of the key-value sequence as decoration, e.g. "{" and "}" for dicts. */
+    startMotif?: string,
+    endMotif?:   string,
 
-        /** Individual key and value item dimension constraints (in px or '%'). */
-        keyMinWidth:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        keyMaxWidth:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        valueMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        valueMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemHeight:    PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-    };
+    /** Individual key and value item dimension constraints (in px or '%'). */
+    keyMinWidth?:   number | string,
+    keyMaxWidth?:   number | string,
+    valueMinWidth?: number | string,
+    valueMaxWidth?: number | string,
+    itemHeight?:    number | string,
 
-    /** Prop default values object. */
+}> {
+
+    /** Prop default values. */
     static defaultProps = {
         startMotif: "",
         endMotif: "",
@@ -160,4 +158,4 @@ const styles = theme => ({
     }
 });
 
-export default withStyles(styles)(KeyValueViz);
+export default withStyles(styles)(KeyValueLayout);

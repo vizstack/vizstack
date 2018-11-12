@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../primitives/TokenPrimitive';
+import TokenViz from '../../primitives/TokenPrimitive';
 
 
 /**

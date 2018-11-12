@@ -1,5 +1,4 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
@@ -10,19 +9,18 @@ import { withStyles } from '@material-ui/core/styles';
  * TODO: This component could be improved by incorporating more complex grid layout functionality (using flexbox grid)
  * in order to more closely resemble Java's JPanel.
  */
-class DisplayFrameContent extends Component {
+class DisplayFrameContent extends React.PureComponent<{
 
-    /** Prop expected types object. */
-    static propTypes = {
-        /** CSS-in-JS styling object. */
-        classes:  PropTypes.object.isRequired,
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** React components within opening & closing tags. */
-        children: PropTypes.oneOfType([PropTypes.element, PropTypes.array]),
+    /** React components within opening & closing tags. */
+    children: React.Node,
 
-        /** Class tags to allow additional styling of container. */
-        className: PropTypes.string,
-    };
+    /** Class tags to allow additional styling of container. */
+    className?: string,
+
+}> {
 
     /**
      * Renders a content container with specific styling and vertical layout properties.
