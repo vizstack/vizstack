@@ -2,7 +2,7 @@ import argparse
 import sys
 import threading
 from multiprocessing import Process, Queue
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from xn.constants import VizId, ExpansionState
 from execute import run_script
@@ -86,7 +86,7 @@ class _ExecutionManager:
         })
 
     @staticmethod
-    def _start_exec_process(script_path: str) -> (Process, Queue, Queue):
+    def _start_exec_process(script_path: str) -> Tuple[Process, Queue, Queue]:
         """Starts a new process, which runs a user-written script inside of a Pdb instance.
 
         Two queues are created to communicate with the new process; one is filled by the subprocess with
@@ -104,7 +104,7 @@ class _ExecutionManager:
         fetch_queue: Queue = Queue()
         print_queue: Queue = Queue()
         process: Process = Process(target=run_script, args=(fetch_queue, print_queue, script_path))
-        process.daemon: bool = True
+        process.daemon = True
         process.start()
         print_queue.get()  # gotta do this here once for some reason
 
@@ -178,7 +178,8 @@ def _execute(exec_manager: Optional[_ExecutionManager],
     """
     if exec_manager:
         exec_manager.terminate()
-    exec_manager: _ExecutionManager = _ExecutionManager(script_path)
+    exec_manager = _ExecutionManager(script_path)
+    assert exec_manager is not None
     return exec_manager
 
 
@@ -194,8 +195,8 @@ def _fetch_viz(exec_manager: _ExecutionManager,
             where `expansion_state` is one of "summary", "compact", or "full", indicating the particular model which
             should be fetched.
     """
-    contents: str = message.replace(_FETCH_HEADER, '').split('?')
-    viz_id: VizId = contents[0]
+    contents: List[str] = message.replace(_FETCH_HEADER, '').split('?')
+    viz_id: VizId = VizId(contents[0])
     expansion_state: ExpansionState = ExpansionState.FULL if contents[1] == 'full' else ExpansionState.COMPACT if \
         contents[1] == 'compact' else ExpansionState.SUMMARY
 
@@ -235,7 +236,7 @@ def main() -> None:
         message: str = input()
         if message.startswith(_EDIT_HEADER):
             if _should_execute(script_path, message):
-                exec_manager: _ExecutionManager = _execute(exec_manager, script_path)
+                exec_manager = _execute(exec_manager, script_path)
 
         elif message.startswith(_FETCH_HEADER):
             if exec_manager:

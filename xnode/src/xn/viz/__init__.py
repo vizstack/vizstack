@@ -1,4 +1,4 @@
-from typing import Sequence, Any, Mapping, Iterable, Optional, List, Dict
+from typing import Sequence, Any, Mapping, Iterable, Optional, List, Dict, Tuple
 from enum import Enum
 from xn.constants import VizModel, ExpansionState
 
@@ -69,7 +69,7 @@ class _Viz:
     """
     def __init__(self,
                  name: Optional[str],
-                 expansion_state: ExpansionState):
+                 expansion_state: ExpansionState) -> None:
         """Constructor.
 
         Args:
@@ -80,7 +80,7 @@ class _Viz:
         self._name: Optional[str] = name
         self.default_expansion_state: ExpansionState = expansion_state
 
-    def compile_full(self) -> (VizModel, Iterable['_Viz']):
+    def compile_full(self) -> Tuple[VizModel, Iterable['_Viz']]:
         """Creates a VizModel which describes this _Viz and can be sent to a client for rendering.
 
         Returns:
@@ -89,7 +89,7 @@ class _Viz:
         """
         raise NotImplementedError
 
-    def compile_compact(self) -> (VizModel, Iterable['_Viz']):
+    def compile_compact(self) -> Tuple[VizModel, Iterable['_Viz']]:
         """Creates a compact VizModel which describes this _Viz and can be sent to a client for rendering.
 
         Returns:
@@ -143,10 +143,10 @@ class TokenPrimitive(_Viz):
         self._text: str = str(val)
         self._color: Color = color
 
-    def compile_full(self) -> ('TokenPrimitiveModel', Iterable[_Viz]):
+    def compile_full(self) -> Tuple['TokenPrimitiveModel', Iterable[_Viz]]:
         return TokenPrimitiveModel(self._text), []
 
-    def compile_compact(self) -> ('TokenPrimitiveModel', Iterable[_Viz]):
+    def compile_compact(self) -> Tuple['TokenPrimitiveModel', Iterable[_Viz]]:
         return TokenPrimitiveModel(self._text), []
 
     def compile_summary(self) -> 'TokenPrimitiveModel':
@@ -181,10 +181,10 @@ class SequenceLayout(_Viz):
         self._orientation: str = orientation
         self._elements: List[_Viz] = [_get_viz(elem) for elem in elements]
 
-    def compile_full(self) -> ('SequenceLayoutModel', Iterable[_Viz]):
+    def compile_full(self) -> Tuple['SequenceLayoutModel', Iterable[_Viz]]:
         return SequenceLayoutModel(self._elements, self._orientation), self._elements
 
-    def compile_compact(self) -> ('SequenceLayoutModel', Iterable[_Viz]):
+    def compile_compact(self) -> Tuple['SequenceLayoutModel', Iterable[_Viz]]:
         return SequenceLayoutModel(self._elements[:SequenceLayout.COMPACT_LEN], self._orientation), \
                self._elements[:SequenceLayout.COMPACT_LEN]
 
@@ -216,12 +216,12 @@ class KeyValueLayout(_Viz):
             _get_viz(key): _get_viz(value) for key, value in key_value_mapping.items()
         }
 
-    def compile_full(self) -> ('KeyValueLayoutModel', Iterable[_Viz]):
+    def compile_full(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
         return KeyValueLayoutModel(self._key_value_mapping), \
                list(self._key_value_mapping.keys()) + list(self._key_value_mapping.values())
 
-    def compile_compact(self) -> ('KeyValueLayoutModel', Iterable[_Viz]):
-        items = self._key_value_mapping.items()[:KeyValueLayout.COMPACT_LEN]
+    def compile_compact(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
+        items = list(self._key_value_mapping.items())[:KeyValueLayout.COMPACT_LEN]
         return KeyValueLayoutModel({key: value for key, value in items}), \
                [key for key, _ in items] + [value for _, value in items]
 
@@ -237,7 +237,7 @@ class KeyValueLayout(_Viz):
 
 class TokenPrimitiveModel(VizModel):
     def __init__(self,
-                 text: str):
+                 text: str) -> None:
         super(TokenPrimitiveModel, self).__init__(
             'TokenPrimitive',
             {
@@ -249,7 +249,7 @@ class TokenPrimitiveModel(VizModel):
 class SequenceLayoutModel(VizModel):
     def __init__(self,
                  elements: List['_Viz'],
-                 orientation: str):
+                 orientation: str) -> None:
         super(SequenceLayoutModel, self).__init__(
             'SequenceLayout',
             {
@@ -261,7 +261,7 @@ class SequenceLayoutModel(VizModel):
 
 class KeyValueLayoutModel(VizModel):
     def __init__(self,
-                 elements: Dict['_Viz', '_Viz']):
+                 elements: Dict['_Viz', '_Viz']) -> None:
         super(KeyValueLayoutModel, self).__init__(
             'KeyValueLayout',
             {

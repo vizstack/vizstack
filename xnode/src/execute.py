@@ -19,7 +19,7 @@ _SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool], None]
 
 
 # Taken from atom-python-debugger
-class _ScriptExecutor(pdb.Pdb):
+class _ScriptExecutor(pdb.Pdb):  # type: ignore
     """Runs a given Python script within the same process.
 
     The `_ScriptExecutor` is a modified `Pdb` instance, using the `Pdb._runscript()` function to execute given
@@ -28,7 +28,7 @@ class _ScriptExecutor(pdb.Pdb):
 
     def __init__(self,
                  **kwargs) -> None:
-        pdb.Pdb.__init__(self, **kwargs)
+        pdb.Pdb.__init__(self, **kwargs)  # type: ignore
 
     # ==================================================================================================================
     # Public methods.
@@ -109,7 +109,7 @@ class _PrintOverwriter:
     def write(self, text: str) -> None:
         if text == '\n':
             return
-        frame_info = getframeinfo(currentframe().f_back)
+        frame_info = getframeinfo(currentframe().f_back)  # type: ignore
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = self._engine.take_snapshot(text, filename, lineno)
         viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
@@ -167,7 +167,7 @@ def _execute_watch(send_message: _SendMessage,
         objects: Object(s) whose symbol slice should be created and sent.
     """
     for obj in objects:
-        frame_info = getframeinfo(currentframe().f_back.f_back)
+        frame_info = getframeinfo(currentframe().f_back.f_back)  # type: ignore
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = engine.take_snapshot(obj, filename, lineno)
         viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
@@ -225,7 +225,7 @@ def run_script(receive_queue: Queue,
     xn.set_view_fn(functools.partial(_execute_watch, send_message, engine))
 
     # Replace stdout with an object that queues all statements printed by the user script as messages
-    sys.stdout = _PrintOverwriter(engine, send_message)
+    sys.stdout = _PrintOverwriter(engine, send_message)  # type: ignore
 
     executor: _ScriptExecutor = _ScriptExecutor()
     try:
@@ -235,14 +235,20 @@ def run_script(receive_queue: Queue,
             request: Mapping[str, Union[VizId, ExpansionState]] = receive_queue.get(True)
             if request is None:
                 break
+            assert not isinstance(request['viz_id'], ExpansionState)
+            assert isinstance(request['expansion_state'], ExpansionState)
             _fetch_viz(send_message, engine, request['viz_id'], request['expansion_state'])
     except:
         raw_error_msg: str = traceback.format_exc()
         result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,
                            re.DOTALL)
+        if result is None:
+            raise
         clean_error_msg: str = result.group(1) + result.group(3)
         result = re.search(r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$", clean_error_msg,
                            re.DOTALL)
+        if result is None:
+            raise
         viz_id: VizId = engine.take_snapshot(clean_error_msg, result.group(1), int(result.group(2)))
         viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
         send_message(viz_slice, viz_id, False)

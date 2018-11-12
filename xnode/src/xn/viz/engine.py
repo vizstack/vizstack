@@ -1,7 +1,7 @@
 from copy import copy
-from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet
+from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple
 
-from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice, VizContents
+from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice
 from xn.viz import _Viz, _get_viz
 
 
@@ -20,7 +20,7 @@ class VisualizationEngine:
                      compact_viz_model: VizModel,
                      full_viz_refs: List[VizId],
                      compact_viz_refs: List[VizId],
-                     expansion_state: ExpansionState):
+                     expansion_state: ExpansionState) -> None:
             """Constructor.
 
             Args:
@@ -106,24 +106,24 @@ class VisualizationEngine:
             viz_obj: _Viz = to_cache.pop()
             viz_id: VizId = VisualizationEngine._get_viz_id(viz_obj, snapshot_id)
             if obj_viz_id is None:
-                obj_viz_id: VizId = viz_id
+                obj_viz_id = viz_id
             added.add(viz_id)
             full_viz, full_refs = viz_obj.compile_full()
-            full_viz.contents: VizContents = VisualizationEngine._replace_viz_with_viz_ids(
+            full_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
                 full_viz.contents,
                 snapshot_id
             )
             compact_viz, compact_refs = viz_obj.compile_compact()
-            compact_viz.contents: VizContents = VisualizationEngine._replace_viz_with_viz_ids(
+            compact_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
                 compact_viz.contents,
                 snapshot_id
             )
             summary_viz = viz_obj.compile_summary()
-            summary_viz.contents: VizContents = VisualizationEngine._replace_viz_with_viz_ids(
+            summary_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(  # type: ignore
                 summary_viz.contents,
                 snapshot_id
             )
-            self._cache[viz_id]: VisualizationEngine._CacheEntry = VisualizationEngine._CacheEntry(
+            self._cache[viz_id] = VisualizationEngine._CacheEntry(
                 VizSpec(
                     file_path,
                     line_number,
@@ -138,6 +138,7 @@ class VisualizationEngine:
                 viz_obj.default_expansion_state,
             )
             to_cache += full_refs
+        assert obj_viz_id is not None
         return obj_viz_id
 
     # ==================================================================================================================
@@ -168,7 +169,7 @@ class VisualizationEngine:
         Returns:
             The VizId of `obj` at the current point in the program's execution.
         """
-        self._next_snapshot_id += 1
+        self._next_snapshot_id = SnapshotId(self._next_snapshot_id + 1)
         return self._cache_slice(obj, file_path, line_number, self._next_snapshot_id)
 
     def get_snapshot_slice(self,
@@ -188,20 +189,22 @@ class VisualizationEngine:
         Returns:
             A VizTableSlice containing all of the information needed to visualize `viz_id` in the given expansion state.
         """
-        viz_slice: VizTableSlice = dict()
-        to_add: MutableSequence[(VizId, ExpansionState, Optional[ExpansionState])] = [(viz_id, ExpansionState.DEFAULT,
-                                                                                       expansion_state)]
+        viz_slice: VizTableSlice = VizTableSlice(dict())
+        to_add: MutableSequence[Tuple[VizId, ExpansionState, Optional[ExpansionState]]] = [
+            (viz_id, ExpansionState.DEFAULT, expansion_state)
+        ]
         while len(to_add) > 0:
             viz_id, parent_view_mode, force_view_mode = to_add.pop()
             if viz_id in viz_slice:
                 continue
             viz_slice[viz_id] = copy(self._cache[viz_id].viz_spec)
-            expansion_state: ExpansionState = (force_view_mode if force_view_mode is not None
-                                   else self._cache[viz_id].default_view
-                                   if self._cache[viz_id].default_view != ExpansionState.DEFAULT
-                                   else ExpansionState.FULL if parent_view_mode == ExpansionState.DEFAULT
-                                   else ExpansionState.COMPACT if parent_view_mode == ExpansionState.FULL
-                                   else ExpansionState.SUMMARY)
+            expansion_state = (
+                force_view_mode if force_view_mode is not None
+                else self._cache[viz_id].default_view
+                if self._cache[viz_id].default_view != ExpansionState.DEFAULT
+                else ExpansionState.FULL if parent_view_mode == ExpansionState.DEFAULT
+                else ExpansionState.COMPACT if parent_view_mode == ExpansionState.FULL
+                else ExpansionState.SUMMARY)
 
             if expansion_state == ExpansionState.COMPACT:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model

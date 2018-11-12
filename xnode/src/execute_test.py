@@ -2,11 +2,12 @@ import json
 import threading
 import os
 from multiprocessing import Queue
+from typing import Mapping, Optional, Tuple
 
 import execute
 from xn.constants import ExpansionState
 
-_RESET_MESSAGE: str = {'viewedVizId': None, 'vizTableSlice': None, 'shouldRefresh': True}
+_RESET_MESSAGE: Mapping[str, Optional[bool]] = {'viewedVizId': None, 'vizTableSlice': None, 'shouldRefresh': True}
 
 
 class _RunScriptThread(threading.Thread):
@@ -23,7 +24,7 @@ class _RunScriptThread(threading.Thread):
         execute.run_script(self.receive_queue, self.send_queue, self.script_path)
 
 
-def _start_script_thread(script_path: str) -> (_RunScriptThread, Queue, Queue):
+def _start_script_thread(script_path: str) -> Tuple[_RunScriptThread, Queue, Queue]:
     request_queue: Queue = Queue()
     output_queue: Queue = Queue()
     thread: _RunScriptThread = _RunScriptThread(request_queue, output_queue, script_path)

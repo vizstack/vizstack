@@ -1,8 +1,8 @@
-from typing import Union, NewType, MutableMapping, Optional, Mapping, Any
+from typing import Union, NewType, MutableMapping, Optional, Dict, Any
 from enum import Enum
 
 # The Python equivalents of the values allowed in JSON
-JsonType = Union[str, float, int, bool, None, list, dict]
+JsonType = Union[str, float, int, bool, None, list, Dict[str, Any]]
 
 # Strings which represent the unique identifier for a particular Python object at a particular point in execution
 VizId = NewType('VizId', str)
@@ -23,13 +23,13 @@ class _Dataclass:
         return isinstance(other, type(self)) and vars(self) == vars(other)
 
 
-VizContents = Mapping[str, Any]
+VizContents = Dict[str, Any]
 
 
 class VizModel(_Dataclass):
     def __init__(self,
                  type: str,
-                 contents: VizContents):
+                 contents: VizContents) -> None:
         self.type: str = type
         self.contents: VizContents = contents
 
@@ -43,31 +43,16 @@ class VizSpec(_Dataclass):
                  line_number: int,
                  summary_viz_model: VizModel,
                  compact_viz_model: Optional[VizModel],
-                 full_viz_model: Optional[VizModel]):
+                 full_viz_model: Optional[VizModel]) -> None:
         self.filePath: str = file_path
         self.lineNumber: int = line_number
         self.summaryModel: VizModel = summary_viz_model
         self.compactModel: Optional[VizModel] = compact_viz_model
         self.fullModel: Optional[VizModel] = full_viz_model
-    #
-    # def __str__(self):
-    #     return str(self.__dict__)
-    #
-    # def __repr__(self):
-    #     return str(self.__dict__)
-    #
-    # def __eq__(self, other):
-    #     """Define two `VizSpec`s as equal if all of their fields are equal."""
-    #     return isinstance(other, VizSpec) and \
-    #         self.filePath == other.filePath and \
-    #         self.lineNumber == other.lineNumber and \
-    #         self.summaryModel == other.summaryModel and \
-    #         self.compactModel == other.compactModel and \
-    #         self.fullModel == other.fullModel
 
 
 # A collection of `VizSpec`s mapped to their respective IDs.
-VizTableSlice = NewType('VizSlice', MutableMapping[VizId, VizSpec])
+VizTableSlice = NewType('VizTableSlice', MutableMapping[VizId, VizSpec])
 
 
 # A message which should be sent to the client, describing a viz to render, a new VizTableSlice to store, and whether
@@ -81,19 +66,6 @@ class ExecutionEngineMessage(_Dataclass):
         self.viewedVizId: Optional[VizId] = viewed_viz_id
         self.vizTableSlice: Optional[VizTableSlice] = viz_table_slice
         self.shouldRefresh: bool = should_refresh
-
-    # def __str__(self):
-    #     return str(self.__dict__)
-    #
-    # def __repr__(self):
-    #     return str(self.__dict__)
-    #
-    # def __eq__(self, other):
-    #     """Define two `VizSpec`s as equal if all of their fields are equal."""
-    #     return isinstance(other, ExecutionEngineMessage) and \
-    #         self.viewedVizId == other.viewedVizId and \
-    #         self.vizTableSlice == other.vizTableSlice and \
-    #         self.shouldRefresh == other.shouldRefesh
 
 
 # Identifies the summary, compact, and full models of a particular `VizSpec`.
