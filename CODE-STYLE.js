@@ -23,7 +23,6 @@
 // Add optional notes here. A block should be used to group a set of related functions or variables. The relative
 // ordering of blocks are important -- make sure that the entire code file is logically organized. Imagine a user is
 // completely new to this codebase and is trying to understand what is going on.
-// =====================================================================================================================
 
 // Subsection description
 // ----------------------
