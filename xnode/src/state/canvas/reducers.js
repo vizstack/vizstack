@@ -1,10 +1,9 @@
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
-import type {VizId} from "../viztable/outputs";
+import type { VizId } from '../viztable/outputs';
 
 /** Root reducer's state slice shape. */
 export type CanvasState = {
-
     // List of VizIds in order of display.
     layout: Array<VizId>,
 };
@@ -21,15 +20,18 @@ const initialState: CanvasState = Immutable({
  */
 export function canvasReducer(state: CanvasState = initialState, action = {}) {
     const { type } = action;
-    switch(type) {
-        case CanvasActions.CLEAR_CANVAS:                return clearCanvasReducer(state, action);
-        case CanvasActions.SHOW_VIEWER_IN_CANVAS:       return showViewerInCanvasReducer(state, action);
-        case CanvasActions.HIDE_VIEWER_IN_CANVAS:       return hideViewerInCanvasReducer(state, action);
-        case CanvasActions.REORDER_VIEWER_IN_CANVAS:    return reorderViewerInCanvasReducer(state, action);
+    switch (type) {
+        case CanvasActions.CLEAR_CANVAS:
+            return clearCanvasReducer(state, action);
+        case CanvasActions.SHOW_VIEWER_IN_CANVAS:
+            return showViewerInCanvasReducer(state, action);
+        case CanvasActions.HIDE_VIEWER_IN_CANVAS:
+            return hideViewerInCanvasReducer(state, action);
+        case CanvasActions.REORDER_VIEWER_IN_CANVAS:
+            return reorderViewerInCanvasReducer(state, action);
     }
-    return state;  // No effect by default
-};
-
+    return state; // No effect by default
+}
 
 /**
  * Resets all information related to the Canvas.
@@ -47,11 +49,13 @@ function clearCanvasReducer(state, action) {
  */
 function showViewerInCanvasReducer(state, action) {
     const { vizId, insertAfterIdx } = action;
-    return state.update('layout', (prev) => Immutable([]).concat(
-        insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-        [ vizId ],
-        insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
-    ));
+    return state.update('layout', (prev) =>
+        Immutable([]).concat(
+            insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
+            [vizId],
+            insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
+        ),
+    );
 }
 
 /**
@@ -62,11 +66,13 @@ function showViewerInCanvasReducer(state, action) {
 function hideViewerInCanvasReducer(state, action) {
     const { vizId } = action;
     const removeIdx = state.layout.findIndex((id) => id === vizId);
-    if(removeIdx === -1) {
-        console.error("Could not hide viewer; no viewer with `vizId` ", vizId);
+    if (removeIdx === -1) {
+        console.error('Could not hide viewer; no viewer with `vizId` ', vizId);
         return state;
     }
-    return state.update('layout', (arr) => arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)));
+    return state.update('layout', (arr) =>
+        arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)),
+    );
 }
 
 /**
@@ -76,13 +82,10 @@ function hideViewerInCanvasReducer(state, action) {
  */
 function reorderViewerInCanvasReducer(state, action) {
     const { startIdx, endIdx } = action;
-    return (
-        state
-        .update('layout', (viewerPositions) => {
-            const arr = viewerPositions.asMutable();
-            const [removed] = arr.splice(startIdx, 1);
-            arr.splice(endIdx, 0, removed);
-            return arr;
-        })
-    );
+    return state.update('layout', (viewerPositions) => {
+        const arr = viewerPositions.asMutable();
+        const [removed] = arr.splice(startIdx, 1);
+        arr.splice(endIdx, 0, removed);
+        return arr;
+    });
 }

@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import SandboxSettingsModal from '../components/SandboxSettings';
 
 export default class SandboxSettingsView {
-
     /**
      * Constructor.
      * Create a <div> for the `SandboxSettings` React components to be added to.
@@ -47,7 +46,7 @@ export default class SandboxSettingsView {
         ReactDOM.unmountComponentAtNode(this.element);
         ReactDOM.render(
             <SandboxSettingsModal defaultScriptPath={defaultScriptPath} />,
-            this.element
+            this.element,
         );
     }
 }

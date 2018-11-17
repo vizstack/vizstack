@@ -8,12 +8,10 @@ import KeyValueViz from '../viz/KeyValueViz';
 
 import Typography from '@material-ui/core/Typography';
 
-
 /**
  * This dumb component renders a viewer for a class, showing its static values and functions.
  */
 class ClassViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -61,18 +59,17 @@ class ClassViewer extends Component {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,
                 isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
+                onClick: () => this.setState({ selectedIdx: idx }),
                 onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
-            }
-        }
-        else {
+                onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                onMouseLeave: () => this.setState({ hoveredIdx: null }),
+            };
+        } else {
             return {
                 text: elem,
                 isHovered: false,
                 isSelected: false,
-            }
+            };
         }
     }
 
@@ -82,44 +79,55 @@ class ClassViewer extends Component {
      */
     render() {
         const { classes, data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
 
-        const { functions, staticfields, } = data;
+        const { functions, staticfields } = data;
         const functionsModel = Object.entries(functions).map(([fnName, fnSymbol], idx) => {
-           return [this.buildTokenModel(fnName, `fn${idx}`), this.buildTokenModel(fnSymbol, `fs${idx}`)]
+            return [
+                this.buildTokenModel(fnName, `fn${idx}`),
+                this.buildTokenModel(fnSymbol, `fs${idx}`),
+            ];
         });
         const fieldsModel = Object.entries(staticfields).map(([fieldName, fieldSymbol], idx) => {
-            return [this.buildTokenModel(fieldName, `sn${idx}`), this.buildTokenModel(fieldSymbol, `ss${idx}`)]
+            return [
+                this.buildTokenModel(fieldName, `sn${idx}`),
+                this.buildTokenModel(fieldSymbol, `ss${idx}`),
+            ];
         });
 
         return (
             <div className={classes.container}>
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Static Fields</Typography>
-                    <KeyValueViz model={fieldsModel}
-                                 startMotif="{"
-                                 endMotif="}"
-                                 keyMaxWidth={75}
-                                 keyMinWidth={75}
-                                 valueMaxWidth={75}
-                                 valueMinWidth={75}/>
+                    <KeyValueViz
+                        model={fieldsModel}
+                        startMotif='{'
+                        endMotif='}'
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75}
+                    />
                 </div>
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Functions</Typography>
-                    <KeyValueViz model={functionsModel}
-                                 startMotif="{"
-                                 endMotif="}"
-                                 keyMaxWidth={75}
-                                 keyMinWidth={75}
-                                 valueMaxWidth={75}
-                                 valueMinWidth={75}/>
+                    <KeyValueViz
+                        model={functionsModel}
+                        startMotif='{'
+                        endMotif='}'
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75}
+                    />
                 </div>
-            </div>);
+            </div>
+        );
     }
 }
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     container: {
         display: 'block',
     },
@@ -128,8 +136,8 @@ const styles = theme => ({
     },
     vizHeader: {
         color: '#ffffff',
-        marginRight: 10,  // TODO: un-hardcode this
-    }
+        marginRight: 10, // TODO: un-hardcode this
+    },
 });
 
 export default withStyles(styles)(ClassViewer);

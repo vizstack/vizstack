@@ -6,9 +6,8 @@ import { line, curveBasis, curveLinear } from 'd3';
 
 import ColorGrey from '@material-ui/core/colors/grey';
 import ColorBlue from '@material-ui/core/colors/blue';
-import classNames from "classnames";
-import ColorLightBlue from "@material-ui/core/colors/lightBlue";
-
+import classNames from 'classnames';
+import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 
 const kArrowStroke = 600;
 const kNodeFill = 200;
@@ -17,7 +16,6 @@ const kNodeFill = 200;
  * This pure dumb component renders a graph node as an SVG component that responds to mouse events based on prop values.
  */
 class DagNode extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -39,27 +37,45 @@ class DagNode extends Component {
     };
 
     render() {
-        const { classes, color, width, height, x, y, label, isHovered, isSelected, isExpanded,
-            onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
+        const {
+            classes,
+            color,
+            width,
+            height,
+            x,
+            y,
+            label,
+            isHovered,
+            isSelected,
+            isExpanded,
+            onClick,
+            onDoubleClick,
+            onMouseEnter,
+            onMouseLeave,
+        } = this.props;
         return (
             <g>
-                <rect x={x} y={y} width={width} height={height} style={{fill: color[kNodeFill]}}
-                      className={classNames({
-                          [classes.node]:           true,
-                          [classes.nodeSmooth]:     isExpanded,
-                          [classes.nodeCollapsed]:  !isExpanded,
-                          [classes.nodeHovered]:    isHovered,
-                          [classes.nodeSelected]:   isSelected,
-                      })}
-                      onClick={onClick}
-                      onDoubleClick={onDoubleClick}
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave} />
+                <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    style={{ fill: color[kNodeFill] }}
+                    className={classNames({
+                        [classes.node]: true,
+                        [classes.nodeSmooth]: isExpanded,
+                        [classes.nodeCollapsed]: !isExpanded,
+                        [classes.nodeHovered]: isHovered,
+                        [classes.nodeSelected]: isSelected,
+                    })}
+                    onClick={onClick}
+                    onDoubleClick={onDoubleClick}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                />
 
-                <foreignObject x={x} y={y} width={width} height={height} pointerEvents="none">
-                    <div className={classes.nodeLabel}>
-                        {isExpanded ? null : label}
-                    </div>
+                <foreignObject x={x} y={y} width={width} height={height} pointerEvents='none'>
+                    <div className={classes.nodeLabel}>{isExpanded ? null : label}</div>
                 </foreignObject>
             </g>
         );
@@ -70,7 +86,6 @@ class DagNode extends Component {
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events based on prop values.
  */
 class DagEdge extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -93,53 +108,75 @@ class DagEdge extends Component {
     };
 
     render() {
-        const { classes, id, baseColor, selectedColor, points, isCurved, isBackground, isHovered, isSelected, isOtherActive,
-            label, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = this.props;
+        const {
+            classes,
+            id,
+            baseColor,
+            selectedColor,
+            points,
+            isCurved,
+            isBackground,
+            isHovered,
+            isSelected,
+            isOtherActive,
+            label,
+            onClick,
+            onDoubleClick,
+            onMouseEnter,
+            onMouseLeave,
+        } = this.props;
         let pathString = null;
         if (isCurved) {
             let curveGenerator = line().curve(curveBasis);
-            pathString = curveGenerator(points.map(({x, y}) => [x, y]));  // [{x:3, y:4},...] => [[3, 4],...]
-        }
-        else {
+            pathString = curveGenerator(points.map(({ x, y }) => [x, y])); // [{x:3, y:4},...] => [[3, 4],...]
+        } else {
             let linearGenerator = line().curve(curveLinear);
-            pathString = linearGenerator(points.map(({x, y}) => [x, y]));  // [{x:3, y:4},...] => [[3, 4],...]
+            pathString = linearGenerator(points.map(({ x, y }) => [x, y])); // [{x:3, y:4},...] => [[3, 4],...]
         }
 
         // Edge id needs to be globally unique, not just within this svg component
         return (
             <g>
-                <path d={pathString}
-                      className={classNames({
-                          [classes.edgeHotspot]: true,
-                      })}
-                      onClick={onClick}
-                      onDoubleClick={onDoubleClick}
-                      onMouseEnter={onMouseEnter}
-                      onMouseLeave={onMouseLeave} />
-                <path id={id}
-                      d={pathString}
-                      pointerEvents="none"
-                      style={{
-                          stroke: isSelected ? selectedColor[kArrowStroke] : baseColor[kArrowStroke],
-                          markerEnd: isSelected? `url(#arrowheadSelected${id})` : `url(#arrowheadBase${id})`,
-                      }}
-                      className={classNames({
-                          [classes.edge]:               true,
-                          [classes.edgeBackground]:     isBackground,
-                          [classes.edgeIsOtherActive]:  isOtherActive,
-                          [classes.edgeHovered]:        isHovered,
-                          [classes.edgeSelected]:       isSelected,
-                      })} />
-                <text dy="-1.5"
-                      textAnchor="end"
-                      pointerEvents="none"
-                      className={classNames({
-                          [classes.edgeLabel]:          true,
-                          [classes.edgeIsOtherActive]:  isOtherActive,
-                          [classes.edgeLabelHovered]:   isHovered,
-                          [classes.edgeLabelSelected]:  isSelected,
-                      })} >
-                    <textPath xlinkHref={`#${id}`} startOffset="95%">
+                <path
+                    d={pathString}
+                    className={classNames({
+                        [classes.edgeHotspot]: true,
+                    })}
+                    onClick={onClick}
+                    onDoubleClick={onDoubleClick}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                />
+                <path
+                    id={id}
+                    d={pathString}
+                    pointerEvents='none'
+                    style={{
+                        stroke: isSelected ? selectedColor[kArrowStroke] : baseColor[kArrowStroke],
+                        markerEnd: isSelected
+                            ? `url(#arrowheadSelected${id})`
+                            : `url(#arrowheadBase${id})`,
+                    }}
+                    className={classNames({
+                        [classes.edge]: true,
+                        [classes.edgeBackground]: isBackground,
+                        [classes.edgeIsOtherActive]: isOtherActive,
+                        [classes.edgeHovered]: isHovered,
+                        [classes.edgeSelected]: isSelected,
+                    })}
+                />
+                <text
+                    dy='-1.5'
+                    textAnchor='end'
+                    pointerEvents='none'
+                    className={classNames({
+                        [classes.edgeLabel]: true,
+                        [classes.edgeIsOtherActive]: isOtherActive,
+                        [classes.edgeLabelHovered]: isHovered,
+                        [classes.edgeLabelSelected]: isSelected,
+                    })}
+                >
+                    <textPath xlinkHref={`#${id}`} startOffset='95%'>
                         {label}
                     </textPath>
                 </text>
@@ -152,7 +189,6 @@ class DagEdge extends Component {
  * This pure dumb component renders a directed acyclic graph.
  */
 class DagViz extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -175,11 +211,11 @@ class DagViz extends Component {
      */
     buildEdgeComponents(edges) {
         const { classes } = this.props;
-        return edges.map(edge => {
-            return ({
-                component: <DagEdge classes={classes} {...edge}  />,
+        return edges.map((edge) => {
+            return {
+                component: <DagEdge classes={classes} {...edge} />,
                 z: edge.z,
-            });
+            };
         });
     }
 
@@ -193,11 +229,11 @@ class DagViz extends Component {
      */
     buildNodeComponents(nodes) {
         const { classes } = this.props;
-        return nodes.map(node => {
-            return ({
+        return nodes.map((node) => {
+            return {
                 component: <DagNode classes={classes} {...node} />,
                 z: node.z,
-            });
+            };
         });
     }
 
@@ -207,30 +243,58 @@ class DagViz extends Component {
     render() {
         const { classes, model, graphHeight, graphWidth, onClick } = this.props;
         const { nodes, edges } = model;
-        let graphComponents = this.buildNodeComponents(nodes).concat(this.buildEdgeComponents(edges));
-        graphComponents = graphComponents.sort(({z: z1}, {z: z2}) => z1 - z2).map(({component}) => component);
+        let graphComponents = this.buildNodeComponents(nodes).concat(
+            this.buildEdgeComponents(edges),
+        );
+        graphComponents = graphComponents
+            .sort(({ z: z1 }, { z: z2 }) => z1 - z2)
+            .map(({ component }) => component);
 
         const buildArrowheadMarker = (id, color) => (
-            <marker key={id} id={id} viewBox="-5 -3 5 6" refX="0" refY="0"
-                    markerUnits="strokeWidth" markerWidth="4" markerHeight="3" orient="auto">
-                <path d="M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z" fill={color} />
+            <marker
+                key={id}
+                id={id}
+                viewBox='-5 -3 5 6'
+                refX='0'
+                refY='0'
+                markerUnits='strokeWidth'
+                markerWidth='4'
+                markerHeight='3'
+                orient='auto'
+            >
+                <path
+                    d='M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z'
+                    fill={color}
+                />
             </marker>
         );
 
         const arrowheads = [];
-        edges.forEach(edge => {
-            arrowheads.push(buildArrowheadMarker(`arrowheadBase${edge.id}`, edge.baseColor[kArrowStroke]));
-            arrowheads.push(buildArrowheadMarker(`arrowheadSelected${edge.id}`, edge.selectedColor[kArrowStroke]));
+        edges.forEach((edge) => {
+            arrowheads.push(
+                buildArrowheadMarker(`arrowheadBase${edge.id}`, edge.baseColor[kArrowStroke]),
+            );
+            arrowheads.push(
+                buildArrowheadMarker(
+                    `arrowheadSelected${edge.id}`,
+                    edge.selectedColor[kArrowStroke],
+                ),
+            );
         });
 
         return (
             <div className={classes.container}>
                 <div className={classes.graph}>
                     <svg width={graphWidth} height={graphHeight}>
-                        <defs>
-                            {arrowheads}
-                        </defs>
-                        <rect x={0} y={0} width={graphWidth} height={graphHeight} fill="transparent" onClick={onClick}/>
+                        <defs>{arrowheads}</defs>
+                        <rect
+                            x={0}
+                            y={0}
+                            width={graphWidth}
+                            height={graphHeight}
+                            fill='transparent'
+                            onClick={onClick}
+                        />
                         {graphComponents}
                     </svg>
                 </div>
@@ -243,18 +307,18 @@ class DagViz extends Component {
 // -------------------------------
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     container: {
-        flex: 1,  // expand to fill frame vertical
+        flex: 1, // expand to fill frame vertical
 
         display: 'flex',
         flexDirection: 'row',
-        justifyContent: 'center',  // along main axis (horizontal)
-        alignItems: 'stretch',  // along cross axis (vertical)
+        justifyContent: 'center', // along main axis (horizontal)
+        alignItems: 'stretch', // along cross axis (vertical)
         overflow: 'hidden',
     },
     graph: {
-        flex: 'auto',  // makes graph fill remaining space so sidebar is on side
+        flex: 'auto', // makes graph fill remaining space so sidebar is on side
         overflow: 'auto',
         textAlign: 'left', // so SVG doesn't move
     },
@@ -309,9 +373,14 @@ const styles = theme => ({
     },
     nodeSmooth: {
         transition: [
-            theme.transitions.create(['width', 'height', 'x', 'y'], { duration: theme.transitions.duration.short }),
-            theme.transitions.create(['fill-opacity'], { duration: theme.transitions.duration.shortest, delay: theme.transitions.duration.short })
-        ].join(", "),
+            theme.transitions.create(['width', 'height', 'x', 'y'], {
+                duration: theme.transitions.duration.short,
+            }),
+            theme.transitions.create(['fill-opacity'], {
+                duration: theme.transitions.duration.shortest,
+                delay: theme.transitions.duration.short,
+            }),
+        ].join(', '),
     },
     nodeCollapsed: {
         fillOpacity: 1.0,
@@ -335,4 +404,4 @@ const styles = theme => ({
     },
 });
 
-export default withStyles(styles)(DagViz)
+export default withStyles(styles)(DagViz);

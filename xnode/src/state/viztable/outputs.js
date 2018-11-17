@@ -17,7 +17,6 @@ export type VizId = string;
  *  model to render.
  */
 export type VizSpec = {
-
     /** Absolute path of the file in which this viz was viewed. */
     filePath: string,
 
@@ -43,9 +42,7 @@ export type VizModel = PrimitiveModel | LayoutModel;
 // Visual "building blocks".
 
 /** Any primitive model. */
-export type PrimitiveModel = (
-    TokenPrimitiveModel
-);
+export type PrimitiveModel = TokenPrimitiveModel;
 
 /** Token primitive is __. */
 export type TokenPrimitiveModel = {
@@ -53,7 +50,7 @@ export type TokenPrimitiveModel = {
     contents: {
         text: string,
     },
-}
+};
 
 // =====================================================================================================================
 // Viz layouts
@@ -61,10 +58,7 @@ export type TokenPrimitiveModel = {
 // Visual "configurations" of "building blocks".
 
 /** Any layout model. */
-export type LayoutModel = (
-    SequenceLayoutModel |
-    KeyValueLayoutModel
-);
+export type LayoutModel = SequenceLayoutModel | KeyValueLayoutModel;
 
 /** Sequence layout is __. */
 export type SequenceLayoutModel = {
@@ -73,7 +67,7 @@ export type SequenceLayoutModel = {
         elements: Array<VizId>,
         orientation?: 'horizontal' | 'vertical',
     },
-}
+};
 
 /** KeyValue layout is __. */
 export type KeyValueLayoutModel = {
@@ -81,9 +75,9 @@ export type KeyValueLayoutModel = {
     contents: {
         elements: {
             [VizId]: VizId,
-        }
+        },
     },
-}
+};
 
 // =====================================================================================================================
 // Public functions

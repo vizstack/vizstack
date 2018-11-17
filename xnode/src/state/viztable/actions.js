@@ -2,8 +2,8 @@ import { VizId, VizSpec } from './outputs';
 
 /** Action type definitions. */
 export const VizTableActions = Object.freeze({
-    CLEAR_TABLE:  'viztable::CLEAR_TABLE',
-    ADD_SLICE:    'viztable::ADD_SLICE',
+    CLEAR_TABLE: 'viztable::CLEAR_TABLE',
+    ADD_SLICE: 'viztable::ADD_SLICE',
 });
 
 /**
@@ -14,7 +14,7 @@ export const VizTableActions = Object.freeze({
 export function clearVizTableAction() {
     return {
         type: VizTableActions.CLEAR_TABLE,
-    }
+    };
 }
 
 /**
@@ -24,9 +24,9 @@ export function clearVizTableAction() {
  * @returns
  *      An action object.
  */
-export function addVizTableSliceAction(vizTableSlice: {[VizId]: VizSpec}) {
+export function addVizTableSliceAction(vizTableSlice: { [VizId]: VizSpec }) {
     return {
         type: VizTableActions.ADD_SLICE,
         vizTableSlice,
-    }
+    };
 }

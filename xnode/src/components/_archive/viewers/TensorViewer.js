@@ -11,14 +11,22 @@ import { fixedWidthNumber } from '../../../services/format-utils';
  * TODO: Handle different precision data for contents.
  */
 class TensorViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "tensor". */
         data: PropTypes.shape({
             contents: PropTypes.array,
-            size:     PropTypes.arrayOf(PropTypes.number),
-            type:     PropTypes.oneOf(['float16', 'float32', 'float64', 'uint8', 'int8', 'int16', 'int32', 'int64']),
+            size: PropTypes.arrayOf(PropTypes.number),
+            type: PropTypes.oneOf([
+                'float16',
+                'float32',
+                'float64',
+                'uint8',
+                'int8',
+                'int16',
+                'int32',
+                'int64',
+            ]),
         }),
     };
 
@@ -38,32 +46,32 @@ class TensorViewer extends Component {
             text: fixedWidthNumber(val),
             isHovered: idx === hoveredIdx,
             isSelected: idx === selectedIdx,
-            onClick: () => this.setState({selectedIdx: idx}),
-            onMouseEnter: () => this.setState({hoveredIdx: idx}),
-            onMouseLeave: () => this.setState({hoveredIdx: null}),
+            onClick: () => this.setState({ selectedIdx: idx }),
+            onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+            onMouseLeave: () => this.setState({ hoveredIdx: null }),
         };
     }
 
     buildSlices(contents, dim, idxs = []) {
-
         // Base cases
-        if (dim === 2) {  // 2D matrix
-            const model = contents.map((arr, r) => arr.map((val, c) => this.buildVal(val, [...idxs, r, c])));
+        if (dim === 2) {
+            // 2D matrix
+            const model = contents.map((arr, r) =>
+                arr.map((val, c) => this.buildVal(val, [...idxs, r, c])),
+            );
             return (
                 <div key={idxs.join(',')}>
                     {idxs.length > 0 ? <div>{`[${idxs.join(', ')}, :, :] =`}</div> : null}
                     <MatrixViz model={model} />
                 </div>
             );
-        } else if (dim === 1) {  // 1D array (only possible from top-level call)
+        } else if (dim === 1) {
+            // 1D array (only possible from top-level call)
             const model = contents.map((val, i) => [this.buildVal(val, [i])]);
-            return (
-                <MatrixViz model={model}
-                           showHorizontalIndices={false} />
-            );
+            return <MatrixViz model={model} showHorizontalIndices={false} />;
         }
 
-        return contents.map((arr, i) => this.buildSlices(arr, dim-1, [...idxs, i]));
+        return contents.map((arr, i) => this.buildSlices(arr, dim - 1, [...idxs, i]));
     }
 
     /**
@@ -71,7 +79,7 @@ class TensorViewer extends Component {
      */
     render() {
         const { data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
         const { contents, size, type } = data;
 
         return (

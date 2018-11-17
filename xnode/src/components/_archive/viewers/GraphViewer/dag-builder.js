@@ -66,9 +66,9 @@ class DagNode {
     // These functions should only be used by clients, as they modify the graph contents or use node metadata.
 
     /** Sets how wide the node should be if it is not expanded. */
-    setCollapsedWidth = (width) => this._collapsedWidth = width;
+    setCollapsedWidth = (width) => (this._collapsedWidth = width);
     /** Sets how tall the node should be if it is not expanded. */
-    setCollapsedHeight = (height) => this._collapsedHeight = height;
+    setCollapsedHeight = (height) => (this._collapsedHeight = height);
 
     /** Returns an object of key-value pairs set by the client in `addMetadata()`. */
     getMetadata = () => this._metadata;
@@ -142,13 +142,19 @@ class DagNode {
     /** Returns how tall the node should be if it is not expanded. */
     getCollapsedHeight = () => this._collapsedHeight;
     /** Returns whether the node is visible in the graph given its current state. */
-    getIsVisible = () => this.getParent() === null || (this.getParent().getIsExpanded() && this.getParent().getIsVisible());
+    getIsVisible = () =>
+        this.getParent() === null ||
+        (this.getParent().getIsExpanded() && this.getParent().getIsVisible());
     /** Returns whether this node's children are horizontally-aligned. */
     getContainsLateral = () => this._containsLateral;
     /** Sets the position and size of the node, for use in rendering. */
     setTransform(x, y, z, width, height) {
         this._transform = {
-            x, y, z, width, height
+            x,
+            y,
+            z,
+            width,
+            height,
         };
     }
 
@@ -194,11 +200,9 @@ class DagNode {
             }
             if (n1.getHierarchyHeight() > n2.getHierarchyHeight()) {
                 n2 = n2.getParent();
-            }
-            else if (n1.getHierarchyHeight() < n2.getHierarchyHeight()) {
+            } else if (n1.getHierarchyHeight() < n2.getHierarchyHeight()) {
                 n1 = n1.getParent();
-            }
-            else{
+            } else {
                 n1 = n1.getParent();
                 n2 = n2.getParent();
             }
@@ -346,7 +350,8 @@ class DagEdge {
      */
     setTransform(z, points) {
         this._transform = {
-            z, points
+            z,
+            points,
         };
     }
 
@@ -438,7 +443,7 @@ class DagBuilder {
         node.init(
             (lateralStep) => this._addChildNode(node, lateralStep),
             (startPortNum, endNode) => this._addEdge(node, startPortNum, endNode),
-            () => this._built ? this.build() : null,
+            () => (this._built ? this.build() : null),
         );
         this.nodes.push(node);
         return node;
@@ -515,10 +520,13 @@ class DagBuilder {
                         edge.setTransform(z, points);
                     }
                 });
-                this._onLayout(graphWidth, graphHeight,
-                    this.nodes.filter(node => node.getId() in nodeTransforms),
-                    this.edges.filter(edge => edge.getId() in edgeTransforms));
-            }
+                this._onLayout(
+                    graphWidth,
+                    graphHeight,
+                    this.nodes.filter((node) => node.getId() in nodeTransforms),
+                    this.edges.filter((edge) => edge.getId() in edgeTransforms),
+                );
+            },
         );
     }
 }

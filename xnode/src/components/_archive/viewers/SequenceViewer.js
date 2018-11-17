@@ -4,13 +4,11 @@ import { createSelector } from 'reselect';
 
 import SequenceViz from '../../layouts/SequenceLayout';
 
-
 /**
  * This dumb component renders a viewer for a Python sequence variable (list, tuple, set). It converts between the
  * Canvas data structures to the explicit data model expected by `SequenceLayout`.
  */
 class SequenceViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "list/tuple/set". */
@@ -43,7 +41,7 @@ class SequenceViewer extends Component {
      */
     render() {
         const { vizTable, expandSubviewer, data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { contents } = data;
@@ -52,19 +50,14 @@ class SequenceViewer extends Component {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,
                 isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
+                onClick: () => this.setState({ selectedIdx: idx }),
                 onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
+                onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                onMouseLeave: () => this.setState({ hoveredIdx: null }),
             };
         });
 
-        return (
-            <SequenceViz model={model}
-                         startMotif="["
-                         endMotif="]"
-                         itemMaxWidth={75} />
-        );
+        return <SequenceViz model={model} startMotif='[' endMotif=']' itemMaxWidth={75} />;
     }
 }
 

@@ -2,7 +2,6 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-
 /**
  * This pure dumb component creates a header bar for a display frame that horizontally lays out its children components.
  * A header is thicker and is emphasized with an accent color; it will typically contain title/subtitle text and icons,
@@ -10,24 +9,19 @@ import { withStyles } from '@material-ui/core/styles';
  * TODO: Allow style overrides with 'classes'
  */
 class DisplayFrameHeader extends React.PureComponent<{
-
     /** CSS-in-JS styling object. */
     classes: {},
 
     /** React components within opening & closing tags. */
     children: React.Node,
-
 }> {
-
     /**
      * Renders a header container with specific styling and horizontal layout properties.
      */
     render() {
         const { classes, children } = this.props;
         return (
-            <div className={classNames('xn-display-frame-header', classes.header)}>
-                {children}
-            </div>
+            <div className={classNames('xn-display-frame-header', classes.header)}>{children}</div>
         );
     }
 }
@@ -36,7 +30,7 @@ class DisplayFrameHeader extends React.PureComponent<{
 // -------------------------------
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     header: {
         // Layout child components horizontally
         display: 'flex',
@@ -67,9 +61,10 @@ const styles = theme => ({
         },
 
         // Transitions
-        transition: theme.transitions.create(['background'], { duration: theme.transitions.duration.shortest })
+        transition: theme.transitions.create(['background'], {
+            duration: theme.transitions.duration.shortest,
+        }),
     },
-
 });
 
 export default withStyles(styles)(DisplayFrameHeader);

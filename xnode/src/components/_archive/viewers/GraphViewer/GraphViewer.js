@@ -7,7 +7,7 @@ import DAGBuilder from './dag-builder';
 
 import ColorPink from '@material-ui/core/colors/pink';
 import ColorGrey from '@material-ui/core/colors/grey';
-import ColorBlue from "@material-ui/core/colors/blue";
+import ColorBlue from '@material-ui/core/colors/blue';
 import ColorOrange from '@material-ui/core/colors/orange';
 
 // Graph element size constants.
@@ -77,7 +77,7 @@ class _ComputationGraph {
      * @param symbolId
      */
     addData(symbolId) {
-        if(!(symbolId in this._dataConnections)) {
+        if (!(symbolId in this._dataConnections)) {
             this._dataConnections[symbolId] = [];
         }
     }
@@ -171,10 +171,12 @@ class _ComputationGraph {
             return null;
         }
         const commonContainers = new Set(
-            Object.values(this._opContainerSets).reduce((a, b) => [...a].filter(x => b.has(x)))
+            Object.values(this._opContainerSets).reduce((a, b) => [...a].filter((x) => b.has(x))),
         );
 
-        const sharedHierarchy = this._opContainerChain.filter(symbolId => commonContainers.has(symbolId));
+        const sharedHierarchy = this._opContainerChain.filter((symbolId) =>
+            commonContainers.has(symbolId),
+        );
         return sharedHierarchy.length > 0 ? sharedHierarchy[0] : null;
     }
 
@@ -260,8 +262,7 @@ class _ComputationGraph {
             let parentNode = null;
             if (connectedSymbolId === null) {
                 parentNode = this._builder;
-            }
-            else {
+            } else {
                 if (!(symbolId in this._dataNodes)) {
                     this._dataNodes[symbolId] = {};
                 }
@@ -307,10 +308,10 @@ class _ComputationGraph {
         });
         // Add any data nodes that had no connecting edges; we don't need to do this for op nodes, since they cannot be
         // islands
-        Object.keys(this._dataConnections).forEach(dataSymbolId => {
-           if (!(dataSymbolId in this._dataNodes)) {
-               this._getNode(dataSymbolId, null);
-           }
+        Object.keys(this._dataConnections).forEach((dataSymbolId) => {
+            if (!(dataSymbolId in this._dataNodes)) {
+                this._getNode(dataSymbolId, null);
+            }
         });
         return this._builder;
     }
@@ -322,7 +323,6 @@ class _ComputationGraph {
  * lays it out whenever the graph's state changes.
  */
 class GraphViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for the head "graphdata" instance. */
@@ -372,7 +372,7 @@ class GraphViewer extends Component {
         const { built } = this.state;
         if (!built && symbolId in symbolTable && data !== null) {
             this.buildDAG(symbolId);
-            this.setState({built: true});
+            this.setState({ built: true });
         }
     }
 
@@ -401,7 +401,13 @@ class GraphViewer extends Component {
         const headCreatorOpId = getCreatorOp(headSymbolId);
         if (headCreatorOpId !== null) {
             opsToCheck.push(headCreatorOpId);
-            computationGraph.addEdge(headSymbolId, headCreatorOpId, getCreatorPos(headSymbolId), headSymbolId, '');
+            computationGraph.addEdge(
+                headSymbolId,
+                headCreatorOpId,
+                getCreatorPos(headSymbolId),
+                headSymbolId,
+                '',
+            );
         }
         // Loop until every op in the history of the head symbol has been added
         while (opsToCheck.length > 0) {
@@ -411,29 +417,40 @@ class GraphViewer extends Component {
             }
             checkedOps.add(opSymbolId);
             computationGraph.addOp(opSymbolId);
-            getArgs(opSymbolId).concat(getKwargs(opSymbolId)).forEach(([argName, arg]) => {
-                // Arguments can be either values or lists of values; we convert the former to the latter for
-                // convenience, since behavior doesn't change either way
-                let argIsList = true;
-                if (!Array.isArray(arg)) {
-                    arg = [arg];
-                    argIsList = false;
-                }
-                arg.forEach((dataSymbolId, argIndex) => {
-                    const creatorOpSymbolId = getCreatorOp(dataSymbolId);
-                    if (creatorOpSymbolId === null) {
-                        computationGraph.addData(dataSymbolId);
-                        // A data node always has exactly one output port, so we provide "0" as the port number
-                        computationGraph.addEdge(dataSymbolId, dataSymbolId, 0, opSymbolId,
-                            argIsList ? `${argName}[${argIndex}]` : argName);
+            getArgs(opSymbolId)
+                .concat(getKwargs(opSymbolId))
+                .forEach(([argName, arg]) => {
+                    // Arguments can be either values or lists of values; we convert the former to the latter for
+                    // convenience, since behavior doesn't change either way
+                    let argIsList = true;
+                    if (!Array.isArray(arg)) {
+                        arg = [arg];
+                        argIsList = false;
                     }
-                    else {
-                        opsToCheck.push(creatorOpSymbolId);
-                        computationGraph.addEdge(dataSymbolId, creatorOpSymbolId, getCreatorPos(dataSymbolId),
-                            opSymbolId, argIsList ? `${argName}[${argIndex}]` : argName);
-                    }
+                    arg.forEach((dataSymbolId, argIndex) => {
+                        const creatorOpSymbolId = getCreatorOp(dataSymbolId);
+                        if (creatorOpSymbolId === null) {
+                            computationGraph.addData(dataSymbolId);
+                            // A data node always has exactly one output port, so we provide "0" as the port number
+                            computationGraph.addEdge(
+                                dataSymbolId,
+                                dataSymbolId,
+                                0,
+                                opSymbolId,
+                                argIsList ? `${argName}[${argIndex}]` : argName,
+                            );
+                        } else {
+                            opsToCheck.push(creatorOpSymbolId);
+                            computationGraph.addEdge(
+                                dataSymbolId,
+                                creatorOpSymbolId,
+                                getCreatorPos(dataSymbolId),
+                                opSymbolId,
+                                argIsList ? `${argName}[${argIndex}]` : argName,
+                            );
+                        }
+                    });
                 });
-            });
         }
         return computationGraph;
     }
@@ -452,9 +469,8 @@ class GraphViewer extends Component {
         const { vizId } = this.props;
         console.debug(`GraphViewer (${symbolId}) -- building DAG`);
         const computationGraph = this.loadGraphBackwards(headSymbolId);
-        const builder = computationGraph.createDAGBuilder(
-            (graphWidth, graphHeight, nodes, edges) =>
-                this.setState({graphWidth, graphHeight, nodes, edges})
+        const builder = computationGraph.createDAGBuilder((graphWidth, graphHeight, nodes, edges) =>
+            this.setState({ graphWidth, graphHeight, nodes, edges }),
         );
         builder.build();
     }
@@ -466,13 +482,14 @@ class GraphViewer extends Component {
     render() {
         const { expandSubviewer } = this.props;
         const { nodes, edges, graphHeight, graphWidth, hoverId, selectedId } = this.state;
-        if (nodes !== null) {  // if nodes is non-null, then so is edges
+        if (nodes !== null) {
+            // if nodes is non-null, then so is edges
             const model = {
-                nodes: nodes.map(node => {
+                nodes: nodes.map((node) => {
                     const { x, y, z, width, height } = node.getTransform();
                     const { symbolId, label, type, temporal } = node.getMetadata();
                     let color = null;
-                    switch(type) {
+                    switch (type) {
                         case 'graphcontainer':
                             color = ColorBlue;
                             break;
@@ -485,11 +502,17 @@ class GraphViewer extends Component {
                     }
                     return {
                         key: 'node' + node.getId(),
-                        x, y, z, width, height, label, color,
+                        x,
+                        y,
+                        z,
+                        width,
+                        height,
+                        label,
+                        color,
                         isExpanded: node.getIsExpanded(),
                         isHovered: !temporal ? hoverId === symbolId : false,
                         isSelected: !temporal ? selectedId === symbolId : false,
-                        onClick: () => this.setState({selectedId: !temporal ? symbolId : null}),
+                        onClick: () => this.setState({ selectedId: !temporal ? symbolId : null }),
                         onDoubleClick: () => {
                             if (type === 'graphcontainer' && !temporal) {
                                 node.toggleExpanded();
@@ -498,11 +521,12 @@ class GraphViewer extends Component {
                                 expandSubviewer(symbolId);
                             }
                         },
-                        onMouseEnter: () => !temporal ? this.setState({hoverId: symbolId}) : null,
-                        onMouseLeave: () => !temporal ? this.setState({hoverId: null}) : null,
-                    }
+                        onMouseEnter: () =>
+                            !temporal ? this.setState({ hoverId: symbolId }) : null,
+                        onMouseLeave: () => (!temporal ? this.setState({ hoverId: null }) : null),
+                    };
                 }),
-                edges: edges.map(edge => {
+                edges: edges.map((edge) => {
                     const { z, points } = edge.getTransform();
                     const { symbolId, label } = edge.getMetadata();
                     const isHovered = hoverId === symbolId;
@@ -510,23 +534,30 @@ class GraphViewer extends Component {
                     return {
                         key: 'edge' + edge.getId(),
                         id: edge.getId(),
-                        z, points, label,
+                        z,
+                        points,
+                        label,
                         baseColor: ColorGrey,
                         selectedColor: ColorBlue,
                         isCurved: edge.getIsLateral(),
                         isBackground: edge.getIsLateral(),
                         isHovered,
                         isSelected,
-                        isOtherActive: (hoverId !== null || selectedId !== null) && !isHovered && !isSelected,
-                        onClick: () => this.setState({selectedId: symbolId}),
-                        onMouseEnter: () => this.setState({hoverId: symbolId}),
-                        onMouseLeave: () => this.setState({hoverId: null}),
-                    }
+                        isOtherActive:
+                            (hoverId !== null || selectedId !== null) && !isHovered && !isSelected,
+                        onClick: () => this.setState({ selectedId: symbolId }),
+                        onMouseEnter: () => this.setState({ hoverId: symbolId }),
+                        onMouseLeave: () => this.setState({ hoverId: null }),
+                    };
                 }),
             };
             return (
-                <DAGViz model={model} graphHeight={graphHeight} graphWidth={graphWidth}
-                        onClick={() => this.setState({selectedId: null})}/>
+                <DAGViz
+                    model={model}
+                    graphHeight={graphHeight}
+                    graphWidth={graphWidth}
+                    onClick={() => this.setState({ selectedId: null })}
+                />
             );
         }
         return null;

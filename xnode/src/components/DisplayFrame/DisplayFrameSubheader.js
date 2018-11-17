@@ -2,14 +2,12 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-
 /**
  * This pure dumb component creates a subheader bar for a display frame that horizontally lays out its children
  * components. A subheader is thinner and is emphasized with an accent color; it will typically contain only icons,
  * grouped with `div`s appropriately for the desired spacing.
  */
 class DisplayFrameHeader extends React.PureComponent<{
-
     /** CSS-in-JS styling object. */
     classes: {},
 
@@ -18,9 +16,7 @@ class DisplayFrameHeader extends React.PureComponent<{
 
     /** Class tags to allow additional styling of container. */
     className?: string,
-
 }> {
-
     /**
      * Renders a subheader container with specific styling and horizontal layout properties.
      */
@@ -38,7 +34,7 @@ class DisplayFrameHeader extends React.PureComponent<{
 // -------------------------------
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     header: {
         // Layout child components horizontally
         display: 'flex',
@@ -72,9 +68,10 @@ const styles = theme => ({
         },
 
         // Transitions
-        transition: theme.transitions.create(['background'], { duration: theme.transitions.duration.shortest })
+        transition: theme.transitions.create(['background'], {
+            duration: theme.transitions.duration.shortest,
+        }),
     },
-
 });
 
 export default withStyles(styles)(DisplayFrameHeader);

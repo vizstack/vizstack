@@ -10,35 +10,34 @@
  * @returns
  *      A map from unique filepath strings to the minimal disambiguated path suffixes.
  */
-export function getMinimalDisambiguatedPaths(paths: Array<string>): {[string]: string} {
+export function getMinimalDisambiguatedPaths(paths: Array<string>): { [string]: string } {
     const uniquePaths: Array<string> = Array.from(new Set(paths));
     const tokenizedPaths: Array<Array<string>> = uniquePaths.map((path) => path.split(/[/\\]+/));
 
-    let tokenFromEnd: number = 1;  // Last token would be 1, second to last would be 2, etc.
-    let minimalPaths: Array<string> = [];  // List of shortened paths. Gradually populated when disambiguated.
-    let ambiguousIdxs: Array<number> = Array.from(uniquePaths.keys());  // Indices of still ambiguous paths.
+    let tokenFromEnd: number = 1; // Last token would be 1, second to last would be 2, etc.
+    let minimalPaths: Array<string> = []; // List of shortened paths. Gradually populated when disambiguated.
+    let ambiguousIdxs: Array<number> = Array.from(uniquePaths.keys()); // Indices of still ambiguous paths.
 
     // Continue until all paths are disambiguated.
-    while(ambiguousIdxs.length > 0) {
-
+    while (ambiguousIdxs.length > 0) {
         // Build index from token to indices of paths currently ending with the token.
-        let tokenToIdxs: {[string]: Array<number>} = {};
-        for(const idx of ambiguousIdxs) {
+        let tokenToIdxs: { [string]: Array<number> } = {};
+        for (const idx of ambiguousIdxs) {
             const tokens = tokenizedPaths[idx];
             const token = tokens[tokens.length - tokenFromEnd];
-            if(token === undefined || token === "" || tokenFromEnd + 1 === tokens.length) {
+            if (token === undefined || token === '' || tokenFromEnd + 1 === tokens.length) {
                 minimalPaths[idx] = uniquePaths[idx];
             } else {
-                if(!tokenToIdxs[token]) tokenToIdxs[token] = [];
+                if (!tokenToIdxs[token]) tokenToIdxs[token] = [];
                 tokenToIdxs[token].push(idx);
             }
         }
 
         // Filter out disambiguated paths, and continue to process ambiguous ones.
         ambiguousIdxs = [];
-        for(const token in tokenToIdxs) {
+        for (const token in tokenToIdxs) {
             const idxs = tokenToIdxs[token];
-            if(idxs.length == 1) {
+            if (idxs.length == 1) {
                 const tokens = tokenizedPaths[idxs[0]];
                 minimalPaths[idxs[0]] = tokens.slice(-tokenFromEnd).join('/');
             } else {
@@ -50,7 +49,7 @@ export function getMinimalDisambiguatedPaths(paths: Array<string>): {[string]: s
     }
 
     return uniquePaths.reduce((uniqueToMinimal, uniquePath, i) => {
-        uniqueToMinimal[uniquePath] = minimalPaths[i]
+        uniqueToMinimal[uniquePath] = minimalPaths[i];
         return uniqueToMinimal;
     }, {});
 }

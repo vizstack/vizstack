@@ -1,11 +1,11 @@
-import type {VizId} from "../viztable/outputs";
+import type { VizId } from '../viztable/outputs';
 
 /** Action type definitions. */
 export const CanvasActions = Object.freeze({
-    CLEAR_CANVAS:                'canvas::CLEAR_CANVAS',
-    SHOW_VIEWER_IN_CANVAS:       'canvas::SHOW_VIEWER_IN_CANVAS',
-    HIDE_VIEWER_IN_CANVAS:       'canvas::HIDE_VIEWER_IN_CANVAS',
-    REORDER_VIEWER_IN_CANVAS:    'canvas::REORDER_VIEWER_IN_CANVAS',
+    CLEAR_CANVAS: 'canvas::CLEAR_CANVAS',
+    SHOW_VIEWER_IN_CANVAS: 'canvas::SHOW_VIEWER_IN_CANVAS',
+    HIDE_VIEWER_IN_CANVAS: 'canvas::HIDE_VIEWER_IN_CANVAS',
+    REORDER_VIEWER_IN_CANVAS: 'canvas::REORDER_VIEWER_IN_CANVAS',
 });
 
 /**
@@ -25,8 +25,7 @@ export function clearCanvasAction() {
  *     Index in layout after which to add the new viewer. (Optional, default: -1 adds to end).
  * @returns {object}
  */
-export function showViewerInCanvasAction(vizId: VizId,
-                                         insertAfterIdx?: number = -1) {
+export function showViewerInCanvasAction(vizId: VizId, insertAfterIdx?: number = -1) {
     return {
         type: CanvasActions.SHOW_VIEWER_IN_CANVAS,
         vizId,

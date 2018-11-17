@@ -4,7 +4,7 @@ import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './views/repl';
 
-import { getMinimalDisambiguatedPaths } from "./services/path-utils";
+import { getMinimalDisambiguatedPaths } from './services/path-utils';
 
 // Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
 let RERUN_DELAY = 2000;
@@ -15,7 +15,6 @@ let RERUN_DELAY = 2000;
  * serialization.
  */
 export default {
-
     // List of REPL objects that are active.
     repls: [],
 
@@ -41,18 +40,26 @@ export default {
 
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
-
             // Register openers to listen to particular URIs
-            atom.workspace.addOpener(uri => {
-                if(uri.startsWith('atom://xnode-sandbox')) {
+            atom.workspace.addOpener((uri) => {
+                if (uri.startsWith('atom://xnode-sandbox')) {
                     this.sandboxSettingsPanel.hide();
                     const tokens = uri.split('/');
-                    const repl = new REPL(decodeURIComponent(tokens[3]), decodeURIComponent(tokens[4]));
+                    const repl = new REPL(
+                        decodeURIComponent(tokens[3]),
+                        decodeURIComponent(tokens[4]),
+                    );
                     this.repls.push(repl);
-                    const minimalUniquePaths = getMinimalDisambiguatedPaths(this.repls.filter(repl => !repl.isDestroyed).map(repl => repl.scriptPath));
-                    this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
-                       repl.name = minimalUniquePaths[repl.scriptPath];
-                    });
+                    const minimalUniquePaths = getMinimalDisambiguatedPaths(
+                        this.repls
+                            .filter((repl) => !repl.isDestroyed)
+                            .map((repl) => repl.scriptPath),
+                    );
+                    this.repls
+                        .filter((repl) => !repl.isDestroyed)
+                        .forEach((repl) => {
+                            repl.name = minimalUniquePaths[repl.scriptPath];
+                        });
                     this.waitAndRerun(null, null, 0);
                     console.debug('root -- new REPL added');
                     return repl;
@@ -60,12 +67,12 @@ export default {
             }),
 
             // Register listener for whenever the active editor is changed
-            atom.workspace.observeActiveTextEditor(editor => {
-                if(editor) {
-                    if(editor.gutterWithName('xnode-watch-gutter') === null) {
-                        editor.addGutter({name: 'xnode-watch-gutter'});
+            atom.workspace.observeActiveTextEditor((editor) => {
+                if (editor) {
+                    if (editor.gutterWithName('xnode-watch-gutter') === null) {
+                        editor.addGutter({ name: 'xnode-watch-gutter' });
                     }
-                    const changes = null;  // TODO: get changes from last edit
+                    const changes = null; // TODO: get changes from last edit
                     editor.onDidChange(() => {
                         editor.save();
                         this.waitAndRerun(editor.getPath(), changes, RERUN_DELAY);
@@ -80,12 +87,12 @@ export default {
 
             // Destroy additional objects on package deactivation
             new Disposable(() => {
-                atom.workspace.getPaneItems().forEach(item => {
-                    if(item instanceof REPL) {
+                atom.workspace.getPaneItems().forEach((item) => {
+                    if (item instanceof REPL) {
                         item.destroy();
                     }
                 });
-            })
+            }),
         );
 
         console.debug('root -- Xnode package activated');
@@ -123,11 +130,13 @@ export default {
         setTimeout(() => {
             const now = new Date();
             if (now - this.lastChangedTime >= delay) {
-                this.repls.filter(repl => !repl.isDestroyed).forEach(repl => {
-                    console.debug('root -- signaling change to REPL');
-                    repl.onFileChanged(changedPath, changes);
-                });
+                this.repls
+                    .filter((repl) => !repl.isDestroyed)
+                    .forEach((repl) => {
+                        console.debug('root -- signaling change to REPL');
+                        repl.onFileChanged(changedPath, changes);
+                    });
             }
-        }, delay + 10);  // Allow some buffer time
-    }
+        }, delay + 10); // Allow some buffer time
+    },
 };

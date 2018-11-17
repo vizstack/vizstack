@@ -8,7 +8,6 @@
 
 import ELK from 'elkjs';
 
-
 /**
  * Graph layout constants.
  * -----------------------
@@ -41,21 +40,27 @@ export function getElkGraph(nodes, edges) {
     const { edgeSegments, outPortCounts, inPortCounts } = getEdgeSegments(edges);
     const elkNodes = {};
     // Create the ELK nodes
-    nodes.forEach(node =>
-        elkNodes[node.getId()] = createElkNode(node, outPortCounts[node.getId()], inPortCounts[node.getId()]));
+    nodes.forEach(
+        (node) =>
+            (elkNodes[node.getId()] = createElkNode(
+                node,
+                outPortCounts[node.getId()],
+                inPortCounts[node.getId()],
+            )),
+    );
     // Assign ELK nodes to their proper parents
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
         if (node.getParent() !== null && node.getParent().getIsExpanded()) {
-            elkNodes[node.getParent().getId()].children.push(elkNodes[node.getId()])
+            elkNodes[node.getParent().getId()].children.push(elkNodes[node.getId()]);
         }
     });
     // Assign edge segments to the ELK nodes that should contain them (first node that is or contains both terminals)
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
         if (node.getIsExpanded()) {
             elkNodes[node.getId()].edges = edgeSegments[node.getId()];
         }
     });
-    const rootNodes = nodes.filter(node => node.getParent() === null);
+    const rootNodes = nodes.filter((node) => node.getParent() === null);
     const orientation = rootNodes.length > 0 && rootNodes[0].getIsLateral() ? 'RIGHT' : 'UP';
     return {
         id: kRootNode,
@@ -63,13 +68,13 @@ export function getElkGraph(nodes, edges) {
             'elk.algorithm': 'layered',
             'elk.direction': orientation,
             'elk.layered.spacing.nodeNodeBetweenLayers': kNodeMargin,
-            'elk.spacing.nodeNode': kNodeMargin
+            'elk.spacing.nodeNode': kNodeMargin,
         },
-        children: rootNodes.map(node => elkNodes[node.getId()]),
+        children: rootNodes.map((node) => elkNodes[node.getId()]),
         edges: edgeSegments[kRootNode],
         notElk: {
             temporalEdges: edgeSegments[kLateralEdges],
-        }
+        },
     };
 }
 
@@ -107,21 +112,24 @@ class ELKEdgeSegment {
         // Find the parent node, the node which is the lowest common ancestor of both the start and end nodes; the
         // segment will be a child of the parent node in the ELK graph
         while (startNode !== endNode) {
-            if (startNode === null || endNode !== null && startNode.getHierarchyHeight() > endNode.getHierarchyHeight()) {
+            if (
+                startNode === null ||
+                (endNode !== null && startNode.getHierarchyHeight() > endNode.getHierarchyHeight())
+            ) {
                 endNode = endNode.getParent();
-            }
-            else if (endNode === null || startNode.getHierarchyHeight() < endNode.getHierarchyHeight()) {
+            } else if (
+                endNode === null ||
+                startNode.getHierarchyHeight() < endNode.getHierarchyHeight()
+            ) {
                 startNode = startNode.getParent();
-            }
-            else{
+            } else {
                 startNode = startNode.getParent();
                 endNode = endNode.getParent();
             }
         }
         if (startNode === null) {
             this._parentNodeId = kRootNode;
-        }
-        else {
+        } else {
             this._parentNodeId = startNode.getId();
         }
     }
@@ -137,7 +145,7 @@ class ELKEdgeSegment {
      * @param {number} index
      *      The 0-indexed order of this segment among all segments belong to the original `DAGEdge`.
      */
-    setIndex = (index) => this._index = index;
+    setIndex = (index) => (this._index = index);
 
     /**
      * Returns a version of this segment ready to be placed into the ELK graph representation.
@@ -153,8 +161,8 @@ class ELKEdgeSegment {
                 edgeId: this._edgeId,
                 index: this._index,
                 z: 0,
-            }
-        }
+            },
+        };
     }
 }
 
@@ -172,7 +180,7 @@ class ELKEdgeSegment {
  *      The first visible ancestor of `node`, or `node` itself if it is visible.
  */
 function getFirstVisible(node) {
-    while(!node.getIsVisible()) {
+    while (!node.getIsVisible()) {
         node = node.getParent();
     }
     return node;
@@ -193,18 +201,27 @@ function getFirstVisible(node) {
  *      The number of incoming ports that each ELK node has.
  */
 function getEdgeSegments(edges) {
-    const edgeSegments = new Proxy({}, {
-        get: (target, name) => name in target ? target[name] : (target[name] = [])
-    });
+    const edgeSegments = new Proxy(
+        {},
+        {
+            get: (target, name) => (name in target ? target[name] : (target[name] = [])),
+        },
+    );
     // We use a port list for outputs because we want edges with the same group ID to go through the same output ports.
-    const outPortIds = new Proxy({}, {
-        get: (target, name) => name in target ? target[name] : (target[name] = [])
-    });
+    const outPortIds = new Proxy(
+        {},
+        {
+            get: (target, name) => (name in target ? target[name] : (target[name] = [])),
+        },
+    );
     // We use a count for inputs because each input should have a separate port (this can maybe be changed to
     // accommodate lists passed as arguments to ops)
-    const inPortCounts = new Proxy({}, {
-        get: (target, name) => name in target ? target[name] : 0
-    });
+    const inPortCounts = new Proxy(
+        {},
+        {
+            get: (target, name) => (name in target ? target[name] : 0),
+        },
+    );
     edges.forEach((edge) => {
         // As we move up through the node hierarchy, we keep track of edges coming _from_ the starting node separate
         // from those going _to_ the end node. This allows us to put the edge segments in proper order when the edge
@@ -237,8 +254,13 @@ function getEdgeSegments(edges) {
                 }
                 fromPortNum = outPortIds[startNode.getId()].indexOf(edge.getGroupId());
 
-                const lateralEdge = new ELKEdgeSegment(edge, startNode, getPortId(startNode, fromPortNum), endNode,
-                                                       endNode.getId());
+                const lateralEdge = new ELKEdgeSegment(
+                    edge,
+                    startNode,
+                    getPortId(startNode, fromPortNum),
+                    endNode,
+                    endNode.getId(),
+                );
                 edgeSegments[kLateralEdges].push(lateralEdge.toElkEdge());
             }
             return;
@@ -249,12 +271,15 @@ function getEdgeSegments(edges) {
             // When we find a common ancestor, create the final segment, assign every segment their proper index, and
             // add them to `edgeSegments`
             if (startNode.getParent() === endNode.getParent()) {
-                fromEdgeSegments.push(new ELKEdgeSegment(
-                    edge,
-                    startNode,
-                    getPortId(startNode, fromPortNum, false),
-                    endNode,
-                    getPortId(endNode, inPortCounts[endNode.getId()], true)));
+                fromEdgeSegments.push(
+                    new ELKEdgeSegment(
+                        edge,
+                        startNode,
+                        getPortId(startNode, fromPortNum, false),
+                        endNode,
+                        getPortId(endNode, inPortCounts[endNode.getId()], true),
+                    ),
+                );
                 inPortCounts[endNode.getId()] += 1;
                 fromEdgeSegments.concat(toEdgeSegments.reverse()).forEach((edgeSegment, i) => {
                     edgeSegment.setIndex(i);
@@ -264,27 +289,41 @@ function getEdgeSegments(edges) {
             }
             // If the start node is at a greater height than the end node, add a new segment connecting the end node to
             // its parent
-            if (startNode.getParent() === null ||
-                endNode.getParent() !== null && startNode.getParent().getHierarchyHeight() > endNode.getParent().getHierarchyHeight()) {
+            if (
+                startNode.getParent() === null ||
+                (endNode.getParent() !== null &&
+                    startNode.getParent().getHierarchyHeight() >
+                        endNode.getParent().getHierarchyHeight())
+            ) {
                 if (!edge.getIsLateral()) {
-                    toEdgeSegments.push(new ELKEdgeSegment(
-                        edge,
-                        endNode.getParent(),
-                        getPortId(endNode.getParent(), inPortCounts[endNode.getParent().getId()], true),
-                        endNode,
-                        getPortId(endNode, inPortCounts[endNode.getId()], true)));
+                    toEdgeSegments.push(
+                        new ELKEdgeSegment(
+                            edge,
+                            endNode.getParent(),
+                            getPortId(
+                                endNode.getParent(),
+                                inPortCounts[endNode.getParent().getId()],
+                                true,
+                            ),
+                            endNode,
+                            getPortId(endNode, inPortCounts[endNode.getId()], true),
+                        ),
+                    );
                 }
                 inPortCounts[endNode.getId()] += 1;
                 endNode = endNode.getParent();
                 continue;
             }
             // Otherwise, add a new segment from the start node to its parent
-            fromEdgeSegments.push(new ELKEdgeSegment(
-                edge,
-                startNode,
-                getPortId(startNode, fromPortNum, false),
-                startNode.getParent(),
-                getPortId(startNode.getParent(), fromPortNum, false)));
+            fromEdgeSegments.push(
+                new ELKEdgeSegment(
+                    edge,
+                    startNode,
+                    getPortId(startNode, fromPortNum, false),
+                    startNode.getParent(),
+                    getPortId(startNode.getParent(), fromPortNum, false),
+                ),
+            );
             startNode = startNode.getParent();
             if (outPortIds[startNode.getId()].indexOf(edge.getGroupId()) < 0) {
                 outPortIds[startNode.getId()].push(edge.getGroupId());
@@ -293,7 +332,9 @@ function getEdgeSegments(edges) {
         }
     });
     const outPortCounts = {};
-    Object.entries(outPortIds).forEach(([nodeId, outPortIdArray]) => outPortCounts[nodeId] = outPortIdArray.length);
+    Object.entries(outPortIds).forEach(
+        ([nodeId, outPortIdArray]) => (outPortCounts[nodeId] = outPortIdArray.length),
+    );
     return { edgeSegments, outPortCounts, inPortCounts };
 }
 
@@ -317,9 +358,9 @@ function createElkNode(node, numOutPorts, numInPorts) {
         id: node.getId(),
         properties: {
             'elk.direction': node.getContainsLateral() ? 'RIGHT' : 'UP',
-            'portConstraints': 'FIXED_SIDE',
+            portConstraints: 'FIXED_SIDE',
             'elk.layered.spacing.nodeNodeBetweenLayers': kNodeMargin,
-            'elk.spacing.nodeNode': kNodeMargin
+            'elk.spacing.nodeNode': kNodeMargin,
         },
         edges: [],
         ports: [],
@@ -327,23 +368,23 @@ function createElkNode(node, numOutPorts, numInPorts) {
         notElk: {
             z: node.getIsExpanded() ? -node.getHierarchyHeight() : 1,
             lateralStep: node.getLateralStep(),
-        }
+        },
     };
-    for (let i=0; i < numInPorts; i++) {
+    for (let i = 0; i < numInPorts; i++) {
         let newPort = {
             id: getPortId(node, i, true),
             properties: {
-                'port.side': "SOUTH",
-            }
+                'port.side': 'SOUTH',
+            },
         };
         elkNode.ports.push(newPort);
     }
-    for (let i=0; i < numOutPorts; i++) {
+    for (let i = 0; i < numOutPorts; i++) {
         let newPort = {
             id: getPortId(node, i, false),
             properties: {
-                'port.side': "NORTH",
-            }
+                'port.side': 'NORTH',
+            },
         };
         elkNode.ports.push(newPort);
     }
@@ -435,31 +476,39 @@ function layoutElkGraphRecurse(elk, toLayout, onComplete) {
         if (elkNode.id !== kRootNode) {
             elkNode.edges = [];
         }
-        elk.layout(elkNode).then(
-            () => {
-                if (getElkNodeContainsLateral(elkNode)) {
-                    // Arrange lateral nodes in order of lateral step
-                    let lateralNodes = elkNode.children.sort((c1, c2) => c1.notElk.lateralStep - c2.notElk.lateralStep);
-                    layoutLateralNodes(lateralNodes);
-                    elkNode.width = lateralNodes[lateralNodes.length - 1].x +
-                        lateralNodes[lateralNodes.length - 1].width + kLateralNodeMargin;
-                    // All temporal containers have the same height, so we can index arbitrarily
-                    elkNode.height = lateralNodes[0].height + kLateralNodeMargin * 2;
-                }
-                lockElkNodeLayout(elkNode);
-                if (elkNode.id !== kRootNode) {
-                    layoutElkGraphRecurse(elk, toLayout.splice(1), onComplete);
-                }
-                else {
-                    elkNode.edges = elkNode.edges.concat(
-                        layoutLateralEdges(elkNode.notElk.temporalEdges, getNodeAndPortTransforms(elkNode)));
-                    onComplete(elkNode.width, elkNode.height,
-                        elkGraphToNodeTransforms(elkNode), elkGraphToEdgeTransforms(elkNode));
-                }
+        elk.layout(elkNode).then(() => {
+            if (getElkNodeContainsLateral(elkNode)) {
+                // Arrange lateral nodes in order of lateral step
+                let lateralNodes = elkNode.children.sort(
+                    (c1, c2) => c1.notElk.lateralStep - c2.notElk.lateralStep,
+                );
+                layoutLateralNodes(lateralNodes);
+                elkNode.width =
+                    lateralNodes[lateralNodes.length - 1].x +
+                    lateralNodes[lateralNodes.length - 1].width +
+                    kLateralNodeMargin;
+                // All temporal containers have the same height, so we can index arbitrarily
+                elkNode.height = lateralNodes[0].height + kLateralNodeMargin * 2;
             }
-        );
-    }
-    else {
+            lockElkNodeLayout(elkNode);
+            if (elkNode.id !== kRootNode) {
+                layoutElkGraphRecurse(elk, toLayout.splice(1), onComplete);
+            } else {
+                elkNode.edges = elkNode.edges.concat(
+                    layoutLateralEdges(
+                        elkNode.notElk.temporalEdges,
+                        getNodeAndPortTransforms(elkNode),
+                    ),
+                );
+                onComplete(
+                    elkNode.width,
+                    elkNode.height,
+                    elkGraphToNodeTransforms(elkNode),
+                    elkGraphToEdgeTransforms(elkNode),
+                );
+            }
+        });
+    } else {
         layoutElkGraphRecurse(elk, toLayout.splice(1), onComplete);
     }
 }
@@ -474,19 +523,20 @@ function layoutElkGraphRecurse(elk, toLayout, onComplete) {
  */
 function layoutLateralNodes(lateralNodes) {
     let xPos = kLateralNodeMargin;
-    let maxChildHeight = Math.max(...lateralNodes.map(node => node.height));
-    lateralNodes.forEach(node => {
+    let maxChildHeight = Math.max(...lateralNodes.map((node) => node.height));
+    lateralNodes.forEach((node) => {
         node.x = xPos;
         xPos += node.width + kLateralNodeMargin;
 
         let heightDiff = maxChildHeight - node.height;
-        node.children.forEach(child => child.y += heightDiff);
-        node.ports.forEach(port => port.y += heightDiff);
+        node.children.forEach((child) => (child.y += heightDiff));
+        node.ports.forEach((port) => (port.y += heightDiff));
         // Each edge should have only one section; multiple sections are only used in hyperedges (which we do not use).
-        node.edges.forEach(edge =>
+        node.edges.forEach((edge) =>
             [edge.sections[0].startPoint, edge.sections[0].endPoint]
                 .concat(edge.sections[0].bendPoints ? edge.sections[0].bendPoints : [])
-                .forEach(point => point.y += heightDiff));
+                .forEach((point) => (point.y += heightDiff)),
+        );
         node.height = maxChildHeight;
         node.y = kLateralNodeMargin;
         lockElkNodeLayout(node);
@@ -522,7 +572,7 @@ function layoutLateralEdges(lateralEdges, nodeAndPortTransforms) {
 
     const outputCountByPort = {};
     const inputCountByNode = {};
-    return lateralEdges.map(({id, sources, targets, notElk}) => {
+    return lateralEdges.map(({ id, sources, targets, notElk }) => {
         let sourceId = sources[0];
         let targetId = targets[0];
         if (!(sourceId in outputCountByPort)) {
@@ -535,21 +585,33 @@ function layoutLateralEdges(lateralEdges, nodeAndPortTransforms) {
         }
         inputCountByNode[targetId] += 1;
 
-        let startPoint = {x: nodeAndPortTransforms[sourceId].x, y: nodeAndPortTransforms[sourceId].y};
-        let portSep = (nodeAndPortTransforms[targetId].height / (lateralInputsToNode[targetId] + 1));
-        let endPoint = {x: nodeAndPortTransforms[targetId].x, y: nodeAndPortTransforms[targetId].y +
-            portSep * (inputCountByNode[targetId])};
-        let bendPoints = buildLateralEdgeBendPoints(startPoint, endPoint, outputCountByPort[sourceId]);
+        let startPoint = {
+            x: nodeAndPortTransforms[sourceId].x,
+            y: nodeAndPortTransforms[sourceId].y,
+        };
+        let portSep = nodeAndPortTransforms[targetId].height / (lateralInputsToNode[targetId] + 1);
+        let endPoint = {
+            x: nodeAndPortTransforms[targetId].x,
+            y: nodeAndPortTransforms[targetId].y + portSep * inputCountByNode[targetId],
+        };
+        let bendPoints = buildLateralEdgeBendPoints(
+            startPoint,
+            endPoint,
+            outputCountByPort[sourceId],
+        );
         return {
             id,
-            sections: [{
-                startPoint,
-                endPoint,
-                bendPoints}],
+            sections: [
+                {
+                    startPoint,
+                    endPoint,
+                    bendPoints,
+                },
+            ],
             sources,
             targets,
             notElk,
-        }
+        };
     });
 }
 
@@ -571,30 +633,32 @@ function layoutLateralEdges(lateralEdges, nodeAndPortTransforms) {
  */
 function buildLateralEdgeBendPoints(startPoint, endPoint, lateralOutputCount) {
     let slope = (endPoint.y - startPoint.y) / (endPoint.x - startPoint.x);
-    let length = Math.sqrt((endPoint.y - startPoint.y)**2 + (endPoint.x - startPoint.x)**2);
+    let length = Math.sqrt((endPoint.y - startPoint.y) ** 2 + (endPoint.x - startPoint.x) ** 2);
     let orthogonal = -1 / slope;
     let curveLen = length * kCurvePointFactor;
-    let curveX = Math.sqrt(curveLen**2 / (1 + orthogonal**2));
+    let curveX = Math.sqrt(curveLen ** 2 / (1 + orthogonal ** 2));
     let curveY = orthogonal * curveX;
     if (curveY > 0) {
         curveY *= -1;
         curveX *= -1;
     }
-    let halfway = {x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2};
+    let halfway = { x: (startPoint.x + endPoint.x) / 2, y: (startPoint.y + endPoint.y) / 2 };
 
-    let curvePoint = {x: halfway.x + curveX, y: halfway.y + curveY};
+    let curvePoint = { x: halfway.x + curveX, y: halfway.y + curveY };
     return [
-        {x: startPoint.x, y: startPoint.y - kEdgeMargin * lateralOutputCount},
+        { x: startPoint.x, y: startPoint.y - kEdgeMargin * lateralOutputCount },
         curvePoint,
-        {x: endPoint.x - kEdgeMargin, y: endPoint.y},
+        { x: endPoint.x - kEdgeMargin, y: endPoint.y },
     ];
 }
 
 /** Changes an ELK node's settings so that its children cannot be rearranged by future `layout()` calls. */
-const lockElkNodeLayout = (elkNode) => {elkNode.properties['elk.algorithm'] = 'elk.fixed'};
+const lockElkNodeLayout = (elkNode) => {
+    elkNode.properties['elk.algorithm'] = 'elk.fixed';
+};
 /** Returns whether a given ELK node contains lateral nodes. */
-const getElkNodeContainsLateral = (elkNode) => elkNode.children && elkNode.children.length > 0 &&
-    elkNode.children[0].notElk.lateralStep >= 0;
+const getElkNodeContainsLateral = (elkNode) =>
+    elkNode.children && elkNode.children.length > 0 && elkNode.children[0].notElk.lateralStep >= 0;
 
 /**
  * Builds a mapping of node IDs and port IDs to their height, width, and absolute position relative to the graph origin.
@@ -613,16 +677,22 @@ const getElkNodeContainsLateral = (elkNode) => elkNode.children && elkNode.child
  *      A mapping of node and port IDs to absolute positions; height is also included for spacing lateral edges
  *      properly.
  */
-function getNodeAndPortTransforms(elkNode, positions={}, offset={x: 0, y: 0}) {
-    positions[elkNode.id] = {...offset, height: elkNode.height};
+function getNodeAndPortTransforms(elkNode, positions = {}, offset = { x: 0, y: 0 }) {
+    positions[elkNode.id] = { ...offset, height: elkNode.height };
     if (elkNode.children) {
-        elkNode.children.forEach(child => {
-            getNodeAndPortTransforms(child, positions, {x: offset.x + child.x, y: offset.y + child.y});
+        elkNode.children.forEach((child) => {
+            getNodeAndPortTransforms(child, positions, {
+                x: offset.x + child.x,
+                y: offset.y + child.y,
+            });
         });
     }
     if (elkNode.ports) {
-        elkNode.ports.forEach(port => {
-            getNodeAndPortTransforms(port, positions, {x: offset.x + port.x, y: offset.y + port.y})
+        elkNode.ports.forEach((port) => {
+            getNodeAndPortTransforms(port, positions, {
+                x: offset.x + port.x,
+                y: offset.y + port.y,
+            });
         });
     }
     return positions;
@@ -641,7 +711,7 @@ function getNodeAndPortTransforms(elkNode, positions={}, offset={x: 0, y: 0}) {
  */
 function getNumLateralInputsByNode(lateralEdges) {
     let temporalInputsToNode = {};
-    lateralEdges.forEach(({targets}) => {
+    lateralEdges.forEach(({ targets }) => {
         // `targets` is always a list with one item, by ELK JSON spec
         let targetId = targets[0];
         if (!(targetId in temporalInputsToNode)) {
@@ -678,7 +748,7 @@ function getNodeLayoutOrderRecurse(toLayout, i) {
     if (i === toLayout.length) {
         return toLayout.reverse();
     }
-    toLayout[i].children.forEach(child => {
+    toLayout[i].children.forEach((child) => {
         toLayout.push(child);
     });
     return getNodeLayoutOrderRecurse(toLayout, i + 1);
@@ -704,9 +774,17 @@ function elkGraphToEdgeTransforms(graph) {
     const edgeGroups = elkGraphToEdgeGroups(graph);
     const edgeTransforms = {};
     Object.entries(edgeGroups).forEach(([groupId, edgeGroup]) => {
-        let edgeGroupSorted = edgeGroup.edgeSlices.splice(0).sort(({order: order1}, {order: order2}) => order1 - order2);
+        let edgeGroupSorted = edgeGroup.edgeSlices
+            .splice(0)
+            .sort(({ order: order1 }, { order: order2 }) => order1 - order2);
         let newEdge = [edgeGroupSorted[0].points[0]];
-        edgeGroupSorted.forEach(({points}) => points.forEach((point, i) => {if (i > 0) {newEdge.push(point)}}));
+        edgeGroupSorted.forEach(({ points }) =>
+            points.forEach((point, i) => {
+                if (i > 0) {
+                    newEdge.push(point);
+                }
+            }),
+        );
         edgeTransforms[groupId] = {
             points: newEdge,
             z: edgeGroup.z,
@@ -740,7 +818,7 @@ function elkGraphToEdgeTransforms(graph) {
  *   edge segments.
  */
 function elkGraphToEdgeGroups(graph) {
-    return elkGraphToEdgeGroupsRecurse(graph, {}, {x: 0, y: 0});
+    return elkGraphToEdgeGroupsRecurse(graph, {}, { x: 0, y: 0 });
 }
 
 /**
@@ -768,16 +846,17 @@ function elkGraphToEdgeGroupsRecurse(elkNode, edgeGroups, offset) {
                 edgeSlices: [],
             };
         }
-        edgeGroups[edgeGroupId].edgeSlices.push(
-            {
-                points,
-                order: edge.notElk.index,
-            }
-        );
+        edgeGroups[edgeGroupId].edgeSlices.push({
+            points,
+            order: edge.notElk.index,
+        });
     }
-    for (let i = 0; i< elkNode.children.length; i ++) {
-        let {x, y} = elkNode.children[i];
-        elkGraphToEdgeGroupsRecurse(elkNode.children[i], edgeGroups, {x: offset.x + x, y: offset.y + y});
+    for (let i = 0; i < elkNode.children.length; i++) {
+        let { x, y } = elkNode.children[i];
+        elkGraphToEdgeGroupsRecurse(elkNode.children[i], edgeGroups, {
+            x: offset.x + x,
+            y: offset.y + y,
+        });
     }
     return edgeGroups;
 }
@@ -792,19 +871,19 @@ function elkGraphToEdgeGroupsRecurse(elkNode, edgeGroups, offset) {
  * @param {object} edge
  *      An edge object in ELK JSON format representing a single laid-out edge.
  * @param {{x: number, y: number}} offset
-  *     The offset of the edge's parent node from the graph origin.
+ *     The offset of the edge's parent node from the graph origin.
  * @returns {{x: number, y: number}[]}
  */
 function elkEdgeToPointArray(edge, offset) {
     let points = [];
     let { startPoint, endPoint, bendPoints } = edge.sections[0];
-    points.push({x: startPoint.x + offset.x, y: startPoint.y + offset.y});
+    points.push({ x: startPoint.x + offset.x, y: startPoint.y + offset.y });
     if (bendPoints) {
-        bendPoints.forEach(({x, y}) => {
-            points.push({x: x + offset.x, y: y + offset.y});
+        bendPoints.forEach(({ x, y }) => {
+            points.push({ x: x + offset.x, y: y + offset.y });
         });
     }
-    points.push({x: endPoint.x + offset.x, y: endPoint.y + offset.y});
+    points.push({ x: endPoint.x + offset.x, y: endPoint.y + offset.y });
     return points;
 }
 
@@ -822,7 +901,7 @@ function elkEdgeToPointArray(edge, offset) {
  *      A mapping of node IDs to their transforms; see `layoutElkGraph()`.
  */
 function elkGraphToNodeTransforms(graph) {
-    return elkGraphToNodeTransformsRecurse(graph, {}, {x: 0, y: 0});
+    return elkGraphToNodeTransformsRecurse(graph, {}, { x: 0, y: 0 });
 }
 
 /**
@@ -850,7 +929,10 @@ function elkGraphToNodeTransformsRecurse(elkNode, nodes, offset) {
             height,
         };
 
-        elkGraphToNodeTransformsRecurse(elkNode.children[i], nodes, {x: x + offset.x, y: y + offset.y});
+        elkGraphToNodeTransformsRecurse(elkNode.children[i], nodes, {
+            x: x + offset.x,
+            y: y + offset.y,
+        });
     }
     return nodes;
 }

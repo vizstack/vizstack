@@ -7,12 +7,10 @@ import SequenceViz from '../../../layouts/SequenceLayout';
 
 import Typography from '@material-ui/core/Typography';
 
-
 /**
  * This dumb component renders a viewer for a `graphdata` object, showing its surfaced key-value pairs as a sequence.
  */
 class GraphDataViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -48,7 +46,7 @@ class GraphDataViewer extends Component {
      */
     render() {
         const { classes, vizTable, expandSubviewer, data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { kvpairs } = data;
@@ -57,27 +55,30 @@ class GraphDataViewer extends Component {
                 text: key,
                 isHovered: hoveredIdx === idx,
                 isSelected: selectedIdx === idx,
-                onClick: () => this.setState({selectedIdx: idx}),
+                onClick: () => this.setState({ selectedIdx: idx }),
                 onDoubleClick: () => expandSubviewer(value),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
-            }
+                onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                onMouseLeave: () => this.setState({ hoveredIdx: null }),
+            };
         });
 
         return (
             <div className={classes.container}>
                 <Typography className={classes.header}>Output properties: </Typography>
-                <SequenceViz model={model}
-                             showIndices={false}
-                             startMotif={"["}
-                             endMotif={"]"}
-                             itemMaxWidth={75}/>
-            </div>);
+                <SequenceViz
+                    model={model}
+                    showIndices={false}
+                    startMotif={'['}
+                    endMotif={']'}
+                    itemMaxWidth={75}
+                />
+            </div>
+        );
     }
 }
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     container: {
         width: '100%',
         display: 'flex',
@@ -87,8 +88,8 @@ const styles = theme => ({
     },
     header: {
         color: '#ffffff',
-        marginRight: 10,  // TODO: un-hardcode this
-    }
+        marginRight: 10, // TODO: un-hardcode this
+    },
 });
 
 export default withStyles(styles)(GraphDataViewer);

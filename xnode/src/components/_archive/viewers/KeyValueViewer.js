@@ -4,13 +4,11 @@ import { createSelector } from 'reselect';
 
 import KeyValueViz from '../viz/KeyValueViz';
 
-
 /**
  * This dumb component renders a viewer for a Python key-value variable (dict, class, module, object). It converts
  * between the Canvas data structures to the explicit data model expected by `KeyValueViz`.
  */
 class KeyValueViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** The `data` sub-object as defined in `SYMBOL-TABLE-SCHEMA.md` for "dict/class/module/object". */
@@ -54,18 +52,17 @@ class KeyValueViewer extends Component {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,
                 isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
+                onClick: () => this.setState({ selectedIdx: idx }),
                 onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
-            }
-        }
-        else {
+                onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                onMouseLeave: () => this.setState({ hoveredIdx: null }),
+            };
+        } else {
             return {
                 text: elem,
                 isHovered: false,
                 isSelected: false,
-            }
+            };
         }
     }
 
@@ -77,7 +74,7 @@ class KeyValueViewer extends Component {
      */
     render() {
         const { data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
 
         const { contents } = data;
         const model = Object.entries(contents).map(([k, v], idx) => {
@@ -85,13 +82,15 @@ class KeyValueViewer extends Component {
         });
 
         return (
-            <KeyValueViz model={model}
-                        startMotif="{"
-                        endMotif="}"
-                        keyMaxWidth={75}
-                        keyMinWidth={75}
-                        valueMaxWidth={75}
-                        valueMinWidth={75} />
+            <KeyValueViz
+                model={model}
+                startMotif='{'
+                endMotif='}'
+                keyMaxWidth={75}
+                keyMinWidth={75}
+                valueMaxWidth={75}
+                valueMinWidth={75}
+            />
         );
     }
 }

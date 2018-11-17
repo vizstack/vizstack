@@ -57,6 +57,6 @@
     "build": "babel src/ -d build/ --ignore 'src/main.js' --copy-files",
     "test": "cd src/ && python3 -m pytest",
     "typecheck": "cd src/ && flow && mypy .",
-    "format": "prettier --config ./.prettierrc --write src/**/*.js"
+    "format": "prettier --config ./.prettierrc --write 'src/**/*.js'"
   }
 }

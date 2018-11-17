@@ -6,9 +6,7 @@ import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 
-
 class SandboxSettingsModal extends React.Component<{
-
     /** CSS-in-JS styling object. */
     classes: {},
 
@@ -17,9 +15,7 @@ class SandboxSettingsModal extends React.Component<{
 
     /** The default path of the created sandbox's script. */
     defaultScriptPath: string,
-
 }> {
-
     /**
      * Constructor.
      */
@@ -29,7 +25,7 @@ class SandboxSettingsModal extends React.Component<{
         this.state = {
             pythonPath: 'python3',
             scriptPath: props.defaultScriptPath,
-        }
+        };
     }
 
     /**
@@ -38,7 +34,11 @@ class SandboxSettingsModal extends React.Component<{
     openSandbox() {
         const { pythonPath, scriptPath } = this.state;
         console.debug(`submit() -- requesting sandbox for ${scriptPath} using ${pythonPath}`);
-        atom.workspace.open(`atom://xnode-sandbox/${encodeURIComponent(pythonPath)}/${encodeURIComponent(scriptPath)}`);
+        atom.workspace.open(
+            `atom://xnode-sandbox/${encodeURIComponent(pythonPath)}/${encodeURIComponent(
+                scriptPath,
+            )}`,
+        );
     }
 
     /**
@@ -50,31 +50,39 @@ class SandboxSettingsModal extends React.Component<{
         const { pythonPath, scriptPath } = this.state;
         return (
             <div className={classes.root}>
-                <Typography className={classes.title} variant={"headline"}>Sandbox Settings</Typography>
+                <Typography className={classes.title} variant={'headline'}>
+                    Sandbox Settings
+                </Typography>
                 <div>
                     <TextField
-                        className={classNames('native-key-bindings')
-                            /* use native-key-bindings to fix an issue with backspacing in Atom */}
-                        label="Python Path"
+                        className={
+                            classNames('native-key-bindings')
+                            /* use native-key-bindings to fix an issue with backspacing in Atom */
+                        }
+                        label='Python Path'
                         value={pythonPath}
-                        InputProps={{className: classes.fieldInput}}
-                        InputLabelProps={{className: classes.fieldLabel, disableAnimation: true}}
-                        onChange={(e) => this.setState({pythonPath: e.target.value})}
+                        InputProps={{ className: classes.fieldInput }}
+                        InputLabelProps={{ className: classes.fieldLabel, disableAnimation: true }}
+                        onChange={(e) => this.setState({ pythonPath: e.target.value })}
                     />
                 </div>
                 <div>
                     <TextField
-                        className={classNames('native-key-bindings')
-                            /* use native-key-bindings to fix an issue with backspacing in Atom */}
-                        label="Script Path"
+                        className={
+                            classNames('native-key-bindings')
+                            /* use native-key-bindings to fix an issue with backspacing in Atom */
+                        }
+                        label='Script Path'
                         value={scriptPath}
-                        InputProps={{className: classes.fieldInput}}
-                        InputLabelProps={{className: classes.fieldLabel, disableAnimation: true}}
-                        onChange={(e) => this.setState({scriptPath: e.target.value})}
+                        InputProps={{ className: classes.fieldInput }}
+                        InputLabelProps={{ className: classes.fieldLabel, disableAnimation: true }}
+                        onChange={(e) => this.setState({ scriptPath: e.target.value })}
                     />
                 </div>
                 <div>
-                    <Button className={classes.button} onClick={() => this.openSandbox()}>Open</Button>
+                    <Button className={classes.button} onClick={() => this.openSandbox()}>
+                        Open
+                    </Button>
                 </div>
             </div>
         );
@@ -85,7 +93,7 @@ class SandboxSettingsModal extends React.Component<{
 // -------------------------------
 
 /** CSS-in-JS styling object. */
-const styles = theme => ({
+const styles = (theme) => ({
     root: {
         display: 'block',
         marginLeft: 'auto',

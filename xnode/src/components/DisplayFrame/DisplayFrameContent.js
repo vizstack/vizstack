@@ -2,7 +2,6 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-
 /**
  * This dumb component creates a content container for a display frame that vertically lays out its children
  * components.
@@ -10,7 +9,6 @@ import { withStyles } from '@material-ui/core/styles';
  * in order to more closely resemble Java's JPanel.
  */
 class DisplayFrameContent extends React.PureComponent<{
-
     /** CSS-in-JS styling object. */
     classes: {},
 
@@ -19,19 +17,13 @@ class DisplayFrameContent extends React.PureComponent<{
 
     /** Class tags to allow additional styling of container. */
     className?: string,
-
 }> {
-
     /**
      * Renders a content container with specific styling and vertical layout properties.
      */
     render() {
         const { classes, children, className } = this.props;
-        return (
-            <div className={classNames(classes.content, className)}>
-                {children}
-            </div>
-        );
+        return <div className={classNames(classes.content, className)}>{children}</div>;
     }
 }
 
@@ -39,21 +31,21 @@ class DisplayFrameContent extends React.PureComponent<{
 // -------------------------------
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     content: {
         // Fill rest of vertical space in DisplayFrame container
-        flexGrow:       1,
+        flexGrow: 1,
 
         // Allow absolute positioning of children
-        position:       'relative',
+        position: 'relative',
 
         // Layout child components vertically
-        display:        'flex',
-        flexDirection:  'column',
+        display: 'flex',
+        flexDirection: 'column',
 
         // Content display properties
-        overflow:       'auto',
-        padding:        theme.spacing.unit,
+        overflow: 'auto',
+        padding: theme.spacing.unit,
     },
 });
 

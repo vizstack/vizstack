@@ -4,12 +4,11 @@ import type { VizId, VizSpec } from './outputs';
 
 /** Root reducer's state slice shape. */
 export type VizTableState = {
-
     // Map of symbol IDs to symbol objects.
     vizTable: {
         [VizId]: VizSpec,
-    }
-}
+    },
+};
 
 /** Root reducer's initial state slice. */
 const initialState = Immutable({
@@ -23,12 +22,14 @@ const initialState = Immutable({
  */
 export function viztableReducer(state = initialState, action = {}) {
     const { type } = action;
-    switch(type) {
-        case VizTableActions.CLEAR_TABLE:  return clearVizTable(state, action);
-        case VizTableActions.ADD_SLICE:    return addVizTableSlice(state, action);
+    switch (type) {
+        case VizTableActions.CLEAR_TABLE:
+            return clearVizTable(state, action);
+        case VizTableActions.ADD_SLICE:
+            return addVizTableSlice(state, action);
     }
-    return state;  // No effect by default
-};
+    return state; // No effect by default
+}
 
 /**
  * Removes all entries from the VizTable.

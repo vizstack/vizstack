@@ -10,28 +10,28 @@ import type {
     TokenPrimitiveModel,
     SequenceLayoutModel,
     KeyValueLayoutModel,
-} from "../state/viztable/outputs";
-import { getVizTable, VizModel } from "../state/viztable/outputs";
+} from '../state/viztable/outputs';
+import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
 import {
-    createViewerAction, hideViewerInCanvasAction, reorderViewerInCanvasAction,
-    showViewerInCanvasAction
-} from "../state/canvas/actions";
-import {getViewer} from "../state/canvas/outputs";
+    createViewerAction,
+    hideViewerInCanvasAction,
+    reorderViewerInCanvasAction,
+    showViewerInCanvasAction,
+} from '../state/canvas/actions';
+import { getViewer } from '../state/canvas/outputs';
 
 // Viz layouts
 import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
-import ColorLightBlue from "@material-ui/core/colors/lightBlue";
-
+import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 
 /** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
  *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the
  *  context to its `Viewer` sub-components; a Primitive Viz is terminal and so does not need to pass-through. */
 export type ViewerContext = {
-
     // Size category to render the top-level Viz.
     displaySize?: 'regular' | 'small',
 };
@@ -39,30 +39,28 @@ export type ViewerContext = {
 /**
  * This smart component parses a VizSpec and assembles a corresponding Viz rendering.
  */
-class Viewer extends React.Component<{
+class Viewer extends React.Component<
+    {
+        /** CSS-in-JS styling object. */
+        classes: {},
 
-    /** CSS-in-JS styling object. */
-    classes: {},
+        /** Unique `ViewerId` for this Viewer. */
+        vizId: string,
 
-    /** Unique `ViewerId` for this Viewer. */
-    vizId: string,
+        /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
+        vizTable: { [VizId]: VizSpec },
 
-    /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
-    vizTable: {[VizId]: VizSpec},
+        /** Information passed down from direct parent Viewer. */
+        viewerContext?: ViewerContext,
 
-    /** Information passed down from direct parent Viewer. */
-    viewerContext?: ViewerContext,
-
-    /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
-    fetchVizModel: (VizId, 'compact' | 'full') => void,
-
-}, {
-
-    /** What expansion mode the viewer is in. */
-    viewerState: 'summary' | 'compact' | 'full',
-
-}> {
-
+        /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
+        fetchVizModel: (VizId, 'compact' | 'full') => void,
+    },
+    {
+        /** What expansion mode the viewer is in. */
+        viewerState: 'summary' | 'compact' | 'full',
+    },
+> {
     /**
      * Constructor.
      *
@@ -82,7 +80,7 @@ class Viewer extends React.Component<{
         this.state = {
             viewerState,
             isHovered: false,
-        }
+        };
     }
 
     /**
@@ -94,17 +92,13 @@ class Viewer extends React.Component<{
      */
     getVizComponent(model: VizModel): React.Component {
         const { fetchVizModel } = this.props;
-        switch(model.type) {
-
+        switch (model.type) {
             // Primitives
             // ----------
 
             case 'TokenPrimitive':
                 const { text } = (model: TokenPrimitiveModel).contents;
-                return (
-                    <TokenPrimitive text={text}
-                                    shouldTextWrap={true} />
-                );
+                return <TokenPrimitive text={text} shouldTextWrap={true} />;
 
             // Layouts
             // -------
@@ -112,13 +106,15 @@ class Viewer extends React.Component<{
             case 'SequenceLayout':
                 const { elements } = (model: SequenceLayoutModel).contents;
                 return (
-                    <SequenceLayout elements={elements.map((vizId: VizId) => ({
-                        vizId,
-                        fetchVizModel: fetchVizModel,
-                        viewerContext: {
-                            displaySize: 'small',
-                        },
-                    }))}/>
+                    <SequenceLayout
+                        elements={elements.map((vizId: VizId) => ({
+                            vizId,
+                            fetchVizModel: fetchVizModel,
+                            viewerContext: {
+                                displaySize: 'small',
+                            },
+                        }))}
+                    />
                 );
 
             case 'KeyValueLayout':
@@ -138,61 +134,64 @@ class Viewer extends React.Component<{
         const { viewerState, isHovered } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
-        if(!vizSpec) {
-            return null;  // TODO: What to do?
+        if (!vizSpec) {
+            return null; // TODO: What to do?
         }
 
         let model: VizModel = undefined;
-        switch(viewerState) {
+        switch (viewerState) {
             case 'summary':
                 model = vizSpec.summaryModel;
                 break;
             case 'compact':
                 if (vizSpec.compactModel) {
                     model = vizSpec.compactModel;
-                }
-                else {
+                } else {
                     model = vizSpec.summaryModel;
                 }
                 break;
             case 'full':
                 if (vizSpec.fullModel) {
                     model = vizSpec.fullModel;
-                }
-                else if (vizSpec.compactModel) {
+                } else if (vizSpec.compactModel) {
                     model = vizSpec.compactModel;
-                }
-                else {
+                } else {
                     model = vizSpec.summaryModel;
                 }
                 break;
         }
         return (
-            <div className={classNames({
-                [classes.box]    :  true,
-                [classes.hovered]:  isHovered,
-            })}
-                 onClick={(e) => {
-                     e.stopPropagation();
-                     const newState = viewerState === 'summary' ? 'compact' :
-                         (viewerState === 'compact' ? 'full' : 'summary');
-                     fetchVizModel(vizId, newState);
-                     this.setState((state) => ({
-                         ...state,
-                         viewerState: newState,
-                     }))
-                 }}
-                 onMouseOver={(e) => {
-                     e.stopPropagation();
-                     this.setState((state) => ({...state, isHovered: true}));
-                 }}
-                 onMouseOut={(e) => {
-                     e.stopPropagation();
-                     this.setState((state) => ({...state, isHovered: false}));
-                 }}>
+            <div
+                className={classNames({
+                    [classes.box]: true,
+                    [classes.hovered]: isHovered,
+                })}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    const newState =
+                        viewerState === 'summary'
+                            ? 'compact'
+                            : viewerState === 'compact'
+                            ? 'full'
+                            : 'summary';
+                    fetchVizModel(vizId, newState);
+                    this.setState((state) => ({
+                        ...state,
+                        viewerState: newState,
+                    }));
+                }}
+                onMouseOver={(e) => {
+                    e.stopPropagation();
+                    this.setState((state) => ({ ...state, isHovered: true }));
+                }}
+                onMouseOut={(e) => {
+                    e.stopPropagation();
+                    this.setState((state) => ({ ...state, isHovered: false }));
+                }}
+            >
                 {this.getVizComponent(model)}
             </div>
-        )
+        );
     }
 }
 
@@ -200,16 +199,16 @@ class Viewer extends React.Component<{
 // -------------------------------
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     // css-key: value,// Border for highlighting
     box: {
-        borderRadius:   theme.shape.borderRadius.regular,
-        borderColor:    'transparent',
-        borderStyle:    'solid',
-        borderWidth:    1,  // TODO: Dehardcode this
+        borderRadius: theme.shape.borderRadius.regular,
+        borderColor: 'transparent',
+        borderStyle: 'solid',
+        borderWidth: 1, // TODO: Dehardcode this
     },
     hovered: {
-        borderColor:    ColorLightBlue[400],
+        borderColor: ColorLightBlue[400],
     },
 });
 
@@ -219,10 +218,8 @@ const styles = theme => ({
 /** Connects application state objects to component props. */
 function mapStateToProps(state, props) {
     return {
-        vizTable:  getVizTable(state.viztable),
+        vizTable: getVizTable(state.viztable),
     };
 }
 
-export default connect(mapStateToProps)(
-    withStyles(styles)(Viewer)
-);
+export default connect(mapStateToProps)(withStyles(styles)(Viewer));

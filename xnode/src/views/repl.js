@@ -20,15 +20,18 @@ import cuid from 'cuid';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
-import { createViewerAction, clearCanvasAction, showViewerInCanvasAction } from '../state/canvas/actions';
-import type { VizId, VizSpec } from "../state/viztable/outputs";
-import { getVizSpec } from "../state/viztable/outputs";
+import {
+    createViewerAction,
+    clearCanvasAction,
+    showViewerInCanvasAction,
+} from '../state/canvas/actions';
+import type { VizId, VizSpec } from '../state/viztable/outputs';
+import { getVizSpec } from '../state/viztable/outputs';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
 
 type ExecutionEngineMessage = {
-
     // Top-level viz created directly from a `xn.view()` call. Is displayed in its own ViewerSpec in the Canvas.
     viewedVizId?: VizId,
 
@@ -51,7 +54,6 @@ type ExecutionEngineMessage = {
  * be thought of as an isolated environment for experimenting with a particular program script, along with any sandbox
  */
 export default class REPL {
-
     /**
      * Constructor.
      * @param pythonPath
@@ -61,11 +63,11 @@ export default class REPL {
      */
     constructor(pythonPath: string, scriptPath: string) {
         this.name = '';
-        this.isDestroyed = false;  // TODO: Why do we need this?
+        this.isDestroyed = false; // TODO: Why do we need this?
         this.scriptPath = scriptPath;
 
         // Initialize REPL state
-        this.executionEngine = this._createEngine(pythonPath, scriptPath);   // Communication channel with Python process
+        this.executionEngine = this._createEngine(pythonPath, scriptPath); // Communication channel with Python process
 
         // Initialize Redux store & connect to main reducer
         // TODO: re-add devtools
@@ -76,7 +78,9 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
-                    <Canvas fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)} />
+                    <Canvas
+                        fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
+                    />
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element,
@@ -101,7 +105,6 @@ export default class REPL {
         console.debug(`repl ${this.name} -- destroy()`);
     }
 
-
     // =================================================================================================================
     // Atom display methods
     // =================================================================================================================
@@ -112,7 +115,7 @@ export default class REPL {
     }
 
     /** Used by Atom to show icon next to title in a tab. */
-    getIconName () {
+    getIconName() {
         return 'paintcan';
     }
 
@@ -157,14 +160,14 @@ export default class REPL {
         executionEngine.on('message', (message: ExecutionEngineMessage) => {
             console.debug(`repl ${this.name} -- received message: `, JSON.parse(message));
             const { viewedVizId, vizTableSlice, shouldRefresh } = JSON.parse(message);
-            if(shouldRefresh) {
+            if (shouldRefresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearVizTableAction());
             }
-            if(vizTableSlice) {
+            if (vizTableSlice) {
                 this.store.dispatch(addVizTableSliceAction(vizTableSlice));
             }
-            if(viewedVizId) {
+            if (viewedVizId) {
                 this.store.dispatch(showViewerInCanvasAction(viewedVizId));
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
@@ -185,8 +188,10 @@ export default class REPL {
      */
     fetchVizModel(vizId: VizId, modelType: 'compact' | 'full') {
         const existingSpec = getVizSpec(this.store.getState().viztable, vizId);
-        if ((existingSpec.compactModel === null && modelType === 'compact') ||
-            (existingSpec.fullModel === null && modelType === 'full')) {
+        if (
+            (existingSpec.compactModel === null && modelType === 'compact') ||
+            (existingSpec.fullModel === null && modelType === 'full')
+        ) {
             console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
             this.executionEngine.send(`fetch:${vizId}?${modelType}`);
         }
@@ -201,7 +206,7 @@ export default class REPL {
      *     Indicates what parts of the file changed. TODO: define this format and use it
      */
     onFileChanged(filePath: string, changes: {}) {
-        changes = '';  // TOOD: Right now not sending specific changes.
+        changes = ''; // TOOD: Right now not sending specific changes.
         console.debug(`repl ${this.name} -- change to ${filePath}`);
         this.executionEngine.send(`change:${filePath}?${changes}`);
     }

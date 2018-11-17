@@ -8,4 +8,3 @@ import type { ExampleState } from './reducers';
 export function getExampleData(state: ExampleState): number {
     return state.data;
 }
-

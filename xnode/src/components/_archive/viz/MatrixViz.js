@@ -11,7 +11,6 @@ import TokenViz from '../../primitives/TokenPrimitive';
  * TODO: Allow element-type-specific background coloring.
  */
 class SequenceViz extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -21,25 +20,25 @@ class SequenceViz extends Component {
         model: PropTypes.arrayOf(
             PropTypes.arrayOf(
                 PropTypes.shape({
-                    text:           PropTypes.string.isRequired,
-                    isHovered:      PropTypes.bool,
-                    isSelected:     PropTypes.bool,
-                    onClick:        PropTypes.func,
-                    onDoubleClick:  PropTypes.func,
-                    onMouseEnter:   PropTypes.func,
-                    onMouseLeave:   PropTypes.func,
-                })
-            )
+                    text: PropTypes.string.isRequired,
+                    isHovered: PropTypes.bool,
+                    isSelected: PropTypes.bool,
+                    onClick: PropTypes.func,
+                    onDoubleClick: PropTypes.func,
+                    onMouseEnter: PropTypes.func,
+                    onMouseLeave: PropTypes.func,
+                }),
+            ),
         ),
 
         /** Whether to display element index labels. */
         showHorizontalIndices: PropTypes.bool,
-        showVerticalIndices:   PropTypes.bool,
+        showVerticalIndices: PropTypes.bool,
 
         /** Individual list item dimension constraints (in px or '%'). */
         itemMinWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
         itemMaxWidth: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
-        itemHeight:   PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+        itemHeight: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
     };
 
     /** Prop default values object. */
@@ -52,27 +51,46 @@ class SequenceViz extends Component {
      * Renders a matrix of TokenPrimitive elements, optionally with the left/bottom edges numbered with indices.
      */
     render() {
-        const { classes, model, showHorizontalIndices, showVerticalIndices,
-            itemMinWidth, itemMaxWidth, itemHeight } = this.props;
+        const {
+            classes,
+            model,
+            showHorizontalIndices,
+            showVerticalIndices,
+            itemMinWidth,
+            itemMaxWidth,
+            itemHeight,
+        } = this.props;
 
-        const items = model.map((arr) => arr.map((elem) => {
-            const { text, isHovered, isSelected, onClick, onDoubleClick, onMouseEnter, onMouseLeave } = elem;
-            return (
-                <TokenViz model={text}
-                          minWidth={itemMinWidth}
-                          maxWidth={itemMaxWidth}
-                          minHeight={itemHeight}
-                          maxHeight={itemHeight}
-                          shouldTextWrap={false}
-                          shouldTextEllipsis={true}
-                          isHovered={isHovered}
-                          isSelected={isSelected}
-                          onClick={onClick}
-                          onDoubleClick={onDoubleClick}
-                          onMouseEnter={onMouseEnter}
-                          onMouseLeave={onMouseLeave}/>
-            );
-        }));
+        const items = model.map((arr) =>
+            arr.map((elem) => {
+                const {
+                    text,
+                    isHovered,
+                    isSelected,
+                    onClick,
+                    onDoubleClick,
+                    onMouseEnter,
+                    onMouseLeave,
+                } = elem;
+                return (
+                    <TokenViz
+                        model={text}
+                        minWidth={itemMinWidth}
+                        maxWidth={itemMaxWidth}
+                        minHeight={itemHeight}
+                        maxHeight={itemHeight}
+                        shouldTextWrap={false}
+                        shouldTextEllipsis={true}
+                        isHovered={isHovered}
+                        isSelected={isSelected}
+                        onClick={onClick}
+                        onDoubleClick={onDoubleClick}
+                        onMouseEnter={onMouseEnter}
+                        onMouseLeave={onMouseLeave}
+                    />
+                );
+            }),
+        );
 
         const vidxs = items.map((_, idx) => {
             return showVerticalIndices ? <span className={classes.indexText}>{idx}</span> : null;
@@ -88,12 +106,20 @@ class SequenceViz extends Component {
                     {items.map((arr, i) => (
                         <tr key={i}>
                             <td className={classes.indexCell}>{vidxs[i]}</td>
-                            {arr.map((item, i) => <td key={i} className={classes.elemCell}>{item}</td>)}
+                            {arr.map((item, i) => (
+                                <td key={i} className={classes.elemCell}>
+                                    {item}
+                                </td>
+                            ))}
                         </tr>
                     ))}
                     <tr>
                         <td className={classes.indexCell}>{/* vertical idx */}</td>
-                        {hidxs.map((idx, i) => <td key={i} className={classes.indexCell}>{idx}</td>)}
+                        {hidxs.map((idx, i) => (
+                            <td key={i} className={classes.indexCell}>
+                                {idx}
+                            </td>
+                        ))}
                     </tr>
                 </tbody>
             </table>
@@ -101,36 +127,34 @@ class SequenceViz extends Component {
     }
 }
 
-
 // To inject styles into component
 // -------------------------------
 
-
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     grid: {
-        textAlign:      'center',
-        verticalAlign:  'middle',
+        textAlign: 'center',
+        verticalAlign: 'middle',
     },
     elemCell: {
-        paddingLeft:     1,  // TODO: Dehardcode this
-        paddingRight:    1,  // TODO: Dehardcode this
-        paddingTop:      1,  // TODO: Dehardcode this
-        paddingBottom:   1,  // TODO: Dehardcode this
+        paddingLeft: 1, // TODO: Dehardcode this
+        paddingRight: 1, // TODO: Dehardcode this
+        paddingTop: 1, // TODO: Dehardcode this
+        paddingBottom: 1, // TODO: Dehardcode this
     },
     indexCell: {
-        paddingLeft:     4,  // TODO: Dehardcode this
-        paddingRight:    4,  // TODO: Dehardcode this
-        paddingTop:      4,  // TODO: Dehardcode this
-        paddingBottom:   4,  // TODO: Dehardcode this
-        lineHeight:      '6pt', // TODO: Dehardcode this
+        paddingLeft: 4, // TODO: Dehardcode this
+        paddingRight: 4, // TODO: Dehardcode this
+        paddingTop: 4, // TODO: Dehardcode this
+        paddingBottom: 4, // TODO: Dehardcode this
+        lineHeight: '6pt', // TODO: Dehardcode this
     },
     indexText: {
-        textAlign:      'center',
-        fontSize:       '6pt',  // TODO: Dehardcode this
-        userSelect:     'none',
-        cursor:         'default',
-    }
+        textAlign: 'center',
+        fontSize: '6pt', // TODO: Dehardcode this
+        userSelect: 'none',
+        cursor: 'default',
+    },
 });
 
 export default withStyles(styles)(SequenceViz);

@@ -9,13 +9,11 @@ import TokenViz from '../../../primitives/TokenPrimitive';
 
 import Typography from '@material-ui/core/Typography';
 
-
 /**
  * This dumb component renders a viewer for an op node in a computation graph, showing its input arguments and output
  * GraphData objects.
  */
 class GraphOpViewer extends Component {
-
     /** Prop expected types object. */
     static propTypes = {
         /** CSS-in-JS styling object. */
@@ -75,7 +73,7 @@ class GraphOpViewer extends Component {
                 const idx = startIdx + listIdx + argIdx;
                 model.push([
                     {
-                        text: isArgArray ? `${argName}[${argIdx}]`: argName,
+                        text: isArgArray ? `${argName}[${argIdx}]` : argName,
                         isHovered: false,
                         isSelected: false,
                     },
@@ -83,10 +81,10 @@ class GraphOpViewer extends Component {
                         text: symbolTable[argSymbolId].str,
                         isHovered: idx === hoveredIdx,
                         isSelected: idx === selectedIdx,
-                        onClick: () => this.setState({selectedIdx: idx}),
+                        onClick: () => this.setState({ selectedIdx: idx }),
                         onDoubleClick: () => expandSubviewer(argSymbolId),
-                        onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                        onMouseLeave: () => this.setState({hoveredIdx: null}),
+                        onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                        onMouseLeave: () => this.setState({ hoveredIdx: null }),
                     },
                 ]);
             });
@@ -100,7 +98,7 @@ class GraphOpViewer extends Component {
      */
     render() {
         const { classes, vizTable, expandSubviewer, data } = this.props;
-        if (!data) return null;  // Empty component if no data yet
+        if (!data) return null; // Empty component if no data yet
         const { hoveredIdx, selectedIdx } = this.state;
 
         const { args, kwargs, outputs, functionname } = data;
@@ -114,10 +112,10 @@ class GraphOpViewer extends Component {
                 text: symbolTable[elem].str,
                 isHovered: idx === hoveredIdx,
                 isSelected: idx === selectedIdx,
-                onClick: () => this.setState({selectedIdx: idx}),
+                onClick: () => this.setState({ selectedIdx: idx }),
                 onDoubleClick: () => expandSubviewer(elem),
-                onMouseEnter: () => this.setState({hoveredIdx: idx}),
-                onMouseLeave: () => this.setState({hoveredIdx: null}),
+                onMouseEnter: () => this.setState({ hoveredIdx: idx }),
+                onMouseLeave: () => this.setState({ hoveredIdx: null }),
             };
         });
         const functionTokenIdx = argsModel.length + kwargsModel.length + outputsModel.length;
@@ -126,41 +124,49 @@ class GraphOpViewer extends Component {
             <div className={classes.container}>
                 <div className={classes.func}>
                     <Typography className={classes.vizHeader}>Function: </Typography>
-                    <TokenViz model={functionname}
-                              shouldTextWrap={false}
-                              isHovered={functionTokenIdx === hoveredIdx}
-                              isSelected={functionTokenIdx === selectedIdx}
-                              onClick={() => this.setState({selectedIdx: functionTokenIdx})}
-                              onDoubleClick={() => expandSubviewer(data['function'])}
-                              onMouseEnter={() => this.setState({hoveredIdx: functionTokenIdx})}
-                              onMouseLeave={() => this.setState({hoveredIdx: null})} />
+                    <TokenViz
+                        model={functionname}
+                        shouldTextWrap={false}
+                        isHovered={functionTokenIdx === hoveredIdx}
+                        isSelected={functionTokenIdx === selectedIdx}
+                        onClick={() => this.setState({ selectedIdx: functionTokenIdx })}
+                        onDoubleClick={() => expandSubviewer(data['function'])}
+                        onMouseEnter={() => this.setState({ hoveredIdx: functionTokenIdx })}
+                        onMouseLeave={() => this.setState({ hoveredIdx: null })}
+                    />
                 </div>
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Positional Arguments</Typography>
-                    <KeyValueViz model={argsModel}
-                                 startMotif="["
-                                 endMotif="]"
-                                 keyMaxWidth={75}
-                                 keyMinWidth={75}
-                                 valueMaxWidth={75}
-                                 valueMinWidth={75} />
+                    <KeyValueViz
+                        model={argsModel}
+                        startMotif='['
+                        endMotif=']'
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75}
+                    />
                 </div>
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Keyword Arguments</Typography>
-                    <KeyValueViz model={kwargsModel}
-                                 startMotif="{"
-                                 endMotif="}"
-                                 keyMaxWidth={75}
-                                 keyMinWidth={75}
-                                 valueMaxWidth={75}
-                                 valueMinWidth={75} />
+                    <KeyValueViz
+                        model={kwargsModel}
+                        startMotif='{'
+                        endMotif='}'
+                        keyMaxWidth={75}
+                        keyMinWidth={75}
+                        valueMaxWidth={75}
+                        valueMinWidth={75}
+                    />
                 </div>
                 <div className={classes.viz}>
                     <Typography className={classes.vizHeader}>Outputs</Typography>
-                    <SequenceViz model={outputsModel}
-                                 startMotif="["
-                                 endMotif="]"
-                                 itemMaxWidth={75} />
+                    <SequenceViz
+                        model={outputsModel}
+                        startMotif='['
+                        endMotif=']'
+                        itemMaxWidth={75}
+                    />
                 </div>
             </div>
         );
@@ -168,7 +174,7 @@ class GraphOpViewer extends Component {
 }
 
 /** CSS-in-JS styling function. */
-const styles = theme => ({
+const styles = (theme) => ({
     container: {
         display: 'block',
     },
@@ -182,8 +188,8 @@ const styles = theme => ({
     },
     vizHeader: {
         color: '#ffffff',
-        marginRight: 10,  // TODO: un-hardcode this
-    }
+        marginRight: 10, // TODO: un-hardcode this
+    },
 });
 
 // TODO: determine if viewers can have styling at all
