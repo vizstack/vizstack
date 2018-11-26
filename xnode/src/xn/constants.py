@@ -12,6 +12,7 @@ SnapshotId = NewType('SnapshotId', int)
 
 
 class _Dataclass:
+
     def __str__(self):
         return str(self.__dict__)
 
@@ -27,9 +28,8 @@ VizContents = Dict[str, Any]
 
 
 class VizModel(_Dataclass):
-    def __init__(self,
-                 type: str,
-                 contents: VizContents) -> None:
+
+    def __init__(self, type: str, contents: VizContents) -> None:
         self.type: str = type
         self.contents: VizContents = contents
 
@@ -38,12 +38,11 @@ class VizModel(_Dataclass):
 # pseudo-dataclass instead of a named tuple for mutability, and instead of a real dataclass to ensure compliance with
 # Python 3.6.
 class VizSpec(_Dataclass):
-    def __init__(self,
-                 file_path: str,
-                 line_number: int,
-                 summary_viz_model: VizModel,
-                 compact_viz_model: Optional[VizModel],
-                 full_viz_model: Optional[VizModel]) -> None:
+
+    def __init__(
+            self, file_path: str, line_number: int, summary_viz_model: VizModel,
+            compact_viz_model: Optional[VizModel], full_viz_model: Optional[VizModel]
+    ) -> None:
         self.filePath: str = file_path
         self.lineNumber: int = line_number
         self.summaryModel: VizModel = summary_viz_model
@@ -59,10 +58,11 @@ VizTableSlice = NewType('VizTableSlice', MutableMapping[VizId, VizSpec])
 # the client should clear all existing renders. We use a pseudo-dataclass instead of a named tuple for mutability,
 # and instead of a real dataclass to ensure compliance with Python 3.6.
 class ExecutionEngineMessage(_Dataclass):
-    def __init__(self,
-                 viewed_viz_id: Optional[VizId],
-                 viz_table_slice: Optional[VizTableSlice],
-                 should_refresh: bool) -> None:
+
+    def __init__(
+            self, viewed_viz_id: Optional[VizId], viz_table_slice: Optional[VizTableSlice],
+            should_refresh: bool
+    ) -> None:
         self.viewedVizId: Optional[VizId] = viewed_viz_id
         self.vizTableSlice: Optional[VizTableSlice] = viz_table_slice
         self.shouldRefresh: bool = should_refresh

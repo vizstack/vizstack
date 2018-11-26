@@ -6,6 +6,7 @@ import operator
 
 
 class StackLSTM(nn.Module):
+
     def __init__(self, batch_size, dims):
         super(StackLSTM, self).__init__()
         self.batch_size = batch_size
@@ -35,6 +36,7 @@ class StackLSTM(nn.Module):
 
 
 class PseudoLogLSTM(nn.Module):
+
     def __init__(self, batch_size, dims):
         super(PseudoLogLSTM, self).__init__()
         self.batch_size = batch_size
@@ -61,11 +63,11 @@ class PseudoLogLSTM(nn.Module):
             new_states = []
             x = token
             for i, l in enumerate(self.layers):
-                h, c = gt.AbstractContainerGenerator(self.cell_forward)(l, x, i, hiddens[i], states[i],
-                                                                        older_hiddens[i] if len(older_hiddens) > 0
-                                                                        else Variable(torch.zeros(hiddens[i].size())),
-                                                                        older_states[i] if len(older_states) > 0
-                                                                        else Variable(torch.zeros(hiddens[i].size())))
+                h, c = gt.AbstractContainerGenerator(self.cell_forward)(
+                    l, x, i, hiddens[i], states[i], older_hiddens[i] if len(older_hiddens) > 0 else
+                    Variable(torch.zeros(hiddens[i].size())), older_states[i]
+                    if len(older_states) > 0 else Variable(torch.zeros(hiddens[i].size()))
+                )
                 new_hiddens.append(h)
                 new_states.append(c)
                 x = h

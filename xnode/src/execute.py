@@ -26,16 +26,14 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
     scripts within the `_ScriptExecutor`'s process so that values can be read from it and sent to clients.
     """
 
-    def __init__(self,
-                 **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         pdb.Pdb.__init__(self, **kwargs)  # type: ignore
 
     # ==================================================================================================================
     # Public methods.
     # ==================================================================================================================
 
-    def execute(self,
-                script_path: str) -> None:
+    def execute(self, script_path: str) -> None:
         """Execute a script within the `_ScriptExecutor` instance, allowing its flow to be controlled by the instance.
 
         `_execute()` should be called only once per `_ScriptExecutor` instance, as its behavior is unknown after
@@ -56,9 +54,7 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
     def user_line(self, frame: FrameType) -> None:
         pass
 
-    def user_return(self,
-                    frame: FrameType,
-                    return_value: Any) -> None:
+    def user_return(self, frame: FrameType, return_value: Any) -> None:
         pass
 
     # `message` and `error` are called by `Pdb` to write to the respective streams. We block those messages so that
@@ -100,9 +96,7 @@ class _PrintOverwriter:
     An object to be used as a replacement for stdout, which uses a given function to send printed strings to the client.
     """
 
-    def __init__(self,
-                 engine: VisualizationEngine,
-                 send_message: _SendMessage) -> None:
+    def __init__(self, engine: VisualizationEngine, send_message: _SendMessage) -> None:
         self._engine: VisualizationEngine = engine
         self._send_message: _SendMessage = send_message
 
@@ -134,10 +128,10 @@ class _DataclassJSONEncoder(json.JSONEncoder):
             return o.__dict__
 
 
-def _send_message(send_queue: Queue,
-                  viz_slice: Optional[VizTableSlice],
-                  view_viz_id: Optional[VizId],
-                  refresh: bool) -> None:
+def _send_message(
+        send_queue: Queue, viz_slice: Optional[VizTableSlice], view_viz_id: Optional[VizId],
+        refresh: bool
+) -> None:
     """Writes a message to the client containing information about symbols and the program state.
 
     Args:
@@ -157,9 +151,7 @@ def _send_message(send_queue: Queue,
     send_queue.put(json.dumps(message, cls=_DataclassJSONEncoder))
 
 
-def _execute_watch(send_message: _SendMessage,
-                   engine: VisualizationEngine,
-                   *objects: Any) -> None:
+def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *objects: Any) -> None:
     """Executes a watch statement on a given object, taking a snapshot of it and sending the symbol slice to the
     client to be viewed.
 
@@ -178,10 +170,10 @@ def _execute_watch(send_message: _SendMessage,
         send_message(viz_slice, viz_id, False)
 
 
-def _fetch_viz(send_message: _SendMessage,
-               engine: VisualizationEngine,
-               viz_id: VizId,
-               expansion_state: ExpansionState) -> None:
+def _fetch_viz(
+        send_message: _SendMessage, engine: VisualizationEngine, viz_id: VizId,
+        expansion_state: ExpansionState
+) -> None:
     """Fetches the symbol slice of a given symbol and sends it to the client.
 
     Does not signal to the client to create a viewer for the requested symbol.
@@ -202,9 +194,8 @@ def _fetch_viz(send_message: _SendMessage,
 # its namespace.
 # ======================================================================================================================
 
-def run_script(receive_queue: Queue,
-               send_queue: Queue,
-               script_path: str) -> None:
+
+def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> None:
     """Runs a given script, writing the vizzes of watched objects to a queue and then writing the vizzes of
     additional variables requested by a client to another queue.
 
@@ -245,14 +236,20 @@ def run_script(receive_queue: Queue,
     except:
         raw_error_msg: str = traceback.format_exc()
         try:
-            result = re.search(r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$", raw_error_msg,
-                               re.DOTALL)
+            result = re.search(
+                r"^(Traceback.*?:\n)(.*File \"<string>\", line 1, in <module>\s)(.*)$",
+                raw_error_msg, re.DOTALL
+            )
             assert result is not None
             clean_error_msg: str = result.group(1) + result.group(3)
-            result = re.search(r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$", clean_error_msg,
-                               re.DOTALL)
+            result = re.search(
+                r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$",
+                clean_error_msg, re.DOTALL
+            )
             assert result is not None
-            viz_id: VizId = engine.take_snapshot(clean_error_msg, result.group(1), int(result.group(2)))
+            viz_id: VizId = engine.take_snapshot(
+                clean_error_msg, result.group(1), int(result.group(2))
+            )
             viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
             send_message(viz_slice, viz_id, False)
         except:

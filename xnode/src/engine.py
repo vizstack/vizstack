@@ -42,16 +42,19 @@ class _ExecutionManager:
 
     _THREAD_QUIT: str = 'quit'
 
-    def __init__(self,
-                 script_path: str) -> None:
+    def __init__(self, script_path: str) -> None:
         """Creates a process to execute the user-written script and a thread to read the returned viz slices.
 
         Args:
             script_path: the absolute path to the user-written script to be executed.
         """
-        self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(script_path)
-        self.print_thread = threading.Thread(target=_ExecutionManager._start_print_thread, args=(self.exec_process,
-                                                                                                 self.print_queue))
+        self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(
+            script_path
+        )
+        self.print_thread = threading.Thread(
+            target=_ExecutionManager._start_print_thread,
+            args=(self.exec_process, self.print_queue)
+        )
         self.print_thread.start()
 
     def terminate(self) -> None:
@@ -64,9 +67,7 @@ class _ExecutionManager:
         self.print_queue.put(_ExecutionManager._THREAD_QUIT)
         self.print_thread.join()
 
-    def fetch_viz(self,
-                  viz_id: VizId,
-                  expansion_state: ExpansionState) -> None:
+    def fetch_viz(self, viz_id: VizId, expansion_state: ExpansionState) -> None:
         """Fetches an ExecutionEngineMessage from the subprocess which includes a VizTableSlice with the VizModel for
         the given VizId in the given ExpansionState.
 
@@ -111,8 +112,7 @@ class _ExecutionManager:
         return process, print_queue, fetch_queue
 
     @staticmethod
-    def _start_print_thread(process: Process,
-                            print_queue: Queue) -> None:
+    def _start_print_thread(process: Process, print_queue: Queue) -> None:
         """Starts a new thread, which reads from a queue and prints any found strings.
 
         An `_ExecutionManager` will create a print thread to pipe all ExecutionEngineMessages produced by its execution
@@ -141,8 +141,8 @@ class _ExecutionManager:
 # additional viz model requests after execution completes.
 # ======================================================================================================================
 
-def _should_execute(script_path: str,
-                    message) -> bool:
+
+def _should_execute(script_path: str, message) -> bool:
     """Determines if a new execution is necessary after a file has been edited.
 
     Currently, we re-run regardless of the edit, but when we implement caching it should be done here.
@@ -161,8 +161,7 @@ def _should_execute(script_path: str,
     return True
 
 
-def _execute(exec_manager: Optional[_ExecutionManager],
-             script_path: str) -> _ExecutionManager:
+def _execute(exec_manager: Optional[_ExecutionManager], script_path: str) -> _ExecutionManager:
     """Creates a new `_ExecutionManager` to run a given script, printing any watched objects to stdout as
     ExecutionEngineMessages.
 
@@ -183,8 +182,7 @@ def _execute(exec_manager: Optional[_ExecutionManager],
     return exec_manager
 
 
-def _fetch_viz(exec_manager: _ExecutionManager,
-               message: str) -> None:
+def _fetch_viz(exec_manager: _ExecutionManager, message: str) -> None:
     """Sends a new ExecutionEngineMessage to the client containing a VizTableSlice which includes a requested viz in
     a specified expansion state.
 
@@ -209,6 +207,7 @@ def _fetch_viz(exec_manager: _ExecutionManager,
 # Associate the engine with a script path given in the command line and then wait for and process requests written by
 # the client to stdin.
 # ======================================================================================================================
+
 
 def _read_args() -> str:
     """Read the path to the user-written script which should be executed by the engine from the command line.

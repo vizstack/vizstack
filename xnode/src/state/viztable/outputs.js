@@ -89,7 +89,7 @@ export type DagLayoutModel = {
         nodes: {
             [DagNodeId]: {
                 vizId: VizId,
-            }
+            },
         },
         containers: {
             [DagContainerId]: {
@@ -98,14 +98,14 @@ export type DagLayoutModel = {
                 itemAlignment: Array<Array<DagNodeId | DagContainerId>>,
                 isExpanded: boolean,
                 flows: Array<Array<DagNodeId | DagContainerId>>,
-            }
+            },
         },
         edges: {
             [DagEdgeId]: {
                 start: DagNodeId,
                 end: DagNodeId,
-            }
-        }
+            },
+        },
     },
 };
 

@@ -37,16 +37,17 @@ myRNNInput = [Variable(torch.ones(5, myRNNDims[0])) for _ in range(4)]
 myRNN = StackLSTM(myRNNBatchSize, myRNNDims)
 myRNNOutput = myRNN(myRNNInput)
 
-
 myPseudoLogLSTM = PseudoLogLSTM(myRNNBatchSize, myRNNDims)
 myPseudoLogLSTMOutput = myPseudoLogLSTM(myRNNInput)
 
+
 def myFn(arg1, arg2=2):
-    f = [1,2,3,4,5]
-    q = [f,3,4,5,2]
+    f = [1, 2, 3, 4, 5]
+    q = [f, 3, 4, 5, 2]
     q[1] = 5
     q = q
     return q
+
 
 myFnRef = myFn
 myFnOutput = myFn(0, 1)
