@@ -79,6 +79,36 @@ export type KeyValueLayoutModel = {
     },
 };
 
+/** Dag layout is ___. */
+export type DagNodeId = string;
+export type DagContainerId = string;
+export type DagEdgeId = string;
+export type DagLayoutModel = {
+    type: 'DagLayout',
+    contents: {
+        nodes: {
+            [DagNodeId]: {
+                vizId: VizId,
+            }
+        },
+        containers: {
+            [DagContainerId]: {
+                flowDirection: 'left' | 'right' | 'up' | 'down',
+                flowAlignment: 'start' | 'center' | 'end',
+                itemAlignment: Array<Array<DagNodeId | DagContainerId>>,
+                isExpanded: boolean,
+                flows: Array<Array<DagNodeId | DagContainerId>>,
+            }
+        },
+        edges: {
+            [DagEdgeId]: {
+                start: DagNodeId,
+                end: DagNodeId,
+            }
+        }
+    },
+};
+
 // =====================================================================================================================
 // Public functions
 
