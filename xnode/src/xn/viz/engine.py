@@ -2,7 +2,7 @@ from copy import copy
 from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, MutableSet, Tuple, overload, Dict
 
 from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice, VizContents
-from xn.viz import _Viz, _get_viz
+from xn.viz import _Viz, get_viz
 
 
 # TODO: do we need snapshot IDs anymore?
@@ -118,7 +118,7 @@ class VisualizationEngine:
             The VizId for `obj`.
         """
         obj_viz_id: Optional[VizId] = None
-        to_cache: MutableSequence[_Viz] = [_get_viz(obj)]
+        to_cache: MutableSequence[_Viz] = [get_viz(obj)]
         added: MutableSet[VizId] = set()
         while len(to_cache) > 0:
             viz_obj: _Viz = to_cache.pop()

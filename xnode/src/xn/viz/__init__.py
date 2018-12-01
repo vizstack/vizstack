@@ -1,8 +1,8 @@
-from typing import Sequence, Any, Mapping, Iterable, Optional, List, Dict, Tuple
+from typing import Sequence, Any, Mapping, Iterable, Optional, List, Dict, Tuple, Union
 from enum import Enum
 from xn.constants import VizModel, ExpansionState
 
-# TODO: potentially use these remnants of the old viz engine
+# TODO: potentially use these remnants of the old get_viz engine
 # TENSOR_TYPES: Mapping[str, str] = {
 #     'torch.HalfTensor': 'float16',
 #     'torch.FloatTensor': 'float32',
@@ -22,6 +22,15 @@ from xn.constants import VizModel, ExpansionState
 #     'torch.cuda.LongTensor': 'int64',
 # }
 
+# ======================================================================================================================
+# Public constants.
+# -----------------
+# Fields which other modules can use to properly interact with this module.
+# ======================================================================================================================
+
+# The name of the function which is called and produces an object's visualization.
+VIZ_FN = 'xn'
+
 
 # ======================================================================================================================
 # Viz utils.
@@ -36,7 +45,7 @@ class Color(Enum):
     BACKGROUND = 3
 
 
-def _get_viz(o: Any) -> '_Viz':
+def get_viz(o: Any) -> '_Viz':
     """Gets the _Viz object associated with `o`.
 
     If `o` is already a _Viz, it is returned unchanged. If `o` has a visualization function, its value is returned.
@@ -50,12 +59,12 @@ def _get_viz(o: Any) -> '_Viz':
     """
     if isinstance(o, _Viz):
         return o
-    if hasattr(o, 'xn'):
-        return o.xn()
+    if hasattr(o, VIZ_FN):
+        return getattr(o, VIZ_FN)()
     elif isinstance(o, list):
         return SequenceLayout(o)
     else:
-        # TODO: use a better generic viz
+        # TODO: use a better generic get_viz
         return TokenPrimitive(o)
 
 
@@ -166,7 +175,7 @@ class SequenceLayout(_Viz):
 
     def __init__(self,
                  elements: Sequence[Any],
-                 orientation: str="horizontal",
+                 orientation: Optional[str]=None,
                  name: Optional[str]=None,
                  expansion_state: ExpansionState=ExpansionState.DEFAULT) -> None:
         """Constructor.
@@ -178,15 +187,17 @@ class SequenceLayout(_Viz):
             expansion_state: The expansion state this Viz should take if none is given in the watch expression.
         """
         super(SequenceLayout, self).__init__(name, expansion_state)
-        self._orientation: str = orientation
-        self._elements: List[_Viz] = [_get_viz(elem) for elem in elements]
+        self._orientation: Optional[str] = orientation
+        self._elements: List[_Viz] = [get_viz(elem) for elem in elements]
 
     def compile_full(self) -> Tuple['SequenceLayoutModel', Iterable[_Viz]]:
         return SequenceLayoutModel(self._elements, self._orientation), self._elements
 
     def compile_compact(self) -> Tuple['SequenceLayoutModel', Iterable[_Viz]]:
-        return SequenceLayoutModel(self._elements[:SequenceLayout.COMPACT_LEN], self._orientation), \
-               self._elements[:SequenceLayout.COMPACT_LEN]
+        return (
+            SequenceLayoutModel(self._elements[:SequenceLayout.COMPACT_LEN], self._orientation),
+            self._elements[:SequenceLayout.COMPACT_LEN]
+        )
 
     def __str__(self) -> str:
         return 'seq[{}]'.format(len(self._elements))
@@ -213,7 +224,7 @@ class KeyValueLayout(_Viz):
         """
         super(KeyValueLayout, self).__init__(name, expansion_state)
         self._key_value_mapping: Dict[_Viz, _Viz] = {
-            _get_viz(key): _get_viz(value) for key, value in key_value_mapping.items()
+            get_viz(key): get_viz(value) for key, value in key_value_mapping.items()
         }
 
     def compile_full(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
@@ -222,16 +233,143 @@ class KeyValueLayout(_Viz):
 
     def compile_compact(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
         items = list(self._key_value_mapping.items())[:KeyValueLayout.COMPACT_LEN]
-        return KeyValueLayoutModel({key: value for key, value in items}), \
-               [key for key, _ in items] + [value for _, value in items]
+        return (
+            KeyValueLayoutModel({key: value for key, value in items}),
+            [key for key, _ in items] + [value for _, value in items]
+        )
 
     def __str__(self) -> str:
         return 'dict[{}]'.format(len(self._key_value_mapping))
 
 
+class DagLayout(_Viz):
+    def __init__(self,
+                 name: Optional[str]=None,
+                 expansion_state: ExpansionState=ExpansionState.DEFAULT) -> None:
+        super(DagLayout, self).__init__(name, expansion_state)
+        self._nodes: List['DagLayoutNode'] = []
+        self._edges: List['DagLayoutEdge'] = []
+        self._containers: List['DagLayoutContainer'] = []
+
+    def compile_full(self) -> Tuple['DagLayoutModel', Iterable[_Viz]]:
+        return (
+            DagLayoutModel(self._nodes, self._containers, self._edges),
+            [node.viz for node in self._nodes],
+        )
+
+    def compile_compact(self) -> Tuple['DagLayoutModel', Iterable[_Viz]]:
+        # TODO: come up with a compact representation
+        return (
+            DagLayoutModel(self._nodes, self._containers, self._edges),
+            [node.viz for node in self._nodes],
+        )
+
+    def create_node(self,
+                    o: Any) -> 'DagLayoutNode':
+        node = DagLayoutNode(str(len(self._nodes) + len(self._containers)),
+                             get_viz(o))
+        self._nodes.append(node)
+        return node
+
+    def create_container(self,
+                         flow_direction: Optional[str] = None,
+                         flow_alignment: Optional[str] = None,
+                         is_expanded: Optional[bool] = None) -> 'DagLayoutContainer':
+        container = DagLayoutContainer(str(len(self._nodes) + len(self._containers)),
+                                       flow_direction,
+                                       flow_alignment,
+                                       is_expanded)
+        self._containers.append(container)
+        return container
+
+    def create_edge(self,
+                    start: Union['DagLayoutNode', 'DagLayoutContainer'],
+                    end: Union['DagLayoutNode', 'DagLayoutContainer']) -> 'DagLayoutEdge':
+        edge = DagLayoutEdge(str(len(self._edges)),
+                             start,
+                             end)
+        self._edges.append(edge)
+        return edge
+
+    def __str__(self) -> str:
+        return 'graph'
+
+
+class DagLayoutNode:
+    def __init__(self,
+                 node_id: str,
+                 viz: '_Viz') -> None:
+        self.node_id = node_id
+        self.viz = viz
+
+    def get_id(self) -> str:
+        return self.node_id
+
+    def to_dict(self) -> Mapping[str, Any]:
+        return {
+            'vizId': self.viz,
+        }
+
+
+class DagLayoutEdge:
+    def __init__(self,
+                 edge_id: str,
+                 start: Union['DagLayoutNode', 'DagLayoutContainer'],
+                 end: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+        self.edge_id = edge_id
+        self.start = start
+        self.end = end
+
+    def get_id(self) -> str:
+        return self.edge_id
+
+    def to_dict(self) -> Mapping[str, Any]:
+        return {
+            'start': self.start.get_id(),
+            'end': self.end.get_id(),
+        }
+
+
+class DagLayoutContainer:
+    def __init__(self,
+                 container_id: str,
+                 flow_direction: Optional[str],
+                 flow_alignment: Optional[str],
+                 is_expanded: Optional[bool]) -> None:
+        self.container_id = container_id
+        self.flow_direction = flow_direction
+        self.flow_alignment = flow_alignment
+        self.item_alignment: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]] = []
+        self.is_expanded = is_expanded
+        self.flows: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]] = []
+
+    def get_id(self) -> str:
+        return self.container_id
+
+    def to_dict(self) -> Mapping[str, Any]:
+        return {
+            'flowDirection': self.flow_direction,
+            'flowAlignment': self.flow_alignment,
+            'itemAlignment': [[item.get_id() for item in alignment] for alignment in self.item_alignment],
+            'isExpanded': self.is_expanded,
+            'flows': [[item.get_id() for item in flow] for flow in self.flows],
+        }
+
+    def add_child(self,
+                  child: Union['DagLayoutNode', 'DagLayoutContainer'],
+                  flow_index: int = 0) -> None:
+        while len(self.flows) < flow_index + 1:
+            self.flows.append([])
+        self.flows[flow_index].append(child)
+
+    def align_children(self,
+                       children: List[Union['DagLayoutNode', 'DagLayoutContainer']]) -> None:
+        self.item_alignment.append(children)
+
+
 # ======================================================================================================================
 # VizModels.
-# -----------------
+# ----------
 # The serializable models, each a subclass of VizModel, which describe the different Viz types.
 # ======================================================================================================================
 
@@ -266,5 +404,26 @@ class KeyValueLayoutModel(VizModel):
             'KeyValueLayout',
             {
                 'elements': elements,
+            }
+        )
+
+
+class DagLayoutModel(VizModel):
+    def __init__(self,
+                 nodes: List['DagLayoutNode'],
+                 containers: List['DagLayoutContainer'],
+                 edges: List['DagLayoutEdge']) -> None:
+        super(DagLayoutModel, self).__init__(
+            'DagLayout',
+            {
+                'nodes': {
+                    node.get_id(): node.to_dict() for node in nodes
+                },
+                'containers': {
+                    container.get_id(): container.to_dict() for container in containers
+                },
+                'edges': {
+                    edge.get_id(): edge.to_dict() for edge in edges
+                },
             }
         )
