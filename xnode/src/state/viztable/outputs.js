@@ -82,7 +82,19 @@ export type KeyValueLayoutModel = {
 /** Dag layout is ___. */
 export type DagNodeId = string;
 export type DagContainerId = string;
+export type DagContainerSpec = {
+    elements: Array<DagNodeId | DagContainerId>,
+    flowDirection?: 'left' | 'right' | 'up' | 'down',
+    isExpanded?: boolean,
+    isInteractive?: boolean,
+    isVisible?: boolean,
+    isTopological?: boolean,
+};
 export type DagEdgeId = string;
+export type DagEdgeSpec = {
+    start: DagNodeId | DagContainerId,
+    end: DagNodeId | DagContainerId,
+};
 export type DagLayoutModel = {
     type: 'DagLayout',
     contents: {
@@ -92,20 +104,12 @@ export type DagLayoutModel = {
             },
         },
         containers: {
-            [DagContainerId]: {
-                flowDirection: 'left' | 'right' | 'up' | 'down',
-                flowAlignment: 'start' | 'center' | 'end',
-                itemAlignment: Array<Array<DagNodeId | DagContainerId>>,
-                isExpanded: boolean,
-                flows: Array<Array<DagNodeId | DagContainerId>>,
-            },
+            [DagContainerId]: DagContainerSpec,
         },
         edges: {
-            [DagEdgeId]: {
-                start: DagNodeId,
-                end: DagNodeId,
-            },
+            [DagEdgeId]: DagEdgeSpec,
         },
+        alignments: Array<Array<DagNodeId | DagContainerId>>,
     },
 };
 

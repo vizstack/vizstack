@@ -4,18 +4,20 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
+import type { ViewerCreationProps } from '../Viewer';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
  * TODO: Allow multi-line wrapping elements.
  * TODO: Allow element-type-specific background coloring.
+ * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
 class SequenceLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: Array<{}>,
+    elements: Array<ViewerCreationProps>,
 
     /** Whether to display element index labels. */
     showIndices?: boolean,
@@ -37,8 +39,9 @@ class SequenceLayout extends React.PureComponent<{
     };
 
     /**
-     * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can have start/end
-     * motifs, which are large characters that can be used to indicate a type of sequence (e.g. "{" for sets).
+     * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
+     * have start/end motifs, which are large characters that can be used to indicate a type of
+     * sequence (e.g. "{" for sets).
      */
     render() {
         const {
@@ -53,7 +56,7 @@ class SequenceLayout extends React.PureComponent<{
         } = this.props;
 
         const items = elements.map((elem) => <Viewer {...elem} />);
-        const idxs = elements.map((_, idx) => {
+        const idxs = elements.map((elem, idx) => {
             return showIndices ? <span className={classes.indexText}>{idx}</span> : null;
         });
 

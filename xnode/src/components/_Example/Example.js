@@ -1,5 +1,6 @@
 import * as React from 'react';
 import classNames from 'classnames';
+import Immutable from 'seamless-immutable';
 import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -28,6 +29,7 @@ class Example extends React.Component<
     /** Constructor. */
     constructor(props) {
         super(props);
+        this.state = Immutable({});
     }
 
     /** Renderer. */

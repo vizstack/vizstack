@@ -1,60 +1,62 @@
 import * as React from 'react';
 import classNames from 'classnames';
+import Immutable from 'seamless-immutable';
 import { withStyles } from '@material-ui/core/styles';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { createSelector } from 'reselect';
+import ColorLightBlue from '@material-ui/core/colors/lightBlue';
+
 import type {
     VizId,
     VizSpec,
     TokenPrimitiveModel,
     SequenceLayoutModel,
     KeyValueLayoutModel,
+    DagLayoutModel,
 } from '../state/viztable/outputs';
 import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
 import TokenPrimitive from './primitives/TokenPrimitive';
-import {
-    createViewerAction,
-    hideViewerInCanvasAction,
-    reorderViewerInCanvasAction,
-    showViewerInCanvasAction,
-} from '../state/canvas/actions';
-import { getViewer } from '../state/canvas/outputs';
 
 // Viz layouts
 import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
+import DagLayout from './layouts/DagLayout';
+
+/** The sequence in which users can toggle different models. */
+kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
 
 /** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
  *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the
  *  context to its `Viewer` sub-components; a Primitive Viz is terminal and so does not need to pass-through. */
 export type ViewerContext = {
-    // Size category to render the top-level Viz.
+    /** Size category to render the top-level Viz. */
     displaySize?: 'regular' | 'small',
+};
+
+export type ViewerCreationProps = {
+    /** Unique `VizId` for this Viewer. */
+    vizId: VizId,
+
+    /** Information passed down from direct parent Viewer. */
+    viewerContext?: ViewerContext,
+
+    /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
+    fetchVizModel: (VizId, 'compact' | 'full') => void,
 };
 
 /**
  * This smart component parses a VizSpec and assembles a corresponding Viz rendering.
  */
 class Viewer extends React.Component<
-    {
+    ViewerCreationProps & {
         /** CSS-in-JS styling object. */
         classes: {},
 
-        /** Unique `ViewerId` for this Viewer. */
-        vizId: string,
-
         /** Reference of `VizTable`. See 'viztable/outputs/getVizTable()'. */
         vizTable: { [VizId]: VizSpec },
-
-        /** Information passed down from direct parent Viewer. */
-        viewerContext?: ViewerContext,
-
-        /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
-        fetchVizModel: (VizId, 'compact' | 'full') => void,
     },
     {
         /** What expansion mode the viewer is in. */
@@ -77,10 +79,10 @@ class Viewer extends React.Component<
         let viewerState = 'summary';
         viewerState = vizTable[vizId].compactModel ? 'compact' : viewerState;
         viewerState = vizTable[vizId].fullModel ? 'full' : viewerState;
-        this.state = {
+        this.state = Immutable({
             viewerState,
             isHovered: false,
-        };
+        });
     }
 
     /**
@@ -125,6 +127,13 @@ class Viewer extends React.Component<
                 //     }/>
                 // )
                 return null;
+
+            case 'DagLayout':
+                const { nodes, containers, edges } = (model: DagLayoutModel).contents;
+                return (
+                    // TODO: update nodes to be viewer props
+                    <DagLayout nodes={nodes} edges={edges} containers={containers} />
+                );
         }
     }
 
@@ -140,24 +149,20 @@ class Viewer extends React.Component<
 
         let model: VizModel = undefined;
         switch (viewerState) {
-            case 'summary':
-                model = vizSpec.summaryModel;
-                break;
-            case 'compact':
-                if (vizSpec.compactModel) {
-                    model = vizSpec.compactModel;
-                } else {
-                    model = vizSpec.summaryModel;
-                }
-                break;
             case 'full':
                 if (vizSpec.fullModel) {
                     model = vizSpec.fullModel;
-                } else if (vizSpec.compactModel) {
-                    model = vizSpec.compactModel;
-                } else {
-                    model = vizSpec.summaryModel;
+                    break;
                 }
+            // Fall through
+            case 'compact':
+                if (vizSpec.compactModel) {
+                    model = vizSpec.compactModel;
+                    break;
+                }
+            // Fall through
+            case 'summary':
+                model = vizSpec.summaryModel;
                 break;
         }
         return (
@@ -168,25 +173,17 @@ class Viewer extends React.Component<
                 })}
                 onClick={(e) => {
                     e.stopPropagation();
-                    const newState =
-                        viewerState === 'summary'
-                            ? 'compact'
-                            : viewerState === 'compact'
-                            ? 'full'
-                            : 'summary';
-                    fetchVizModel(vizId, newState);
-                    this.setState((state) => ({
-                        ...state,
-                        viewerState: newState,
-                    }));
+                    const viewerStateUpdated = kModelTransitionOrder[viewerState];
+                    fetchVizModel(vizId, viewerStateUpdated);
+                    this.setState((state) => state.set('viewerState', viewerStateUpdated));
                 }}
                 onMouseOver={(e) => {
                     e.stopPropagation();
-                    this.setState((state) => ({ ...state, isHovered: true }));
+                    this.setState((state) => state.set('isHovered', true));
                 }}
                 onMouseOut={(e) => {
                     e.stopPropagation();
-                    this.setState((state) => ({ ...state, isHovered: false }));
+                    this.setState((state) => state.set('isHovered', false));
                 }}
             >
                 {this.getVizComponent(model)}
@@ -208,7 +205,7 @@ const styles = (theme) => ({
         borderWidth: 1, // TODO: Dehardcode this
     },
     hovered: {
-        borderColor: ColorLightBlue[400],
+        borderColor: ColorLightBlue[400], // TODO: Dehardcode this
     },
 });
 
