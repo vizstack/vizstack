@@ -4,8 +4,8 @@ from typing import List, MutableMapping, Union, Any, Optional, MutableSequence, 
 from xn.constants import VizSpec, VizModel, VizId, ExpansionState, SnapshotId, JsonType, VizTableSlice, VizContents
 from xn.viz import _Viz, get_viz
 
-
 # TODO: do we need snapshot IDs anymore?
+
 
 class VisualizationEngine:
     """A stateful object which creates VizTableSlices for Python objects."""
@@ -14,13 +14,12 @@ class VisualizationEngine:
         """
         The information that should be cached about each vizualization created by the VisualizationEngine.
         """
-        def __init__(self,
-                     viz_spec: VizSpec,
-                     full_viz_model: VizModel,
-                     compact_viz_model: VizModel,
-                     full_viz_refs: List[VizId],
-                     compact_viz_refs: List[VizId],
-                     expansion_state: ExpansionState) -> None:
+
+        def __init__(
+                self, viz_spec: VizSpec, full_viz_model: VizModel, compact_viz_model: VizModel,
+                full_viz_refs: List[VizId], compact_viz_refs: List[VizId],
+                expansion_state: ExpansionState
+        ) -> None:
             """Constructor.
 
             Args:
@@ -48,32 +47,27 @@ class VisualizationEngine:
         self._next_snapshot_id: SnapshotId = SnapshotId(0)
 
     @staticmethod
-    def _get_viz_id(obj: '_Viz',
-                    snapshot_id: SnapshotId) -> VizId:
+    def _get_viz_id(obj: '_Viz', snapshot_id: SnapshotId) -> VizId:
         """Gets the VizId for a particular _Viz object at a particular snapshot."""
         return VizId('@id:{}!{}!'.format(str(id(obj)), snapshot_id))
 
     @staticmethod
     @overload
-    def _replace_viz_with_viz_ids(o: '_Viz',
-                                  snapshot_id: SnapshotId) -> VizId:
+    def _replace_viz_with_viz_ids(o: '_Viz', snapshot_id: SnapshotId) -> VizId:
         ...
 
     @staticmethod
     @overload
-    def _replace_viz_with_viz_ids(o: Dict[str, Any],
-                                  snapshot_id: SnapshotId) -> Dict[str, Any]:
+    def _replace_viz_with_viz_ids(o: Dict[str, Any], snapshot_id: SnapshotId) -> Dict[str, Any]:
         ...
 
     @staticmethod
     @overload
-    def _replace_viz_with_viz_ids(o: List[Any],
-                                  snapshot_id: SnapshotId) -> List[Any]:
+    def _replace_viz_with_viz_ids(o: List[Any], snapshot_id: SnapshotId) -> List[Any]:
         ...
 
     @staticmethod
-    def _replace_viz_with_viz_ids(o,
-                                  snapshot_id):
+    def _replace_viz_with_viz_ids(o, snapshot_id):
         """Recursively generates a version of `o` where all _Viz objects are replaced by their respective _VizIds.
 
         No changes are made to `o`.
@@ -88,7 +82,8 @@ class VisualizationEngine:
         """
         if isinstance(o, dict):
             return {
-                key: VisualizationEngine._replace_viz_with_viz_ids(value, snapshot_id) for key, value in o.items()
+                key: VisualizationEngine._replace_viz_with_viz_ids(value, snapshot_id)
+                for key, value in o.items()
             }
         elif isinstance(o, list):
             return [VisualizationEngine._replace_viz_with_viz_ids(elem, snapshot_id) for elem in o]
@@ -101,11 +96,9 @@ class VisualizationEngine:
     # Utility functions for public methods.
     # ==================================================================================================================
 
-    def _cache_slice(self,
-                     obj: Any,
-                     file_path: str,
-                     line_number: int,
-                     snapshot_id: SnapshotId) -> VizId:
+    def _cache_slice(
+            self, obj: Any, file_path: str, line_number: int, snapshot_id: SnapshotId
+    ) -> VizId:
         """Creates the Viz for `obj`, then generates a _CacheEntry for that Viz and every Viz it references.
 
         Args:
@@ -128,27 +121,18 @@ class VisualizationEngine:
             added.add(viz_id)
             full_viz, full_refs = viz_obj.compile_full()
             full_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
-                full_viz.contents,
-                snapshot_id
+                full_viz.contents, snapshot_id
             )
             compact_viz, compact_refs = viz_obj.compile_compact()
             compact_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
-                compact_viz.contents,
-                snapshot_id
+                compact_viz.contents, snapshot_id
             )
             summary_viz = viz_obj.compile_summary()
             summary_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
-                summary_viz.contents,
-                snapshot_id
+                summary_viz.contents, snapshot_id
             )
             self._cache[viz_id] = VisualizationEngine._CacheEntry(
-                VizSpec(
-                    file_path,
-                    line_number,
-                    summary_viz,
-                    None,
-                    None
-                ),
+                VizSpec(file_path, line_number, summary_viz, None, None),
                 full_viz,
                 compact_viz,
                 [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in full_refs],
@@ -170,10 +154,7 @@ class VisualizationEngine:
     # surfacing other VizModels for the components of the visualization.
     # ==================================================================================================================
 
-    def take_snapshot(self,
-                      obj: Any,
-                      file_path: str,
-                      line_number: int) -> VizId:
+    def take_snapshot(self, obj: Any, file_path: str, line_number: int) -> VizId:
         """Caches all information needed to visualize `obj` and returns a VizId which can be used to acquire it.
 
         The returned VizId can be passed to `get_snapshot_slice()` to return the cached VizTableSlice, as well as to
@@ -190,9 +171,9 @@ class VisualizationEngine:
         self._next_snapshot_id = SnapshotId(self._next_snapshot_id + 1)
         return self._cache_slice(obj, file_path, line_number, self._next_snapshot_id)
 
-    def get_snapshot_slice(self,
-                           viz_id: VizId,
-                           expansion_state: Optional[ExpansionState]=None) -> VizTableSlice:
+    def get_snapshot_slice(
+            self, viz_id: VizId, expansion_state: Optional[ExpansionState] = None
+    ) -> VizTableSlice:
         """Returns a VizTableSlice containing the VizModel for the given VizId in the given ExpansionState.
 
         This function does not create any new information; instead, it reads information that was cached in a
@@ -217,18 +198,22 @@ class VisualizationEngine:
                 continue
             viz_slice[viz_id] = copy(self._cache[viz_id].viz_spec)
             expansion_state = (
-                force_view_mode if force_view_mode is not None
-                else self._cache[viz_id].default_view
-                if self._cache[viz_id].default_view != ExpansionState.DEFAULT
-                else ExpansionState.FULL if parent_view_mode == ExpansionState.DEFAULT
-                else ExpansionState.COMPACT if parent_view_mode == ExpansionState.FULL
-                else ExpansionState.SUMMARY)
+                force_view_mode if force_view_mode is not None else self._cache[viz_id].default_view
+                if self._cache[viz_id].default_view != ExpansionState.DEFAULT else ExpansionState
+                .FULL if parent_view_mode == ExpansionState.DEFAULT else ExpansionState
+                .COMPACT if parent_view_mode == ExpansionState.FULL else ExpansionState.SUMMARY
+            )
 
             if expansion_state == ExpansionState.COMPACT:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
-                to_add += [(viz_id, expansion_state, None) for viz_id in self._cache[viz_id].compact_viz_refs]
+                to_add += [
+                    (viz_id, expansion_state, None)
+                    for viz_id in self._cache[viz_id].compact_viz_refs
+                ]
             if expansion_state == ExpansionState.FULL:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
                 viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
-                to_add += [(viz_id, expansion_state, None) for viz_id in self._cache[viz_id].full_viz_refs]
+                to_add += [
+                    (viz_id, expansion_state, None) for viz_id in self._cache[viz_id].full_viz_refs
+                ]
         return viz_slice

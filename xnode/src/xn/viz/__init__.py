@@ -31,12 +31,12 @@ from xn.constants import VizModel, ExpansionState
 # The name of the function which is called and produces an object's visualization.
 VIZ_FN = 'xn'
 
-
 # ======================================================================================================================
 # Viz utils.
 # ----------
 # Functions and classes which are helpful for creating new Viz classes.
 # ======================================================================================================================
+
 
 # An enum which includes every color a Viz can take.
 class Color(Enum):
@@ -76,9 +76,8 @@ class _Viz:
     `compile_compact()`, which creates a compact VizModel, and `__str__()`, which is used to generate the text for
     its summary model.
     """
-    def __init__(self,
-                 name: Optional[str],
-                 expansion_state: ExpansionState) -> None:
+
+    def __init__(self, name: Optional[str], expansion_state: ExpansionState) -> None:
         """Constructor.
 
         Args:
@@ -133,13 +132,13 @@ class _Viz:
 # These objects subclass _Viz and will be instantiated directly by developers writing visualizations for their objects.
 # ======================================================================================================================
 
+
 class TokenPrimitive(_Viz):
     """
     A Viz which is a single, contiguous block of text content.
     """
-    def __init__(self,
-                 val: Any,
-                 color: Color = Color.PRIMARY) -> None:
+
+    def __init__(self, val: Any, color: Color = Color.PRIMARY) -> None:
         """Constructor.
 
         Args:
@@ -173,11 +172,13 @@ class SequenceLayout(_Viz):
     # How many items are shown in the compact form of this Viz.
     COMPACT_LEN = 2
 
-    def __init__(self,
-                 elements: Sequence[Any],
-                 orientation: Optional[str]=None,
-                 name: Optional[str]=None,
-                 expansion_state: ExpansionState=ExpansionState.DEFAULT) -> None:
+    def __init__(
+            self,
+            elements: Sequence[Any],
+            orientation: Optional[str] = None,
+            name: Optional[str] = None,
+            expansion_state: ExpansionState = ExpansionState.DEFAULT
+    ) -> None:
         """Constructor.
 
         Args:
@@ -211,10 +212,12 @@ class KeyValueLayout(_Viz):
     # How many key-value pairs to show in the compact form of this Viz.
     COMPACT_LEN = 3
 
-    def __init__(self,
-                 key_value_mapping: Mapping[Any, Any],
-                 name: Optional[str]=None,
-                 expansion_state: ExpansionState=ExpansionState.DEFAULT) -> None:
+    def __init__(
+            self,
+            key_value_mapping: Mapping[Any, Any],
+            name: Optional[str] = None,
+            expansion_state: ExpansionState = ExpansionState.DEFAULT
+    ) -> None:
         """Constructor.
 
         Args:
@@ -224,7 +227,8 @@ class KeyValueLayout(_Viz):
         """
         super(KeyValueLayout, self).__init__(name, expansion_state)
         self._key_value_mapping: Dict[_Viz, _Viz] = {
-            get_viz(key): get_viz(value) for key, value in key_value_mapping.items()
+            get_viz(key): get_viz(value)
+            for key, value in key_value_mapping.items()
         }
 
     def compile_full(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
@@ -234,7 +238,8 @@ class KeyValueLayout(_Viz):
     def compile_compact(self) -> Tuple['KeyValueLayoutModel', Iterable[_Viz]]:
         items = list(self._key_value_mapping.items())[:KeyValueLayout.COMPACT_LEN]
         return (
-            KeyValueLayoutModel({key: value for key, value in items}),
+            KeyValueLayoutModel({key: value
+                                 for key, value in items}),
             [key for key, _ in items] + [value for _, value in items]
         )
 
@@ -243,9 +248,11 @@ class KeyValueLayout(_Viz):
 
 
 class DagLayout(_Viz):
-    def __init__(self,
-                 name: Optional[str]=None,
-                 expansion_state: ExpansionState=ExpansionState.DEFAULT) -> None:
+
+    def __init__(
+            self, name: Optional[str] = None,
+            expansion_state: ExpansionState = ExpansionState.DEFAULT
+    ) -> None:
         super(DagLayout, self).__init__(name, expansion_state)
         self._nodes: List['DagLayoutNode'] = []
         self._edges: List['DagLayoutEdge'] = []
@@ -265,39 +272,35 @@ class DagLayout(_Viz):
             [node.viz for node in self._nodes],
         )
 
-    def create_node(self,
-                    o: Any) -> 'DagLayoutNode':
-        node = DagLayoutNode(str(len(self._nodes) + len(self._containers)),
-                             get_viz(o))
+    def create_node(self, o: Any) -> 'DagLayoutNode':
+        node = DagLayoutNode(str(len(self._nodes) + len(self._containers)), get_viz(o))
         self._nodes.append(node)
         return node
 
-    def create_container(self,
-                         flow_direction: Optional[str] = None,
-                         is_expanded: Optional[bool] = None,
-                         is_interactive: Optional[bool] = None,
-                         is_visible: Optional[bool] = None,
-                         is_topological: Optional[bool] = None) -> 'DagLayoutContainer':
-        container = DagLayoutContainer(str(len(self._nodes) + len(self._containers)),
-                                       flow_direction,
-                                       is_expanded,
-                                       is_interactive,
-                                       is_visible,
-                                       is_topological)
+    def create_container(
+            self,
+            flow_direction: Optional[str] = None,
+            is_expanded: Optional[bool] = None,
+            is_interactive: Optional[bool] = None,
+            is_visible: Optional[bool] = None,
+            is_topological: Optional[bool] = None
+    ) -> 'DagLayoutContainer':
+        container = DagLayoutContainer(
+            str(len(self._nodes) + len(self._containers)), flow_direction, is_expanded,
+            is_interactive, is_visible, is_topological
+        )
         self._containers.append(container)
         return container
 
-    def create_edge(self,
-                    start: Union['DagLayoutNode', 'DagLayoutContainer'],
-                    end: Union['DagLayoutNode', 'DagLayoutContainer']) -> 'DagLayoutEdge':
-        edge = DagLayoutEdge(str(len(self._edges)),
-                             start,
-                             end)
+    def create_edge(
+            self, start: Union['DagLayoutNode', 'DagLayoutContainer'],
+            end: Union['DagLayoutNode', 'DagLayoutContainer']
+    ) -> 'DagLayoutEdge':
+        edge = DagLayoutEdge(str(len(self._edges)), start, end)
         self._edges.append(edge)
         return edge
 
-    def align_elements(self,
-                       elements: List[Union['DagLayoutNode', 'DagLayoutContainer']]) -> None:
+    def align_elements(self, elements: List[Union['DagLayoutNode', 'DagLayoutContainer']]) -> None:
         self._alignments.append(elements)
 
     def __str__(self) -> str:
@@ -305,9 +308,8 @@ class DagLayout(_Viz):
 
 
 class DagLayoutNode:
-    def __init__(self,
-                 node_id: str,
-                 viz: '_Viz') -> None:
+
+    def __init__(self, node_id: str, viz: '_Viz') -> None:
         self.node_id = node_id
         self.viz = viz
 
@@ -321,10 +323,11 @@ class DagLayoutNode:
 
 
 class DagLayoutEdge:
-    def __init__(self,
-                 edge_id: str,
-                 start: Union['DagLayoutNode', 'DagLayoutContainer'],
-                 end: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+
+    def __init__(
+            self, edge_id: str, start: Union['DagLayoutNode', 'DagLayoutContainer'],
+            end: Union['DagLayoutNode', 'DagLayoutContainer']
+    ) -> None:
         self.edge_id = edge_id
         self.start = start
         self.end = end
@@ -340,13 +343,12 @@ class DagLayoutEdge:
 
 
 class DagLayoutContainer:
-    def __init__(self,
-                 container_id: str,
-                 flow_direction: Optional[str],
-                 is_expanded: Optional[bool],
-                 is_interactive: Optional[bool],
-                 is_visible: Optional[bool],
-                 is_topological: Optional[bool]) -> None:
+
+    def __init__(
+            self, container_id: str, flow_direction: Optional[str], is_expanded: Optional[bool],
+            is_interactive: Optional[bool], is_visible: Optional[bool],
+            is_topological: Optional[bool]
+    ) -> None:
         self.container_id = container_id
         self.flow_direction = flow_direction
         self.is_expanded = is_expanded
@@ -368,8 +370,7 @@ class DagLayoutContainer:
             'isTopological': self.is_topological,
         }
 
-    def add_child(self,
-                  child: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+    def add_child(self, child: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
         self.elements.append(child)
 
 
@@ -379,59 +380,48 @@ class DagLayoutContainer:
 # The serializable models, each a subclass of VizModel, which describe the different Viz types.
 # ======================================================================================================================
 
+
 class TokenPrimitiveModel(VizModel):
-    def __init__(self,
-                 text: str) -> None:
-        super(TokenPrimitiveModel, self).__init__(
-            'TokenPrimitive',
-            {
-                'text': text,
-            }
-        )
+
+    def __init__(self, text: str) -> None:
+        super(TokenPrimitiveModel, self).__init__('TokenPrimitive', {
+            'text': text,
+        })
 
 
 class SequenceLayoutModel(VizModel):
-    def __init__(self,
-                 elements: List['_Viz'],
-                 orientation: str) -> None:
-        super(SequenceLayoutModel, self).__init__(
-            'SequenceLayout',
-            {
-                'elements': elements,
-                'orientation': orientation,
-            }
-        )
+
+    def __init__(self, elements: List['_Viz'], orientation: str) -> None:
+        super(SequenceLayoutModel,
+              self).__init__('SequenceLayout', {
+                  'elements': elements,
+                  'orientation': orientation,
+              })
 
 
 class KeyValueLayoutModel(VizModel):
-    def __init__(self,
-                 elements: Dict['_Viz', '_Viz']) -> None:
-        super(KeyValueLayoutModel, self).__init__(
-            'KeyValueLayout',
-            {
-                'elements': elements,
-            }
-        )
+
+    def __init__(self, elements: Dict['_Viz', '_Viz']) -> None:
+        super(KeyValueLayoutModel, self).__init__('KeyValueLayout', {
+            'elements': elements,
+        })
 
 
 class DagLayoutModel(VizModel):
-    def __init__(self,
-                 nodes: List['DagLayoutNode'],
-                 containers: List['DagLayoutContainer'],
-                 edges: List['DagLayoutEdge'],
-                 alignments: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]]) -> None:
+
+    def __init__(
+            self, nodes: List['DagLayoutNode'], containers: List['DagLayoutContainer'],
+            edges: List['DagLayoutEdge'],
+            alignments: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]]
+    ) -> None:
         super(DagLayoutModel, self).__init__(
-            'DagLayout',
-            {
-                'nodes': {
-                    node.get_id(): node.to_dict() for node in nodes
-                },
-                'containers': {
-                    container.get_id(): container.to_dict() for container in containers
-                },
-                'edges': {
-                    edge.get_id(): edge.to_dict() for edge in edges
-                },
+            'DagLayout', {
+                'nodes': {node.get_id(): node.to_dict()
+                          for node in nodes},
+                'containers': {container.get_id(): container.to_dict()
+                               for container in containers},
+                'edges': {edge.get_id(): edge.to_dict()
+                          for edge in edges},
                 'alignments': [[item.get_id() for item in alignment] for alignment in alignments]
             }
         )

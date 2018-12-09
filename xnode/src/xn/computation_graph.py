@@ -13,17 +13,18 @@ from collections import deque
 from xn.viz import VIZ_FN, get_viz, DagLayout, TokenPrimitive
 from typing import Callable, List, Tuple, Any, Mapping, Optional, Union
 
-
 # TODO: state outputs
 # TODO: re-document
 # TODO: naming (op is a bad name that we don't use anymore)
 
+
 class FunctionCall:
     """A record of a single function execution."""
-    def __init__(self,
-                 fn_name: str,
-                 args: List[Tuple[str, Union[List['GraphData'], 'GraphData']]],
-                 kwargs: List[Tuple[str, Union[List['GraphData'], 'GraphData']]]):
+
+    def __init__(
+            self, fn_name: str, args: List[Tuple[str, Union[List['GraphData'], 'GraphData']]],
+            kwargs: List[Tuple[str, Union[List['GraphData'], 'GraphData']]]
+    ):
         """Constructor.
 
         Args:
@@ -43,10 +44,14 @@ class FunctionCall:
 
     def _get_input_list(self, input_tuples):
         tracked_args = []
-        tracked_args.extend([arg[1] for arg in input_tuples if len(arg) > 1 and not isinstance(arg[1], list)])
+        tracked_args.extend(
+            [arg[1] for arg in input_tuples if len(arg) > 1 and not isinstance(arg[1], list)]
+        )
         for input_tuple in input_tuples:
             if len(input_tuple) > 1 and isinstance(input_tuple[1], list):
-                tracked_args.extend([arg_item for arg_item in input_tuple[1] if arg_item is not None])
+                tracked_args.extend(
+                    [arg_item for arg_item in input_tuple[1] if arg_item is not None]
+                )
         return tracked_args
 
     def get_args(self):
@@ -121,13 +126,15 @@ def gen_tracked_call(fn: Callable):
 
     def _tracked_call(self, *args, **kwargs):
         arg_names: List[str] = (
-                _arg_names[(len(_arg_names) - len(args)):] +
-                [_varargs for _ in range(len(args) - len(_arg_names))]
+            _arg_names[(len(_arg_names) - len(args)):] +
+            [_varargs for _ in range(len(args) - len(_arg_names))]
         )
 
         kwarg_keys = list(kwargs.keys())
-        op = FunctionCall(_op_name, _make_arg_list(args, arg_names),
-                          _make_arg_list([kwargs[k] for k in kwarg_keys], kwarg_keys))
+        op = FunctionCall(
+            _op_name, _make_arg_list(args, arg_names),
+            _make_arg_list([kwargs[k] for k in kwarg_keys], kwarg_keys)
+        )
         try:
             self.xnode_current_op = op
             ret = c(*args, **kwargs)
@@ -138,18 +145,15 @@ def gen_tracked_call(fn: Callable):
         # TODO handle passthrough returns
         if multiple_returns:
             ret_tracked = tuple(
-                [_track_data(r,
-                             creator_op=op,
-                             creator_pos=i)
-                 for i, r in enumerate(ret)])
+                [_track_data(r, creator_op=op, creator_pos=i) for i, r in enumerate(ret)]
+            )
         else:
-            ret_tracked = _track_data(ret,
-                                      creator_op=op,
-                                      creator_pos=0)
-        op.outputs = (x.xnode_graphdata for x in ret_tracked) if isinstance(ret_tracked, tuple) else (
-            ret_tracked.xnode_graphdata,)
+            ret_tracked = _track_data(ret, creator_op=op, creator_pos=0)
+        op.outputs = (x.xnode_graphdata for x in ret_tracked
+                     ) if isinstance(ret_tracked, tuple) else (ret_tracked.xnode_graphdata,)
         _get_internal_calls(op)
         return ret_tracked
+
     return _tracked_call
 
 
@@ -168,8 +172,8 @@ def track_function(fn: Callable) -> Callable:
 
 class _TrackedFunction(wrapt.ObjectProxy):
     """Wraps a callable object, creating a `FunctionCall` whenever called and creating a `GraphData` for each output."""
-    def __init__(self,
-                 obj: Callable) -> None:
+
+    def __init__(self, obj: Callable) -> None:
         """Constructor.
 
         Args:
@@ -253,8 +257,10 @@ def _get_internal_calls(op) -> None:
 # be used as if they were their wrapped object.
 # ======================================================================================================================
 
+
 class GraphData:
     """A record of a tracked function input or output."""
+
     def __init__(self, obj, creator_op=None, creator_pos=-1):
         """Constructor. Stores the properties of the tracked object which should be visualized in the graph.
 
@@ -273,14 +279,13 @@ class GraphData:
 
     def xn(self):
         layout = DagLayout()
-        graphdata_to_node = {
-            self: layout.create_node(self.obj)
-        }
+        graphdata_to_node = {self: layout.create_node(self.obj)}
         if self.creator_op is None:
             return layout
 
         op_to_node = {
-            self.creator_op: layout.create_node(self.creator_op)
+            self.creator_op:
+            layout.create_node(self.creator_op)
             if len(self.creator_op.contents) == 0 else layout.create_container(),
         }
         op_to_secret_container_node = dict()
@@ -291,7 +296,9 @@ class GraphData:
             op_node = op_to_node[op]
 
             # add to secret container
-            op_to_secret_container_node[op] = layout.create_container(flow_direction='right', is_visible=False)
+            op_to_secret_container_node[op] = layout.create_container(
+                flow_direction='right', is_visible=False
+            )
             op_to_secret_container_node[op].add_child(op_to_node[op])
 
             # create container ancestry
@@ -348,13 +355,17 @@ def gen_magic_method(obj_class, fn_name):
 
     def wrapped_magic_method(self, x):
         return _TrackedFunction(magic_method)(self, x)
+
     return wrapped_magic_method
 
 
 # List of all arithmetic magic methods from https://rszalski.github.io/magicmethods/#appendix2
-MAGIC_METHODS = ['__add__', '__sub__', '__mul__', '__div__', '__floordiv__', '__truediv__', '__mod__', '__divmod__',
-                 '__pow__', '__lshift__', '__rshift__', '__and__', '__or__', '__xor__']
+MAGIC_METHODS = [
+    '__add__', '__sub__', '__mul__', '__div__', '__floordiv__', '__truediv__', '__mod__',
+    '__divmod__', '__pow__', '__lshift__', '__rshift__', '__and__', '__or__', '__xor__'
+]
 MAGIC_METHODS += ['__r' + fn_name.lstrip('__') for fn_name in MAGIC_METHODS]
+
 # TODO: in-place assignment magic methods?
 
 
@@ -389,6 +400,7 @@ def track_magic_methods(obj_class):
 # directly created, and should be created only using the following methods.
 # ======================================================================================================================
 
+
 def _track_data(obj, creator_op=None, creator_pos=-1) -> Any:
     """Creates a `GraphData` object which records the properties of `obj` and allows it to be shown in the graph.
 
@@ -420,15 +432,19 @@ def _track_data(obj, creator_op=None, creator_pos=-1) -> Any:
             new_class_dict = track_magic_methods(obj.__class__)
             new_class_dict[VIZ_FN] = getattr(graphdata, VIZ_FN)
             try:
-                obj.__class__ = type('__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
-                                     new_class_dict)
+                obj.__class__ = type(
+                    '__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
+                    new_class_dict
+                )
             except TypeError:
                 # The object might be an int or other primitive, which cannot be directly assigned with `type()`.
                 class WrapperClass(type(obj)):
                     pass
 
                 obj = WrapperClass(obj)
-                obj.__class__ = type('__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
-                                     new_class_dict)
+                obj.__class__ = type(
+                    '__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
+                    new_class_dict
+                )
         obj.xnode_graphdata = graphdata
     return obj

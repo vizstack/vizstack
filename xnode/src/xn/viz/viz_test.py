@@ -6,6 +6,7 @@ from xn.viz import TokenPrimitive, SequenceLayout
 
 
 class _TokenTest:
+
     def __init__(self, data):
         self.data = data
 
@@ -14,11 +15,13 @@ class _TokenTest:
 
 
 class _SequenceTest:
+
     def __init__(self, data):
         self.data = data
 
     def xn(self):
         return SequenceLayout(self.data)
+
 
 # TODO: use this to test viz engine
 #
