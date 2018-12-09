@@ -250,17 +250,18 @@ class DagLayout(_Viz):
         self._nodes: List['DagLayoutNode'] = []
         self._edges: List['DagLayoutEdge'] = []
         self._containers: List['DagLayoutContainer'] = []
+        self._alignments: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]] = []
 
     def compile_full(self) -> Tuple['DagLayoutModel', Iterable[_Viz]]:
         return (
-            DagLayoutModel(self._nodes, self._containers, self._edges),
+            DagLayoutModel(self._nodes, self._containers, self._edges, self._alignments),
             [node.viz for node in self._nodes],
         )
 
     def compile_compact(self) -> Tuple['DagLayoutModel', Iterable[_Viz]]:
         # TODO: come up with a compact representation
         return (
-            DagLayoutModel(self._nodes, self._containers, self._edges),
+            DagLayoutModel(self._nodes, self._containers, self._edges, self._alignments),
             [node.viz for node in self._nodes],
         )
 
@@ -273,12 +274,16 @@ class DagLayout(_Viz):
 
     def create_container(self,
                          flow_direction: Optional[str] = None,
-                         flow_alignment: Optional[str] = None,
-                         is_expanded: Optional[bool] = None) -> 'DagLayoutContainer':
+                         is_expanded: Optional[bool] = None,
+                         is_interactive: Optional[bool] = None,
+                         is_visible: Optional[bool] = None,
+                         is_topological: Optional[bool] = None) -> 'DagLayoutContainer':
         container = DagLayoutContainer(str(len(self._nodes) + len(self._containers)),
                                        flow_direction,
-                                       flow_alignment,
-                                       is_expanded)
+                                       is_expanded,
+                                       is_interactive,
+                                       is_visible,
+                                       is_topological)
         self._containers.append(container)
         return container
 
@@ -290,6 +295,10 @@ class DagLayout(_Viz):
                              end)
         self._edges.append(edge)
         return edge
+
+    def align_elements(self,
+                       elements: List[Union['DagLayoutNode', 'DagLayoutContainer']]) -> None:
+        self._alignments.append(elements)
 
     def __str__(self) -> str:
         return 'graph'
@@ -334,37 +343,34 @@ class DagLayoutContainer:
     def __init__(self,
                  container_id: str,
                  flow_direction: Optional[str],
-                 flow_alignment: Optional[str],
-                 is_expanded: Optional[bool]) -> None:
+                 is_expanded: Optional[bool],
+                 is_interactive: Optional[bool],
+                 is_visible: Optional[bool],
+                 is_topological: Optional[bool]) -> None:
         self.container_id = container_id
         self.flow_direction = flow_direction
-        self.flow_alignment = flow_alignment
-        self.item_alignment: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]] = []
         self.is_expanded = is_expanded
-        self.flows: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]] = []
+        self.is_interactive = is_interactive
+        self.is_visible = is_visible
+        self.is_topological = is_topological
+        self.elements: List[Union['DagLayoutNode', 'DagLayoutContainer']] = []
 
     def get_id(self) -> str:
         return self.container_id
 
     def to_dict(self) -> Mapping[str, Any]:
         return {
+            'elements': [item.get_id() for item in self.elements],
             'flowDirection': self.flow_direction,
-            'flowAlignment': self.flow_alignment,
-            'itemAlignment': [[item.get_id() for item in alignment] for alignment in self.item_alignment],
             'isExpanded': self.is_expanded,
-            'flows': [[item.get_id() for item in flow] for flow in self.flows],
+            'isInteractive': self.is_interactive,
+            'isVisible': self.is_visible,
+            'isTopological': self.is_topological,
         }
 
     def add_child(self,
-                  child: Union['DagLayoutNode', 'DagLayoutContainer'],
-                  flow_index: int = 0) -> None:
-        while len(self.flows) < flow_index + 1:
-            self.flows.append([])
-        self.flows[flow_index].append(child)
-
-    def align_children(self,
-                       children: List[Union['DagLayoutNode', 'DagLayoutContainer']]) -> None:
-        self.item_alignment.append(children)
+                  child: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+        self.elements.append(child)
 
 
 # ======================================================================================================================
@@ -412,7 +418,8 @@ class DagLayoutModel(VizModel):
     def __init__(self,
                  nodes: List['DagLayoutNode'],
                  containers: List['DagLayoutContainer'],
-                 edges: List['DagLayoutEdge']) -> None:
+                 edges: List['DagLayoutEdge'],
+                 alignments: List[List[Union['DagLayoutNode', 'DagLayoutContainer']]]) -> None:
         super(DagLayoutModel, self).__init__(
             'DagLayout',
             {
@@ -425,5 +432,6 @@ class DagLayoutModel(VizModel):
                 'edges': {
                     edge.get_id(): edge.to_dict() for edge in edges
                 },
+                'alignments': [[item.get_id() for item in alignment] for alignment in alignments]
             }
         )

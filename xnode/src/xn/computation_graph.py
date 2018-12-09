@@ -14,8 +14,9 @@ from xn.viz import VIZ_FN, get_viz, DagLayout, TokenPrimitive
 from typing import Callable, List, Tuple, Any, Mapping, Optional, Union
 
 
-# TODO: TrackedField
-
+# TODO: state outputs
+# TODO: re-document
+# TODO: naming (op is a bad name that we don't use anymore)
 
 class FunctionCall:
     """A record of a single function execution."""
@@ -34,12 +35,27 @@ class FunctionCall:
         self.container: Optional[FunctionCall] = None
         self.contents = None
         self.outputs = []
+        self.state_inputs = []
 
         self.fn_name: str = fn_name
         self.args = args
         self.kwargs = kwargs
 
-    def get_tracked_args(self):
+    def _get_input_list(self, input_tuples):
+        tracked_args = []
+        tracked_args.extend([arg[1] for arg in input_tuples if len(arg) > 1 and not isinstance(arg[1], list)])
+        for input_tuple in input_tuples:
+            if len(input_tuple) > 1 and isinstance(input_tuple[1], list):
+                tracked_args.extend([arg_item for arg_item in input_tuple[1] if arg_item is not None])
+        return tracked_args
+
+    def get_args(self):
+        return self._get_input_list(self.args + self.kwargs)
+
+    def get_state_inputs(self):
+        return self._get_input_list(self.state_inputs)
+
+    def get_all_inputs(self):
         """Return a list of all recorded positional and keyword arguments that are wrapped in `GraphData`.
 
         This is used to build the DAG, collecting all `GraphData` inputs so that their ancestors can be iterated over
@@ -48,13 +64,7 @@ class FunctionCall:
         Returns:
             (list): All positional and keyword argument values that are tracked in `GraphData`.
         """
-        tracked_args = []
-        for arg_list in [self.args, self.kwargs]:
-            tracked_args.extend([arg[1] for arg in arg_list if len(arg) > 1 and not isinstance(arg[1], list)])
-            for arg in arg_list:
-                if len(arg) > 1 and isinstance(arg[1], list):
-                    tracked_args.extend([arg_item for arg_item in arg[1] if arg_item is not None])
-        return tracked_args
+        return self.get_args() + self.get_state_inputs()
 
     def get_outermost_parent(self):
         """Returns the first `Nestable` with no container, found by iterating through this `Nestable`'s container
@@ -72,7 +82,91 @@ class FunctionCall:
         return TokenPrimitive(self.fn_name)
 
 
-class TrackedFunction(wrapt.ObjectProxy):
+def gen_tracked_getattr(fn: Callable):
+    g = fn.__getattribute__
+
+    def _tracked_getattr(self, name):
+        ret = g(name)
+        # Have to use __getattribute__ here, not .xnode_current_op, to avoid calling this function infinitely
+        if object.__getattribute__(self, 'xnode_current_op') is not None:
+            ret = _track_data(ret)
+            op = object.__getattribute__(self, 'xnode_current_op')
+            op.state_inputs.append(('self.{}'.format(name), ret.xnode_graphdata))
+        return ret
+
+    return _tracked_getattr
+
+
+def gen_tracked_call(fn: Callable):
+    c = fn.__call__
+    # TODO: this is custom tailored for PyTorch, and we should generalize it in the future
+    try:
+        if hasattr(fn, 'forward'):
+            # `getfullargspec` will work on PyTorch modules, but won't get arg names. Need to get from `forward`
+            # directly.
+            fn_spec = inspect.getfullargspec(fn.forward)
+        else:
+            fn_spec = inspect.getfullargspec(fn)
+        _arg_names = fn_spec.args
+        _varargs = fn_spec.varargs
+    except TypeError:
+        _arg_names = []
+        _varargs: str = 'args'
+
+    # Pytorch modules don't have a `__name__` field
+    try:
+        _op_name = fn.__name__
+    except AttributeError:
+        _op_name = fn.__class__.__name__
+
+    def _tracked_call(self, *args, **kwargs):
+        arg_names: List[str] = (
+                _arg_names[(len(_arg_names) - len(args)):] +
+                [_varargs for _ in range(len(args) - len(_arg_names))]
+        )
+
+        kwarg_keys = list(kwargs.keys())
+        op = FunctionCall(_op_name, _make_arg_list(args, arg_names),
+                          _make_arg_list([kwargs[k] for k in kwarg_keys], kwarg_keys))
+        try:
+            self.xnode_current_op = op
+            ret = c(*args, **kwargs)
+            self.xnode_current_op = None
+        except AttributeError:
+            ret = c(*args, **kwargs)
+        multiple_returns = isinstance(ret, tuple) and len(ret) > 1
+        # TODO handle passthrough returns
+        if multiple_returns:
+            ret_tracked = tuple(
+                [_track_data(r,
+                             creator_op=op,
+                             creator_pos=i)
+                 for i, r in enumerate(ret)])
+        else:
+            ret_tracked = _track_data(ret,
+                                      creator_op=op,
+                                      creator_pos=0)
+        op.outputs = (x.xnode_graphdata for x in ret_tracked) if isinstance(ret_tracked, tuple) else (
+            ret_tracked.xnode_graphdata,)
+        _get_internal_calls(op)
+        return ret_tracked
+    return _tracked_call
+
+
+def track_function(fn: Callable) -> Callable:
+    new_class_dict = {
+        '__call__': gen_tracked_call(fn),
+        '__getattribute__': gen_tracked_getattr(fn),
+    }
+    try:
+        fn.__class__ = type(fn.__class__.__name__, (fn.__class__,), new_class_dict)
+    except TypeError:
+        # The object is a function or lambda, which cannot be subclassed
+        fn = _TrackedFunction(fn)
+    return fn
+
+
+class _TrackedFunction(wrapt.ObjectProxy):
     """Wraps a callable object, creating a `FunctionCall` whenever called and creating a `GraphData` for each output."""
     def __init__(self,
                  obj: Callable) -> None:
@@ -82,31 +176,9 @@ class TrackedFunction(wrapt.ObjectProxy):
             obj (callable): A callable object, such as a function, whose executions should be recorded in the
                 computation graph.
         """
-        super(TrackedFunction, self).__init__(obj)
+        super(_TrackedFunction, self).__init__(obj)
         # wrapt requires all wrapper properties to start with _self_
-
-        # built-in functions don't have signatures, so we make them up
-        # TODO: this is custom tailored for PyTorch, and we should generalize it in the future
-        try:
-            if hasattr(obj, 'forward'):
-                # `getfullargspec` will work on PyTorch modules, but won't get arg names. Need to get from `forward`
-                # directly.
-                fn_spec = inspect.getfullargspec(obj.forward)
-            else:
-                fn_spec = inspect.getfullargspec(obj)
-            arg_names = fn_spec.args
-            varargs = fn_spec.varargs
-        except TypeError:
-            arg_names = []
-            varargs: str = 'args'
-
-        self._self_arg_names: List[str] = arg_names
-        self._self_varargs: str = varargs
-        # Pytorch modules don't have a `__name__` field
-        try:
-            self._self_op_name = obj.__name__
-        except AttributeError:
-            self._self_op_name = obj.__class__.__name__
+        self._self_tracked_call = gen_tracked_call(obj)
 
     def __call__(self, *args, **kwargs):
         """Executes the wrapped function and creates a `FunctionCall` recording the execution.
@@ -122,35 +194,7 @@ class TrackedFunction(wrapt.ObjectProxy):
         Returns:
             The outputs of the wrapped function, each wrapped in a `GraphData` instance.
         """
-        # TODO: should we dive into sequences and look for nested GraphData? If not, torch.cat doesn't really work
-        # (since it takes as argument a list), but could be made to work with a wrapper that takes in any number of
-        # inputs and collects them into a list before calling cat. If we do, how do we know when to stop diving,
-        # and what do we do about output_props?
-        ret = self.__wrapped__(*args, **kwargs)
-        multiple_returns = isinstance(ret, tuple) and len(ret) > 1
-        arg_names: List[str] = (
-                self._self_arg_names[(len(self._self_arg_names) - len(args)):] +
-                [self._self_varargs for _ in range(len(args) - len(self._self_arg_names))]
-        )
-
-        kwarg_keys = list(kwargs.keys())
-        op = FunctionCall(self._self_op_name, _make_arg_list(args, arg_names),
-                          _make_arg_list([kwargs[k] for k in kwarg_keys], kwarg_keys))
-        # TODO handle passthrough returns
-        if multiple_returns:
-            ret_tracked = tuple(
-                [_track_data(r,
-                             creator_op=op,
-                             creator_pos=i)
-                 for i, r in enumerate(ret)])
-        else:
-            ret_tracked = _track_data(ret,
-                                        creator_op=op,
-                                        creator_pos=0)
-        op.outputs = (x.xnode_graphdata for x in ret_tracked) if isinstance(ret_tracked, tuple) else (
-            ret_tracked.xnode_graphdata,)
-        _get_internal_calls(op)
-        return ret_tracked
+        return self._self_tracked_call(self.__wrapped__, *args, **kwargs)
 
 
 def _make_arg_list(args, arg_names) -> List[Tuple[str, Union[List['GraphData'], 'GraphData']]]:
@@ -181,7 +225,7 @@ def _get_internal_calls(op) -> None:
     """
     contents = list()
     ops_checked = {op}
-    inputs = set(op.get_tracked_args())
+    inputs = set(op.get_all_inputs())
     data_to_check = deque(op.outputs)
     while len(data_to_check) > 0:
         data = data_to_check.popleft()
@@ -191,7 +235,7 @@ def _get_internal_calls(op) -> None:
         if creator_op is not None and creator_op not in ops_checked:
             outermost_parent = creator_op.get_outermost_parent()
             contents.append(outermost_parent)
-            data_to_check.extend(creator_op.get_tracked_args())
+            data_to_check.extend(creator_op.get_all_inputs())
             ops_checked.add(creator_op)
     # Update newly contained objects after iterating through the graph to prevent the new container from containing
     # itself (consider ops op1, op2, which share container c1. We are adding a new container c2. If we update the
@@ -229,30 +273,64 @@ class GraphData:
 
     def xn(self):
         layout = DagLayout()
-        graphdata = [self]
-        creator_op_nodes = dict()
-        container_nodes = dict()
-        while len(graphdata) > 0:
-            graphdatum = graphdata.pop()
-            graphdatum_node = layout.create_node(graphdatum.obj)
-            if graphdatum.creator_op is not None:
-                if graphdatum.creator_op not in creator_op_nodes:
-                    creator_op_nodes[graphdatum.creator_op] = layout.create_node(graphdatum.creator_op)
-                    child = creator_op_nodes[graphdatum.creator_op]
-                    container = graphdatum.creator_op.container
-                    while container is not None:
-                        # if no node yet, create, add child, and continue
-                        # if node, add child and break
-                        if container not in container_nodes:
-                            container_nodes[container] = layout.create_container()
-                            container_nodes[container].add_child(child)
-                            child = container_nodes[container]
-                            container = container.container
-                        else:
-                            container_nodes[container].add_child(child)
-                            break
-                layout.create_edge(creator_op_nodes[graphdatum.creator_op], graphdatum_node)
-                graphdata += graphdatum.creator_op.get_tracked_args()
+        graphdata_to_node = {
+            self: layout.create_node(self.obj)
+        }
+        if self.creator_op is None:
+            return layout
+
+        op_to_node = {
+            self.creator_op: layout.create_node(self.creator_op)
+            if len(self.creator_op.contents) == 0 else layout.create_container(),
+        }
+        op_to_secret_container_node = dict()
+        layout.create_edge(op_to_node[self.creator_op], graphdata_to_node[self])
+        ops = [self.creator_op]
+        while len(ops) > 0:
+            op = ops.pop()
+            op_node = op_to_node[op]
+
+            # add to secret container
+            op_to_secret_container_node[op] = layout.create_container(flow_direction='right', is_visible=False)
+            op_to_secret_container_node[op].add_child(op_to_node[op])
+
+            # create container ancestry
+            container_op = op.container
+            child = op_to_secret_container_node[op]
+            while container_op is not None:
+                if container_op not in op_to_node:
+                    op_to_node[container_op] = layout.create_container()
+                    op_to_node[container_op].add_child(child)
+                    # if not graphdatum_added_to_container:
+                    #     op_to_node[container_op].add_child(graphdata_to_node[])
+                    child = op_to_node[container_op]
+                    container_op = container_op.container
+                else:
+                    op_to_node[container_op].add_child(child)
+                    break
+
+            # add input data nodes
+            for input_graphdata in op.get_args():
+                # Only create a new data node if one does not exist, or if the data is a leaf
+                # TODO: the data node needs to be in some container!
+                if input_graphdata not in graphdata_to_node or input_graphdata.creator_op is None:
+                    graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
+                layout.create_edge(graphdata_to_node[input_graphdata], op_node)
+                if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
+                    if len(op.contents) > 0:
+                        creator_op_node = layout.create_container()
+                    else:
+                        creator_op_node = layout.create_node(input_graphdata.creator_op)
+                    op_to_node[input_graphdata.creator_op] = creator_op_node
+                    ops.append(input_graphdata.creator_op)
+
+            # add state inputs
+            for input_graphdata in op.get_state_inputs():
+                # for now, always create a new node and put it in a new container with the op
+                graphdata_node = layout.create_node(input_graphdata.obj)
+                layout.create_edge(graphdata_node, op_node)
+                op_to_secret_container_node[op].add_child(graphdata_node)
+
         return layout
 
 
@@ -269,7 +347,7 @@ def gen_magic_method(obj_class, fn_name):
     magic_method = getattr(obj_class, fn_name)
 
     def wrapped_magic_method(self, x):
-        return TrackedFunction(magic_method)(self, x)
+        return _TrackedFunction(magic_method)(self, x)
     return wrapped_magic_method
 
 
@@ -314,7 +392,7 @@ def track_magic_methods(obj_class):
 def _track_data(obj, creator_op=None, creator_pos=-1) -> Any:
     """Creates a `GraphData` object which records the properties of `obj` and allows it to be shown in the graph.
 
-    Any object which is not the output of a tracked function (see `TrackedFunction`) is not, by default, shown in the
+    Any object which is not the output of a tracked function (see `_TrackedFunction`) is not, by default, shown in the
     computation graph. Leaf data nodes can be added to the graph via `_track_data()`.
 
     `_track_data()` adds a new field `xnode_graphdata` to `obj`, which maps to new the `GraphData` object. The class
