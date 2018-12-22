@@ -13,8 +13,8 @@ export type VizId = string;
  *      2) summaryModel + compactModel
  *      3) summaryModel + compactModel + fullModel
  *
- *  This allows storage/transmission efficiency, and looking at the filled stated implicit communicated the default
- *  model to render.
+ *  This allows storage/transmission efficiency, and looking at the filled stated implicit
+ *  communicated the default model to render.
  */
 export type VizSpec = {
     /** Absolute path of the file in which this viz was viewed. */
@@ -23,7 +23,8 @@ export type VizSpec = {
     /** Line number of view statement within file at `filePath`. */
     lineNumber: number,
 
-    /** Model that is just string summary of the object and does not allow references (i.e. it "bottoms-out"). */
+    /** Model that is just string summary of the object and does not allow references (i.e. it
+     *  "bottoms-out"). */
     summaryModel: VizModel,
 
     /** Model that visualizes a tiny subset of the object data and allows references. */
@@ -36,7 +37,7 @@ export type VizSpec = {
 /** A mode of visualization for a viz. */
 export type VizModel = PrimitiveModel | LayoutModel;
 
-// =====================================================================================================================
+// =================================================================================================
 // Viz primitives
 // --------------
 // Visual "building blocks".
@@ -52,7 +53,7 @@ export type TokenPrimitiveModel = {
     },
 };
 
-// =====================================================================================================================
+// =================================================================================================
 // Viz layouts
 // -----------
 // Visual "configurations" of "building blocks".
@@ -113,7 +114,7 @@ export type DagLayoutModel = {
     },
 };
 
-// =====================================================================================================================
+// =================================================================================================
 // Public functions
 
 /**

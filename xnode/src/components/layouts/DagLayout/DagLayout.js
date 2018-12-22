@@ -1,14 +1,9 @@
 import * as React from 'react';
-import PropTypes from 'prop-types'; // TODO: Remove
+import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { withSize } from 'react-sizeme';
 import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
-
-import ColorGrey from '@material-ui/core/colors/grey';
-import ColorBlue from '@material-ui/core/colors/blue';
-import classNames from 'classnames';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 
 import type {
     DagNodeId,
@@ -19,6 +14,33 @@ import type {
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerCreationProps } from '../../Viewer';
+
+
+export type DagNodeLayoutedSpec = {
+    id: DagNodeId,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+};
+
+export type DagContainerLayoutedSpec = {
+    contents: DagContainerSpec,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+};
+
+export type DagEdgeLayoutedSpec = {
+    contents: DagEdgeSpec,
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+};
+
+
 
 function buildArrowheadMarker(id, color) {
     return (
