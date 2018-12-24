@@ -6,41 +6,13 @@ import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
 
 import type {
-    DagNodeId,
+    DagElementId,
     DagEdgeId,
-    DagContainerId,
     DagEdgeSpec,
     DagContainerSpec,
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerCreationProps } from '../../Viewer';
-
-
-export type DagNodeLayoutedSpec = {
-    id: DagNodeId,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-};
-
-export type DagContainerLayoutedSpec = {
-    contents: DagContainerSpec,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-};
-
-export type DagEdgeLayoutedSpec = {
-    contents: DagEdgeSpec,
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number,
-};
-
-
 
 function buildArrowheadMarker(id, color) {
     return (
@@ -202,7 +174,7 @@ class DagLayout extends React.PureComponent<{
 
     /** Node elements that serve as props to `Viewer` sub-components. */
     nodes: {
-        [DagNodeId]: ViewerCreationProps,
+        [DagElementId]: ViewerCreationProps,
     },
 
     /** Edge specifications of which nodes to connect. */

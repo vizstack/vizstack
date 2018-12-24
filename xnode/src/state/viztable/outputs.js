@@ -81,10 +81,12 @@ export type KeyValueLayoutModel = {
 };
 
 /** Dag layout is ___. */
-export type DagNodeId = string;
-export type DagContainerId = string;
+export type DagElementId = string;
+export type DagNodeSpec = {
+    vizId: VizId,
+}
 export type DagContainerSpec = {
-    elements: Array<DagNodeId | DagContainerId>,
+    elements: Array<DagElementId>,
     flowDirection?: 'left' | 'right' | 'up' | 'down',
     isExpanded?: boolean,
     isInteractive?: boolean,
@@ -93,24 +95,22 @@ export type DagContainerSpec = {
 };
 export type DagEdgeId = string;
 export type DagEdgeSpec = {
-    start: DagNodeId | DagContainerId,
-    end: DagNodeId | DagContainerId,
+    start: DagElementId,
+    end: DagElementId,
 };
 export type DagLayoutModel = {
     type: 'DagLayout',
     contents: {
         nodes: {
-            [DagNodeId]: {
-                vizId: VizId,
-            },
+            [DagElementId]: DagNodeSpec,
         },
         containers: {
-            [DagContainerId]: DagContainerSpec,
+            [DagElementId]: DagContainerSpec,
         },
         edges: {
             [DagEdgeId]: DagEdgeSpec,
         },
-        alignments: Array<Array<DagNodeId | DagContainerId>>,
+        alignments: Array<Array<DagElementId>>,
     },
 };
 
