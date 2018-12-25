@@ -26,7 +26,7 @@ import SequenceLayout from './layouts/SequenceLayout';
 import DagLayout from './layouts/DagLayout';
 
 /** The sequence in which users can toggle different models. */
-kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
+const kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
 
 /** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
  *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the

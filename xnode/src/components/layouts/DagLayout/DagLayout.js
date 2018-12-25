@@ -6,56 +6,14 @@ import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
 
 import type {
-    DagNodeId,
+    DagElementId,
     DagEdgeId,
-    DagContainerId,
     DagEdgeSpec,
     DagContainerSpec,
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
-
-export type DagNodeLayoutSpec = {
-    /** Unique identifier of node. */
-    viewerProps: ViewerProps,
-
-    /** Size dimensions populated after rendering. */
-    width?: number,
-    height?: number,
-
-    /** Layout coordinates populated by layout engine. */
-    x?: number,
-    y?: number,
-    z?: number,
-};
-
-export type DagContainerLayoutSpec = {
-    spec: DagContainerSpec,
-
-    /** Size dimensions populated by layout engine. */
-    width?: number,
-    height?: number,
-
-    /** Layout coordinates populated by layout engine. */
-    x?: number,
-    y?: number,
-    z?: number,
-};
-
-export type DagEdgeLayoutSpec = {
-    spec: DagEdgeSpec,
-
-    /** Layout coordinates populated by layout engine. */
-    start?: {
-        x: number,
-        y: number,
-    },
-    end?: {
-        x: number,
-        y: number,
-    },
-    z?: number,
-};
+import type { DagEdgeLayoutSpec, DagNodeLayoutSpec } from './layout';
 
 function buildArrowheadMarker(id, color) {
     return (
@@ -218,7 +176,7 @@ class DagLayout extends React.PureComponent<
 
         /** Node elements that are props to `Viewer` sub-components. */
         nodes: {
-            [DagNodeId]: ViewerProps,
+            [DagElementId]: ViewerProps,
         },
 
         /** Edge specifications of which nodes to connect. */
@@ -228,7 +186,7 @@ class DagLayout extends React.PureComponent<
 
         /** Container specifications for how to layout and group nodes. */
         containers: {
-            [DagContainerId]: DagContainerSpec,
+            [DagElementId]: DagContainerSpec,
         },
     },
     {
@@ -237,19 +195,19 @@ class DagLayout extends React.PureComponent<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagNodeId]: DagNodeLayoutSpec,
+            [DagElementId]: DagNodeLayoutSpec,
         },
         edges: {
             [DagEdgeId]: DagEdgeLayoutSpec,
         },
         containers: {
-            [DagContainerId]: DagContainerLayoutSpec,
+            [DagElementId]: DagContainerLayoutSpec, // TODO: Replace?
         },
 
         /** Graph elements after layout sorted in ascending z-order. */
         elements: Array<{
             type: 'node' | 'edge' | 'container',
-            id: DagNodeId | DagEdgeId | DagContainerId,
+            id: DagElementId | DagEdgeId,
             z: number,
         }>,
     },
@@ -312,9 +270,7 @@ class DagLayout extends React.PureComponent<
         } = layoutDag(nodes, edges, containers);
 
         // Sort elements by ascending z-order so SVGs can be overlaid correctly.
-        const elements =
-            Immutable([])
-                .concat(Object.entries(nodes).map());
+        const elements = Immutable([]).concat(Object.entries(nodes).map());
 
         const graphComponents = nodeComponents
             .concat(edgeComponents)
