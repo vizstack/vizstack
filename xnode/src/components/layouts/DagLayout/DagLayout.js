@@ -13,34 +13,49 @@ import type {
     DagContainerSpec,
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
-import type { ViewerCreationProps } from '../../Viewer';
+import type { ViewerProps } from '../../Viewer';
 
+export type DagNodeLayoutSpec = {
+    /** Unique identifier of node. */
+    viewerProps: ViewerProps,
 
-export type DagNodeLayoutedSpec = {
-    id: DagNodeId,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
+    /** Size dimensions populated after rendering. */
+    width?: number,
+    height?: number,
+
+    /** Layout coordinates populated by layout engine. */
+    x?: number,
+    y?: number,
+    z?: number,
 };
 
-export type DagContainerLayoutedSpec = {
-    contents: DagContainerSpec,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
+export type DagContainerLayoutSpec = {
+    spec: DagContainerSpec,
+
+    /** Size dimensions populated by layout engine. */
+    width?: number,
+    height?: number,
+
+    /** Layout coordinates populated by layout engine. */
+    x?: number,
+    y?: number,
+    z?: number,
 };
 
-export type DagEdgeLayoutedSpec = {
-    contents: DagEdgeSpec,
-    startX: number,
-    startY: number,
-    endX: number,
-    endY: number,
+export type DagEdgeLayoutSpec = {
+    spec: DagEdgeSpec,
+
+    /** Layout coordinates populated by layout engine. */
+    start?: {
+        x: number,
+        y: number,
+    },
+    end?: {
+        x: number,
+        y: number,
+    },
+    z?: number,
 };
-
-
 
 function buildArrowheadMarker(id, color) {
     return (
@@ -70,8 +85,8 @@ class DagNode extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    /** Contents of node that serve as props to the `Viewer` sub-component. */
-    element: ViewerCreationProps,
+    /** Props to the `Viewer` sub-component. */
+    viewerProps: ViewerProps,
 
     /** Position and size properties. */
     x: number,
@@ -80,12 +95,12 @@ class DagNode extends React.PureComponent<{
     height: number,
 }> {
     render() {
-        const { classes, x, y, width, height, element } = this.props;
+        const { classes, x, y, width, height, viewerProps } = this.props;
         return (
             <g>
                 <rect x={x} y={y} width={width} height={height} className={classes.node} />
                 <foreignObject x={x} y={y} width={width} height={height}>
-                    <Viewer {...element} />
+                    <Viewer {...viewerProps} />
                 </foreignObject>
             </g>
         );
@@ -196,63 +211,110 @@ class DagEdge extends React.PureComponent<{
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-class DagLayout extends React.PureComponent<{
-    /** CSS-in-JS styling object. */
-    classes: {},
+class DagLayout extends React.PureComponent<
+    {
+        /** CSS-in-JS styling object. */
+        classes: {},
 
-    /** Node elements that serve as props to `Viewer` sub-components. */
-    nodes: {
-        [DagNodeId]: ViewerCreationProps,
-    },
+        /** Node elements that are props to `Viewer` sub-components. */
+        nodes: {
+            [DagNodeId]: ViewerProps,
+        },
 
-    /** Edge specifications of which nodes to connect. */
-    edges: {
-        [DagEdgeId]: DagEdgeSpec,
-    },
+        /** Edge specifications of which nodes to connect. */
+        edges: {
+            [DagEdgeId]: DagEdgeSpec,
+        },
 
-    /** Container specifications for how to layout and group nodes. */
-    containers: {
-        [DagContainerId]: DagContainerSpec,
+        /** Container specifications for how to layout and group nodes. */
+        containers: {
+            [DagContainerId]: DagContainerSpec,
+        },
     },
-}> {
+    {
+        /** Whether the graph needs to be re-layout. */
+        shouldLayout: boolean,
+
+        /** Graph element specifications, but now with size and position information. */
+        nodes: {
+            [DagNodeId]: DagNodeLayoutSpec,
+        },
+        edges: {
+            [DagEdgeId]: DagEdgeLayoutSpec,
+        },
+        containers: {
+            [DagContainerId]: DagContainerLayoutSpec,
+        },
+
+        /** Graph elements after layout sorted in ascending z-order. */
+        elements: Array<{
+            type: 'node' | 'edge' | 'container',
+            id: DagNodeId | DagEdgeId | DagContainerId,
+            z: number,
+        }>,
+    },
+> {
     /** Constructor. */
     constructor(props) {
         super(props);
         this.state = Immutable({
-            nodeSizes: {},
+            shouldLayout: true,
+            nodes: {},
+            edges: {},
+            containers: {},
+            elements: [],
         });
-
-        const foo: { foo: bool } = { foo: true };
     }
 
     componentDidMount() {
-
+        // At this point, self and children elements have been rendered and mounted into the DOM, so
+        // they have defined sizes which have been populated in `this.state` and which the
+        // layout engine may use.
+        this._layoutGraph();
     }
 
     componentDidUpdate() {
-        if(true /* coniditon*/) {
-
+        // By default, a `PureComponent` will update if props and state have changed according to
+        // a shallow comparison; since we use `Immutable` structures, this will trigger updates
+        // at the correct conditions. Performing the layout will change the state, so we wrap it in
+        // a condition to prevent infinite looping.
+        if (this.state.shouldLayout) {
+            this._layoutGraph();
         }
     }
 
-    updateGraph() {
-        const { classes } = this.props;
-        const { nodes, edges, containers } = this.props;
+    /**
+     * Callback function to update the
+     * @param nodeId
+     * @param width
+     * @param height
+     * @private
+     */
+    _onElementResize(nodeId: DagNodeId, width, height) {
+        this.setState((state) =>
+            state.merge({ [nodeId]: { width, height } }, { deep: true }).set('shouldLayout', true),
+        );
+    }
 
-        const nodeComponents = nodes.map((node) => {
-            return {
-                component: (
-                    <DagNode ref={(r) => this.nodeRefs[node.vizId]} classes={classes} {...node} />
-                ),
-                z: node.z,
-            };
-        });
-        const edgeComponents = edges.map((edge) => {
-            return {
-                component: <DagEdge classes={classes} {...edge} />,
-                z: edge.z,
-            };
-        });
+    /**
+     * Layout the graph using the current size dimensions.
+     * @private
+     */
+    _layoutGraph() {
+        const { classes } = this.props;
+        const { nodes, edges, containers } = this.state;
+
+        // TODO(rholmdahl): Layout.js magic here!
+        const result: {
+            nodes: {},
+            edges: {},
+            containers: {},
+        } = layoutDag(nodes, edges, containers);
+
+        // Sort elements by ascending z-order so SVGs can be overlaid correctly.
+        const elements =
+            Immutable([])
+                .concat(Object.entries(nodes).map());
 
         const graphComponents = nodeComponents
             .concat(edgeComponents)
@@ -260,6 +322,8 @@ class DagLayout extends React.PureComponent<{
             .map(({ component }) => component);
 
         // TODO: Return or save?
+
+        this.setState((state) => state.set('shouldLayout', false));
     }
 
     /**

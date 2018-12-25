@@ -4,7 +4,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
-import type { ViewerCreationProps } from '../Viewer';
+import type { ViewerProps } from '../Viewer';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -17,7 +17,7 @@ class SequenceLayout extends React.PureComponent<{
     classes: {},
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: Array<ViewerCreationProps>,
+    elements: Array<ViewerProps>,
 
     /** Whether to display element index labels. */
     showIndices?: boolean,

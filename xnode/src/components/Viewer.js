@@ -36,7 +36,7 @@ export type ViewerContext = {
     displaySize?: 'regular' | 'small',
 };
 
-export type ViewerCreationProps = {
+export type ViewerProps = {
     /** Unique `VizId` for this Viewer. */
     vizId: VizId,
 
@@ -51,7 +51,7 @@ export type ViewerCreationProps = {
  * This smart component parses a VizSpec and assembles a corresponding Viz rendering.
  */
 class Viewer extends React.Component<
-    ViewerCreationProps & {
+    ViewerProps & {
         /** CSS-in-JS styling object. */
         classes: {},
 
