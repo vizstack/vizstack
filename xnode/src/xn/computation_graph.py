@@ -370,7 +370,7 @@ def _gen_tracked_setattr(fn: Callable):
 
     def _tracked_setattr(self, name, value):
         # Have to use __getattribute__ here, not .xnode_current_op, to avoid calling the tracked getattr
-        if object.__getattribute__(self, 'xnode_current_op') is not None:
+        if name is not 'xnode_current_op' and object.__getattribute__(self, 'xnode_current_op') is not None:
             op = object.__getattribute__(self, 'xnode_current_op')
             value = _track_data(value, creator_op=op)
         s(name, value)
