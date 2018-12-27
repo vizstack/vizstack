@@ -13,6 +13,7 @@ import type {
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
+import layout from './layout';
 import type { DagEdgeLayoutSpec, DagNodeLayoutSpec } from './layout';
 
 function buildArrowheadMarker(id, color) {
@@ -195,13 +196,13 @@ class DagLayout extends React.PureComponent<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagElementId]: DagNodeLayoutSpec,
+            [DagElementId]: ViewerProps | DagNodeLayoutSpec,
         },
         edges: {
-            [DagEdgeId]: DagEdgeLayoutSpec,
+            [DagEdgeId]: DagEdgeSpec | DagEdgeLayoutSpec,
         },
         containers: {
-            [DagElementId]: DagContainerLayoutSpec, // TODO: Replace?
+            [DagElementId]: DagContainerSpec | DagNodeLayoutSpec,
         },
 
         /** Graph elements after layout sorted in ascending z-order. */
@@ -250,7 +251,9 @@ class DagLayout extends React.PureComponent<
      */
     _onElementResize(nodeId: DagNodeId, width, height) {
         this.setState((state) =>
-            state.merge({ [nodeId]: { width, height } }, { deep: true }).set('shouldLayout', true),
+            state
+                .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
+                .set('shouldLayout', true),
         );
     }
 
@@ -263,23 +266,21 @@ class DagLayout extends React.PureComponent<
         const { nodes, edges, containers } = this.state;
 
         // TODO(rholmdahl): Layout.js magic here!
-        const result: {
-            nodes: {},
-            edges: {},
-            containers: {},
-        } = layoutDag(nodes, edges, containers);
+        layout(
+            nodes.values() + containers.values(),
+            edges.values(),
+            (width, height, nodes, edges) => {
+                // Separate nodes from containers.
+                // let containers = nodes.filter((node) => node.id in containers.keys());
 
-        // Sort elements by ascending z-order so SVGs can be overlaid correctly.
-        const elements = Immutable([]).concat(Object.entries(nodes).map());
+                // Sort elements by ascending z-order so SVGs can be overlaid correctly.
+                // sort(({ z: z1 }, { z: z2 }) => z1 - z2);
 
-        const graphComponents = nodeComponents
-            .concat(edgeComponents)
-            .sort(({ z: z1 }, { z: z2 }) => z1 - z2)
-            .map(({ component }) => component);
-
-        // TODO: Return or save?
-
-        this.setState((state) => state.set('shouldLayout', false));
+                // Save elements into state.
+                // this.setState((state) => state.merge())
+                this.setState((state) => state.set('shouldLayout', false));
+            },
+        );
     }
 
     /**

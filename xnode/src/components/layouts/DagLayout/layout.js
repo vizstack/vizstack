@@ -1,9 +1,8 @@
 /**
- * Produces node and edge positions for directed acyclic graphs created by the `dagbuilder` module.
+ * Layout engine for a directed acyclic graph (DAG).
  *
- * The representation created by `DAGBuilder` is transformed into one that the layout engine (currently the Eclipse
- * Layout Kernel) can use with `createElkGraph()`. The transformed graph can then be input to `layoutElkGraph()`, which
- * produces node and edge positions for each visible node and edge in the DAG.
+ * This layout engine takes in specifications of graph node/edge dimensions and properties, and it
+ * positions the graph elements in a visually appealing way.
  */
 
 import ELK from 'elkjs';
@@ -23,7 +22,6 @@ const kNodeMargin = 40;
 const kRootNode = 'root';
 const kLateralEdges = 'lateral';
 
-// Refers to both Node and Container
 export type DagNodeLayoutSpec = {
     /** Node config specified by client. */
     id: DagElementId,
@@ -51,48 +49,6 @@ export type DagEdgeLayoutSpec = {
     points?: Array<[number, number]>,
     z?: number,
 };
-
-// export type DagNodeLayoutSpec = {
-//     /** Unique identifier of node. */
-//     viewerProps: ViewerProps,
-//
-//     /** Size dimensions populated after rendering. */
-//     width?: number,
-//     height?: number,
-//
-//     /** Layout coordinates populated by layout engine. */
-//     x?: number,
-//     y?: number,
-//     z?: number,
-// };
-//
-// export type DagContainerLayoutSpec = {
-//     spec: DagContainerSpec,
-//
-//     /** Size dimensions populated by layout engine. */
-//     width?: number,
-//     height?: number,
-//
-//     /** Layout coordinates populated by layout engine. */
-//     x?: number,
-//     y?: number,
-//     z?: number,
-// };
-//
-// export type DagEdgeLayoutSpec = {
-//     spec: DagEdgeSpec,
-//
-//     /** Layout coordinates populated by layout engine. */
-//     start?: {
-//     x: number,
-//     y: number,
-// },
-//     end?: {
-//     x: number,
-//     y: number,
-// },
-//     z?: number,
-// };
 
 class GraphProperties {
     constructor(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>) {
