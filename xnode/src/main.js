@@ -22,7 +22,7 @@ export default {
     subscriptions: null,
 
     // Time that the active editor was last changed.
-    lastChangedTime: new Date(),
+    lastChangedTime: null,
 
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
@@ -60,7 +60,6 @@ export default {
                         .forEach((repl) => {
                             repl.name = minimalUniquePaths[repl.scriptPath];
                         });
-                    this.waitAndRerun(null, null, 0);
                     console.debug('root -- new REPL added');
                     return repl;
                 }

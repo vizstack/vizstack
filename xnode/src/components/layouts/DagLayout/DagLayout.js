@@ -1,5 +1,6 @@
 import * as React from 'react';
 import classNames from 'classnames';
+import Immutable from 'seamless-immutable';
 import { withStyles } from '@material-ui/core/styles';
 import { withSize } from 'react-sizeme';
 import { createSelector } from 'reselect';
@@ -67,6 +68,30 @@ class DagNode extends React.PureComponent<{
 }
 
 /**
+ * This pure dumb component renders a graph container as an SVG component that contains other nodes
+ * and containers.
+ */
+class DagContainer extends React.PureComponent<{
+    /** CSS-in-JS styling object. */
+    classes: {},
+
+    /** Position and size properties. */
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+}> {
+    render() {
+        const { classes, x, y, width, height, viewerProps } = this.props;
+        return (
+            <g>
+                <rect x={x} y={y} width={width} height={height} className={classes.container} />
+            </g>
+        );
+    }
+}
+
+/**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
  * based on prop values.
  */
@@ -74,10 +99,12 @@ class DagEdge extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
+    /** Curve point coordinates. */
+    points: Array<[number, number]>,
+
     id: number,
     baseColor: {},
     selectedColor: {},
-    points: Array,
     isCurved: boolean,
     isBackground: boolean,
     isHovered: boolean,
@@ -196,17 +223,17 @@ class DagLayout extends React.PureComponent<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagElementId]: ViewerProps | DagNodeLayoutSpec,
+            [DagElementId]: DagNodeLayoutSpec,
         },
         edges: {
-            [DagEdgeId]: DagEdgeSpec | DagEdgeLayoutSpec,
+            [DagEdgeId]: DagEdgeLayoutSpec,
         },
         containers: {
-            [DagElementId]: DagContainerSpec | DagNodeLayoutSpec,
+            [DagElementId]: DagNodeLayoutSpec,
         },
 
-        /** Graph elements after layout sorted in ascending z-order. */
-        elements: Array<{
+        /** Arrangement of graph elements after layout, sorted in ascending z-order. */
+        ordering: Array<{
             type: 'node' | 'edge' | 'container',
             id: DagElementId | DagEdgeId,
             z: number,
@@ -221,8 +248,9 @@ class DagLayout extends React.PureComponent<
             nodes: {},
             edges: {},
             containers: {},
-            elements: [],
+            ordering: [],
         });
+        console.log(props);
     }
 
     componentDidMount() {
@@ -243,13 +271,13 @@ class DagLayout extends React.PureComponent<
     }
 
     /**
-     * Callback function to update the
+     * Callback function to update a node's size dimensions (upon interacting with its `Viewer`).
      * @param nodeId
      * @param width
      * @param height
      * @private
      */
-    _onElementResize(nodeId: DagNodeId, width, height) {
+    _onElementResize(nodeId: DagElementId, width: number, height: number) {
         this.setState((state) =>
             state
                 .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
@@ -267,17 +295,25 @@ class DagLayout extends React.PureComponent<
 
         // TODO(rholmdahl): Layout.js magic here!
         layout(
-            nodes.values() + containers.values(),
-            edges.values(),
-            (width, height, nodes, edges) => {
+            Object.values(nodes) + Object.values(containers),
+            Object.values(edges),
+            (
+                width: number,
+                height: number,
+                nodes: Array<DagNodeLayoutSpec>,
+                edges: Array<DagEdgeLayoutSpec>,
+            ) => {
                 // Separate nodes from containers.
-                // let containers = nodes.filter((node) => node.id in containers.keys());
+                const containerKeys = Set(Object.keys(containers));
+                let containers = nodes.filter((node) => containerKeys.contains(node.id));
 
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
                 // sort(({ z: z1 }, { z: z2 }) => z1 - z2);
 
                 // Save elements into state.
-                // this.setState((state) => state.merge())
+                // this.setState((state) => state.merge());
+
+                // No more layout out until explicitly triggered.
                 this.setState((state) => state.set('shouldLayout', false));
             },
         );
@@ -291,10 +327,12 @@ class DagLayout extends React.PureComponent<
     // <defs>{arrowheads}</defs>
     render() {
         const { classes, size } = this.props;
-        const { graph } = this.state;
+        const { ordering } = this.state;
+
+        console.log('DagLayout -- rendering graph with ordering:', ordering);
 
         return (
-            <div className={classes.container}>
+            <div className={classes.frame}>
                 <div className={classes.graph}>
                     <svg width={size.width} height={size.height}>
                         <rect
@@ -305,7 +343,39 @@ class DagLayout extends React.PureComponent<
                             fill='transparent'
                             onClick={undefined}
                         />
-                        {graph}
+                        {ordering.map(({ type, id }) => {
+                            switch (type) {
+                                case 'node': {
+                                    const { viewerProps } = this.props.nodes[id];
+                                    const { x, y, width, height } = this.state.nodes[id];
+                                    return (
+                                        <DagNode
+                                            viewerProps={viewerProps}
+                                            x={x}
+                                            y={y}
+                                            width={width}
+                                            height={height}
+                                        />
+                                    );
+                                }
+
+                                case 'edge': {
+                                    const { points } = this.state.edges[id];
+                                    return <DagEdge points={points} />;
+                                }
+
+                                case 'container': {
+                                    const { x, y, width, height } = this.state.containers[id];
+                                    return (
+                                        <DagContainer x={x} y={y} width={width} height={height} />
+                                    );
+                                }
+
+                                default:
+                                    console.error('Got unrecognized graph element');
+                                    return null;
+                            }
+                        })}
                     </svg>
                 </div>
             </div>
@@ -318,7 +388,7 @@ class DagLayout extends React.PureComponent<
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    container: {
+    frame: {
         flex: 1, // expand to fill frame vertical
 
         display: 'flex',
@@ -389,6 +459,11 @@ const styles = (theme) => ({
                 delay: theme.transitions.duration.short,
             }),
         ].join(', '),
+    },
+
+    /** Container styles. */
+    dagContainer: {
+        fillColor: '#FFFFFF', // TODO: Change this.
     },
 });
 

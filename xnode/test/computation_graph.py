@@ -34,3 +34,4 @@ x = grandparent_fn(0, 1)
 graph = x.xn().compile_full()[0]
 print(graph)
 print(len(graph.contents['nodes']), len(graph.contents['containers']))
+xn.view(x)

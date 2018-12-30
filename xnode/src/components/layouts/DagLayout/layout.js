@@ -50,6 +50,16 @@ export type DagEdgeLayoutSpec = {
     z?: number,
 };
 
+export default function dummyLayout(
+    nodes: Array,
+    edges: Array,
+    callback: (width, height, nodes, edges) => void,
+) {
+    // TODO: Fix me!
+    console.log('Ran dummy layout engine.', nodes, edges);
+    callback(0, 0, nodes, edges);
+}
+
 class GraphProperties {
     constructor(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>) {
         this._nodes = {};

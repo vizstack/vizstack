@@ -24,6 +24,7 @@ import TokenPrimitive from './primitives/TokenPrimitive';
 import KeyValueLayout from './layouts/KeyValueLayout';
 import SequenceLayout from './layouts/SequenceLayout';
 import DagLayout from './layouts/DagLayout';
+import { obj2obj } from '../services/data-utils';
 
 /** The sequence in which users can toggle different models. */
 const kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
@@ -60,7 +61,7 @@ class Viewer extends React.Component<
     },
     {
         /** What expansion mode the viewer is in. */
-        viewerState: 'summary' | 'compact' | 'full',
+        expansionMode: 'summary' | 'compact' | 'full',
     },
 > {
     /**
@@ -76,11 +77,11 @@ class Viewer extends React.Component<
         const { vizTable, vizId } = this.props;
 
         // Set initial state based on what model is available.
-        let viewerState = 'summary';
-        viewerState = vizTable[vizId].compactModel ? 'compact' : viewerState;
-        viewerState = vizTable[vizId].fullModel ? 'full' : viewerState;
+        let expansionMode = 'summary';
+        expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;
+        expansionMode = vizTable[vizId].fullModel ? 'full' : expansionMode;
         this.state = Immutable({
-            viewerState,
+            expansionMode,
             isHovered: false,
         });
     }
@@ -111,7 +112,7 @@ class Viewer extends React.Component<
                     <SequenceLayout
                         elements={elements.map((vizId: VizId) => ({
                             vizId,
-                            fetchVizModel: fetchVizModel,
+                            fetchVizModel,
                             viewerContext: {
                                 displaySize: 'small',
                             },
@@ -131,8 +132,20 @@ class Viewer extends React.Component<
             case 'DagLayout':
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
                 return (
-                    // TODO: update nodes to be viewer props
-                    <DagLayout nodes={nodes} edges={edges} containers={containers} />
+                    <DagLayout
+                        nodes={obj2obj(nodes, (id, spec) => [
+                            id,
+                            {
+                                vizId: spec.vizId,
+                                fetchVizModel,
+                                viewerContext: {
+                                    displaySize: 'small',
+                                },
+                            },
+                        ])}
+                        edges={edges}
+                        containers={containers}
+                    />
                 );
         }
     }
@@ -140,7 +153,7 @@ class Viewer extends React.Component<
     /** Renderer. */
     render() {
         const { vizId, vizTable, viewerContext, classes, fetchVizModel } = this.props;
-        const { viewerState, isHovered } = this.state;
+        const { expansionMode, isHovered } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if (!vizSpec) {
@@ -148,7 +161,7 @@ class Viewer extends React.Component<
         }
 
         let model: VizModel = undefined;
-        switch (viewerState) {
+        switch (expansionMode) {
             case 'full':
                 if (vizSpec.fullModel) {
                     model = vizSpec.fullModel;
@@ -173,17 +186,24 @@ class Viewer extends React.Component<
                 })}
                 onClick={(e) => {
                     e.stopPropagation();
-                    const viewerStateUpdated = kModelTransitionOrder[viewerState];
-                    fetchVizModel(vizId, viewerStateUpdated);
-                    this.setState((state) => state.set('viewerState', viewerStateUpdated));
+                    // const expansionModeNext = kModelTransitionOrder[expansionMode];
+                    // fetchVizModel(vizId, expansionModeNext);
+                    // this.setState((state) => state.set('expansionMode', expansionModeNext));
                 }}
                 onMouseOver={(e) => {
                     e.stopPropagation();
-                    this.setState((state) => state.set('isHovered', true));
+                    // console.log("HERRO", this.state);
+                    // this.setState((state) => {
+                    //     let s = state.set('isHovered', true);
+                    //     console.log("myVAL", s);
+                    //     setTimeout(() => console.log("myVAL2", this.state), 1000);
+                    //     return s;
+                    // });
                 }}
                 onMouseOut={(e) => {
                     e.stopPropagation();
-                    this.setState((state) => state.set('isHovered', false));
+                    // console.log("HERRO", this.state);
+                    // this.setState((state) => state.set('isHovered', false));
                 }}
             >
                 {this.getVizComponent(model)}
