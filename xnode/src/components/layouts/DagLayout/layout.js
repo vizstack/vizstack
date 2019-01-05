@@ -142,7 +142,7 @@ function getElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayout
     console.log(nodes);
     console.log(edges);
     const graph = new GraphProperties(nodes, edges);
-    const { edgeSegments, outPortCounts, inPortCounts } = getEdgeSegments(edges, graph);
+    const { edgeSegments, outPortCounts, inPortCounts } = getEdgeSegments(graph);
     const elkNodes = {};
     // Create the ELK nodes
     nodes.forEach(

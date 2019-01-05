@@ -292,10 +292,11 @@ class DagLayout extends React.PureComponent<
     _layoutGraph() {
         const { classes } = this.props;
         const { nodes, edges, containers } = this.state;
+        const containerKeys = new Set(Object.keys(containers));
 
         // TODO(rholmdahl): Layout.js magic here!
         layout(
-            Object.values(nodes) + Object.values(containers),
+            Object.values(nodes).concat(Object.values(containers)),
             Object.values(edges),
             (
                 width: number,
@@ -304,7 +305,6 @@ class DagLayout extends React.PureComponent<
                 edges: Array<DagEdgeLayoutSpec>,
             ) => {
                 // Separate nodes from containers.
-                const containerKeys = Set(Object.keys(containers));
                 let containers = nodes.filter((node) => containerKeys.contains(node.id));
 
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
@@ -314,7 +314,9 @@ class DagLayout extends React.PureComponent<
                 // this.setState((state) => state.merge());
 
                 // No more layout out until explicitly triggered.
-                this.setState((state) => state.set('shouldLayout', false));
+                this.setState((state) => {
+                    state.set('shouldLayout', false);
+                });
             },
         );
     }
