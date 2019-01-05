@@ -97,19 +97,21 @@ class _PrintOverwriter:
     """
 
     def __init__(self, engine: VisualizationEngine, send_message: _SendMessage) -> None:
+        self._text = ''
         self._engine: VisualizationEngine = engine
         self._send_message: _SendMessage = send_message
 
     def write(self, text: str) -> None:
-        if text == '\n':
-            return
-        frame: Optional[FrameType] = currentframe()
-        assert frame is not None
-        frame_info = getframeinfo(frame.f_back)
-        filename, lineno = frame_info.filename, frame_info.lineno
-        viz_id: VizId = self._engine.take_snapshot(text, filename, lineno)
-        viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
-        self._send_message(viz_slice, viz_id, False)
+        self._text += text
+        if self._text.endswith('\n') and self._text != '\n':
+            frame: Optional[FrameType] = currentframe()
+            assert frame is not None
+            frame_info = getframeinfo(frame.f_back)
+            filename, lineno = frame_info.filename, frame_info.lineno
+            viz_id: VizId = self._engine.take_snapshot(self._text, filename, lineno)
+            viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
+            self._send_message(viz_slice, viz_id, False)
+            self._text = ''
 
     def flush(self) -> None:
         pass
