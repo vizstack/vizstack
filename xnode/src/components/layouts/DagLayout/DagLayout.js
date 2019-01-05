@@ -314,9 +314,7 @@ class DagLayout extends React.PureComponent<
                 // this.setState((state) => state.merge());
 
                 // No more layout out until explicitly triggered.
-                this.setState((state) => {
-                    state.set('shouldLayout', false);
-                });
+                this.setState((state) => Immutable(state).set('shouldLayout', false));
             },
         );
     }
