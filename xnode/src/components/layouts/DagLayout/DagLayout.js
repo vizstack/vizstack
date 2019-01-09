@@ -2,7 +2,6 @@ import * as React from 'react';
 import classNames from 'classnames';
 import Immutable from 'seamless-immutable';
 import { withStyles } from '@material-ui/core/styles';
-import { withSize } from 'react-sizeme';
 import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
@@ -72,7 +71,7 @@ class DagNode extends React.PureComponent<{
                         }
                     >
                         {({ measureRef }) => (
-                            <div ref={measureRef} width="50">
+                            <div ref={measureRef} style={{width: 100}}>
                                 <Viewer {...viewerProps} />
                             </div>
                         )}
@@ -291,7 +290,7 @@ class DagLayout extends React.Component<
         // At this point, self and children elements have been rendered and mounted into the DOM, so
         // they have defined sizes which have been populated in `this.state` and which the
         // layout engine may use.
-        console.debug('DagLayout -- mounted');
+        console.debug('DagLayout -- componentDidMount(): mounted');
 
         // We want us to be mounted already, then populate self. Triggering other render.
         this.setState(Immutable({
@@ -330,8 +329,11 @@ class DagLayout extends React.Component<
     }
 
     shouldComponentUpdate(nextProps, nextState) {
-        console.log("nextstate.nodes", Object.values(nextState.nodes));
-        return Object.values(nextState.nodes).every((node) => node.height);  // TODO: Add width
+        // Prevent component from re-rendering each time a dimension is populated/updated unless all
+        // dimensions are populated.
+        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height);  // TODO: Add width
+        console.log("DagLayout -- shouldComponentUpdate(): ", shouldUpdate, "nextState.nodes", Object.values(nextState.nodes));
+        return shouldUpdate;
     }
 
 
@@ -341,7 +343,7 @@ class DagLayout extends React.Component<
         // at the correct conditions. Performing the layout will change the state, so we wrap it in
         // a condition to prevent infinite looping.
         if (this.state.shouldLayout) {
-            console.debug('DagLayout -- laying out after update');
+            console.debug('DagLayout -- componentDidUpdate(): shouldLayout = true so will layout');
             this._layoutGraph();
         }
     }
@@ -354,7 +356,7 @@ class DagLayout extends React.Component<
      * @private
      */
     _onElementResize(nodeId: DagElementId, width: number, height: number) {
-        console.log("Element resized:", nodeId, width, height);
+        console.log(`DagLayout -- _onElementResize(${nodeId}, ${width}, ${height})`);
         this.setState((state) =>
             Immutable(state)
                 .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
@@ -383,7 +385,7 @@ class DagLayout extends React.Component<
                 nodes: Array<DagNodeLayoutSpec>,
                 edges: Array<DagEdgeLayoutSpec>,
             ) => {
-                console.log('DagLayout -- ELK callback triggered')
+                console.log('DagLayout -- _layoutGraph(): ELK callback triggered')
                 // Separate nodes from containers.
                 let containers = nodes.filter((node) => containerKeys.has(node.id));
 
@@ -395,7 +397,7 @@ class DagLayout extends React.Component<
                 this.setState((state) =>
                     Immutable(state).merge({
                         nodes: arr2obj(nodes, (elem) =>
-                            !containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
+                            !containerKeys.has(elem.id) ? [elem.id, {...elem, width: 86, height: 86}] : undefined,  // TODO: Change value to elem
                         ),
                         containers: arr2obj(nodes, (elem) =>
                             containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
@@ -427,7 +429,7 @@ class DagLayout extends React.Component<
         const { classes } = this.props;
         const { ordering, size } = this.state;
 
-        console.log('DagLayout -- rendering graph with ordering:', ordering, 'and state:', this.state);
+        console.log('DagLayout -- render(): ordering =', ordering, 'state =', this.state);
 
         return (
             <div className={classes.frame}>
