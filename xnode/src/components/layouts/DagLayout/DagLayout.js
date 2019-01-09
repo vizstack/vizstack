@@ -356,6 +356,12 @@ class DagLayout extends React.Component<
      */
     _onElementResize(nodeId: DagElementId, width: number, height: number) {
         console.log(`DagLayout -- _onElementResize(${nodeId}, ${width}, ${height})`);
+        // TODO: formalize this tolerance measure
+        const oldWidth = this.state.nodes[nodeId].width;
+        const oldHeight = this.state.nodes[nodeId].height;
+        if (oldWidth !== undefined && oldHeight !== undefined && -5 < oldWidth - width < 5 && -5 < oldHeight - height < 5) {
+            return;
+        }
         this.setState((state) =>
             Immutable(state)
                 .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
@@ -396,7 +402,7 @@ class DagLayout extends React.Component<
                 this.setState((state) =>
                     Immutable(state).merge({
                         nodes: arr2obj(nodes, (elem) =>
-                            !containerKeys.has(elem.id) ? [elem.id, {...elem, width: 86, height: 86}] : undefined,  // TODO: Change value to elem
+                            !containerKeys.has(elem.id) ? [elem.id, elem] : undefined,  // TODO: Change value to elem
                         ),
                         containers: arr2obj(nodes, (elem) =>
                             containerKeys.has(elem.id) ? [elem.id, elem] : undefined,

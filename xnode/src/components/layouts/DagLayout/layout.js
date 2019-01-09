@@ -141,8 +141,6 @@ export default function layout(
  *      An ELK graph ready for layout.
  */
 function getElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>) {
-    console.log(nodes);
-    console.log(edges);
     const graph = new GraphProperties(nodes, edges);
     const { edgeSegments, outPortCounts, inPortCounts } = getEdgeSegments(graph);
     const elkNodes = {};
@@ -432,6 +430,7 @@ function createElkNode(
     numInPorts: number,
     graph: GraphProperties,
 ) {
+    console.log(node.width, node.height);
     const elkNode = {
         id: node.id,
         properties: {
@@ -447,6 +446,10 @@ function createElkNode(
             z: -graph.getHierarchyHeight(node.id),
         },
     };
+    if (node.width !== undefined) {
+        elkNode.width = node.width;
+        elkNode.height = node.height;
+    }
     for (let i = 0; i < numInPorts; i++) {
         let newPort = {
             id: getPortId(node, i, true),
