@@ -70,7 +70,7 @@ class DagNode extends React.PureComponent<{
                         }
                     >
                         {({ measureRef }) => (
-                            <div ref={measureRef} style={{width: 100}}>
+                            <div ref={measureRef} style={{display: 'inline-block'}}>
                                 <Viewer {...viewerProps} />
                             </div>
                         )}
@@ -296,7 +296,7 @@ class DagLayout extends React.Component<
             shouldLayout: false,
             nodes: obj2obj(this.props.nodes, (k, v) => [
                 k,
-                { id: k, children: [], orientation: 'vertical' },
+                { id: k, children: [], orientation: 'vertical', width: 100000 },  // TODO: Dehard
             ]), // TODO: remove orientation
             edges: obj2obj(this.props.edges, (k, v) => [
                 k,
