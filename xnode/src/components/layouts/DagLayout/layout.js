@@ -115,11 +115,13 @@ class GraphProperties {
     }
 }
 
-
-export default function layout(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>, callback: (number, number, Array<DagNodeLayoutSpec>, Array<DagEdgeLayoutSpec>) => void): void{
+export default function layout(
+    nodes: Array<DagNodeLayoutSpec>,
+    edges: Array<DagEdgeLayoutSpec>,
+    callback: (number, number, Array<DagNodeLayoutSpec>, Array<DagEdgeLayoutSpec>) => void,
+): void {
     layoutElkGraph(nodes, edges, getElkGraph(nodes, edges), callback);
 }
-
 
 // =====================================================================================================================
 // Convert a `dagbuilder` generic graph into an engine-ready graph.
@@ -180,7 +182,7 @@ function getElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayout
 }
 
 /** Returns the string ID of a port on a given node with given index. */
-const getPortId = (node, portNum, isInput) => `${node.getId()}_${portNum}` + (isInput ? 'i' : 'o');
+const getPortId = (node, portNum, isInput) => `${node}_${portNum}` + (isInput ? 'i' : 'o');
 
 /**
  * This JS object describes a segment of an edge in a DAG. Since ELK can only lay out edges which connect nodes that
@@ -504,7 +506,12 @@ function createElkNode(
  *          }
  *      where one entry exists for each visible edge in the graph.
  */
-function layoutElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>, graph, onComplete) {
+function layoutElkGraph(
+    nodes: Array<DagNodeLayoutSpec>,
+    edges: Array<DagEdgeLayoutSpec>,
+    graph,
+    onComplete,
+) {
     layoutElkGraphRecurse(new ELK(), getNodeLayoutOrder(graph), nodes, edges, onComplete);
 }
 
@@ -538,7 +545,13 @@ function layoutElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLay
  *      A function with signature `(graphWidth, graphHeight, nodeTransforms, edgeTransforms)` to be executed when
  *      the graph has been laid out.
  */
-function layoutElkGraphRecurse(elk, toLayout, nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>, onComplete) {
+function layoutElkGraphRecurse(
+    elk,
+    toLayout,
+    nodes: Array<DagNodeLayoutSpec>,
+    edges: Array<DagEdgeLayoutSpec>,
+    onComplete,
+) {
     let elkNode = toLayout[0];
     // `elk.layout(elkNode)` will crash if `elkNode` contains edges that connect itself to its children. Thus, we only
     // lay out when `elkNode` is the root node (which cannot connect to its children) and when `elkNode` contains
@@ -835,7 +848,7 @@ function elkGraphToEdgeTransforms(graph, edges: Array<DagEdgeLayoutSpec>) {
             z: edgeGroup.z,
         };
     });
-    edges.forEach(edgeLayoutSpec => {
+    edges.forEach((edgeLayoutSpec) => {
         edgeLayoutSpec.points = edgeTransforms[edgeLayoutSpec.id].points;
         edgeLayoutSpec.z = edgeTransforms[edgeLayoutSpec.id].z;
     });
@@ -970,7 +983,7 @@ function elkGraphToNodeTransformsRecurse(elkNode, nodes: Array<DagNodeLayoutSpec
     for (let i = 0; i < elkNode.children.length; i++) {
         let { width, height, x, y, id, notElk } = elkNode.children[i];
         let { z } = notElk;
-        const node = nodes.find(node => node.id === id);
+        const node = nodes.find((node) => node.id === id);
         node.x = x + offset.x;
         node.y = y + offset.y;
         node.z = z;

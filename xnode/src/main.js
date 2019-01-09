@@ -60,7 +60,7 @@ export default {
                         .forEach((repl) => {
                             repl.name = minimalUniquePaths[repl.scriptPath];
                         });
-                    this.waitAndRerun(null, null, 0);
+                    // this.waitAndRerun(null, null, 0);
                     console.debug('root -- new REPL added');
                     return repl;
                 }

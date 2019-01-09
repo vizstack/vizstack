@@ -23,7 +23,7 @@ class SandboxSettingsModal extends React.Component<{
         super(props);
         console.debug(props.defaultScriptPath);
         this.state = {
-            pythonPath: 'python3',
+            pythonPath: '/Users/Nikhil/Desktop/xnode/xnode/venv/bin/python3', // TODO: Dehardcode
             scriptPath: props.defaultScriptPath,
         };
     }

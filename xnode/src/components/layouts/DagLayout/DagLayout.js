@@ -5,6 +5,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { withSize } from 'react-sizeme';
 import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
+import Measure from 'react-measure';
 
 import type {
     DagElementId,
@@ -16,6 +17,7 @@ import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
 import layout from './layout';
 import type { DagEdgeLayoutSpec, DagNodeLayoutSpec } from './layout';
+import { arr2obj, obj2arr, obj2obj } from '../../../services/data-utils';
 
 function buildArrowheadMarker(id, color) {
     return (
@@ -53,14 +55,28 @@ class DagNode extends React.PureComponent<{
     y: number,
     width: number,
     height: number,
+
+    /** Callback on component resize. */
+    onResize: (number, number) => void,
 }> {
     render() {
-        const { classes, x, y, width, height, viewerProps } = this.props;
+        const { classes, x, y, width, height, viewerProps, onResize } = this.props;
         return (
             <g>
                 <rect x={x} y={y} width={width} height={height} className={classes.node} />
                 <foreignObject x={x} y={y} width={width} height={height}>
-                    <Viewer {...viewerProps} />
+                    <Measure
+                        bounds
+                        onResize={(contentRect) =>
+                            onResize(contentRect.bounds.width, contentRect.bounds.height)
+                        }
+                    >
+                        {({ measureRef }) => (
+                            <div ref={measureRef} width="50">
+                                <Viewer {...viewerProps} />
+                            </div>
+                        )}
+                    </Measure>
                 </foreignObject>
             </g>
         );
@@ -82,10 +98,10 @@ class DagContainer extends React.PureComponent<{
     height: number,
 }> {
     render() {
-        const { classes, x, y, width, height, viewerProps } = this.props;
+        const { classes, x, y, width, height } = this.props;
         return (
             <g>
-                <rect x={x} y={y} width={width} height={height} className={classes.container} />
+                <rect x={x} y={y} width={width} height={height} className={classes.dagContainer} />
             </g>
         );
     }
@@ -103,8 +119,8 @@ class DagEdge extends React.PureComponent<{
     points: Array<[number, number]>,
 
     id: number,
-    baseColor: {},
-    selectedColor: {},
+    baseColor: string,
+    selectedColor: string,
     isCurved: boolean,
     isBackground: boolean,
     isHovered: boolean,
@@ -116,6 +132,11 @@ class DagEdge extends React.PureComponent<{
     onMouseEnter?: () => void,
     onMouseLeave?: () => void,
 }> {
+    static defaultProps = {
+        baseColor: '#FF0000',
+        selectedColor: '#00FF00',
+    };
+
     render() {
         const {
             classes,
@@ -134,6 +155,11 @@ class DagEdge extends React.PureComponent<{
             onMouseEnter,
             onMouseLeave,
         } = this.props;
+
+        if (!points) {
+            return null;
+        }
+
         let pathString = null;
         if (isCurved) {
             let curveGenerator = line().curve(curveBasis);
@@ -161,7 +187,7 @@ class DagEdge extends React.PureComponent<{
                     d={pathString}
                     pointerEvents='none'
                     style={{
-                        stroke: isSelected ? selectedColor[kArrowStroke] : baseColor[kArrowStroke],
+                        stroke: isSelected ? selectedColor : baseColor,
                         markerEnd: isSelected
                             ? `url(#arrowheadSelected${id})`
                             : `url(#arrowheadBase${id})`,
@@ -197,7 +223,7 @@ class DagEdge extends React.PureComponent<{
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-class DagLayout extends React.PureComponent<
+class DagLayout extends React.Component<
     {
         /** CSS-in-JS styling object. */
         classes: {},
@@ -236,29 +262,78 @@ class DagLayout extends React.PureComponent<
         ordering: Array<{
             type: 'node' | 'edge' | 'container',
             id: DagElementId | DagEdgeId,
-            z: number,
         }>,
+
+        /** Size of the graph determined by layout engine. */
+        size: {
+            width: number,
+            height: number,
+        },
     },
 > {
     /** Constructor. */
     constructor(props) {
         super(props);
         this.state = Immutable({
-            shouldLayout: true,
+            shouldLayout: false,
             nodes: {},
             edges: {},
             containers: {},
             ordering: [],
+            size: {
+                width: 0,
+                height: 0,
+            },
         });
-        console.log(props);
     }
 
     componentDidMount() {
         // At this point, self and children elements have been rendered and mounted into the DOM, so
         // they have defined sizes which have been populated in `this.state` and which the
         // layout engine may use.
-        this._layoutGraph();
+        console.debug('DagLayout -- mounted');
+
+        // We want us to be mounted already, then populate self. Triggering other render.
+        this.setState(Immutable({
+            shouldLayout: false,
+            nodes: obj2obj(this.props.nodes, (k, v) => [
+                k,
+                { id: k, children: [], orientation: 'vertical' },
+            ]), // TODO: remove orientation
+            edges: obj2obj(this.props.edges, (k, v) => [
+                k,
+                { id: k, startId: v.startId, endId: v.endId },
+            ]),
+            containers: obj2obj(this.props.containers, (k, v) => [
+                k,
+                {
+                    id: k,
+                    children: v.elements,
+                    orientation:
+                        v.flowDirection === 'left' || v.flowDirection === 'right'
+                            ? 'vertical'
+                            : 'horizontal',
+                },
+            ]),
+            ordering: [
+                ...obj2arr(this.props.nodes, (k, v) => ({ type: 'node', id: k })),
+                ...obj2arr(this.props.containers, (k, v) => ({ type: 'container', id: k })),
+                ...obj2arr(this.props.edges, (k, v) => ({ type: 'edge', id: k })),
+            ],
+            size: {
+                width: 0,
+                height: 0,
+            },
+        }));
+
+        this.forceUpdate();
     }
+
+    shouldComponentUpdate(nextProps, nextState) {
+        console.log("nextstate.nodes", Object.values(nextState.nodes));
+        return Object.values(nextState.nodes).every((node) => node.height);  // TODO: Add width
+    }
+
 
     componentDidUpdate() {
         // By default, a `PureComponent` will update if props and state have changed according to
@@ -266,6 +341,7 @@ class DagLayout extends React.PureComponent<
         // at the correct conditions. Performing the layout will change the state, so we wrap it in
         // a condition to prevent infinite looping.
         if (this.state.shouldLayout) {
+            console.debug('DagLayout -- laying out after update');
             this._layoutGraph();
         }
     }
@@ -278,8 +354,9 @@ class DagLayout extends React.PureComponent<
      * @private
      */
     _onElementResize(nodeId: DagElementId, width: number, height: number) {
+        console.log("Element resized:", nodeId, width, height);
         this.setState((state) =>
-            state
+            Immutable(state)
                 .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
                 .set('shouldLayout', true),
         );
@@ -296,25 +373,46 @@ class DagLayout extends React.PureComponent<
 
         // TODO(rholmdahl): Layout.js magic here!
         layout(
-            Object.values(nodes).concat(Object.values(containers)),
-            Object.values(edges),
+            Object.values(nodes.asMutable({ deep: true })).concat(
+                Object.values(containers.asMutable({ deep: true })),
+            ),
+            [], // Object.values(edges.asMutable({deep: true})),
             (
                 width: number,
                 height: number,
                 nodes: Array<DagNodeLayoutSpec>,
                 edges: Array<DagEdgeLayoutSpec>,
             ) => {
+                console.log('DagLayout -- ELK callback triggered')
                 // Separate nodes from containers.
-                let containers = nodes.filter((node) => containerKeys.contains(node.id));
+                let containers = nodes.filter((node) => containerKeys.has(node.id));
 
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
-                // sort(({ z: z1 }, { z: z2 }) => z1 - z2);
+                const elements = [...nodes, ...edges];
+                elements.sort(({ z: z1 }, { z: z2 }) => z1 - z2);
 
-                // Save elements into state.
-                // this.setState((state) => state.merge());
-
-                // No more layout out until explicitly triggered.
-                this.setState((state) => Immutable(state).set('shouldLayout', false));
+                // Save elements into state, and no more layout out until explicitly triggered.
+                this.setState((state) =>
+                    Immutable(state).merge({
+                        nodes: arr2obj(nodes, (elem) =>
+                            !containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
+                        ),
+                        containers: arr2obj(nodes, (elem) =>
+                            containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
+                        ),
+                        edges: arr2obj(edges, (elem) => [elem.id, elem]),
+                        ordering: elements.map((elem) => ({
+                            type: elem.points
+                                ? 'edge'
+                                : containerKeys.has(elem.id)
+                                ? 'container'
+                                : 'node',
+                            id: elem.id,
+                        })),
+                        size: { width, height },
+                        shouldLayout: false,
+                    }),
+                );
             },
         );
     }
@@ -326,10 +424,10 @@ class DagLayout extends React.PureComponent<
     // arrowheads = [makeArrowheadMarker(...), ...]
     // <defs>{arrowheads}</defs>
     render() {
-        const { classes, size } = this.props;
-        const { ordering } = this.state;
+        const { classes } = this.props;
+        const { ordering, size } = this.state;
 
-        console.log('DagLayout -- rendering graph with ordering:', ordering);
+        console.log('DagLayout -- rendering graph with ordering:', ordering, 'and state:', this.state);
 
         return (
             <div className={classes.frame}>
@@ -346,28 +444,40 @@ class DagLayout extends React.PureComponent<
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const { viewerProps } = this.props.nodes[id];
+                                    const viewerProps = this.props.nodes[id];
                                     const { x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
+                                            key={`n${id}`}
                                             viewerProps={viewerProps}
                                             x={x}
                                             y={y}
                                             width={width}
                                             height={height}
+                                            classes={classes}
+                                            onResize={(width, height) =>
+                                                this._onElementResize(id, width, height)
+                                            }
                                         />
                                     );
                                 }
 
                                 case 'edge': {
                                     const { points } = this.state.edges[id];
-                                    return <DagEdge points={points} />;
+                                    return <DagEdge key={`e${id}`} points={points} classes={classes} />;
                                 }
 
                                 case 'container': {
                                     const { x, y, width, height } = this.state.containers[id];
                                     return (
-                                        <DagContainer x={x} y={y} width={width} height={height} />
+                                        <DagContainer
+                                            key={`c${id}`}
+                                            x={x}
+                                            y={y}
+                                            width={width}
+                                            height={height}
+                                            classes={classes}
+                                        />
                                     );
                                 }
 
@@ -445,26 +555,27 @@ const styles = (theme) => ({
 
     /** Node styles. */
     node: {
-        fillOpacity: 0.2,
-        stroke: 'transparent', // TODO: Remove this?
-        strokeWidth: 4,
-        rx: 4,
-        ry: 4,
-        transition: [
-            theme.transitions.create(['width', 'height', 'x', 'y'], {
-                duration: theme.transitions.duration.short,
-            }),
-            theme.transitions.create(['fill-opacity'], {
-                duration: theme.transitions.duration.shortest,
-                delay: theme.transitions.duration.short,
-            }),
-        ].join(', '),
+        // fillOpacity: 0.2,
+        // stroke: 'transparent', // TODO: Remove this?
+        // strokeWidth: 4,
+        // rx: 4,
+        // ry: 4,
+        // transition: [
+        //     theme.transitions.create(['width', 'height', 'x', 'y'], {
+        //         duration: theme.transitions.duration.short,
+        //     }),
+        //     theme.transitions.create(['fill-opacity'], {
+        //         duration: theme.transitions.duration.shortest,
+        //         delay: theme.transitions.duration.short,
+        //     }),
+        // ].join(', '),
     },
 
     /** Container styles. */
     dagContainer: {
         fillColor: '#FFFFFF', // TODO: Change this.
+        fillOpacity: 0.2,
     },
 });
 
-export default withSize()(withStyles(styles)(DagLayout));
+export default withStyles(styles)(DagLayout);
