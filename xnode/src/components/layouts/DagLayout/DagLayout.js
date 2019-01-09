@@ -62,8 +62,7 @@ class DagNode extends React.PureComponent<{
         const { classes, x, y, width, height, viewerProps, onResize } = this.props;
         return (
             <g>
-                <rect x={x} y={y} width={width} height={height} className={classes.node} />
-                <foreignObject x={x} y={y} width={width} height={height}>
+                <foreignObject x={x} y={y} width={width} height={height} className={classes.node}>
                     <Measure
                         bounds
                         onResize={(contentRect) =>
