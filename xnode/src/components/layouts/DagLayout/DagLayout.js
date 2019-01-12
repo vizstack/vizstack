@@ -582,8 +582,9 @@ const styles = (theme) => ({
 
     /** Container styles. */
     dagContainer: {
-        fillColor: '#FFFFFF', // TODO: Change this.
-        fillOpacity: 0.2,
+        fill: '#000000', // TODO: Change this.
+        fillOpacity: 0.17,
+        strokeWidth: 3
     },
 });
 
