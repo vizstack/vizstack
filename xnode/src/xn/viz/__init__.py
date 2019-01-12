@@ -312,6 +312,7 @@ class DagLayoutNode:
     def __init__(self, node_id: str, viz: '_Viz') -> None:
         self.node_id = node_id
         self.viz = viz
+        self.container: Optional['DagLayoutContainer'] = None
 
     def get_id(self) -> str:
         return self.node_id
@@ -321,24 +322,32 @@ class DagLayoutNode:
             'vizId': self.viz,
         }
 
+    def get_container(self) -> 'DagLayoutContainer':
+        return self.container
+
 
 class DagLayoutEdge:
 
     def __init__(
             self, edge_id: str, start: Union['DagLayoutNode', 'DagLayoutContainer'],
-            end: Union['DagLayoutNode', 'DagLayoutContainer']
+            end: Union['DagLayoutNode', 'DagLayoutContainer'], start_side: Optional[str] = None, end_side: Optional[
+                str] = None
     ) -> None:
         self.edge_id = edge_id
         self.start = start
         self.end = end
+        self.start_side = start_side
+        self.end_side = end_side
 
     def get_id(self) -> str:
         return self.edge_id
 
     def to_dict(self) -> Mapping[str, Any]:
         return {
-            'start': self.start.get_id(),
-            'end': self.end.get_id(),
+            'startId': self.start.get_id(),
+            'endId': self.end.get_id(),
+            'startSide': self.start_side,
+            'endSide': self.end_side,
         }
 
 
@@ -356,6 +365,7 @@ class DagLayoutContainer:
         self.is_visible = is_visible
         self.is_topological = is_topological
         self.elements: List[Union['DagLayoutNode', 'DagLayoutContainer']] = []
+        self.container: Optional['DagLayoutContainer'] = None
 
     def get_id(self) -> str:
         return self.container_id
@@ -370,8 +380,27 @@ class DagLayoutContainer:
             'isTopological': self.is_topological,
         }
 
+    # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
     def add_child(self, child: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+        assert child.container is None
+        child.container = self
         self.elements.append(child)
+
+    def remove_child(self, child: Union['DagLayoutNode', 'DagLayoutContainer']) -> None:
+        assert child in self.elements
+        assert child.container == self
+        child.container = None
+        self.elements.remove(child)
+
+    def is_ancestor(self, descendant: Union['DagLayoutNode', 'DagLayoutContainer']) -> bool:
+        if len(self.elements) == 0:
+            return False
+        if descendant in self.elements:
+            return True
+        return any([isinstance(child, DagLayoutContainer) and child.is_ancestor(descendant) for child in self.elements])
+
+    def get_container(self) -> Optional['DagLayoutContainer']:
+        return self.container
 
 
 # ======================================================================================================================

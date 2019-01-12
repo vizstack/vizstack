@@ -96,7 +96,9 @@ export type DagContainerSpec = {
 export type DagEdgeId = string;
 export type DagEdgeSpec = {
     startId: DagElementId,
+    startSide?: 'left' | 'right' | 'up' | 'down',
     endId: DagElementId,
+    endSide?: 'left' | 'right' | 'up' | 'down',
 };
 export type DagLayoutModel = {
     type: 'DagLayout',

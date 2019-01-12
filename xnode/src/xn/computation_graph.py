@@ -34,8 +34,11 @@ class _FunctionCall:
         """Constructor.
 
         Args:
-            fn_name (str): The name of the function, as should be shown in visualizations.
-            args (tuple): A sequence of positional arguments that were passed to the function at execution.
+            fn_name: The name of the function, as should be shown in visualizations.
+            args: A sequence of positional arguments that were passed to the function at execution. Each element of
+                the sequence is a two-tuple, where the first element is the string name of the argument and the
+                second is either the `GraphData` object associated with the input or a sequence of `GraphData`
+                objects if the input was a sequence.
             kwargs (dict): A dictionary of keyword arguments passed to the function at execution.
         """
         super(_FunctionCall, self).__init__()
@@ -189,7 +192,7 @@ class GraphData:
 
             # add to secret container
             op_to_secret_container_node[op] = layout.create_container(
-                flow_direction='right', is_visible=False
+                flow_direction='up', is_visible=False
             )
             op_to_secret_container_node[op].add_child(op_to_node[op])
 
@@ -208,18 +211,36 @@ class GraphData:
                     op_to_node[container_op].add_child(child)
                     break
 
+            for output_graphdata in op.outputs:
+                c = graphdata_to_node[output_graphdata].get_container()
+                while c is not None and not c.is_ancestor(op_to_node[op]):
+                    c.remove_child(graphdata_to_node[output_graphdata])
+                    c = c.get_container()
+                    if c is not None:
+                        c.add_child(graphdata_to_node[output_graphdata])
+
             # add input data nodes
             for input_graphdata in op.get_args():
                 # Only create a new data node if one does not exist, or if the data is a leaf
-                # TODO: the data node needs to be in some container!
                 if input_graphdata not in graphdata_to_node or input_graphdata.creator_op is None:
                     graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
+                    # call get_container() twice to keep it out of the secret container
+                    op_to_secret_container_node[op].get_container().add_child(graphdata_to_node[input_graphdata])
+
+                c = graphdata_to_node[input_graphdata].get_container()
+                while c is not None and not c.is_ancestor(op_to_node[op]):
+                    c.remove_child(graphdata_to_node[input_graphdata])
+                    c = c.get_container()
+                    if c is not None:
+                        c.add_child(graphdata_to_node[input_graphdata])
+
                 layout.create_edge(graphdata_to_node[input_graphdata], op_node)
                 if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
                     if len(op.contents) > 0:
                         creator_op_node = layout.create_container()
                     else:
                         creator_op_node = layout.create_node(input_graphdata.creator_op)
+                    layout.create_edge(creator_op_node, graphdata_to_node[input_graphdata])
                     op_to_node[input_graphdata.creator_op] = creator_op_node
                     ops.append(input_graphdata.creator_op)
 

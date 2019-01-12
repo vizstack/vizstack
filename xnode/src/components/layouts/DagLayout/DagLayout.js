@@ -291,6 +291,8 @@ class DagLayout extends React.Component<
         // layout engine may use.
         console.debug('DagLayout -- componentDidMount(): mounted');
 
+        console.log('prop edges', this.props.edges);
+
         // We want us to be mounted already, then populate self. Triggering other render.
         this.setState(Immutable({
             shouldLayout: false,
@@ -300,7 +302,7 @@ class DagLayout extends React.Component<
             ]), // TODO: remove orientation
             edges: obj2obj(this.props.edges, (k, v) => [
                 k,
-                { id: k, startId: v.startId, endId: v.endId },
+                { id: k, startId: v.startId, endId: v.endId, startSide: v.startSide || 'up', endSide: v.endSide || 'down' },
             ]),
             containers: obj2obj(this.props.containers, (k, v) => [
                 k,
@@ -309,8 +311,8 @@ class DagLayout extends React.Component<
                     children: v.elements,
                     orientation:
                         v.flowDirection === 'left' || v.flowDirection === 'right'
-                            ? 'vertical'
-                            : 'horizontal',
+                            ? 'horizontal'
+                            : 'vertical',
                 },
             ]),
             ordering: [
@@ -383,14 +385,14 @@ class DagLayout extends React.Component<
             Object.values(nodes.asMutable({ deep: true })).concat(
                 Object.values(containers.asMutable({ deep: true })),
             ),
-            [], // Object.values(edges.asMutable({deep: true})),
+            Object.values(edges.asMutable({deep: true})),
             (
                 width: number,
                 height: number,
                 nodes: Array<DagNodeLayoutSpec>,
                 edges: Array<DagEdgeLayoutSpec>,
             ) => {
-                console.log('DagLayout -- _layoutGraph(): ELK callback triggered')
+                console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
                 // Separate nodes from containers.
                 let containers = nodes.filter((node) => containerKeys.has(node.id));
 
