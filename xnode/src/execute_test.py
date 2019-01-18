@@ -5,7 +5,7 @@ from multiprocessing import Queue
 from typing import Mapping, Optional, Tuple
 
 import execute
-from xn.constants import ExpansionState
+from xnode.constants import ExpansionMode
 
 _RESET_MESSAGE: Mapping[str, Optional[bool]] = {
     'viewedVizId': None,
@@ -91,7 +91,7 @@ def test_run_script_with_fetch_request_should_send_symbol_slice() -> None:
     request_queue.put(
         {
             'viz_id': json.loads(symbol_slice_str)['vizTableSlice'].popitem()[0],
-            'expansion_state': ExpansionState.SUMMARY
+            'expansion_state': ExpansionMode.SUMMARY
         }
     )
     request_queue.put(None)

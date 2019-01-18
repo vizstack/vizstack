@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import SequenceViz from '../../layouts/SequenceLayout';
+import SequenceViz from '../layouts/SequenceLayout';
 
 /**
  * This dumb component renders a viewer for a Python string (list, tuple, set). It converts the string into a

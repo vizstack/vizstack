@@ -50,6 +50,7 @@ export type TokenPrimitiveModel = {
     type: 'TokenPrimitive',
     contents: {
         text: string,
+        color?: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
     },
 };
 
@@ -59,26 +60,13 @@ export type TokenPrimitiveModel = {
 // Visual "configurations" of "building blocks".
 
 /** Any layout model. */
-export type LayoutModel = SequenceLayoutModel | KeyValueLayoutModel;
+export type LayoutModel = GridLayoutModel | DagLayoutModel;
 
-/** Sequence layout is __. */
-export type SequenceLayoutModel = {
-    type: 'SequenceLayout',
-    contents: {
-        elements: Array<VizId>,
-        orientation?: 'horizontal' | 'vertical',
-    },
-};
-
-/** KeyValue layout is __. */
-export type KeyValueLayoutModel = {
-    type: 'KeyValueLayout',
-    contents: {
-        elements: {
-            [VizId]: VizId,
-        },
-    },
-};
+/** Grid layout is __. */
+export type GridLayoutModel = {
+    /** col, row, width, height */
+    geometries: Array<[VizId, number, number, number, number]>,
+}
 
 /** Dag layout is ___. */
 export type DagElementId = string;

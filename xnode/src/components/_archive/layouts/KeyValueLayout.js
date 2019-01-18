@@ -3,7 +3,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../primitives/TokenPrimitive';
+import TokenViz from '../../primitives/TokenPrimitive';
 
 /**
  * This dumb component renders visualization for a sequence of arbitrary key-value pairs.

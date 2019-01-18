@@ -1,4 +1,5 @@
 from typing import Callable, Any
+from xnode.constants import ExpansionMode
 
 # A function which takes as input any Python object and performs some action that allows it to be viewed by the client.
 # By default, this prints it to stdout, but it can be changed via `set_view_fn()` to write objects as Xnode symbol
@@ -16,10 +17,10 @@ def set_view_fn(fn: Callable[[Any], None]) -> None:
     _VIEW_FN = fn
 
 
-def view(*args: Any) -> None:
+def view(*args: Any, **kwargs: Any) -> None:
     """Performs some action, as defined by a call to `set_view_fn()`, that allows an object to be visualized.
 
     Args:
         args: The object(s) to be visualized.
     """
-    _VIEW_FN(*args)
+    _VIEW_FN(*args, **kwargs)

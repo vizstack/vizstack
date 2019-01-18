@@ -11,8 +11,7 @@ import type {
     VizId,
     VizSpec,
     TokenPrimitiveModel,
-    SequenceLayoutModel,
-    KeyValueLayoutModel,
+    GridLayoutModel,
     DagLayoutModel,
 } from '../state/viztable/outputs';
 import { getVizTable, VizModel } from '../state/viztable/outputs';
@@ -21,28 +20,16 @@ import { getVizTable, VizModel } from '../state/viztable/outputs';
 import TokenPrimitive from './primitives/TokenPrimitive';
 
 // Viz layouts
-import KeyValueLayout from './layouts/KeyValueLayout';
-import SequenceLayout from './layouts/SequenceLayout';
+import GridLayout from './layouts/GridLayout';
 import DagLayout from './layouts/DagLayout';
 import { obj2obj } from '../services/data-utils';
 
 /** The sequence in which users can toggle different models. */
 const kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
 
-/** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
- *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the
- *  context to its `Viewer` sub-components; a Primitive Viz is terminal and so does not need to pass-through. */
-export type ViewerContext = {
-    /** Size category to render the top-level Viz. */
-    displaySize?: 'regular' | 'small',
-};
-
 export type ViewerProps = {
     /** Unique `VizId` for this Viewer. */
     vizId: VizId,
-
-    /** Information passed down from direct parent Viewer. */
-    viewerContext?: ViewerContext,
 
     /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
     fetchVizModel: (VizId, 'compact' | 'full') => void,
@@ -100,34 +87,24 @@ class Viewer extends React.Component<
             // ----------
 
             case 'TokenPrimitive':
-                const { text } = (model: TokenPrimitiveModel).contents;
-                return <TokenPrimitive text={text} shouldTextWrap={true} />;
+                const { text, color } = (model: TokenPrimitiveModel).contents;
+                return <TokenPrimitive text={text}
+                                       color={color ? color : 'primary'}
+                                       shouldTextWrap={true} />;
 
             // Layouts
             // -------
 
-            case 'SequenceLayout':
-                const { elements } = (model: SequenceLayoutModel).contents;
+            case 'GridLayout':
+                const { geometries } = (model: GridLayoutModel).contents;
                 return (
-                    <SequenceLayout
-                        elements={elements.map((vizId: VizId) => ({
+                    <GridLayout
+                        geometries={geometries.map(([vizId, col, row, width, height]) => ([{
                             vizId,
                             fetchVizModel,
-                            viewerContext: {
-                                displaySize: 'small',
-                            },
-                        }))}
+                        }, col, row, width, height]))}
                     />
                 );
-
-            case 'KeyValueLayout':
-                // const { elements } = (model: KeyValueLayoutModel).contents;
-                // return (
-                //     <KeyValueLayout elements={
-                //         Object.entries(elements).map(([key: VizId, value: VizId]))
-                //     }/>
-                // )
-                return null;
 
             case 'DagLayout':
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
@@ -138,9 +115,6 @@ class Viewer extends React.Component<
                             {
                                 vizId: spec.vizId,
                                 fetchVizModel,
-                                viewerContext: {
-                                    displaySize: 'small',
-                                },
                             },
                         ])}
                         edges={edges}
@@ -152,7 +126,7 @@ class Viewer extends React.Component<
 
     /** Renderer. */
     render() {
-        const { vizId, vizTable, viewerContext, classes, fetchVizModel } = this.props;
+        const { vizId, vizTable, classes, fetchVizModel } = this.props;
         const { expansionMode, isHovered } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
@@ -186,9 +160,9 @@ class Viewer extends React.Component<
                 })}
                 onClick={(e) => {
                     e.stopPropagation();
-                    // const expansionModeNext = kModelTransitionOrder[expansionMode];
-                    // fetchVizModel(vizId, expansionModeNext);
-                    // this.setState((state) => state.set('expansionMode', expansionModeNext));
+                    const expansionModeNext = kModelTransitionOrder[expansionMode];
+                    fetchVizModel(vizId, expansionModeNext);
+                    this.setState((state) => Immutable(state).set('expansionMode', expansionModeNext));
                 }}
                 onMouseOver={(e) => {
                     e.stopPropagation();

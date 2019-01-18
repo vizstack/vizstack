@@ -17,36 +17,9 @@ class TokenPrimitive extends React.PureComponent<{
     /** Text string displayed by token. */
     text: string,
 
-    /** Token box dimension constraints (in px or '%'). */
-    minWidth?: number | string,
-    maxWidth?: number | string,
-    minHeight?: number | string,
-    maxHeight?: number | string,
-
-    /** Whether text should wrap if it exceeds token width. */
-    shouldTextWrap?: boolean,
-
-    /** Whether text should display ellipsis if too long. */
-    shouldTextEllipsis?: boolean,
-
-    /** Token interaction state. */
-    isHovered?: boolean,
-    isSelected?: boolean,
-
-    /** Mouse handler functions. */
-    onClick?: () => void,
-    onDoubleClick?: () => void,
-    onMouseEnter?: () => void,
-    onMouseLeave?: () => void,
+    /** The color scheme of the token. */
+    color: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
 }> {
-    /** Prop default values. */
-    static defaultProps = {
-        shouldTextWrap: false,
-        shouldTextEllipsis: false,
-        isHovered: false,
-        isSelected: false,
-    };
-
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
@@ -54,47 +27,40 @@ class TokenPrimitive extends React.PureComponent<{
         const {
             classes,
             text,
-            minWidth,
-            minHeight,
-            maxWidth,
-            maxHeight,
-            shouldTextWrap,
-            shouldTextEllipsis,
-            isHovered,
-            isSelected,
-            onClick,
-            onDoubleClick,
-            onMouseEnter,
-            onMouseLeave,
+            color,
         } = this.props;
 
-        // Construct style dict
-        const style = {
-            minWidth,
-            maxWidth,
-            minHeight,
-            maxHeight,
-        };
+        let background = undefined;
+
+        // TODO: pick these colors and use theme instead
+        switch(color) {
+            case 'primary':
+                background = '#31363f';
+                break;
+            case 'secondary':
+                background = '#31363f';
+                break;
+            case 'emphasis':
+                background = '#31363f';
+                break;
+            case 'error':
+                background = '#911e15';
+                break;
+            case 'invisible':
+                background = 'transparent';
+                break;
+        }
 
         return (
             <div
                 className={classNames({
                     [classes.tokenBox]: true,
-                    [classes.hovered]: isHovered,
-                    [classes.selected]: isSelected,
                 })}
-                style={style}
-                onClick={onClick}
-                onDoubleClick={onDoubleClick}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
+                style={{background}}
             >
                 <Typography
                     className={classNames({
                         [classes.tokenText]: true,
-                        [classes.textWrap]: shouldTextWrap,
-                        [classes.textNoWrap]: !shouldTextWrap,
-                        [classes.textEllipsis]: shouldTextEllipsis,
                     })}
                 >
                     {text}
@@ -111,7 +77,7 @@ class TokenPrimitive extends React.PureComponent<{
 const styles = (theme) => ({
     tokenBox: {
         // Base shape properties
-        background: '#31363f', // TODO: Dehardcode this, allow conditional coloring
+        // background: '#31363f', // TODO: Dehardcode this, allow conditional coloring
 
         // Border for highlighting
         borderRadius: theme.shape.borderRadius.regular,
@@ -138,6 +104,8 @@ const styles = (theme) => ({
         userSelect: 'none',
         cursor: 'default',
     },
+    smallTokenBox: {
+    },
     hovered: {
         borderColor: ColorLightBlue[400],
     },
@@ -156,6 +124,8 @@ const styles = (theme) => ({
     },
     textNoWrap: {
         whiteSpace: 'nowrap',
+    },
+    smallTokenText: {
     },
     textEllipsis: {
         textOverflow: 'ellipsis',

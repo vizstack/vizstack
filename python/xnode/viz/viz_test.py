@@ -1,8 +1,4 @@
-from importlib import reload
-import json
-
-import xn
-from xn.viz import TokenPrimitive, SequenceLayout
+from xnode.viz import TokenPrimitive, SequenceLayout
 
 
 class _TokenTest:
