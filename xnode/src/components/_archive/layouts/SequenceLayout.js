@@ -111,7 +111,7 @@ const styles = (theme) => ({
     },
     motifText: {
         fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '14pt', // TODO: Dehardcode this, same as TokenPrimitive.tokenText
+        fontSize: '14pt', // TODO: Dehardcode this, same as TextPrimitive.tokenText
         verticalAlign: '25%', // Offset baseline for middle alignment
 
         // No text selection

@@ -141,7 +141,7 @@ class VisualizationEngine:
                 compact_viz,
                 [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in full_refs],
                 [VisualizationEngine._get_viz_id(ref, snapshot_id) for ref in compact_refs],
-                viz_obj.default_expansion_state,
+                viz_obj.default_expansion_mode,
             )
             to_cache += full_refs
         assert obj_viz_id is not None

@@ -10,18 +10,20 @@ import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 import type {
     VizId,
     VizSpec,
-    TokenPrimitiveModel,
+    TextPrimitiveModel,
+    FlowLayoutModel,
     GridLayoutModel,
     DagLayoutModel,
 } from '../state/viztable/outputs';
 import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
-import TokenPrimitive from './primitives/TokenPrimitive';
+import TextPrimitive from './primitives/TextPrimitive';
 
 // Viz layouts
 import GridLayout from './layouts/GridLayout';
 import DagLayout from './layouts/DagLayout';
+import FlowLayout from './layouts/FlowLayout';
 import { obj2obj } from '../services/data-utils';
 
 /** The sequence in which users can toggle different models. */
@@ -86,14 +88,19 @@ class Viewer extends React.Component<
             // Primitives
             // ----------
 
-            case 'TokenPrimitive':
-                const { text, color } = (model: TokenPrimitiveModel).contents;
-                return <TokenPrimitive text={text}
-                                       color={color ? color : 'primary'}
-                                       shouldTextWrap={true} />;
+            case 'TextPrimitive':
+                const { text, color } = (model: TextPrimitiveModel).contents;
+                return <TextPrimitive text={text}
+                                       color={color ? color : 'primary'} />;
 
             // Layouts
             // -------
+
+            case 'FlowLayout':
+                const { elements } = (model: FlowLayoutModel).contents;
+                return <FlowLayout elements={elements.map((vizId) => {
+                    return {vizId, fetchVizModel}
+                })} />;
 
             case 'GridLayout':
                 const { geometries } = (model: GridLayoutModel).contents;
@@ -134,6 +141,8 @@ class Viewer extends React.Component<
             return null; // TODO: What to do?
         }
 
+        // TODO: show borders (and padding?) iff it can be meaningfully expanded
+
         let model: VizModel = undefined;
         switch (expansionMode) {
             case 'full':
@@ -153,9 +162,10 @@ class Viewer extends React.Component<
                 break;
         }
         return (
-            <div
+            <span
                 className={classNames({
                     [classes.box]: true,
+                    [classes.notHovered]: !isHovered,
                     [classes.hovered]: isHovered,
                 })}
                 onClick={(e) => {
@@ -166,22 +176,15 @@ class Viewer extends React.Component<
                 }}
                 onMouseOver={(e) => {
                     e.stopPropagation();
-                    // console.log("HERRO", this.state);
-                    // this.setState((state) => {
-                    //     let s = state.set('isHovered', true);
-                    //     console.log("myVAL", s);
-                    //     setTimeout(() => console.log("myVAL2", this.state), 1000);
-                    //     return s;
-                    // });
+                    this.setState((state) => Immutable(state).set('isHovered', true));
                 }}
                 onMouseOut={(e) => {
                     e.stopPropagation();
-                    // console.log("HERRO", this.state);
-                    // this.setState((state) => state.set('isHovered', false));
+                    this.setState((state) => Immutable(state).set('isHovered', false));
                 }}
             >
-                {this.getVizComponent(model)}
-            </div>
+            {this.getVizComponent(model)}
+        </span>
         );
     }
 }
@@ -196,11 +199,18 @@ const styles = (theme) => ({
         borderRadius: theme.shape.borderRadius.regular,
         borderColor: 'transparent',
         borderStyle: 'solid',
+        // This keeps the viewer box tight to its contents
+        // display: 'table',
+        padding: '5px',
         borderWidth: 1, // TODO: Dehardcode this
     },
     hovered: {
         borderColor: ColorLightBlue[400], // TODO: Dehardcode this
+        // opacity: 1.0,
     },
+    notHovered: {
+        // opacity: 0.9,
+    }
 });
 
 // To inject application state into component

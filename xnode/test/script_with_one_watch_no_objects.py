@@ -1,3 +1,3 @@
-import xn
+import xnode
 
-xn.view()
+xnode.view()

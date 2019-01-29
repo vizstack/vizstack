@@ -89,10 +89,10 @@ def get_viz(o: Any) -> 'Viz':
             else:
                 kwargs[param_name] = param.default
         viz = SequenceLayout([
-            TokenPrimitive('Function: {}'.format(o.__name__), color=Color.INVISIBLE),
-            TokenPrimitive('Positional Arguments', color=Color.INVISIBLE),
+            TextPrimitive('Function: {}'.format(o.__name__)),
+            TextPrimitive('Positional Arguments'),
             args,
-            TokenPrimitive('Keyword Arguments', color=Color.INVISIBLE),
+            TextPrimitive('Keyword Arguments'),
             kwargs,
             ], orientation='vertical')
     elif inspect.ismodule(o):
@@ -106,7 +106,7 @@ def get_viz(o: Any) -> 'Viz':
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        viz = SequenceLayout([TokenPrimitive('Module: {}'.format(o.__name__), color=Color.INVISIBLE), attributes],
+        viz = SequenceLayout([TextPrimitive('Module: {}'.format(o.__name__)), attributes],
                              orientation='vertical')
     elif inspect.isclass(o):
         functions = dict()
@@ -120,11 +120,11 @@ def get_viz(o: Any) -> 'Viz':
                     staticfields[attr] = value
             except AttributeError:
                 continue
-        contents = [TokenPrimitive('Class: {}'.format(o.__name__), color=Color.INVISIBLE)]
+        contents = [TextPrimitive('Class: {}'.format(o.__name__))]
         if len(functions) > 0:
-            contents.extend([TokenPrimitive('Functions', color=Color.INVISIBLE), functions])
+            contents.extend([TextPrimitive('Functions'), functions])
         if len(staticfields) > 0:
-            contents.extend([TokenPrimitive('Fields', color=Color.INVISIBLE), staticfields])
+            contents.extend([TextPrimitive('Fields'), staticfields])
         viz = SequenceLayout(contents, orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
         viz = TokenPrimitive(o)
@@ -143,7 +143,7 @@ def get_viz(o: Any) -> 'Viz':
                 # and raise any error), just skip over instead of crashing
                 continue
         viz = SequenceLayout([
-            TokenPrimitive('Object: {}'.format(type(o).__name__), color=Color.INVISIBLE),
+            TextPrimitive('Object: {}'.format(type(o).__name__)),
             contents
         ], orientation='vertical')
     _CURRENT.pop()
@@ -165,16 +165,16 @@ class Viz:
     its summary model.
     """
 
-    def __init__(self, name: Optional[str], expansion_state: ExpansionMode) -> None:
+    def __init__(self, name: Optional[str], expansion_mode: ExpansionMode) -> None:
         """Constructor.
 
         Args:
             name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_state: The expansion state this Viz should take if none is specifically given in the watch
+            expansion_mode: The expansion state this Viz should take if none is specifically given in the watch
                 expression.
         """
         self._name: Optional[str] = name
-        self.default_expansion_state: ExpansionMode = expansion_state
+        self.default_expansion_mode: ExpansionMode = expansion_mode
 
     def compile_full(self) -> Tuple[VizModel, Iterable['Viz']]:
         """Creates a VizModel which describes this Viz and can be sent to a client for rendering.
@@ -194,11 +194,11 @@ class Viz:
         """
         raise NotImplementedError
 
-    def compile_summary(self) -> 'TokenPrimitiveModel':
+    def compile_summary(self) -> 'TextPrimitiveModel':
         """Creates a limited-size VizModel giving a hint as to the Viz's properties.
 
         Returns:
-            A TokenPrimitiveModel whose text is the name of this Viz if given in the constructor, or otherwise this
+            A TextPrimitiveModel whose text is the name of this Viz if given in the constructor, or otherwise this
                 Viz's string representation.
         """
         return TokenPrimitive(str(self) if self._name is None else self._name).compile_summary()
@@ -214,12 +214,12 @@ class Viz:
         raise NotImplementedError
 
 
-class TokenPrimitive(Viz):
+class TextPrimitive(Viz):
     """
     A Viz which is a single, contiguous block of text content.
     """
 
-    def __init__(self, val: Any, color: Color = Color.DEFAULT) -> None:
+    def __init__(self, text: str, color: Color = Color.INVISIBLE) -> None:
         """Constructor.
 
         Args:
@@ -227,31 +227,65 @@ class TokenPrimitive(Viz):
                 token.
             color: The background color of the token.
         """
-        super(TokenPrimitive, self).__init__(None, ExpansionMode.FULL)
-        # TODO: smarter strings
-        self._text: str = str(val)
+        super(TextPrimitive, self).__init__(None, ExpansionMode.FULL)
+        self._text: str = text
         self._color: Color = color
 
-    def compile_full(self) -> Tuple['TokenPrimitiveModel', Iterable[Viz]]:
-        return TokenPrimitiveModel(self._text, self._color.value), []
+    def compile_full(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
+        return TextPrimitiveModel(self._text, self._color.value), []
 
-    def compile_compact(self) -> Tuple['TokenPrimitiveModel', Iterable[Viz]]:
-        return TokenPrimitiveModel(self._text, self._color.value), []
+    def compile_compact(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
+        return TextPrimitiveModel(self._text, self._color.value), []
 
-    def compile_summary(self) -> 'TokenPrimitiveModel':
-        return TokenPrimitiveModel(self._text, self._color.value)
+    def compile_summary(self) -> 'TextPrimitiveModel':
+        return TextPrimitiveModel(self._text, self._color.value)
 
     def __str__(self) -> str:
         return self._text
+
+
+class TokenPrimitive(TextPrimitive):
+    """
+    A Viz which is a single, contiguous block of text content.
+    """
+
+    def __init__(self, val: Any) -> None:
+        """Constructor.
+
+        Args:
+            val: The text to include on the token, or an object whose string representation should be written on the
+                token.
+            color: The background color of the token.
+        """
+        super(TokenPrimitive, self).__init__(str(val), Color.DEFAULT)
+
+
+class FlowLayout(Viz):
+
+    COMPACT_LEN = 3
+
+    def __init__(self, elements: Sequence[Any], name: Optional[str] = None, expansion_mode: ExpansionMode =
+    ExpansionMode.NONE) -> None:
+        super(FlowLayout, self).__init__(name, expansion_mode)
+        self._elements = [get_viz(o) for o in elements]
+
+    def compile_full(self) -> Tuple['FlowLayoutModel', Iterable[Viz]]:
+        return FlowLayoutModel(self._elements), self._elements
+
+    def compile_compact(self) -> Tuple['FlowLayoutModel', Iterable[Viz]]:
+        return FlowLayoutModel(self._elements[:self.COMPACT_LEN]), self._elements[:self.COMPACT_LEN]
+
+    def __str__(self) -> str:
+        return '[ ... ]'
 
 
 class DagLayout(Viz):
 
     def __init__(
             self, name: Optional[str] = None,
-            expansion_state: ExpansionMode = ExpansionMode.NONE
+            expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
-        super(DagLayout, self).__init__(name, expansion_state)
+        super(DagLayout, self).__init__(name, expansion_mode)
         self._nodes: List['_DagLayoutNode'] = []
         self._edges: List['_DagLayoutEdge'] = []
         self._containers: List['_DagLayoutContainer'] = []
@@ -414,15 +448,15 @@ class GridLayout(Viz):
             self,
             geometries: List[Tuple[Any, int, int, int, int]],
             name: Optional[str] = None,
-            expansion_state: ExpansionMode = ExpansionMode.NONE
+            expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
         """Constructor.
 
         Args:
             name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_state: The expansion state this Viz should take if none is given in the watch expression.
+            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
         """
-        super(GridLayout, self).__init__(name, expansion_state)
+        super(GridLayout, self).__init__(name, expansion_mode)
         self._num_cols = max(x + w for _, x, _, w, _ in geometries) if len(geometries) > 0 else 1
         self._num_rows = max(y + h for _, _, y, _, h in geometries) if len(geometries) > 0 else 1
         self._geometries: List[Tuple[Viz, int, int, int, int]] = [(get_viz(o), x, y, w, h)
@@ -457,7 +491,7 @@ class SequenceLayout(GridLayout):
             elements: Sequence[Any],
             orientation: str = 'horizontal',
             name: Optional[str] = None,
-            expansion_state: ExpansionMode = ExpansionMode.NONE
+            expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
         """Constructor.
 
@@ -465,14 +499,14 @@ class SequenceLayout(GridLayout):
             elements: An iterable of objects whose Vizzes should be shown in sequence.
             orientation: How to arrange the elements of this Viz. Should be either "horizontal" or "vertical".
             name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_state: The expansion state this Viz should take if none is given in the watch expression.
+            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
         """
         if orientation == 'horizontal':
             super(SequenceLayout, self).__init__([(elem, i, 0, 1, 1) for i, elem in enumerate(elements)],
-                                                 name, expansion_state)
+                                                 name, expansion_mode)
         elif orientation == 'vertical':
             super(SequenceLayout, self).__init__([(elem, 0, i, 1, 1) for i, elem in enumerate(elements)],
-                                                 name, expansion_state)
+                                                 name, expansion_mode)
         else:
             raise ValueError('Provided orientation "{}" not recognized.'.format(orientation))
 
@@ -489,30 +523,30 @@ class KeyValueLayout(GridLayout):
             self,
             key_value_mapping: Mapping[Any, Any],
             name: Optional[str] = None,
-            expansion_state: ExpansionMode = ExpansionMode.NONE
+            expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
         """Constructor.
 
         Args:
             key_value_mapping: A mapping of objects whose Vizzes should be shown as key-value pairs.
             name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_state: The expansion state this Viz should take if none is given in the watch expression.
+            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
         """
         keys = list(key_value_mapping.keys())
         super(KeyValueLayout, self).__init__([(key, 0, i, 1, 1) for i, key in enumerate(keys)] +
-                                             [(TokenPrimitive(':', Color.INVISIBLE), 1, i, 1, 1) for i in range(len(
+                                             [(TextPrimitive(':'), 1, i, 1, 1) for i in range(len(
                                                  keys))] +
                                              [(key_value_mapping[key], 2, i, 1, 1) for i, key in enumerate(keys)],
-                                             name, expansion_state)
+                                             name, expansion_mode)
 
     def __str__(self) -> str:
         return '{ ... }'
 
 
-class TokenPrimitiveModel(VizModel):
+class TextPrimitiveModel(VizModel):
 
     def __init__(self, text: str, color: Optional[str]) -> None:
-        super(TokenPrimitiveModel, self).__init__('TokenPrimitive', {
+        super(TextPrimitiveModel, self).__init__('TextPrimitive', {
             'text': text,
             'color': color,
         })
@@ -544,5 +578,15 @@ class GridLayoutModel(VizModel):
         super(GridLayoutModel, self).__init__(
             'GridLayout', {
                 'geometries': geometries,
+            }
+        )
+
+
+class FlowLayoutModel(VizModel):
+
+    def __init__(self, elements: List['Viz']):
+        super(FlowLayoutModel, self).__init__(
+            'FlowLayout', {
+                'elements': elements,
             }
         )

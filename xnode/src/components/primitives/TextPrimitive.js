@@ -10,7 +10,7 @@ import ColorBlue from '@material-ui/core/colors/blue';
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
-class TokenPrimitive extends React.PureComponent<{
+class TextPrimitive extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
@@ -50,22 +50,10 @@ class TokenPrimitive extends React.PureComponent<{
                 background = 'transparent';
                 break;
         }
-
         return (
-            <div
-                className={classNames({
-                    [classes.tokenBox]: true,
-                })}
-                style={{background}}
-            >
-                <Typography
-                    className={classNames({
-                        [classes.tokenText]: true,
-                    })}
-                >
-                    {text}
-                </Typography>
-            </div>
+            <span className={classes.tokenText} style={{
+                backgroundColor: background,
+            }}>{text}</span>
         );
     }
 }
@@ -80,16 +68,8 @@ const styles = (theme) => ({
         // background: '#31363f', // TODO: Dehardcode this, allow conditional coloring
 
         // Border for highlighting
-        borderRadius: theme.shape.borderRadius.regular,
-        borderColor: 'transparent',
-        borderStyle: 'solid',
-        borderWidth: 1, // TODO: Dehardcode this
 
         // Content padding
-        paddingLeft: 2, // TODO: Dehardcode this
-        paddingRight: 2, // TODO: Dehardcode this
-        paddingTop: 0, // TODO: Dehardcode this
-        paddingBottom: 0, // TODO: Dehardcode this
 
         // Vertically center text
         display: 'inline-flex',
@@ -113,6 +93,14 @@ const styles = (theme) => ({
         borderColor: ColorBlue[600],
     },
     tokenText: {
+        borderRadius: theme.shape.borderRadius.regular,
+        borderColor: 'transparent',
+        borderStyle: 'solid',
+        borderWidth: 1, // TODO: Dehardcode this
+        paddingLeft: 2, // TODO: Dehardcode this
+        paddingRight: 2, // TODO: Dehardcode this
+        paddingTop: 0, // TODO: Dehardcode this
+        paddingBottom: 0, // TODO: Dehardcode this
         textAlign: 'center',
         overflow: 'hidden',
         fontFamily: theme.typography.monospace.fontFamily,
@@ -132,4 +120,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(TokenPrimitive);
+export default withStyles(styles)(TextPrimitive);

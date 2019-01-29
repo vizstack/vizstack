@@ -3,7 +3,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../../primitives/TokenPrimitive';
+import TokenViz from '../../primitives/TextPrimitive';
 
 /**
  * This dumb component renders visualization for a sequence of arbitrary key-value pairs.
@@ -35,7 +35,7 @@ class KeyValueLayout extends React.Component<{
     };
 
     /**
-     * Renders a sequence of TokenPrimitive pairs. The sequence can have start/end motifs, which are large characters that can
+     * Renders a sequence of TextPrimitive pairs. The sequence can have start/end motifs, which are large characters that can
      * be used to indicate a type of sequence (e.g. "{" for sets).
      */
     render() {

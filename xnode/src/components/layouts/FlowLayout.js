@@ -12,12 +12,12 @@ import type { ViewerProps } from '../Viewer';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-class GridLayout extends React.PureComponent<{
+class FlowLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    geometries: Array<[ViewerProps, number, number, number, number]>,
+    elements: Array<ViewerProps>,
 }> {
     /** Prop default values. */
     static defaultProps = {
@@ -31,23 +31,15 @@ class GridLayout extends React.PureComponent<{
     render() {
         const {
             classes,
-            geometries,
+            elements,
         } = this.props;
 
         return (
-            <div className={classes.grid}>
-                {geometries.map(([viewerProps, col, row, width, height]) => {
+            <div>
+                {elements.map((viewerProps, i) => {
                     return (
-                        <div
-                            key={viewerProps.vizId}
-                            style={{
-                                gridColumn: `${col + 1} / ${col + 1 + width}`,
-                                gridRow: `${row + 1} / ${row + 1 + height}`,
-                            }
-                        }>
-                            <Viewer {...viewerProps}/>
-                        </div>
-                    );
+                        <Viewer key={i} {...viewerProps} />
+                    )
                 })}
             </div>
         );
@@ -91,4 +83,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(GridLayout);
+export default withStyles(styles)(FlowLayout);

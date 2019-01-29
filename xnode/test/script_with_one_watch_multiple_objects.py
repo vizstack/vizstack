@@ -1,5 +1,5 @@
-import xn
+import xnode
 
 myInt = 69
 myInt2 = 96
-xn.view(myInt, myInt2)
+xnode.view(myInt, myInt2)

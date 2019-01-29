@@ -1,4 +1,5 @@
-import xn
+import xnode
+
 x = 86
-xn.view(x)
+xnode.view(x)
 print(k)
