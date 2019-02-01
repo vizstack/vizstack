@@ -47,19 +47,28 @@ class TextPrimitive extends React.PureComponent<{
                 background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'error':
-                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
+                background = `rgba(160, 25, 25, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'invisible':
                 background = 'transparent';
                 break;
         }
+        const textBreaks = text.split('\n');
         return (
             <span className={classNames({
                 [classes.tokenText]  : true,
                 })}
                 style={{
                     backgroundColor: background,
-            }}>{text}</span>
+            }}>{textBreaks.map((text, i) => {
+                if (i < textBreaks.length - 1) {
+                    return (
+                        <span key={i}>{text}<br/></span>
+                    )
+                } else {
+                    return <span key={i}>{text}</span>
+                }
+            })}</span>
         );
     }
 }
