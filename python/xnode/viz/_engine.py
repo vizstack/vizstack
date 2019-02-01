@@ -122,6 +122,8 @@ class VisualizationEngine:
             viz_id: VizId = VisualizationEngine._get_viz_id(viz_obj, snapshot_id)
             if obj_viz_id is None:
                 obj_viz_id = viz_id
+            if viz_id in added:
+                continue
             added.add(viz_id)
             full_viz, full_refs = viz_obj.compile_full()
             full_viz.contents = VisualizationEngine._replace_viz_with_viz_ids(
@@ -144,6 +146,7 @@ class VisualizationEngine:
                 viz_obj.default_expansion_mode,
             )
             to_cache += full_refs
+            to_cache += compact_refs
         assert obj_viz_id is not None
         return obj_viz_id
 
@@ -208,14 +211,13 @@ class VisualizationEngine:
                 .COMPACT if parent_expansion_mode == ExpansionMode.FULL else ExpansionMode.SUMMARY
             )
 
-            if expansion_mode == ExpansionMode.COMPACT:
+            if expansion_mode == ExpansionMode.COMPACT or expansion_mode == ExpansionMode.FULL:
                 viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
                 to_add += [
                     (viz_id, expansion_mode, None)
                     for viz_id in self._cache[viz_id].compact_viz_refs
                 ]
             if expansion_mode == ExpansionMode.FULL:
-                viz_slice[viz_id].compactModel = self._cache[viz_id].compact_viz_model
                 viz_slice[viz_id].fullModel = self._cache[viz_id].full_viz_model
                 to_add += [
                     (viz_id, expansion_mode, None) for viz_id in self._cache[viz_id].full_viz_refs

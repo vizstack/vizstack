@@ -65,6 +65,7 @@ class Viewer extends React.Component<
         super(props);
         const { vizTable, vizId } = this.props;
 
+        console.log(vizTable, vizId);
         // Set initial state based on what model is available.
         let expansionMode = 'summary';
         expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;
@@ -83,6 +84,7 @@ class Viewer extends React.Component<
      *      The Viz component which renders the model.
      */
     getVizComponent(model: VizModel): React.Component {
+        const { isHovered, expansionMode } = this.state;
         const { fetchVizModel } = this.props;
         switch (model.type) {
             // Primitives
@@ -90,7 +92,7 @@ class Viewer extends React.Component<
 
             case 'TextPrimitive':
                 const { text, color } = (model: TextPrimitiveModel).contents;
-                return <TextPrimitive text={text}
+                return <TextPrimitive isHovered={isHovered} text={text}
                                        color={color ? color : 'primary'} />;
 
             // Layouts
@@ -98,7 +100,7 @@ class Viewer extends React.Component<
 
             case 'FlowLayout':
                 const { elements } = (model: FlowLayoutModel).contents;
-                return <FlowLayout elements={elements.map((vizId) => {
+                return <FlowLayout isHovered={isHovered} elements={elements.map((vizId) => {
                     return {vizId, fetchVizModel}
                 })} />;
 
@@ -106,6 +108,8 @@ class Viewer extends React.Component<
                 const { geometries } = (model: GridLayoutModel).contents;
                 return (
                     <GridLayout
+                        isCompact={expansionMode === 'compact'}
+                        isHovered={isHovered}
                         geometries={geometries.map(([vizId, col, row, width, height]) => ([{
                             vizId,
                             fetchVizModel,
@@ -117,6 +121,7 @@ class Viewer extends React.Component<
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
                 return (
                     <DagLayout
+                        isHovered={isHovered}
                         nodes={obj2obj(nodes, (id, spec) => [
                             id,
                             {
@@ -134,7 +139,7 @@ class Viewer extends React.Component<
     /** Renderer. */
     render() {
         const { vizId, vizTable, classes, fetchVizModel } = this.props;
-        const { expansionMode, isHovered } = this.state;
+        const { expansionMode } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if (!vizSpec) {
@@ -165,8 +170,6 @@ class Viewer extends React.Component<
             <span
                 className={classNames({
                     [classes.box]: true,
-                    [classes.notHovered]: !isHovered,
-                    [classes.hovered]: isHovered,
                 })}
                 onClick={(e) => {
                     e.stopPropagation();
@@ -196,16 +199,9 @@ class Viewer extends React.Component<
 const styles = (theme) => ({
     // css-key: value,// Border for highlighting
     box: {
-        borderRadius: theme.shape.borderRadius.regular,
-        borderColor: 'transparent',
-        borderStyle: 'solid',
-        // This keeps the viewer box tight to its contents
-        // display: 'table',
-        padding: '5px',
-        borderWidth: 1, // TODO: Dehardcode this
+        margin: '5px',
     },
     hovered: {
-        borderColor: ColorLightBlue[400], // TODO: Dehardcode this
         // opacity: 1.0,
     },
     notHovered: {

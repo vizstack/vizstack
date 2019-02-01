@@ -14,6 +14,8 @@ class TextPrimitive extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
+    isHovered: boolean,
+
     /** Text string displayed by token. */
     text: string,
 
@@ -26,6 +28,7 @@ class TextPrimitive extends React.PureComponent<{
     render() {
         const {
             classes,
+            isHovered,
             text,
             color,
         } = this.props;
@@ -35,24 +38,27 @@ class TextPrimitive extends React.PureComponent<{
         // TODO: pick these colors and use theme instead
         switch(color) {
             case 'primary':
-                background = '#31363f';
+                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'secondary':
-                background = '#31363f';
+                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'emphasis':
-                background = '#31363f';
+                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'error':
-                background = '#911e15';
+                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
                 break;
             case 'invisible':
                 background = 'transparent';
                 break;
         }
         return (
-            <span className={classes.tokenText} style={{
-                backgroundColor: background,
+            <span className={classNames({
+                [classes.tokenText]  : true,
+                })}
+                style={{
+                    backgroundColor: background,
             }}>{text}</span>
         );
     }
@@ -63,35 +69,6 @@ class TextPrimitive extends React.PureComponent<{
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    tokenBox: {
-        // Base shape properties
-        // background: '#31363f', // TODO: Dehardcode this, allow conditional coloring
-
-        // Border for highlighting
-
-        // Content padding
-
-        // Vertically center text
-        display: 'inline-flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-
-        // No stretch along either axis (if within flex parent)
-        alignSelf: 'flex-start',
-        flex: 'none',
-
-        // No text selection
-        userSelect: 'none',
-        cursor: 'default',
-    },
-    smallTokenBox: {
-    },
-    hovered: {
-        borderColor: ColorLightBlue[400],
-    },
-    selected: {
-        borderColor: ColorBlue[600],
-    },
     tokenText: {
         borderRadius: theme.shape.borderRadius.regular,
         borderColor: 'transparent',
@@ -106,17 +83,6 @@ const styles = (theme) => ({
         fontFamily: theme.typography.monospace.fontFamily,
         fontSize: '10pt', // TODO: Dehardcode this
         color: '#d7dae0', // TODO: Dehardcode this
-    },
-    textWrap: {
-        wordBreak: 'break-all',
-    },
-    textNoWrap: {
-        whiteSpace: 'nowrap',
-    },
-    smallTokenText: {
-    },
-    textEllipsis: {
-        textOverflow: 'ellipsis',
     },
 });
 

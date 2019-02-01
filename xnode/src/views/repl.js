@@ -100,16 +100,29 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
-                    <SandboxSettings
-                        settingsFileExists={settingsFileExists}
-                        settingsPath={settingsPath}
-                        onSelect={(sandboxName, pythonPath, scriptPath) => {
-                            this.name = sandboxName;
-                            this.executionEngine = this._createEngine(pythonPath, scriptPath);
-                        }} />
-                    <Canvas
-                        fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
-                    />
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%',
+                    }}>
+                        <div style={{
+                            width: '100%',
+                        }}>
+                            <SandboxSettings
+                                settingsFileExists={settingsFileExists}
+                                settingsPath={settingsPath}
+                                onSelect={(sandboxName, pythonPath, scriptPath) => {
+                                    this.name = sandboxName;
+                                    this.executionEngine = this._createEngine(pythonPath, scriptPath);
+                                }} />
+                        </div>
+                        <Canvas
+                            style={{
+                                flexGrow: 1,
+                            }}
+                            fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
+                        />
+                    </div>
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element,

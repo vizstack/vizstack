@@ -5,6 +5,7 @@ import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
 import type { ViewerProps } from '../Viewer';
+import ColorLightBlue from "@material-ui/core/colors/lightBlue";
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -15,6 +16,8 @@ import type { ViewerProps } from '../Viewer';
 class FlowLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
+
+    isHovered: boolean,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     elements: Array<ViewerProps>,
@@ -32,10 +35,15 @@ class FlowLayout extends React.PureComponent<{
         const {
             classes,
             elements,
+            isHovered,
         } = this.props;
 
         return (
-            <div>
+            <div className={classNames({
+                [classes.root]: true,
+                [classes.hovered]: isHovered,
+                [classes.notHovered]: !isHovered,
+            })}>
                 {elements.map((viewerProps, i) => {
                     return (
                         <Viewer key={i} {...viewerProps} />
@@ -51,35 +59,16 @@ class FlowLayout extends React.PureComponent<{
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    grid: {
-        display: 'inline-grid',
-        gridGap: '10px',
-        justifyContent: 'start',
-        gridAutoColumns: 'max-content',
-        gridAutoRows: 'max-content',
+    root: {
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderRadius: theme.shape.borderRadius.regular,
     },
-    elemCell: {
-        paddingLeft: 1, // TODO: Dehardcode this
-        paddingRight: 1, // TODO: Dehardcode this
-        paddingTop: 1, // TODO: Dehardcode this
-        paddingBottom: 1, // TODO: Dehardcode this
+    hovered: {
+        borderColor: ColorLightBlue[400],
     },
-    indexCell: {
-        lineHeight: '6pt', // TODO: Dehardcode this
-    },
-    motifText: {
-        fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '14pt', // TODO: Dehardcode this, same as TextPrimitive.tokenText
-        verticalAlign: '25%', // Offset baseline for middle alignment
-
-        // No text selection
-        userSelect: 'none',
-        cursor: 'default',
-    },
-    indexText: {
-        fontSize: '6pt', // TODO: Dehardcode this
-        userSelect: 'none',
-        cursor: 'default',
+    notHovered: {
+        borderColor: 'transparent',
     },
 });
 

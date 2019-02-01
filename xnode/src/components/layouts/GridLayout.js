@@ -5,6 +5,7 @@ import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
 import type { ViewerProps } from '../Viewer';
+import ColorLightBlue from "@material-ui/core/colors/lightBlue";
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -15,6 +16,10 @@ import type { ViewerProps } from '../Viewer';
 class GridLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
+
+    isHovered: boolean,
+
+    isCompact: boolean,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     geometries: Array<[ViewerProps, number, number, number, number]>,
@@ -32,14 +37,26 @@ class GridLayout extends React.PureComponent<{
         const {
             classes,
             geometries,
+            isCompact,
+            isHovered,
         } = this.props;
 
         return (
-            <div className={classes.grid}>
+            <div className={classNames({
+                [classes.grid]       : true,
+                [classes.compactGrid]: isCompact,
+                [classes.hoveredGrid]    : isHovered,
+                [classes.notHoveredGrid] : !isHovered,
+            })}>
                 {geometries.map(([viewerProps, col, row, width, height]) => {
                     return (
                         <div
                             key={viewerProps.vizId}
+                            className={classNames({
+                                [classes.cell]           : true,
+                                [classes.hoveredCell]    : isHovered,
+                                [classes.notHoveredCell] : !isHovered,
+                            })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
                                 gridRow: `${row + 1} / ${row + 1 + height}`,
@@ -65,30 +82,25 @@ const styles = (theme) => ({
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
+        borderStyle: 'solid',
+        borderWidth: 1,
+        borderRadius: theme.shape.borderRadius.regular,
     },
-    elemCell: {
-        paddingLeft: 1, // TODO: Dehardcode this
-        paddingRight: 1, // TODO: Dehardcode this
-        paddingTop: 1, // TODO: Dehardcode this
-        paddingBottom: 1, // TODO: Dehardcode this
+    compactGrid: {
+        gridGap: '0px',
     },
-    indexCell: {
-        lineHeight: '6pt', // TODO: Dehardcode this
+    hoveredGrid: {
+        borderColor: ColorLightBlue[400], // TODO: Dehardcode this
     },
-    motifText: {
-        fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '14pt', // TODO: Dehardcode this, same as TextPrimitive.tokenText
-        verticalAlign: '25%', // Offset baseline for middle alignment
-
-        // No text selection
-        userSelect: 'none',
-        cursor: 'default',
+    notHoveredGrid: {
+        borderColor: 'transparent',
     },
-    indexText: {
-        fontSize: '6pt', // TODO: Dehardcode this
-        userSelect: 'none',
-        cursor: 'default',
+    cell: {
     },
+    hoveredCell: {
+    },
+    notHoveredCell: {
+    }
 });
 
 export default withStyles(styles)(GridLayout);

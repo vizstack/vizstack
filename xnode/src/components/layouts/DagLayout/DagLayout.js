@@ -221,10 +221,11 @@ class DagEdge extends React.PureComponent<{
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-class DagLayout extends React.Component<
-    {
+class DagLayout extends React.Component<{
         /** CSS-in-JS styling object. */
         classes: {},
+
+        isHovered: boolean,
 
         /** Node elements that are props to `Viewer` sub-components. */
         nodes: {

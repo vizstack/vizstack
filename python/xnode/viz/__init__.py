@@ -461,6 +461,8 @@ class GridLayout(Viz):
         self._num_rows = max(y + h for _, _, y, _, h in geometries) if len(geometries) > 0 else 1
         self._geometries: List[Tuple[Viz, int, int, int, int]] = [(get_viz(o), x, y, w, h)
                                                                   for o, x, y, w, h in geometries]
+        self._right_ellipsis = TextPrimitive('...')
+        self._bottom_ellipsis = TextPrimitive('...')
 
     def compile_full(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
         return (
@@ -469,9 +471,20 @@ class GridLayout(Viz):
         )
 
     def compile_compact(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
-        visible_geometries = [(o, x, y, min(w, self.COMPACT_COLS - x), min(h, self.COMPACT_ROWS - y))
-                              for o, x, y, w, h in self._geometries
-                              if x < self.COMPACT_COLS and y < self.COMPACT_ROWS]
+        visible_geometries = []
+        extends_right = False
+        extends_below = False
+        for o, x, y, w, h in self._geometries:
+            if x >= self.COMPACT_COLS:
+                extends_right = True
+            if y >= self.COMPACT_ROWS:
+                extends_below = True
+            if x < self.COMPACT_COLS and y < self.COMPACT_ROWS:
+                visible_geometries.append((o, x, y, min(w, self.COMPACT_COLS - x), min(h, self.COMPACT_ROWS - y)))
+        if extends_right:
+            visible_geometries.append((self._right_ellipsis, self.COMPACT_COLS, 0, 1, self.COMPACT_ROWS))
+        if extends_below:
+            visible_geometries.append((self._bottom_ellipsis, 0, self.COMPACT_ROWS, self.COMPACT_COLS, 1))
         return (
             GridLayoutModel(visible_geometries),
             [o for o, _, _, _, _ in visible_geometries]
