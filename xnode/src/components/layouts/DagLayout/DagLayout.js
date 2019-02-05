@@ -70,7 +70,7 @@ class DagNode extends React.PureComponent<{
                         }
                     >
                         {({ measureRef }) => (
-                            <div ref={measureRef} style={{display: 'inline-block'}}>
+                            <div ref={measureRef} style={{ display: 'inline-block' }}>
                                 <Viewer {...viewerProps} />
                             </div>
                         )}
@@ -294,37 +294,45 @@ class DagLayout extends React.Component<
         console.log('prop edges', this.props.edges);
 
         // We want us to be mounted already, then populate self. Triggering other render.
-        this.setState(Immutable({
-            shouldLayout: false,
-            nodes: obj2obj(this.props.nodes, (k, v) => [
-                k,
-                { id: k, children: [], orientation: 'vertical', width: 100000 },  // TODO: Dehard
-            ]), // TODO: remove orientation
-            edges: obj2obj(this.props.edges, (k, v) => [
-                k,
-                { id: k, startId: v.startId, endId: v.endId, startSide: v.startSide || 'up', endSide: v.endSide || 'down' },
-            ]),
-            containers: obj2obj(this.props.containers, (k, v) => [
-                k,
-                {
-                    id: k,
-                    children: v.elements,
-                    orientation:
-                        v.flowDirection === 'left' || v.flowDirection === 'right'
-                            ? 'horizontal'
-                            : 'vertical',
+        this.setState(
+            Immutable({
+                shouldLayout: false,
+                nodes: obj2obj(this.props.nodes, (k, v) => [
+                    k,
+                    { id: k, children: [], orientation: 'vertical', width: 100000 }, // TODO: Dehard
+                ]), // TODO: remove orientation
+                edges: obj2obj(this.props.edges, (k, v) => [
+                    k,
+                    {
+                        id: k,
+                        startId: v.startId,
+                        endId: v.endId,
+                        startSide: v.startSide || 'up',
+                        endSide: v.endSide || 'down',
+                    },
+                ]),
+                containers: obj2obj(this.props.containers, (k, v) => [
+                    k,
+                    {
+                        id: k,
+                        children: v.elements,
+                        orientation:
+                            v.flowDirection === 'left' || v.flowDirection === 'right'
+                                ? 'horizontal'
+                                : 'vertical',
+                    },
+                ]),
+                ordering: [
+                    ...obj2arr(this.props.nodes, (k, v) => ({ type: 'node', id: k })),
+                    ...obj2arr(this.props.containers, (k, v) => ({ type: 'container', id: k })),
+                    ...obj2arr(this.props.edges, (k, v) => ({ type: 'edge', id: k })),
+                ],
+                size: {
+                    width: 0,
+                    height: 0,
                 },
-            ]),
-            ordering: [
-                ...obj2arr(this.props.nodes, (k, v) => ({ type: 'node', id: k })),
-                ...obj2arr(this.props.containers, (k, v) => ({ type: 'container', id: k })),
-                ...obj2arr(this.props.edges, (k, v) => ({ type: 'edge', id: k })),
-            ],
-            size: {
-                width: 0,
-                height: 0,
-            },
-        }));
+            }),
+        );
 
         this.forceUpdate();
     }
@@ -332,11 +340,15 @@ class DagLayout extends React.Component<
     shouldComponentUpdate(nextProps, nextState) {
         // Prevent component from re-rendering each time a dimension is populated/updated unless all
         // dimensions are populated.
-        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height);  // TODO: Add width
-        console.log("DagLayout -- shouldComponentUpdate(): ", shouldUpdate, "nextState.nodes", Object.values(nextState.nodes));
+        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height); // TODO: Add width
+        console.log(
+            'DagLayout -- shouldComponentUpdate(): ',
+            shouldUpdate,
+            'nextState.nodes',
+            Object.values(nextState.nodes),
+        );
         return shouldUpdate;
     }
-
 
     componentDidUpdate() {
         // By default, a `PureComponent` will update if props and state have changed according to
@@ -361,7 +373,12 @@ class DagLayout extends React.Component<
         // TODO: formalize this tolerance measure
         const oldWidth = this.state.nodes[nodeId].width;
         const oldHeight = this.state.nodes[nodeId].height;
-        if (oldWidth !== undefined && oldHeight !== undefined && -5 < oldWidth - width < 5 && -5 < oldHeight - height < 5) {
+        if (
+            oldWidth !== undefined &&
+            oldHeight !== undefined &&
+            -5 < oldWidth - width < 5 &&
+            -5 < oldHeight - height < 5
+        ) {
             return;
         }
         this.setState((state) =>
@@ -385,7 +402,7 @@ class DagLayout extends React.Component<
             Object.values(nodes.asMutable({ deep: true })).concat(
                 Object.values(containers.asMutable({ deep: true })),
             ),
-            Object.values(edges.asMutable({deep: true})),
+            Object.values(edges.asMutable({ deep: true })),
             (
                 width: number,
                 height: number,
@@ -403,8 +420,9 @@ class DagLayout extends React.Component<
                 // Save elements into state, and no more layout out until explicitly triggered.
                 this.setState((state) =>
                     Immutable(state).merge({
-                        nodes: arr2obj(nodes, (elem) =>
-                            !containerKeys.has(elem.id) ? [elem.id, elem] : undefined,  // TODO: Change value to elem
+                        nodes: arr2obj(
+                            nodes,
+                            (elem) => (!containerKeys.has(elem.id) ? [elem.id, elem] : undefined), // TODO: Change value to elem
                         ),
                         containers: arr2obj(nodes, (elem) =>
                             containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
@@ -473,7 +491,9 @@ class DagLayout extends React.Component<
 
                                 case 'edge': {
                                     const { points } = this.state.edges[id];
-                                    return <DagEdge key={`e${id}`} points={points} classes={classes} />;
+                                    return (
+                                        <DagEdge key={`e${id}`} points={points} classes={classes} />
+                                    );
                                 }
 
                                 case 'container': {
@@ -584,7 +604,7 @@ const styles = (theme) => ({
     dagContainer: {
         fill: '#000000', // TODO: Change this.
         fillOpacity: 0.17,
-        strokeWidth: 3
+        strokeWidth: 3,
     },
 });
 

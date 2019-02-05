@@ -1,5 +1,5 @@
-import {DagEdgeLayoutSpec, DagNodeLayoutSpec} from "./layout";
-import ELK from "elkjs";
+import { DagEdgeLayoutSpec, DagNodeLayoutSpec } from './layout';
+import ELK from 'elkjs';
 
 class GraphProperties {
     constructor(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayoutSpec>) {
@@ -26,11 +26,11 @@ class GraphProperties {
         edges.forEach((edge) => (this._edges[edge.id] = edge));
 
         this._sideMap = {
-            'left': 'WEST',
-            'right': 'EAST',
-            'up': 'NORTH',
-            'down': 'SOUTH',
-        }
+            left: 'WEST',
+            right: 'EAST',
+            up: 'NORTH',
+            down: 'SOUTH',
+        };
     }
 
     _setHierarchyHeight(nodeId: DagElementId) {
@@ -53,10 +53,12 @@ class GraphProperties {
     getCommonAncestor(nodeId1: DagElementId, nodeId2: DagElementId): DagElementId {
         while (nodeId1 !== nodeId2) {
             console.log(nodeId1, nodeId2);
-            if (nodeId2 === null || this.getHierarchyHeight(nodeId1) < this.getHierarchyHeight(nodeId2)) {
+            if (
+                nodeId2 === null ||
+                this.getHierarchyHeight(nodeId1) < this.getHierarchyHeight(nodeId2)
+            ) {
                 nodeId1 = this.getParent(nodeId1);
-            }
-            else {
+            } else {
                 nodeId2 = this.getParent(nodeId2);
             }
         }
@@ -132,12 +134,7 @@ function getElkGraph(nodes: Array<DagNodeLayoutSpec>, edges: Array<DagEdgeLayout
     // Create the ELK nodes
     nodes.forEach(
         (node) =>
-            (elkNodes[node.id] = createElkNode(
-                node,
-                outPorts[node.id],
-                inPorts[node.id],
-                graph,
-            )),
+            (elkNodes[node.id] = createElkNode(node, outPorts[node.id], inPorts[node.id], graph)),
     );
     // Assign ELK nodes to their proper parents
     nodes.forEach((node) => {
@@ -220,7 +217,7 @@ class ELKEdgeSegment {
                 endNodeId = graph.getParent(endNodeId);
             }
         }
-        if(this._startPortId + this._endPortId === '1_1o2_0o') {
+        if (this._startPortId + this._endPortId === '1_1o2_0o') {
             console.log(startNodeId, endNodeId);
         }
         if (startNodeId === null) {
@@ -343,12 +340,12 @@ function getEdgeSegments(graph: GraphProperties) {
         // }
 
         const inMap = {
-            'horizontal': 'WEST',
-            'vertical': 'SOUTH',
+            horizontal: 'WEST',
+            vertical: 'SOUTH',
         };
         const outMap = {
-            'horizontal': 'EAST',
-            'vertical': 'NORTH',
+            horizontal: 'EAST',
+            vertical: 'NORTH',
         };
 
         // Move from the terminals up through the node parent hierarchy until a common ancestor is found; then, link
@@ -368,7 +365,11 @@ function getEdgeSegments(graph: GraphProperties) {
                         graph,
                     ),
                 );
-                inPorts[endId].push(firstInPortAssigned ? inMap[graph.getOrientation(graph.getParent(endId))] : graph.getEndSide(edgeId));
+                inPorts[endId].push(
+                    firstInPortAssigned
+                        ? inMap[graph.getOrientation(graph.getParent(endId))]
+                        : graph.getEndSide(edgeId),
+                );
                 fromEdgeSegments.concat(toEdgeSegments.reverse()).forEach((edgeSegment, i) => {
                     edgeSegment.setIndex(i);
                     edgeSegments[edgeSegment.getParentNodeId()].push(edgeSegment.toElkEdge());
@@ -381,7 +382,7 @@ function getEdgeSegments(graph: GraphProperties) {
                 graph.getParent(startId) === null ||
                 (graph.getParent(endId) !== null &&
                     graph.getHierarchyHeight(graph.getParent(startId)) >
-                    graph.getHierarchyHeight(graph.getParent(endId)))
+                        graph.getHierarchyHeight(graph.getParent(endId)))
             ) {
                 toEdgeSegments.push(
                     new ELKEdgeSegment(
@@ -397,7 +398,11 @@ function getEdgeSegments(graph: GraphProperties) {
                         graph,
                     ),
                 );
-                inPorts[endId].push(firstInPortAssigned ? inMap[graph.getOrientation(graph.getParent(endId))] : graph.getEndSide(edgeId));
+                inPorts[endId].push(
+                    firstInPortAssigned
+                        ? inMap[graph.getOrientation(graph.getParent(endId))]
+                        : graph.getEndSide(edgeId),
+                );
                 firstInPortAssigned = true;
                 endId = graph.getParent(endId);
                 continue;
@@ -472,18 +477,22 @@ function createElkNode(
     inPorts.forEach((portSide, i) => {
         let newPort = {
             id: getPortId(node.id, i, true),
-            properties: portSide ? {
-                'port.side': portSide,
-            } : {},
+            properties: portSide
+                ? {
+                      'port.side': portSide,
+                  }
+                : {},
         };
         elkNode.ports.push(newPort);
     });
     outPorts.forEach((portSide, i) => {
         let newPort = {
             id: getPortId(node.id, i, false),
-            properties: portSide ? {
-                'port.side': portSide,
-            } : {},
+            properties: portSide
+                ? {
+                      'port.side': portSide,
+                  }
+                : {},
         };
         elkNode.ports.push(newPort);
     });
@@ -536,14 +545,16 @@ function layoutElkGraph(
 ) {
     console.log(graph);
     const elk = new ELK();
-    elk.layout(graph).then(() => {
-        onComplete(
-            graph.width,
-            graph.height,
-            elkGraphToNodeTransforms(graph, nodes),
-            elkGraphToEdgeTransforms(graph, edges),
-        );
-    }).catch(console.error);
+    elk.layout(graph)
+        .then(() => {
+            onComplete(
+                graph.width,
+                graph.height,
+                elkGraphToNodeTransforms(graph, nodes),
+                elkGraphToEdgeTransforms(graph, edges),
+            );
+        })
+        .catch(console.error);
     // layoutElkGraphRecurse(elk, getNodeLayoutOrder(graph), nodes, edges, onComplete);
 }
 
@@ -603,23 +614,25 @@ function layoutElkGraphRecurse(
     // lay out when `elkNode` is the root node (which cannot connect to its children) and when `elkNode` contains
     // lateral nodes.
     console.log('starting', elkNode.id, elkNode);
-    elk.layout(elkNode).then(() => {
-        console.log('finished', elkNode.id);
-        if (elkNode.id === 'temp') {
-            elkNode = elkNode.children[0];
-        }
-        // lockElkNodeLayout(elkNode);
-        if (elkNode.id !== kRootNode) {
-            layoutElkGraphRecurse(elk, toLayout.splice(1), nodes, edges, onComplete);
-        } else {
-            onComplete(
-                elkNode.width,
-                elkNode.height,
-                elkGraphToNodeTransforms(elkNode, nodes),
-                elkGraphToEdgeTransforms(elkNode, edges),
-            );
-        }
-    }).catch(console.error);
+    elk.layout(elkNode)
+        .then(() => {
+            console.log('finished', elkNode.id);
+            if (elkNode.id === 'temp') {
+                elkNode = elkNode.children[0];
+            }
+            // lockElkNodeLayout(elkNode);
+            if (elkNode.id !== kRootNode) {
+                layoutElkGraphRecurse(elk, toLayout.splice(1), nodes, edges, onComplete);
+            } else {
+                onComplete(
+                    elkNode.width,
+                    elkNode.height,
+                    elkGraphToNodeTransforms(elkNode, nodes),
+                    elkGraphToEdgeTransforms(elkNode, edges),
+                );
+            }
+        })
+        .catch(console.error);
 }
 
 /** Changes an ELK node's settings so that its children cannot be rearranged by future `layout()` calls. */
