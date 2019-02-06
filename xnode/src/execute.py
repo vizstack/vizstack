@@ -16,7 +16,7 @@ from xnode.viz._engine import VisualizationEngine
 from xnode.viz import TextPrimitive, Color
 
 # The type of the function which is called to send a message to the parent process.
-_SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool], None]
+_SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool, bool], None]
 
 
 # Taken from atom-python-debugger
@@ -111,7 +111,7 @@ class _PrintOverwriter:
             filename, lineno = frame_info.filename, frame_info.lineno
             viz_id: VizId = self._engine.take_snapshot(self._unprinted_text, filename, lineno)
             viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
-            self._send_message(viz_slice, viz_id, False)
+            self._send_message(viz_slice, viz_id, False, False)
             self._unprinted_text = ''
 
     def flush(self) -> None:
@@ -133,7 +133,7 @@ class _DataclassJSONEncoder(json.JSONEncoder):
 
 def _send_message(
         send_queue: Queue, viz_slice: Optional[VizTableSlice], view_viz_id: Optional[VizId],
-        refresh: bool
+        refresh: bool, script_finished: bool,
 ) -> None:
     """Writes a message to the client containing information about symbols and the program state.
 
@@ -145,11 +145,13 @@ def _send_message(
             if no symbol should be viewed.
         refresh: Whether the client should clear its renderings and reset its viz table information before
             incorporating the new slice.
+        script_finished: Whether the executor has finished running the script.
     """
     message = ExecutionEngineMessage(
         view_viz_id,
         viz_slice,
         refresh,
+        script_finished,
     )
     send_queue.put(json.dumps(message, cls=_DataclassJSONEncoder))
 
@@ -173,7 +175,7 @@ def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *obj
         viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id,
                                                              expansion_mode=None if expansion_mode is None
                                                              else ExpansionMode(expansion_mode))
-        send_message(viz_slice, viz_id, False)
+        send_message(viz_slice, viz_id, False, False)
 
 
 def _fetch_viz(
@@ -190,7 +192,7 @@ def _fetch_viz(
         viz_id: The symbol ID of the object whose slice should be sent.
     """
     viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id, expansion_state)
-    send_message(viz_slice, None, False)
+    send_message(viz_slice, None, False, False)
 
 
 # ======================================================================================================================
@@ -220,7 +222,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
     send_message: _SendMessage = functools.partial(_send_message, send_queue)
 
     # this won't be processed by the engine, a "junk" message must be sent for some reason
-    send_message(None, None, False)
+    send_message(None, None, False, False)
 
     engine: VisualizationEngine = VisualizationEngine()
     xnode.set_view_fn(functools.partial(_execute_watch, send_message, engine))
@@ -230,8 +232,10 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
 
     executor: _ScriptExecutor = _ScriptExecutor()
     try:
-        send_message(None, None, True)
+        send_message(None, None, True, False)
         executor.execute(script_path)
+        # Indicate to the client that the script has finished executing
+        send_message(None, None, False, True)
         while True:
             request: Mapping[str, Union[VizId, ExpansionMode]] = receive_queue.get(True)
             if request is None:
@@ -257,7 +261,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
                 TextPrimitive(clean_error_msg, Color.ERROR), result.group(1), int(result.group(2))
             )
             viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
-            send_message(viz_slice, viz_id, False)
+            send_message(viz_slice, viz_id, False, True)
         except:
             # if something goes wrong in parsing the traceback, write it directly
             print(raw_error_msg)

@@ -17,12 +17,21 @@ class GridLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
+    /** Whether the Viz is currently being hovered over by the cursor. */
     isHovered: boolean,
 
-    isCompact: boolean,
+    /** Whether the Viz should lay out its contents spaciously. */
+    isFullyExpanded: boolean,
+
+    /** Event listeners which should be assigned to the Viz's outermost node. */
+    mouseProps: {
+        onClick: (e) => void,
+        onMouseOver: (e) => void,
+        onMouseOut: (e) => void,
+    },
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    geometries: Array<[ViewerProps, number, number, number, number]>,
+    elements: Array<[ViewerProps, number, number, number, number]>,
 }> {
     /** Prop default values. */
     static defaultProps = {
@@ -36,19 +45,22 @@ class GridLayout extends React.PureComponent<{
     render() {
         const {
             classes,
-            geometries,
-            isCompact,
+            elements,
+            isFullyExpanded,
             isHovered,
+            mouseProps,
         } = this.props;
 
         return (
             <div className={classNames({
                 [classes.grid]       : true,
-                [classes.compactGrid]: isCompact,
+                [classes.compactGrid]: !isFullyExpanded,
                 [classes.hoveredGrid]    : isHovered,
                 [classes.notHoveredGrid] : !isHovered,
-            })}>
-                {geometries.map(([viewerProps, col, row, width, height]) => {
+            })}
+                 {...mouseProps}
+            >
+                {elements.map(([viewerProps, col, row, width, height]) => {
                     return (
                         <div
                             key={viewerProps.vizId}
@@ -78,19 +90,20 @@ class GridLayout extends React.PureComponent<{
 const styles = (theme) => ({
     grid: {
         display: 'inline-grid',
-        gridGap: '10px',
+        gridGap: `${theme.spacing.unit}px`,
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
-        borderStyle: 'solid',
-        borderWidth: 1,
-        borderRadius: theme.shape.borderRadius.regular,
+        borderStyle: theme.shape.border.style,
+        borderWidth: theme.shape.border.width,
+        borderRadius: theme.shape.border.radius,
+        padding: theme.spacing.separate,
     },
     compactGrid: {
-        gridGap: '0px',
+        gridGap: `${theme.spacing.tight}px`,
     },
     hoveredGrid: {
-        borderColor: ColorLightBlue[400], // TODO: Dehardcode this
+        borderColor: theme.palette.primary.light,
     },
     notHoveredGrid: {
         borderColor: 'transparent',

@@ -14,7 +14,18 @@ class TextPrimitive extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
+    /** Whether the Viz is currently being hovered over by the cursor. */
     isHovered: boolean,
+
+    /** Whether the Viz should lay out its contents spaciously. */
+    isFullyExpanded: boolean,
+
+    /** Event listeners which should be assigned to the Viz's outermost node. */
+    mouseProps: {
+        onClick: (e) => void,
+        onMouseOver: (e) => void,
+        onMouseOut: (e) => void,
+    },
 
     /** Text string displayed by token. */
     text: string,
@@ -28,39 +39,22 @@ class TextPrimitive extends React.PureComponent<{
     render() {
         const {
             classes,
-            isHovered,
             text,
             color,
+            mouseProps,
         } = this.props;
 
-        let background = undefined;
-
-        // TODO: pick these colors and use theme instead
-        switch(color) {
-            case 'primary':
-                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
-                break;
-            case 'secondary':
-                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
-                break;
-            case 'emphasis':
-                background = `rgba(90, 90, 90, ${isHovered ? 1.0: 0.5})`;
-                break;
-            case 'error':
-                background = `rgba(160, 25, 25, ${isHovered ? 1.0: 0.5})`;
-                break;
-            case 'invisible':
-                background = 'transparent';
-                break;
-        }
         const textBreaks = text.split('\n');
         return (
             <span className={classNames({
                 [classes.tokenText]  : true,
+                [classes.primary] : color === 'primary',
+                [classes.secondary] : color === 'secondary',
+                [classes.emphasis] : color === 'emphasis',
+                [classes.error] : color === 'error',
                 })}
-                style={{
-                    backgroundColor: background,
-            }}>{textBreaks.map((text, i) => {
+                  {...mouseProps}
+            >{textBreaks.map((text, i) => {
                 if (i < textBreaks.length - 1) {
                     return (
                         <span key={i}>{text}<br/></span>
@@ -79,19 +73,47 @@ class TextPrimitive extends React.PureComponent<{
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     tokenText: {
-        borderRadius: theme.shape.borderRadius.regular,
-        borderColor: 'transparent',
-        borderStyle: 'solid',
-        borderWidth: 1, // TODO: Dehardcode this
-        paddingLeft: 2, // TODO: Dehardcode this
-        paddingRight: 2, // TODO: Dehardcode this
-        paddingTop: 0, // TODO: Dehardcode this
-        paddingBottom: 0, // TODO: Dehardcode this
-        textAlign: 'center',
+        paddingLeft: theme.spacing.unit / 2,
+        paddingRight: theme.spacing.unit / 2,
+        paddingTop: theme.spacing.unit / 2,
+        paddingBottom: theme.spacing.unit / 2,
+        marginLeft: theme.spacing.unit,
+        marginRight: theme.spacing.unit,
+        textAlign: 'left',
         overflow: 'hidden',
+        width: 'fit-content',
         fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '10pt', // TODO: Dehardcode this
-        color: '#d7dae0', // TODO: Dehardcode this
+        fontSize: theme.typography.fontSize.primary,
+        color: theme.palette.text.primary,
+        borderRadius: theme.shape.border.radius,
+    },
+    primary: {
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
+        '&:hover': {
+            backgroundColor: theme.palette.primary.light,
+        }
+    },
+    secondary: {
+        backgroundColor: theme.palette.secondary.main,
+        color: theme.palette.secondary.contrastText,
+        '&:hover': {
+            backgroundColor: theme.palette.secondary.light,
+        }
+    },
+    emphasis: {
+        backgroundColor: theme.palette.emphasis.main,
+        color: theme.palette.emphasis.contrastText,
+        '&:hover': {
+            backgroundColor: theme.palette.emphasis.light,
+        }
+    },
+    error: {
+        backgroundColor: theme.palette.error.main,
+        color: theme.palette.error.contrastText,
+        '&:hover': {
+            backgroundColor: theme.palette.error.light,
+        }
     },
 });
 

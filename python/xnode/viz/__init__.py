@@ -446,7 +446,7 @@ class GridLayout(Viz):
 
     def __init__(
             self,
-            geometries: List[Tuple[Any, int, int, int, int]],
+            elements: List[Tuple[Any, int, int, int, int]],
             name: Optional[str] = None,
             expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
@@ -457,37 +457,37 @@ class GridLayout(Viz):
             expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
         """
         super(GridLayout, self).__init__(name, expansion_mode)
-        self._num_cols = max(x + w for _, x, _, w, _ in geometries) if len(geometries) > 0 else 1
-        self._num_rows = max(y + h for _, _, y, _, h in geometries) if len(geometries) > 0 else 1
-        self._geometries: List[Tuple[Viz, int, int, int, int]] = [(get_viz(o), x, y, w, h)
-                                                                  for o, x, y, w, h in geometries]
+        self._num_cols = max(x + w for _, x, _, w, _ in elements) if len(elements) > 0 else 1
+        self._num_rows = max(y + h for _, _, y, _, h in elements) if len(elements) > 0 else 1
+        self._elements: List[Tuple[Viz, int, int, int, int]] = [(get_viz(o), x, y, w, h)
+                                                                  for o, x, y, w, h in elements]
         self._right_ellipsis = TextPrimitive('...')
         self._bottom_ellipsis = TextPrimitive('...')
 
     def compile_full(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
         return (
-            GridLayoutModel(self._geometries),
-            [o for o, _, _, _, _ in self._geometries]
+            GridLayoutModel(self._elements),
+            [o for o, _, _, _, _ in self._elements]
         )
 
     def compile_compact(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
-        visible_geometries = []
+        visible_elements = []
         extends_right = False
         extends_below = False
-        for o, x, y, w, h in self._geometries:
+        for o, x, y, w, h in self._elements:
             if x >= self.COMPACT_COLS:
                 extends_right = True
             if y >= self.COMPACT_ROWS:
                 extends_below = True
             if x < self.COMPACT_COLS and y < self.COMPACT_ROWS:
-                visible_geometries.append((o, x, y, min(w, self.COMPACT_COLS - x), min(h, self.COMPACT_ROWS - y)))
+                visible_elements.append((o, x, y, min(w, self.COMPACT_COLS - x), min(h, self.COMPACT_ROWS - y)))
         if extends_right:
-            visible_geometries.append((self._right_ellipsis, self.COMPACT_COLS, 0, 1, self.COMPACT_ROWS))
+            visible_elements.append((self._right_ellipsis, self.COMPACT_COLS, 0, 1, self.COMPACT_ROWS))
         if extends_below:
-            visible_geometries.append((self._bottom_ellipsis, 0, self.COMPACT_ROWS, self.COMPACT_COLS, 1))
+            visible_elements.append((self._bottom_ellipsis, 0, self.COMPACT_ROWS, self.COMPACT_COLS, 1))
         return (
-            GridLayoutModel(visible_geometries),
-            [o for o, _, _, _, _ in visible_geometries]
+            GridLayoutModel(visible_elements),
+            [o for o, _, _, _, _ in visible_elements]
         )
 
     def __str__(self) -> str:
@@ -587,10 +587,10 @@ class DagLayoutModel(VizModel):
 
 class GridLayoutModel(VizModel):
 
-    def __init__(self, geometries: List[Tuple['Viz', int, int, int, int]]):
+    def __init__(self, elements: List[Tuple['Viz', int, int, int, int]]):
         super(GridLayoutModel, self).__init__(
             'GridLayout', {
-                'geometries': geometries,
+                'elements': elements,
             }
         )
 

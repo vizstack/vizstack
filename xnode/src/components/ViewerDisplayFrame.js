@@ -60,13 +60,13 @@ class ViewerDisplayFrame extends React.Component<{
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     container: {
-        paddingTop: 1, // TODO: Dehardcode this
-        paddingBottom: 1, // TODO: Dehardcode this
+        paddingTop: theme.spacing.unit,
+        paddingBottom: theme.spacing.unit,
     },
     buttons: {
         position: 'absolute',
-        right: 2, // TODO: Dehardcode this
-        top: 2, // TODO: Dehardcode this
+        right: theme.spacing.unit,
+        top: theme.spacing.unit,
     },
 });
 

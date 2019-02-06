@@ -30,6 +30,7 @@ import {
 } from '../state/canvas/actions';
 import type { VizId, VizSpec } from '../state/viztable/outputs';
 import { getVizSpec } from '../state/viztable/outputs';
+import Progress from '../components/DOMProgress';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
@@ -96,6 +97,7 @@ export default class REPL {
         }
 
         // Initialize React root component for Canvas
+        this.progressComponent = undefined;
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
@@ -105,6 +107,7 @@ export default class REPL {
                         flexDirection: 'column',
                         height: '100%',
                     }}>
+                        <Progress ref={(element) => {this.progressComponent = element}}/>
                         <div style={{
                             width: '100%',
                         }}>
@@ -205,7 +208,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message: ExecutionEngineMessage) => {
             console.debug(`repl ${this.name} -- received message: `, JSON.parse(message));
-            const { viewedVizId, vizTableSlice, shouldRefresh } = JSON.parse(message);
+            const { viewedVizId, vizTableSlice, shouldRefresh, scriptFinished } = JSON.parse(message);
             if (shouldRefresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearVizTableAction());
@@ -215,6 +218,9 @@ export default class REPL {
             }
             if (viewedVizId) {
                 this.store.dispatch(showViewerInCanvasAction(viewedVizId));
+            }
+            if (scriptFinished) {
+                this.progressComponent.hide();
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
             // focus so the user can keep typing.
@@ -252,10 +258,37 @@ export default class REPL {
      *     Indicates what parts of the file changed. TODO: define this format and use it
      */
     onFileChanged(filePath: string, changes: {}) {
-        changes = ''; // TOOD: Right now not sending specific changes.
+        changes = ''; // TODO: Right now not sending specific changes.
         console.debug(`repl ${this.name} -- change to ${filePath}`);
         if (this.executionEngine) {
             this.executionEngine.send(`change:${filePath}?${changes}`);
+            this.progressComponent.showIndeterminate();
         }
+        else {
+            this.progressComponent.hide();
+        }
+    }
+
+    /**
+     * Triggered immediately after a file is edited. Should not trigger the execution engine, since the change may not
+     * have finished; that behavior should be done in `onFileChanged()`.
+     * @param  filePath
+     *     Absolute path of file that was edited.
+     * @param  changes
+     *     Indicates what parts of the file edited. TODO: define this format and use it
+     */
+    onFileEdit(filePath: string, changes: {}) {
+        if (this.executionEngine) {
+            this.progressComponent.showDeterminate();
+        }
+    }
+
+    /**
+     * Triggered when there is a certain amount of time remaining before a change to a file will be submitted.
+     * @param remainingTime
+     * @param maxTime
+     */
+    setTimeToFileChange(remainingTime: number, maxTime: number) {
+        this.progressComponent.setProgress(((maxTime - remainingTime) / maxTime) * 100);
     }
 }

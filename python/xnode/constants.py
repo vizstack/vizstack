@@ -61,11 +61,12 @@ class ExecutionEngineMessage(_Dataclass):
 
     def __init__(
             self, viewed_viz_id: Optional[VizId], viz_table_slice: Optional[VizTableSlice],
-            should_refresh: bool
+            should_refresh: bool, script_finished: bool,
     ) -> None:
         self.viewedVizId: Optional[VizId] = viewed_viz_id
         self.vizTableSlice: Optional[VizTableSlice] = viz_table_slice
         self.shouldRefresh: bool = should_refresh
+        self.scriptFinished: bool = script_finished
 
 
 # Identifies the summary, compact, and full models of a particular `VizSpec`.

@@ -85,32 +85,61 @@ class Viewer extends React.Component<
      */
     getVizComponent(model: VizModel): React.Component {
         const { isHovered, expansionMode } = this.state;
-        const { fetchVizModel } = this.props;
+        const { vizId, fetchVizModel } = this.props;
+        // Each Viz component receives `mouseProps`, which define mouse events for highlighting and viewer expansion.
+        // The Viz component must add these props to a node in its `render()` function. This allows the Viz to control
+        // what its outermost node is instead of the Viewer having to wrap it.
+        const mouseProps = {
+            onClick: (e) => {
+                e.stopPropagation();
+                const expansionModeNext = kModelTransitionOrder[expansionMode];
+                fetchVizModel(vizId, expansionModeNext);
+                this.setState((state) => Immutable(state).set('expansionMode', expansionModeNext));
+            },
+            onMouseOver: (e) => {
+                e.stopPropagation();
+                this.setState((state) => Immutable(state).set('isHovered', true));
+            },
+            onMouseOut: (e) => {
+                e.stopPropagation();
+                this.setState((state) => Immutable(state).set('isHovered', false));
+            },
+        };
+
+        const generalProps = {
+            mouseProps,
+            isHovered,
+            isFullyExpanded: expansionMode === 'full'
+        };
+        let elements;
         switch (model.type) {
             // Primitives
             // ----------
 
             case 'TextPrimitive':
                 const { text, color } = (model: TextPrimitiveModel).contents;
-                return <TextPrimitive isHovered={isHovered} text={text}
-                                       color={color ? color : 'primary'} />;
+                return <TextPrimitive
+                    {...generalProps}
+                    text={text}
+                    color={color ? color : 'primary'} />;
 
             // Layouts
             // -------
 
             case 'FlowLayout':
-                const { elements } = (model: FlowLayoutModel).contents;
-                return <FlowLayout isHovered={isHovered} elements={elements.map((vizId) => {
-                    return {vizId, fetchVizModel}
-                })} />;
+                elements = (model: FlowLayoutModel).contents.elements;
+                return <FlowLayout
+                    {...generalProps}
+                    elements={elements.map((vizId) => {
+                        return {vizId, fetchVizModel}
+                    })} />;
 
             case 'GridLayout':
-                const { geometries } = (model: GridLayoutModel).contents;
+                elements = (model: GridLayoutModel).contents.elements;
                 return (
                     <GridLayout
-                        isCompact={expansionMode === 'compact'}
-                        isHovered={isHovered}
-                        geometries={geometries.map(([vizId, col, row, width, height]) => ([{
+                        {...generalProps}
+                        elements={elements.map(([vizId, col, row, width, height]) => ([{
                             vizId,
                             fetchVizModel,
                         }, col, row, width, height]))}
@@ -121,7 +150,7 @@ class Viewer extends React.Component<
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
                 return (
                     <DagLayout
-                        isHovered={isHovered}
+                        {...generalProps}
                         nodes={obj2obj(nodes, (id, spec) => [
                             id,
                             {
@@ -138,7 +167,7 @@ class Viewer extends React.Component<
 
     /** Renderer. */
     render() {
-        const { vizId, vizTable, classes, fetchVizModel } = this.props;
+        const { vizId, vizTable, classes } = this.props;
         const { expansionMode } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
@@ -166,29 +195,7 @@ class Viewer extends React.Component<
                 model = vizSpec.summaryModel;
                 break;
         }
-        return (
-            <span
-                className={classNames({
-                    [classes.box]: true,
-                })}
-                onClick={(e) => {
-                    e.stopPropagation();
-                    const expansionModeNext = kModelTransitionOrder[expansionMode];
-                    fetchVizModel(vizId, expansionModeNext);
-                    this.setState((state) => Immutable(state).set('expansionMode', expansionModeNext));
-                }}
-                onMouseOver={(e) => {
-                    e.stopPropagation();
-                    this.setState((state) => Immutable(state).set('isHovered', true));
-                }}
-                onMouseOut={(e) => {
-                    e.stopPropagation();
-                    this.setState((state) => Immutable(state).set('isHovered', false));
-                }}
-            >
-            {this.getVizComponent(model)}
-        </span>
-        );
+        return this.getVizComponent(model);
     }
 }
 
@@ -199,14 +206,7 @@ class Viewer extends React.Component<
 const styles = (theme) => ({
     // css-key: value,// Border for highlighting
     box: {
-        margin: '5px',
     },
-    hovered: {
-        // opacity: 1.0,
-    },
-    notHovered: {
-        // opacity: 0.9,
-    }
 });
 
 // To inject application state into component

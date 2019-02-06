@@ -24,6 +24,8 @@ export default {
     // Time that the active editor was last changed.
     lastChangedTime: null,
 
+    changeInterval: null,
+
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
      * @param state
@@ -116,9 +118,23 @@ export default {
      */
     waitAndRerun(changedPath, changes, delay) {
         this.lastChangedTime = new Date();
+        clearInterval(this.changeInterval);
+        this.changeInterval = setInterval(() => {
+            this.repls
+                .filter((repl) => !repl.isDestroyed)
+                .forEach((repl) => {
+                    repl.setTimeToFileChange(delay - (new Date() - this.lastChangedTime), delay);
+                });
+        }, 100);
+        this.repls
+            .filter((repl) => !repl.isDestroyed)
+            .forEach((repl) => {
+                repl.onFileEdit(changedPath, changes);
+            });
         setTimeout(() => {
             const now = new Date();
             if (now - this.lastChangedTime >= delay) {
+                clearInterval(this.changeInterval);
                 this.repls
                     .filter((repl) => !repl.isDestroyed)
                     .forEach((repl) => {

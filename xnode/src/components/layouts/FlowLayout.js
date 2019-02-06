@@ -5,7 +5,6 @@ import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
 import type { ViewerProps } from '../Viewer';
-import ColorLightBlue from "@material-ui/core/colors/lightBlue";
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -17,7 +16,18 @@ class FlowLayout extends React.PureComponent<{
     /** CSS-in-JS styling object. */
     classes: {},
 
+    /** Whether the Viz is currently being hovered over by the cursor. */
     isHovered: boolean,
+
+    /** Whether the Viz should lay out its contents spaciously. */
+    isFullyExpanded: boolean,
+
+    /** Event listeners which should be assigned to the Viz's outermost node. */
+    mouseProps: {
+        onClick: (e) => void,
+        onMouseOver: (e) => void,
+        onMouseOut: (e) => void,
+    },
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     elements: Array<ViewerProps>,
@@ -36,6 +46,7 @@ class FlowLayout extends React.PureComponent<{
             classes,
             elements,
             isHovered,
+            mouseProps,
         } = this.props;
 
         return (
@@ -43,7 +54,9 @@ class FlowLayout extends React.PureComponent<{
                 [classes.root]: true,
                 [classes.hovered]: isHovered,
                 [classes.notHovered]: !isHovered,
-            })}>
+            })}
+                 {...mouseProps}
+            >
                 {elements.map((viewerProps, i) => {
                     return (
                         <Viewer key={i} {...viewerProps} />
@@ -60,12 +73,12 @@ class FlowLayout extends React.PureComponent<{
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     root: {
-        borderStyle: 'solid',
-        borderWidth: 1,
-        borderRadius: theme.shape.borderRadius.regular,
+        borderStyle: theme.shape.border.style,
+        borderWidth: theme.shape.border.width,
+        borderRadius: theme.shape.border.radius,
     },
     hovered: {
-        borderColor: ColorLightBlue[400],
+        borderColor: theme.palette.primary.light,
     },
     notHovered: {
         borderColor: 'transparent',
