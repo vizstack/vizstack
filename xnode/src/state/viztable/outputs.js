@@ -81,38 +81,43 @@ export type KeyValueLayoutModel = {
 };
 
 /** Dag layout is ___. */
-export type DagElementId = string;
+export type DagNodeId = string;
 export type DagNodeSpec = {
     vizId: VizId,
-};
-export type DagContainerSpec = {
-    elements: Array<DagElementId>,
-    flowDirection?: 'left' | 'right' | 'up' | 'down',
+    children: Array<DagNodeId>,
+    flowDirection?: 'north' | 'south' | 'east' | 'west',
+    alignChildren?: boolean,
+    ports?: {
+        [string]: {
+            side?: 'north' | 'south' | 'east' | 'west',
+            order?: number,
+        },
+    },
     isExpanded?: boolean,
     isInteractive?: boolean,
     isVisible?: boolean,
-    isTopological?: boolean,
 };
 export type DagEdgeId = string;
 export type DagEdgeSpec = {
-    startId: DagElementId,
-    startSide?: 'left' | 'right' | 'up' | 'down',
-    endId: DagElementId,
-    endSide?: 'left' | 'right' | 'up' | 'down',
+    startId: DagNodeId,
+    endId: DagNodeId,
+    startPort?: string,
+    endPort?: string,
+    // TODO: Edge have Viz?
 };
 export type DagLayoutModel = {
     type: 'DagLayout',
     contents: {
         nodes: {
-            [DagElementId]: DagNodeSpec,
-        },
-        containers: {
-            [DagElementId]: DagContainerSpec,
+            [DagNodeId]: DagNodeSpec,
         },
         edges: {
             [DagEdgeId]: DagEdgeSpec,
         },
-        alignments: Array<Array<DagElementId>>,
+        alignments?: Array<Array<DagNodeId>>,
+        flowDirection?: 'north' | 'south' | 'east' | 'west',
+        flowSpacing?: number,
+        alignChildren?: boolean,
     },
 };
 
