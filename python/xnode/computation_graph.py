@@ -10,8 +10,8 @@ See get_viz.md for underlying principles and concepts.
 import wrapt
 import inspect
 from collections import deque
-from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz
-from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable
+from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz, _DagLayoutNode
+from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
 
 # TODO: state outputs need a special placement
 # TODO: figure out where data nodes should go
@@ -173,26 +173,24 @@ class GraphData:
         self.creator_pos = creator_pos
 
     def xn(self):
-        layout = DagLayout()
+        layout: DagLayout = DagLayout()
         graphdata_to_node = {self: layout.create_node(self.obj)}
         if self.creator_op is None:
             return layout
 
-        op_to_node = {
-            self.creator_op:
-            layout.create_node(self.creator_op)
-            if len(self.creator_op.contents) == 0 else layout.create_container(),
+        op_to_node: Dict[_FunctionCall, _DagLayoutNode] = {
+            self.creator_op: layout.create_node(self.creator_op)
         }
-        op_to_secret_container_node = dict()
+        op_to_secret_container_node: Dict[_FunctionCall, _DagLayoutNode] = dict()
         layout.create_edge(op_to_node[self.creator_op], graphdata_to_node[self])
-        ops = [self.creator_op]
+        ops: List[_FunctionCall] = [self.creator_op]
         while len(ops) > 0:
             op = ops.pop()
             op_node = op_to_node[op]
 
             # add to secret container
-            op_to_secret_container_node[op] = layout.create_container(
-                flow_direction='right', is_visible=False
+            op_to_secret_container_node[op] = layout.create_node(
+                None, flow_direction='right', is_visible=False
             )
             op_to_secret_container_node[op].add_child(op_to_node[op])
 
@@ -201,7 +199,7 @@ class GraphData:
             child = op_to_secret_container_node[op]
             while container_op is not None:
                 if container_op not in op_to_node:
-                    op_to_node[container_op] = layout.create_container()
+                    op_to_node[container_op] = layout.create_node(container_op)
                     op_to_node[container_op].add_child(child)
                     # if not graphdatum_added_to_container:
                     #     op_to_node[container_op].add_child(graphdata_to_node[])
@@ -238,10 +236,7 @@ class GraphData:
 
                 layout.create_edge(graphdata_to_node[input_graphdata], op_node)
                 if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
-                    if len(op.contents) > 0:
-                        creator_op_node = layout.create_container()
-                    else:
-                        creator_op_node = layout.create_node(input_graphdata.creator_op)
+                    creator_op_node = layout.create_node(input_graphdata.creator_op)
                     layout.create_edge(creator_op_node, graphdata_to_node[input_graphdata])
                     op_to_node[input_graphdata.creator_op] = creator_op_node
                     ops.append(input_graphdata.creator_op)

@@ -2,7 +2,7 @@
 This file defines all functions and objects which can be used by developers to create visualizations for their objects.
 """
 
-from typing import Sequence, Any, Mapping, Iterable, Optional, List, Tuple, Union
+from typing import Sequence, Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 from enum import Enum
 import types
 import inspect
@@ -282,57 +282,57 @@ class FlowLayout(Viz):
 class DagLayout(Viz):
 
     def __init__(
-            self, name: Optional[str] = None,
+            self, flow_direction: Optional[str] = None, align_children: Optional[bool] = None,
+            name: Optional[str] = None,
             expansion_mode: ExpansionMode = ExpansionMode.NONE
     ) -> None:
         super(DagLayout, self).__init__(name, expansion_mode)
+        self._flow_direction = flow_direction
+        self._align_children = align_children
         self._nodes: List['_DagLayoutNode'] = []
         self._edges: List['_DagLayoutEdge'] = []
-        self._containers: List['_DagLayoutContainer'] = []
-        self._alignments: List[List[Union['_DagLayoutNode', '_DagLayoutContainer']]] = []
+        self._alignments: List[List['_DagLayoutNode']] = []
 
     def compile_full(self) -> Tuple['DagLayoutModel', Iterable[Viz]]:
         return (
-            DagLayoutModel(self._nodes, self._containers, self._edges, self._alignments),
+            DagLayoutModel(self._nodes, self._edges, self._alignments, self._flow_direction, self._align_children),
             [node.viz for node in self._nodes],
         )
 
     def compile_compact(self) -> Tuple['DagLayoutModel', Iterable[Viz]]:
         # TODO: come up with a compact representation
         return (
-            DagLayoutModel(self._nodes, self._containers, self._edges, self._alignments),
+            DagLayoutModel(self._nodes, self._edges, self._alignments, self._flow_direction,self._align_children),
             [node.viz for node in self._nodes],
         )
 
-    def create_node(self, o: Any) -> '_DagLayoutNode':
-        node = _DagLayoutNode(str(len(self._nodes) + len(self._containers)), get_viz(o))
+    def create_node(
+            self,
+            o: Any,
+            flow_direction: Optional[str] = None,
+            align_children: Optional[bool] = None,
+            is_expanded: Optional[bool] = None,
+            is_interactive: Optional[bool] = None,
+            is_visible: Optional[bool] = None) -> '_DagLayoutNode':
+        node = _DagLayoutNode(str(len(self._nodes)),
+                              get_viz(o),
+                              flow_direction,
+                              align_children,
+                              is_expanded,
+                              is_interactive,
+                              is_visible)
         self._nodes.append(node)
         return node
 
-    def create_container(
-            self,
-            flow_direction: Optional[str] = None,
-            is_expanded: Optional[bool] = None,
-            is_interactive: Optional[bool] = None,
-            is_visible: Optional[bool] = None,
-            is_topological: Optional[bool] = None
-    ) -> '_DagLayoutContainer':
-        container = _DagLayoutContainer(
-            str(len(self._nodes) + len(self._containers)), flow_direction, is_expanded,
-            is_interactive, is_visible, is_topological
-        )
-        self._containers.append(container)
-        return container
-
     def create_edge(
-            self, start: Union['_DagLayoutNode', '_DagLayoutContainer'],
-            end: Union['_DagLayoutNode', '_DagLayoutContainer']
+            self, start: '_DagLayoutNode', end: '_DagLayoutNode', start_port: Optional[str] = None,
+            end_port: Optional[str] = None
     ) -> '_DagLayoutEdge':
-        edge = _DagLayoutEdge(str(len(self._edges)), start, end)
+        edge = _DagLayoutEdge(str(len(self._edges)), start, end, start_port, end_port)
         self._edges.append(edge)
         return edge
 
-    def align_elements(self, elements: List[Union['_DagLayoutNode', '_DagLayoutContainer']]) -> None:
+    def align_elements(self, elements: List['_DagLayoutNode']) -> None:
         self._alignments.append(elements)
 
     def __str__(self) -> str:
@@ -341,10 +341,22 @@ class DagLayout(Viz):
 
 class _DagLayoutNode:
 
-    def __init__(self, node_id: str, viz: 'Viz') -> None:
+    def __init__(self, node_id: str, viz: 'Viz',
+                 flow_direction: Optional[str],
+            align_children: Optional[bool],
+            is_expanded: Optional[bool],
+            is_interactive: Optional[bool],
+            is_visible: Optional[bool]) -> None:
         self.node_id = node_id
         self.viz = viz
-        self.container: Optional['_DagLayoutContainer'] = None
+        self.flow_direction = flow_direction
+        self.is_expanded = is_expanded
+        self.is_interactive = is_interactive
+        self.is_visible = is_visible
+        self.align_children = align_children
+        self.elements: List['_DagLayoutNode'] = []
+        self.ports: Dict[str, Mapping[str, Union[str, int]]] = {}
+        self.container: Optional['_DagLayoutNode'] = None
 
     def get_id(self) -> str:
         return self.node_id
@@ -352,24 +364,56 @@ class _DagLayoutNode:
     def to_dict(self) -> Mapping[str, Any]:
         return {
             'vizId': self.viz,
+            'elements': [item.get_id() for item in self.elements],
+            'flowDirection': self.flow_direction,
+            'isExpanded': self.is_expanded,
+            'isInteractive': self.is_interactive,
+            'isVisible': self.is_visible,
+            'alignChildren': self.align_children,
+            'ports': self.ports,
         }
 
-    def get_container(self) -> '_DagLayoutContainer':
+    # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
+    def create_port(self, port_name: str, side: Optional[str]=None, order: Optional[int]=None):
+        assert port_name not in self.ports
+        self.ports[port_name] = {
+            'side': side,
+            'order': order,
+        }
+
+    def add_child(self, child: '_DagLayoutNode') -> None:
+        assert child.container is None
+        child.container = self
+        self.elements.append(child)
+
+    def remove_child(self, child: '_DagLayoutNode') -> None:
+        assert child in self.elements
+        assert child.container == self
+        child.container = None
+        self.elements.remove(child)
+
+    def is_ancestor(self, descendant: '_DagLayoutNode') -> bool:
+        if len(self.elements) == 0:
+            return False
+        if descendant in self.elements:
+            return True
+        return any([child.is_ancestor(descendant) for child in self.elements])
+
+    def get_container(self) -> Optional['_DagLayoutNode']:
         return self.container
 
 
 class _DagLayoutEdge:
 
     def __init__(
-            self, edge_id: str, start: Union['_DagLayoutNode', '_DagLayoutContainer'],
-            end: Union['_DagLayoutNode', '_DagLayoutContainer'], start_side: Optional[str] = None, end_side: Optional[
-                str] = None
+            self, edge_id: str, start: '_DagLayoutNode',
+            end: '_DagLayoutNode', start_port: Optional[str], end_port: Optional[str]
     ) -> None:
         self.edge_id = edge_id
         self.start = start
         self.end = end
-        self.start_side = start_side
-        self.end_side = end_side
+        self.start_port = start_port
+        self.end_port = end_port
 
     def get_id(self) -> str:
         return self.edge_id
@@ -378,61 +422,9 @@ class _DagLayoutEdge:
         return {
             'startId': self.start.get_id(),
             'endId': self.end.get_id(),
-            'startSide': self.start_side,
-            'endSide': self.end_side,
+            'startPort': self.start_port,
+            'endPort': self.end_port,
         }
-
-
-class _DagLayoutContainer:
-
-    def __init__(
-            self, container_id: str, flow_direction: Optional[str], is_expanded: Optional[bool],
-            is_interactive: Optional[bool], is_visible: Optional[bool],
-            is_topological: Optional[bool]
-    ) -> None:
-        self.container_id = container_id
-        self.flow_direction = flow_direction
-        self.is_expanded = is_expanded
-        self.is_interactive = is_interactive
-        self.is_visible = is_visible
-        self.is_topological = is_topological
-        self.elements: List[Union['_DagLayoutNode', '_DagLayoutContainer']] = []
-        self.container: Optional['_DagLayoutContainer'] = None
-
-    def get_id(self) -> str:
-        return self.container_id
-
-    def to_dict(self) -> Mapping[str, Any]:
-        return {
-            'elements': [item.get_id() for item in self.elements],
-            'flowDirection': self.flow_direction,
-            'isExpanded': self.is_expanded,
-            'isInteractive': self.is_interactive,
-            'isVisible': self.is_visible,
-            'isTopological': self.is_topological,
-        }
-
-    # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
-    def add_child(self, child: Union['_DagLayoutNode', '_DagLayoutContainer']) -> None:
-        assert child.container is None
-        child.container = self
-        self.elements.append(child)
-
-    def remove_child(self, child: Union['_DagLayoutNode', '_DagLayoutContainer']) -> None:
-        assert child in self.elements
-        assert child.container == self
-        child.container = None
-        self.elements.remove(child)
-
-    def is_ancestor(self, descendant: Union['_DagLayoutNode', '_DagLayoutContainer']) -> bool:
-        if len(self.elements) == 0:
-            return False
-        if descendant in self.elements:
-            return True
-        return any([isinstance(child, _DagLayoutContainer) and child.is_ancestor(descendant) for child in self.elements])
-
-    def get_container(self) -> Optional['_DagLayoutContainer']:
-        return self.container
 
 
 class GridLayout(Viz):
@@ -568,19 +560,18 @@ class TextPrimitiveModel(VizModel):
 class DagLayoutModel(VizModel):
 
     def __init__(
-            self, nodes: List['_DagLayoutNode'], containers: List['_DagLayoutContainer'],
-            edges: List['_DagLayoutEdge'],
-            alignments: List[List[Union['_DagLayoutNode', '_DagLayoutContainer']]]
+            self, nodes: List['_DagLayoutNode'], edges: List['_DagLayoutEdge'],
+            alignments: List[List['_DagLayoutNode']], flow_direction: Optional[str], align_children: Optional[str]
     ) -> None:
         super(DagLayoutModel, self).__init__(
             'DagLayout', {
                 'nodes': {node.get_id(): node.to_dict()
                           for node in nodes},
-                'containers': {container.get_id(): container.to_dict()
-                               for container in containers},
                 'edges': {edge.get_id(): edge.to_dict()
                           for edge in edges},
-                'alignments': [[item.get_id() for item in alignment] for alignment in alignments]
+                'alignments': [[item.get_id() for item in alignment] for alignment in alignments],
+                'flowDirection': flow_direction,
+                'alignChildren': align_children,
             }
         )
 
