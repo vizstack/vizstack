@@ -13,6 +13,16 @@ export type Node = {
     /** String ID unique among all nodes in a graph. */
     id: NodeId,
 
+    /** IDs of nodes that are strictly contained within this node. */
+    children?: Array<NodeId>,
+
+    /** Direction in which the immediate children of this node will be arranged. */
+    flowDirection?: 'north' | 'south' | 'east' | 'west',
+
+    /** Whether to ensure that all immediate children of this node are strictly aligned along the
+     *  axis of the flow direction. */
+    alignChildren?: boolean,
+
     /** Named points on node boundaries that serve as the source/destination of edges. */
     ports?: {
         [string]: {
@@ -24,16 +34,6 @@ export type Node = {
         },
     },
 
-    /** IDs of nodes that are strictly contained within this node. */
-    children?: Array<NodeId>,
-
-    /** Direction in which the immediate children of this node will be arranged. */
-    flowDirection?: 'north' | 'south' | 'east' | 'west',
-
-    /** Whether to ensure that all immediate children of this node are strictly aligned along the
-     *  axis of the flow direction. */
-    alignChildren?: boolean,
-
     /** Size dimensions populated after rendering. Can be specified by client (for childless nodes),
      *  but might be overwritten by layout engine. */
     width?: number,
@@ -44,6 +44,8 @@ export type Node = {
     y?: number,
     z?: number,
 };
+
+// TODO: Expansion, caching + identity fn
 
 export type EdgeId = string;
 export type Edge = {
@@ -254,6 +256,8 @@ export default function layout(
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
 
+    console.log('DONE PROCESSING', graph);
+
     // function processAlignment(alignment: Array<NodeId>) {
     //     // TODO: Add `AlignConstraint` for alignments (but need to specify direction)
     // }
@@ -353,7 +357,7 @@ export default function layout(
     );
 }
 
-function findLowestCommonAncestor(
+export function findLowestCommonAncestor(
     parents: { [NodeId]: NodeId },
     leftId: NodeId,
     rightId: NodeId,
@@ -430,52 +434,3 @@ type Graph = {
     constraints: Array<Constraint>,
     groups: Array<Group>,
 };
-
-// function constructPreliminaryLayoutGraph(
-//     nodes: Array<Node>,
-//     edges: Array<Edge>,
-//     alignments?: Array<Array<NodeId>>,
-// ) {
-//     // Nodes w/ children -> Vertex +
-//
-//
-//
-//
-// }
-
-// function translateToWebCola(nodes: Array<Node>, edges: Array<Edge>, alignments?: Array<Array<NodeId>>): Graph {
-//     const graph: Graph = {
-//         vertices: [],
-//         groups: [],
-//         links: [],
-//         constraints: [],
-//     };
-//
-//     type NodeIdx = number;
-//     type GroupIdx = number;
-//     const nodeIdToIdx: {[NodeId]: NodeIdx} = {};
-//
-//     // Construct vertices + groups + constraints
-//     // Node --> Vertex
-//     // ports --> dummy vertices + sep inequality constraints.
-//     // children --> group
-//     function processNode(node: Node) {
-//
-//         if(node.children) {
-//             // Node has children, so process them first. Usin
-//
-//         } else {
-//             // Node does not have children
-//
-//         }
-//     }
-//     nodes.forEach((node) => processNode(node));
-//
-//
-//     // Construct node alignments
-//
-//     // Construct edges + constraints
-//
-//     return graph
-// }
-//

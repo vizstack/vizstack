@@ -1,8 +1,38 @@
 import * as cola from 'webcola';
-import { arr2obj, obj2obj } from '../../../services/data-utils';
-import { powerGraphGridLayout } from 'webcola/WebCola/src/batch';
+import { NodeId, findLowestCommonAncestor} from "./layout";
 
-test('cola layout', () => {
+test('findLowestCommonAncestor() finds lca if it exists, or returns null', () => {
+
+    /** Parents lookup table for the following tree structure:
+     *  a0
+     *     \
+     *       b0
+     *     /    \
+     *  a1        c0 - d0
+     *          /
+     *       b1
+     *
+     *  a2 - b2 - c1 - d1
+     */
+    let parents: { [NodeId]: NodeId } = {
+        'a0': 'b0',
+        'a1': 'b0',
+        'b0': 'c0',
+        'b1': 'c0',
+        'c0': 'd0',
+        'a2': 'b2',
+        'b2': 'c1',
+        'c1': 'd1',
+    };
+
+    expect(findLowestCommonAncestor(parents, 'a0', 'b1')).toEqual('c0');  // Different branch
+    expect(findLowestCommonAncestor(parents, 'a0', 'a0')).toEqual('a0');  // Identity
+    expect(findLowestCommonAncestor(parents, 'a0', 'b0')).toEqual('b0');  // Left-to-right chain
+    expect(findLowestCommonAncestor(parents, 'b0', 'a0')).toEqual('b0');  // Right-to-left chain
+    expect(findLowestCommonAncestor(parents, 'a0', 'a2')).toBeNull();     // Disconnected
+});
+
+test('layout()', () => {
     // const nodes = [
     //     { width: 50, height: 30, id: null, },
     //     { width: 50, height: 30, id: null, },

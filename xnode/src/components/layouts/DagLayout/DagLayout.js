@@ -15,7 +15,7 @@ import type {
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
 import layout from './layout';
-import type { DagEdgeLayoutSpec, DagNodeLayoutSpec } from './layout';
+import type { Edge, Node } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../services/data-utils';
 
 function buildArrowheadMarker(id, color) {
@@ -221,6 +221,7 @@ class DagEdge extends React.PureComponent<{
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
+const kInitialNodeWidth = 100000;
 class DagLayout extends React.Component<
     {
         /** CSS-in-JS styling object. */
@@ -247,13 +248,13 @@ class DagLayout extends React.Component<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagElementId]: DagNodeLayoutSpec,
+            [DagElementId]: Node,
         },
         edges: {
-            [DagEdgeId]: DagEdgeLayoutSpec,
+            [DagEdgeId]: Edge,
         },
         containers: {
-            [DagElementId]: DagNodeLayoutSpec,
+            [DagElementId]: Node,
         },
 
         /** Arrangement of graph elements after layout, sorted in ascending z-order. */
@@ -269,6 +270,20 @@ class DagLayout extends React.Component<
         },
     },
 > {
+    // The lifecycle of this component is as follows.
+    //     constructor(): Initialize state to be empty.
+    //     render(): Render nothing because state is empty.
+    //     componentDidMount(): Populate state by transforming props. Call `forceUpdate()`.
+    //     render(): Render the not layouted elements.
+    //     componentDidUpdate(): The not layouted elements have been mounted. Do not layout until
+    //         all their sizes have been populated by `_onElementResize()`.
+    //     shouldComponentUpdate(): Trigger update when all sizes are populated.
+    //     render(): Render the not layouted elements (again).
+    //     componentDidUpdate(): Call `_layoutGraph()` to layout the elements.
+    //     render(): Render the layouted elements.
+    //     componentDidUpdate(): Do nothing, because `shouldLayout` set to false during layout.
+    // TODO: Is there an extraneous rerender of not layouted elements?
+
     /** Constructor. */
     constructor(props) {
         super(props);
@@ -286,21 +301,21 @@ class DagLayout extends React.Component<
     }
 
     componentDidMount() {
-        // At this point, self and children elements have been rendered and mounted into the DOM, so
-        // they have defined sizes which have been populated in `this.state` and which the
-        // layout engine may use.
+        // At this point, a render() has been called but nothing was rendered since state is
+        // initialized to be empty.
         console.debug('DagLayout -- componentDidMount(): mounted');
 
-        console.log('prop edges', this.props.edges);
-
-        // We want us to be mounted already, then populate self. Triggering other render.
         this.setState(
             Immutable({
-                shouldLayout: false,
+                shouldLayout: false,  // False so no layout until sizes all populated.
                 nodes: obj2obj(this.props.nodes, (k, v) => [
                     k,
-                    { id: k, children: [], orientation: 'vertical', width: 100000 }, // TODO: Dehard
-                ]), // TODO: remove orientation
+                    {
+                        id: k,
+                        children: [],
+                        width: kInitialNodeWidth,  // Allow space for `Viewer` to be rendered.
+                    },
+                ]),
                 edges: obj2obj(this.props.edges, (k, v) => [
                     k,
                     {
@@ -334,13 +349,14 @@ class DagLayout extends React.Component<
             }),
         );
 
+        // Force render and mount of the not layouted components so they get their sizes.
         this.forceUpdate();
     }
 
     shouldComponentUpdate(nextProps, nextState) {
         // Prevent component from re-rendering each time a dimension is populated/updated unless all
         // dimensions are populated.
-        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height); // TODO: Add width
+        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height);
         console.log(
             'DagLayout -- shouldComponentUpdate(): ',
             shouldUpdate,
@@ -351,10 +367,8 @@ class DagLayout extends React.Component<
     }
 
     componentDidUpdate() {
-        // By default, a `PureComponent` will update if props and state have changed according to
-        // a shallow comparison; since we use `Immutable` structures, this will trigger updates
-        // at the correct conditions. Performing the layout will change the state, so we wrap it in
-        // a condition to prevent infinite looping.
+        // Performing the layout will change the state, so we wrap it in a condition to prevent
+        // infinite looping.
         if (this.state.shouldLayout) {
             console.debug('DagLayout -- componentDidUpdate(): shouldLayout = true so will layout');
             this._layoutGraph();
@@ -393,11 +407,9 @@ class DagLayout extends React.Component<
      * @private
      */
     _layoutGraph() {
-        const { classes } = this.props;
         const { nodes, edges, containers } = this.state;
         const containerKeys = new Set(Object.keys(containers));
 
-        // TODO(rholmdahl): Layout.js magic here!
         layout(
             Object.values(nodes.asMutable({ deep: true })).concat(
                 Object.values(containers.asMutable({ deep: true })),
@@ -406,8 +418,8 @@ class DagLayout extends React.Component<
             (
                 width: number,
                 height: number,
-                nodes: Array<DagNodeLayoutSpec>,
-                edges: Array<DagEdgeLayoutSpec>,
+                nodes: Array<Node>,
+                edges: Array<Edge>,
             ) => {
                 console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
                 // Separate nodes from containers.
