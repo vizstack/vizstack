@@ -3,9 +3,9 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 import { withStyles } from '@material-ui/core/styles';
 
-import SequenceViz from '../../../layouts/SequenceLayout';
+import SequenceViz from '../../layouts/SequenceLayout';
 import KeyValueViz from '../../viz/KeyValueViz';
-import TokenViz from '../../../primitives/TokenPrimitive';
+import TokenViz from '../../../primitives/TextPrimitive';
 
 import Typography from '@material-ui/core/Typography';
 

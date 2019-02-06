@@ -2,11 +2,11 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../../primitives/TokenPrimitive';
+import TokenViz from '../../primitives/TextPrimitive';
 
 /**
  * This dumb component renders a viewer for a Python primitive (none, float, int, complex, bool). A string is the
- * explicit data model expected by `TokenPrimitive`.
+ * explicit data model expected by `TextPrimitive`.
  */
 class PrimitiveViewer extends Component {
     /** Prop expected types object. */
@@ -24,7 +24,7 @@ class PrimitiveViewer extends Component {
     }
 
     /**
-     * Renders a TokenPrimitive with the given string.
+     * Renders a TextPrimitive with the given string.
      */
     render() {
         const { str } = this.props;

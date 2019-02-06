@@ -30,37 +30,13 @@ export default {
      *     Object holding serialized state from last session, created through `serialize()`, if defined.
      */
     activate(state) {
-        // Attach settings panel.
-        // TODO: Integrate into canvas tab.
-        this.sandboxSettingsView = new SandboxSettingsView();
-        this.sandboxSettingsPanel = atom.workspace.addModalPanel({
-            item: this.sandboxSettingsView.getElement(),
-            visible: false,
-        });
-
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
         this.subscriptions = new CompositeDisposable(
             // Register openers to listen to particular URIs
             atom.workspace.addOpener((uri) => {
-                if (uri.startsWith('atom://xnode-sandbox')) {
-                    this.sandboxSettingsPanel.hide();
-                    const tokens = uri.split('/');
-                    const repl = new REPL(
-                        decodeURIComponent(tokens[3]),
-                        decodeURIComponent(tokens[4]),
-                    );
+                if (uri === 'atom://xnode-sandbox') {
+                    const repl = new REPL();
                     this.repls.push(repl);
-                    const minimalUniquePaths = getMinimalDisambiguatedPaths(
-                        this.repls
-                            .filter((repl) => !repl.isDestroyed)
-                            .map((repl) => repl.scriptPath),
-                    );
-                    this.repls
-                        .filter((repl) => !repl.isDestroyed)
-                        .forEach((repl) => {
-                            repl.name = minimalUniquePaths[repl.scriptPath];
-                        });
-                    // this.waitAndRerun(null, null, 0);
                     console.debug('root -- new REPL added');
                     return repl;
                 }
@@ -82,7 +58,7 @@ export default {
 
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
-                'xnode:create-sandbox': () => this.openSandboxSettings(),
+                'xnode:create-sandbox': () => atom.workspace.open('atom://xnode-sandbox')
             }),
 
             // Destroy additional objects on package deactivation
@@ -109,6 +85,19 @@ export default {
     // =================================================================================================================
     // Xnode-specific commands
     // =================================================================================================================
+
+    // onReplRename() {
+    //     const minimalUniquePaths = getMinimalDisambiguatedPaths(
+    //         this.repls
+    //             .filter((repl) => !repl.isDestroyed)
+    //             .map((repl) => repl.scriptPath),
+    //     );
+    //     this.repls
+    //         .filter((repl) => !repl.isDestroyed)
+    //         .forEach((repl) => {
+    //             repl.name = minimalUniquePaths[repl.scriptPath];
+    //         });
+    // },
 
     /**
      * Opens a modal that allows users to open a sandbox after specifying key parameters.

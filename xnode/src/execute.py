@@ -7,12 +7,13 @@ from inspect import currentframe, getframeinfo
 from multiprocessing import Queue
 from os.path import normpath, normcase
 from types import FrameType
-from typing import Callable, Mapping, Union, Any, Optional, cast
+from typing import Callable, Mapping, Union, Any, Optional
 
 import traceback
-import xn
-from xn.constants import VizTableSlice, VizId, ExpansionState, ExecutionEngineMessage
-from xn.viz.engine import VisualizationEngine
+import xnode
+from xnode.constants import VizTableSlice, VizId, ExpansionMode, ExecutionEngineMessage
+from xnode.viz._engine import VisualizationEngine
+from xnode.viz import TextPrimitive, Color
 
 # The type of the function which is called to send a message to the parent process.
 _SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool], None]
@@ -153,7 +154,8 @@ def _send_message(
     send_queue.put(json.dumps(message, cls=_DataclassJSONEncoder))
 
 
-def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *objects: Any) -> None:
+def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *objects: Any,
+                   expansion_mode: Optional[str] = None) -> None:
     """Executes a watch statement on a given object, taking a snapshot of it and sending the symbol slice to the
     client to be viewed.
 
@@ -168,13 +170,15 @@ def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *obj
         frame_info = getframeinfo(frame.f_back.f_back)
         filename, lineno = frame_info.filename, frame_info.lineno
         viz_id: VizId = engine.take_snapshot(obj, filename, lineno)
-        viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
+        viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id,
+                                                             expansion_mode=None if expansion_mode is None
+                                                             else ExpansionMode(expansion_mode))
         send_message(viz_slice, viz_id, False)
 
 
 def _fetch_viz(
         send_message: _SendMessage, engine: VisualizationEngine, viz_id: VizId,
-        expansion_state: ExpansionState
+        expansion_state: ExpansionMode
 ) -> None:
     """Fetches the symbol slice of a given symbol and sends it to the client.
 
@@ -219,7 +223,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
     send_message(None, None, False)
 
     engine: VisualizationEngine = VisualizationEngine()
-    xn.set_view_fn(functools.partial(_execute_watch, send_message, engine))
+    xnode.set_view_fn(functools.partial(_execute_watch, send_message, engine))
 
     # Replace stdout with an object that queues all statements printed by the user script as messages
     sys.stdout = _PrintOverwriter(engine, send_message)  # type: ignore
@@ -229,11 +233,11 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
         send_message(None, None, True)
         executor.execute(script_path)
         while True:
-            request: Mapping[str, Union[VizId, ExpansionState]] = receive_queue.get(True)
+            request: Mapping[str, Union[VizId, ExpansionMode]] = receive_queue.get(True)
             if request is None:
                 break
-            assert not isinstance(request['viz_id'], ExpansionState)
-            assert isinstance(request['expansion_state'], ExpansionState)
+            assert not isinstance(request['viz_id'], ExpansionMode)
+            assert isinstance(request['expansion_state'], ExpansionMode)
             _fetch_viz(send_message, engine, request['viz_id'], request['expansion_state'])
     except:
         raw_error_msg: str = traceback.format_exc()
@@ -245,12 +249,12 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
             assert result is not None
             clean_error_msg: str = result.group(1) + result.group(3)
             result = re.search(
-                r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),(.*)$",
+                r"^Traceback \(most recent call last\):\s*File \"(.*)\", line (\d*),?(.*)$",
                 clean_error_msg, re.DOTALL
             )
             assert result is not None
             viz_id: VizId = engine.take_snapshot(
-                clean_error_msg, result.group(1), int(result.group(2))
+                TextPrimitive(clean_error_msg, Color.ERROR), result.group(1), int(result.group(2))
             )
             viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
             send_message(viz_slice, viz_id, False)

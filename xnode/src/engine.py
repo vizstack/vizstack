@@ -4,7 +4,7 @@ import threading
 from multiprocessing import Process, Queue
 from typing import Optional, Tuple, List
 
-from xn.constants import VizId, ExpansionState
+from xnode.constants import VizId, ExpansionMode
 from execute import run_script
 
 # ======================================================================================================================
@@ -67,9 +67,9 @@ class _ExecutionManager:
         self.print_queue.put(_ExecutionManager._THREAD_QUIT)
         self.print_thread.join()
 
-    def fetch_viz(self, viz_id: VizId, expansion_state: ExpansionState) -> None:
+    def fetch_viz(self, viz_id: VizId, expansion_state: ExpansionMode) -> None:
         """Fetches an ExecutionEngineMessage from the subprocess which includes a VizTableSlice with the VizModel for
-        the given VizId in the given ExpansionState.
+        the given VizId in the given ExpansionMode.
 
         The subprocess holds the visualizations for all objects in the script's namespace, so requests must be
         forwarded to the process itself. These requests are only processed after the script has finished running,
@@ -195,8 +195,8 @@ def _fetch_viz(exec_manager: _ExecutionManager, message: str) -> None:
     """
     contents: List[str] = message.replace(_FETCH_HEADER, '').split('?')
     viz_id: VizId = VizId(contents[0])
-    expansion_state: ExpansionState = ExpansionState.FULL if contents[1] == 'full' else ExpansionState.COMPACT if \
-        contents[1] == 'compact' else ExpansionState.SUMMARY
+    expansion_state: ExpansionMode = ExpansionMode.FULL if contents[1] == 'full' else ExpansionMode.COMPACT if \
+        contents[1] == 'compact' else ExpansionMode.SUMMARY
 
     exec_manager.fetch_viz(viz_id, expansion_state)
 

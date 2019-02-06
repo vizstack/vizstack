@@ -227,6 +227,8 @@ class DagLayout extends React.Component<
         /** CSS-in-JS styling object. */
         classes: {},
 
+        isHovered: boolean,
+
         /** Node elements that are props to `Viewer` sub-components. */
         nodes: {
             [DagElementId]: ViewerProps,

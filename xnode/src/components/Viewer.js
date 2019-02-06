@@ -10,39 +10,28 @@ import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 import type {
     VizId,
     VizSpec,
-    TokenPrimitiveModel,
-    SequenceLayoutModel,
-    KeyValueLayoutModel,
+    TextPrimitiveModel,
+    FlowLayoutModel,
+    GridLayoutModel,
     DagLayoutModel,
 } from '../state/viztable/outputs';
 import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
-import TokenPrimitive from './primitives/TokenPrimitive';
+import TextPrimitive from './primitives/TextPrimitive';
 
 // Viz layouts
-import KeyValueLayout from './layouts/KeyValueLayout';
-import SequenceLayout from './layouts/SequenceLayout';
+import GridLayout from './layouts/GridLayout';
 import DagLayout from './layouts/DagLayout';
+import FlowLayout from './layouts/FlowLayout';
 import { obj2obj } from '../services/data-utils';
 
 /** The sequence in which users can toggle different models. */
 const kModelTransitionOrder = { summary: 'compact', compact: 'full', full: 'summary' };
 
-/** Context information passed down by parent Viewer. Each viewer will consume fields useful to it; all other fields
- *  are discarded by default, unless explicitly propagated. Only a Layout Viz will have to pass-through (ignoring) the
- *  context to its `Viewer` sub-components; a Primitive Viz is terminal and so does not need to pass-through. */
-export type ViewerContext = {
-    /** Size category to render the top-level Viz. */
-    displaySize?: 'regular' | 'small',
-};
-
 export type ViewerProps = {
     /** Unique `VizId` for this Viewer. */
     vizId: VizId,
-
-    /** Information passed down from direct parent Viewer. */
-    viewerContext?: ViewerContext,
 
     /** Requests a particular model for a Viz from the backend if not already loaded. See 'repl/fetchVizModel'. */
     fetchVizModel: (VizId, 'compact' | 'full') => void,
@@ -76,6 +65,7 @@ class Viewer extends React.Component<
         super(props);
         const { vizTable, vizId } = this.props;
 
+        console.log(vizTable, vizId);
         // Set initial state based on what model is available.
         let expansionMode = 'summary';
         expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;
@@ -94,53 +84,49 @@ class Viewer extends React.Component<
      *      The Viz component which renders the model.
      */
     getVizComponent(model: VizModel): React.Component {
+        const { isHovered, expansionMode } = this.state;
         const { fetchVizModel } = this.props;
         switch (model.type) {
             // Primitives
             // ----------
 
-            case 'TokenPrimitive':
-                const { text } = (model: TokenPrimitiveModel).contents;
-                return <TokenPrimitive text={text} shouldTextWrap={true} />;
+            case 'TextPrimitive':
+                const { text, color } = (model: TextPrimitiveModel).contents;
+                return <TextPrimitive isHovered={isHovered} text={text}
+                                       color={color ? color : 'primary'} />;
 
             // Layouts
             // -------
 
-            case 'SequenceLayout':
-                const { elements } = (model: SequenceLayoutModel).contents;
+            case 'FlowLayout':
+                const { elements } = (model: FlowLayoutModel).contents;
+                return <FlowLayout isHovered={isHovered} elements={elements.map((vizId) => {
+                    return {vizId, fetchVizModel}
+                })} />;
+
+            case 'GridLayout':
+                const { geometries } = (model: GridLayoutModel).contents;
                 return (
-                    <SequenceLayout
-                        elements={elements.map((vizId: VizId) => ({
+                    <GridLayout
+                        isCompact={expansionMode === 'compact'}
+                        isHovered={isHovered}
+                        geometries={geometries.map(([vizId, col, row, width, height]) => ([{
                             vizId,
                             fetchVizModel,
-                            viewerContext: {
-                                displaySize: 'small',
-                            },
-                        }))}
+                        }, col, row, width, height]))}
                     />
                 );
-
-            case 'KeyValueLayout':
-                // const { elements } = (model: KeyValueLayoutModel).contents;
-                // return (
-                //     <KeyValueLayout elements={
-                //         Object.entries(elements).map(([key: VizId, value: VizId]))
-                //     }/>
-                // )
-                return null;
 
             case 'DagLayout':
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
                 return (
                     <DagLayout
+                        isHovered={isHovered}
                         nodes={obj2obj(nodes, (id, spec) => [
                             id,
                             {
                                 vizId: spec.vizId,
                                 fetchVizModel,
-                                viewerContext: {
-                                    displaySize: 'small',
-                                },
                             },
                         ])}
                         edges={edges}
@@ -152,13 +138,15 @@ class Viewer extends React.Component<
 
     /** Renderer. */
     render() {
-        const { vizId, vizTable, viewerContext, classes, fetchVizModel } = this.props;
-        const { expansionMode, isHovered } = this.state;
+        const { vizId, vizTable, classes, fetchVizModel } = this.props;
+        const { expansionMode } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if (!vizSpec) {
             return null; // TODO: What to do?
         }
+
+        // TODO: show borders (and padding?) iff it can be meaningfully expanded
 
         let model: VizModel = undefined;
         switch (expansionMode) {
@@ -179,35 +167,27 @@ class Viewer extends React.Component<
                 break;
         }
         return (
-            <div
+            <span
                 className={classNames({
                     [classes.box]: true,
-                    [classes.hovered]: isHovered,
                 })}
                 onClick={(e) => {
                     e.stopPropagation();
-                    // const expansionModeNext = kModelTransitionOrder[expansionMode];
-                    // fetchVizModel(vizId, expansionModeNext);
-                    // this.setState((state) => state.set('expansionMode', expansionModeNext));
+                    const expansionModeNext = kModelTransitionOrder[expansionMode];
+                    fetchVizModel(vizId, expansionModeNext);
+                    this.setState((state) => Immutable(state).set('expansionMode', expansionModeNext));
                 }}
                 onMouseOver={(e) => {
                     e.stopPropagation();
-                    // console.log("HERRO", this.state);
-                    // this.setState((state) => {
-                    //     let s = state.set('isHovered', true);
-                    //     console.log("myVAL", s);
-                    //     setTimeout(() => console.log("myVAL2", this.state), 1000);
-                    //     return s;
-                    // });
+                    this.setState((state) => Immutable(state).set('isHovered', true));
                 }}
                 onMouseOut={(e) => {
                     e.stopPropagation();
-                    // console.log("HERRO", this.state);
-                    // this.setState((state) => state.set('isHovered', false));
+                    this.setState((state) => Immutable(state).set('isHovered', false));
                 }}
             >
-                {this.getVizComponent(model)}
-            </div>
+            {this.getVizComponent(model)}
+        </span>
         );
     }
 }
@@ -219,14 +199,14 @@ class Viewer extends React.Component<
 const styles = (theme) => ({
     // css-key: value,// Border for highlighting
     box: {
-        borderRadius: theme.shape.borderRadius.regular,
-        borderColor: 'transparent',
-        borderStyle: 'solid',
-        borderWidth: 1, // TODO: Dehardcode this
+        margin: '5px',
     },
     hovered: {
-        borderColor: ColorLightBlue[400], // TODO: Dehardcode this
+        // opacity: 1.0,
     },
+    notHovered: {
+        // opacity: 0.9,
+    }
 });
 
 // To inject application state into component

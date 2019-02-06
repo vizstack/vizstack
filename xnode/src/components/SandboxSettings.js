@@ -2,43 +2,82 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
+import fs from 'fs';
+import yaml from 'js-yaml';
+
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
+import Select from 'react-select'
+import Input from '@material-ui/core/Input';
+import MenuItem from '@material-ui/core/MenuItem';
+import IconButton from '@material-ui/core/IconButton';
+import RefreshIcon from '@material-ui/icons/Refresh';
+import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import Tooltip from '@material-ui/core/Tooltip';
+import InputLabel from '@material-ui/core/InputLabel';
+
 
 class SandboxSettingsModal extends React.Component<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    /** React components within opening & closing tags. */
-    children: React.Node,
+    settingsFileExists: boolean,
 
-    /** The default path of the created sandbox's script. */
-    defaultScriptPath: string,
+    settingsPath: string,
+
+    onSelect: (string, string, string) => void,
+}, {
+    currentSandboxName: string,
+
+    sandboxes: {
+        [string]: {
+            pythonPath: string,
+            scriptPath: string,
+        }
+    }
 }> {
     /**
      * Constructor.
      */
     constructor(props) {
         super(props);
-        console.debug(props.defaultScriptPath);
+        let sandboxes = {};
+        if (props.settingsFileExists) {
+            sandboxes = this.getSandboxes();
+        }
         this.state = {
-            pythonPath: '/Users/Nikhil/Desktop/xnode/xnode/venv/bin/python3', // TODO: Dehardcode
-            scriptPath: props.defaultScriptPath,
-        };
+            sandboxes,
+            currentSandboxName: null,
+        }
     }
 
-    /**
-     * Asks `main` to open a new sandbox with the component's current parameters
-     */
-    openSandbox() {
-        const { pythonPath, scriptPath } = this.state;
-        console.debug(`submit() -- requesting sandbox for ${scriptPath} using ${pythonPath}`);
-        atom.workspace.open(
-            `atom://xnode-sandbox/${encodeURIComponent(pythonPath)}/${encodeURIComponent(
-                scriptPath,
-            )}`,
-        );
+    componentDidUpdate(prevProps) {
+        if (!prevProps.settingsFileExists && this.props.settingsFileExists) {
+            this.setState({
+                sandboxes: this.getSandboxes(),
+            })
+        }
+    }
+
+    getSandboxes() {
+        const { settingsPath } = this.props;
+        return yaml.safeLoad(fs.readFileSync(settingsPath)).sandboxes;
+    }
+
+    onSandboxSelected(sandboxName) {
+        const { sandboxes } = this.state;
+        const { pythonPath, scriptPath } = sandboxes[sandboxName];
+        this.props.onSelect(sandboxName, pythonPath, scriptPath);
+        this.setState({
+            currentSandboxName: sandboxName,
+        })
+    }
+
+    submitSelection() {
+        const { sandboxes, currentSandboxName } = this.state;
+        const { pythonPath, scriptPath } = sandboxes[currentSandboxName];
+        this.props.onSelect(currentSandboxName, pythonPath, scriptPath);
     }
 
     /**
@@ -47,43 +86,34 @@ class SandboxSettingsModal extends React.Component<{
      */
     render() {
         const { classes } = this.props;
-        const { pythonPath, scriptPath } = this.state;
+        const { currentSandboxName, sandboxes } = this.state;
+
         return (
             <div className={classes.root}>
-                <Typography className={classes.title} variant={'headline'}>
-                    Sandbox Settings
-                </Typography>
-                <div>
-                    <TextField
-                        className={
-                            classNames('native-key-bindings')
-                            /* use native-key-bindings to fix an issue with backspacing in Atom */
-                        }
-                        label='Python Path'
-                        value={pythonPath}
-                        InputProps={{ className: classes.fieldInput }}
-                        InputLabelProps={{ className: classes.fieldLabel, disableAnimation: true }}
-                        onChange={(e) => this.setState({ pythonPath: e.target.value })}
-                    />
-                </div>
-                <div>
-                    <TextField
-                        className={
-                            classNames('native-key-bindings')
-                            /* use native-key-bindings to fix an issue with backspacing in Atom */
-                        }
-                        label='Script Path'
-                        value={scriptPath}
-                        InputProps={{ className: classes.fieldInput }}
-                        InputLabelProps={{ className: classes.fieldLabel, disableAnimation: true }}
-                        onChange={(e) => this.setState({ scriptPath: e.target.value })}
-                    />
-                </div>
-                <div>
-                    <Button className={classes.button} onClick={() => this.openSandbox()}>
-                        Open
-                    </Button>
-                </div>
+                <Select
+                    value={currentSandboxName !== null ? {
+                        value: currentSandboxName, label: currentSandboxName,
+                    } : undefined}
+                    options=
+                        {Object.keys(sandboxes).map((sandboxName) => ({
+                            value: sandboxName, label: sandboxName,
+                        }))}
+                    placeholder={"Select a sandbox..."}
+                    onMenuOpen={() => this.setState({sandboxes: this.getSandboxes()})}
+                    onChange={(selected) => this.onSandboxSelected(selected.value)}
+                />
+                {/*<Select*/}
+                    {/*value={currentSandboxName}*/}
+                    {/*onChange={(e) => this.onSandboxSelected(e.target.value)}*/}
+                    {/*className={classes.sandboxSelect}*/}
+                    {/*input={<Input className={classes.sandboxSelect} />}*/}
+                    {/*>*/}
+                    {/*{Object.keys(sandboxes).map((sandboxName) => {*/}
+                        {/*return (*/}
+                            {/*<MenuItem key={sandboxName} value={sandboxName}>{sandboxName}</MenuItem>*/}
+                        {/*)*/}
+                    {/*})}*/}
+                {/*</Select>*/}
             </div>
         );
     }
@@ -94,6 +124,11 @@ class SandboxSettingsModal extends React.Component<{
 
 /** CSS-in-JS styling object. */
 const styles = (theme) => ({
+    sandboxSelect: {
+        backgroundColor: '#afafaf',
+        fontFamily: theme.typography.monospace.fontFamily,
+        fontSize: '10pt', // TODO: Dehardcode this
+    },
     root: {
         display: 'block',
         marginLeft: 'auto',

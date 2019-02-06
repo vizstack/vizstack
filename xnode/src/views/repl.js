@@ -12,11 +12,14 @@ import XnodeMuiTheme from '../theme';
 // Python services
 import PythonShell from 'python-shell';
 import path from 'path';
+import fs from 'fs';
+import yaml from 'js-yaml';
 
 // UUID services
 import cuid from 'cuid';
 
 // Custom top-level React/Redux components
+import SandboxSettings from '../components/SandboxSettings';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
@@ -61,26 +64,65 @@ export default class REPL {
      * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(pythonPath: string, scriptPath: string) {
+    constructor() {
         this.name = '';
         this.isDestroyed = false; // TODO: Why do we need this?
-        this.scriptPath = scriptPath;
 
         // Initialize REPL state
-        this.executionEngine = this._createEngine(pythonPath, scriptPath); // Communication channel with Python process
+        this.executionEngine = undefined;
 
         // Initialize Redux store & connect to main reducer
         // TODO: re-add devtools
         this.store = createStore(mainReducer, applyMiddleware(thunk));
+
+        let settingsFileExists = false;
+
+        const settingsPath = path.join(atom.project.getPaths()[0], 'xnode.yaml');
+        if (!fs.existsSync(settingsPath)) {
+            atom.workspace.open(settingsPath).then(editor => {
+                settingsFileExists = true;
+                editor.insertText('# Define your sandbox configurations here.\n');
+                editor.insertText(yaml.safeDump({
+                    'sandboxes': {
+                        'MySandbox1': {
+                            'pythonPath' : null,
+                            'scriptPath' : null,
+                        }
+                    }
+                }))
+            });
+        } else {
+            settingsFileExists = true;
+        }
 
         // Initialize React root component for Canvas
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
-                    <Canvas
-                        fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
-                    />
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%',
+                    }}>
+                        <div style={{
+                            width: '100%',
+                        }}>
+                            <SandboxSettings
+                                settingsFileExists={settingsFileExists}
+                                settingsPath={settingsPath}
+                                onSelect={(sandboxName, pythonPath, scriptPath) => {
+                                    this.name = sandboxName;
+                                    this.executionEngine = this._createEngine(pythonPath, scriptPath);
+                                }} />
+                        </div>
+                        <Canvas
+                            style={{
+                                flexGrow: 1,
+                            }}
+                            fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
+                        />
+                    </div>
                 </MuiThemeProvider>
             </ReduxProvider>,
             this.element,
@@ -152,6 +194,10 @@ export default class REPL {
      *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
     _createEngine(pythonPath: string, scriptPath: string) {
+        if (this.executionEngine) {
+            this.executionEngine.terminate();
+            this.executionEngine = undefined;
+        }
         let options = {
             args: [scriptPath],
             pythonPath,
@@ -208,6 +254,8 @@ export default class REPL {
     onFileChanged(filePath: string, changes: {}) {
         changes = ''; // TOOD: Right now not sending specific changes.
         console.debug(`repl ${this.name} -- change to ${filePath}`);
-        this.executionEngine.send(`change:${filePath}?${changes}`);
+        if (this.executionEngine) {
+            this.executionEngine.send(`change:${filePath}?${changes}`);
+        }
     }
 }

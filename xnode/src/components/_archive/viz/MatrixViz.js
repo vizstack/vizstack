@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../../primitives/TokenPrimitive';
+import TokenViz from '../../primitives/TextPrimitive';
 
 /**
  * This dumb component renders visualization for a 2D matrix of elements.
@@ -48,7 +48,7 @@ class SequenceViz extends Component {
     };
 
     /**
-     * Renders a matrix of TokenPrimitive elements, optionally with the left/bottom edges numbered with indices.
+     * Renders a matrix of TextPrimitive elements, optionally with the left/bottom edges numbered with indices.
      */
     render() {
         const {

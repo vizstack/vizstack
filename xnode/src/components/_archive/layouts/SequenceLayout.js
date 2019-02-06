@@ -3,8 +3,8 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Viewer from '../Viewer';
-import type { ViewerProps } from '../Viewer';
+import Viewer from '../../Viewer';
+import type { ViewerProps } from '../../Viewer';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -111,7 +111,7 @@ const styles = (theme) => ({
     },
     motifText: {
         fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '14pt', // TODO: Dehardcode this, same as TokenPrimitive.tokenText
+        fontSize: '14pt', // TODO: Dehardcode this, same as TextPrimitive.tokenText
         verticalAlign: '25%', // Offset baseline for middle alignment
 
         // No text selection

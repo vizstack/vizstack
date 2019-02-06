@@ -10,8 +10,8 @@ See get_viz.md for underlying principles and concepts.
 import wrapt
 import inspect
 from collections import deque
-from xn.viz import VIZ_FN, get_viz, DagLayout, TokenPrimitive, _Viz
-from typing import Callable, List, Tuple, Any, Mapping, Optional, Union, Set, Iterable
+from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz
+from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable
 
 # TODO: state outputs need a special placement
 # TODO: figure out where data nodes should go
@@ -131,7 +131,7 @@ class _FunctionCall:
         """
         return self if self.container is None else self.container.get_outermost_parent()
 
-    def xn(self) -> _Viz:
+    def xn(self) -> Viz:
         return TokenPrimitive(self.fn_name)
 
 
@@ -192,7 +192,7 @@ class GraphData:
 
             # add to secret container
             op_to_secret_container_node[op] = layout.create_container(
-                flow_direction='up', is_visible=False
+                flow_direction='right', is_visible=False
             )
             op_to_secret_container_node[op].add_child(op_to_node[op])
 

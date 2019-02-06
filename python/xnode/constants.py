@@ -69,9 +69,9 @@ class ExecutionEngineMessage(_Dataclass):
 
 
 # Identifies the summary, compact, and full models of a particular `VizSpec`.
-class ExpansionState(Enum):
+class ExpansionMode(Enum):
     # No specified view, use Xnode defaults
-    DEFAULT = 0
-    FULL = 1
-    COMPACT = 2
-    SUMMARY = 3
+    NONE = 'none'
+    FULL = 'full'
+    COMPACT = 'compact'
+    SUMMARY = 'summary'

@@ -1,4 +1,4 @@
-import xn
+import xnode
 from typing import List
 
 
@@ -12,5 +12,5 @@ def largest_num(list: List[int]) -> int:
 
 if __name__ == "__main__":
     # Run tests
-    xn.view(digits_to_number([1, 2, 3, 0]))
-    xn.view(digits_to_number([0, 1, 2, 3]))
+    xnode.view(digits_to_number([1, 2, 3, 0]))
+    xnode.view(digits_to_number([0, 1, 2, 3]))

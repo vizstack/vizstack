@@ -18,6 +18,7 @@
     "cuid": "^2.1.4",
     "d3": "^5.7.0",
     "elkjs": "^0.4.0",
+    "js-yaml": "^3.12.1",
     "nodemon": "^1.18.5",
     "npm": "^6.4.1",
     "prop-types": "^15.6.2",
@@ -28,6 +29,7 @@
     "react-grid-layout": "^0.16.6",
     "react-measure": "^2.2.2",
     "react-redux": "^5.0.7",
+    "react-select": "^2.3.0",
     "react-sizeme": "^2.5.2",
     "react-vis": "^1.11.2",
     "redux": "^4.0.0",
@@ -55,7 +57,10 @@
     "remote-redux-devtools": "^0.5.13"
   },
   "jest": {
-    "testPathIgnorePatterns": ["/node_modules/", "/build/"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/build/"
+    ]
   },
   "watch": {
     "build": "src/**/*.js"

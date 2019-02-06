@@ -43,13 +43,14 @@ export type VizModel = PrimitiveModel | LayoutModel;
 // Visual "building blocks".
 
 /** Any primitive model. */
-export type PrimitiveModel = TokenPrimitiveModel;
+export type PrimitiveModel = TextPrimitiveModel;
 
 /** Token primitive is __. */
-export type TokenPrimitiveModel = {
-    type: 'TokenPrimitive',
+export type TextPrimitiveModel = {
+    type: 'TextPrimitive',
     contents: {
         text: string,
+        color?: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
     },
 };
 
@@ -59,26 +60,17 @@ export type TokenPrimitiveModel = {
 // Visual "configurations" of "building blocks".
 
 /** Any layout model. */
-export type LayoutModel = SequenceLayoutModel | KeyValueLayoutModel;
+export type LayoutModel = GridLayoutModel | DagLayoutModel | FlowLayoutModel;
 
-/** Sequence layout is __. */
-export type SequenceLayoutModel = {
-    type: 'SequenceLayout',
-    contents: {
-        elements: Array<VizId>,
-        orientation?: 'horizontal' | 'vertical',
-    },
-};
+/** Grid layout is __. */
+export type GridLayoutModel = {
+    /** col, row, width, height */
+    geometries: Array<[VizId, number, number, number, number]>,
+}
 
-/** KeyValue layout is __. */
-export type KeyValueLayoutModel = {
-    type: 'KeyValueLayout',
-    contents: {
-        elements: {
-            [VizId]: VizId,
-        },
-    },
-};
+export type FlowLayoutModel = {
+    elements: Array<VizId>,
+}
 
 /** Dag layout is ___. */
 export type DagNodeId = string;
