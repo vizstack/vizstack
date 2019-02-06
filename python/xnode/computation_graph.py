@@ -225,7 +225,9 @@ class GraphData:
                 if input_graphdata not in graphdata_to_node or input_graphdata.creator_op is None:
                     graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
                     # call get_container() twice to keep it out of the secret container
-                    op_to_secret_container_node[op].get_container().add_child(graphdata_to_node[input_graphdata])
+                    op_to_secret_container_node[op].get_container().add_child(
+                        graphdata_to_node[input_graphdata]
+                    )
 
                 c = graphdata_to_node[input_graphdata].get_container()
                 while c is not None and not c.is_ancestor(op_to_node[op]):
