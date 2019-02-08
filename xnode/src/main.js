@@ -37,7 +37,8 @@ export default {
             // Register openers to listen to particular URIs
             atom.workspace.addOpener((uri) => {
                 if (uri.startsWith('atom://xnode-sandbox')) {
-                    const repl = new REPL();
+                    const uriTokens = uri.split('/');
+                    const repl = new REPL(uriTokens[3], () => this.waitAndRerun(null, null, 0));
                     this.repls.push(repl);
                     console.debug('root -- new REPL added');
                     return repl;

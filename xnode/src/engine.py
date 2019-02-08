@@ -3,6 +3,7 @@ import sys
 import threading
 from multiprocessing import Process, Queue
 from typing import Optional, Tuple, List
+import os
 
 from xnode.constants import VizId, ExpansionMode
 from execute import run_script
@@ -216,9 +217,9 @@ def _read_args() -> str:
         Absolute path to the script to be executed.
     """
     parser: argparse.ArgumentParser = argparse.ArgumentParser()
-    parser.add_argument('script', type=str)
+    parser.add_argument('scripts', type=str, nargs='+')
     args = parser.parse_args()
-    return args.script
+    return args.scripts
 
 
 def main() -> None:
@@ -229,7 +230,10 @@ def main() -> None:
     message.
     """
 
-    script_path: str = _read_args()
+    script_paths: str = _read_args()
+    for script_path in script_paths:
+        if os.path.isfile(script_path):
+            break
     exec_manager: Optional[_ExecutionManager] = None
     while True:
         message: str = input()

@@ -65,7 +65,7 @@ export default class REPL {
      * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(id: number) {
+    constructor(id: number, onSandboxChange: () => void) {
         this.id = id;
         this.name = '';
         this.isDestroyed = false; // TODO: Why do we need this?
@@ -118,6 +118,7 @@ export default class REPL {
                                 onSelect={(sandboxName, pythonPath, scriptPath) => {
                                     this.name = sandboxName;
                                     this.executionEngine = this._createEngine(pythonPath, scriptPath);
+                                    onSandboxChange();
                                 }} />
                         </div>
                         <Canvas
@@ -204,7 +205,7 @@ export default class REPL {
             this.executionEngine = undefined;
         }
         let options = {
-            args: [scriptPath],
+            args: [scriptPath, path.join(atom.project.getPaths()[0], scriptPath)],
             pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);

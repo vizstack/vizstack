@@ -263,5 +263,13 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
             viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
             send_message(viz_slice, viz_id, False, True)
         except:
-            # if something goes wrong in parsing the traceback, write it directly
-            print(raw_error_msg)
+            try:
+                # if something goes wrong in parsing the traceback, write it directly
+                viz_id: VizId = engine.take_snapshot(
+                    TextPrimitive(raw_error_msg, Color.ERROR), 'engine.py', 0
+                )
+                viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
+                send_message(viz_slice, viz_id, False, True)
+            except:
+                # if something goes terribly wrong, just print it and hope for the best
+                print(raw_error_msg)
