@@ -36,7 +36,7 @@ export default {
         this.subscriptions = new CompositeDisposable(
             // Register openers to listen to particular URIs
             atom.workspace.addOpener((uri) => {
-                if (uri === 'atom://xnode-sandbox') {
+                if (uri.startsWith('atom://xnode-sandbox')) {
                     const repl = new REPL();
                     this.repls.push(repl);
                     console.debug('root -- new REPL added');
@@ -60,7 +60,9 @@ export default {
 
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
-                'xnode:create-sandbox': () => atom.workspace.open('atom://xnode-sandbox')
+                'xnode:create-sandbox': () => {
+                    atom.workspace.open(`atom://xnode-sandbox/${this.repls.length}`);
+                }
             }),
 
             // Destroy additional objects on package deactivation

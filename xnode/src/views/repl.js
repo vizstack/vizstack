@@ -65,7 +65,8 @@ export default class REPL {
      * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor() {
+    constructor(id: number) {
+        this.id = id;
         this.name = '';
         this.isDestroyed = false; // TODO: Why do we need this?
 
@@ -144,8 +145,9 @@ export default class REPL {
      */
     destroy() {
         this.isDestroyed = true;
-        // TODO: do we need to destroy the execution engine as well?
-        this.executionEngine.terminate();
+        if (this.executionEngine) {
+            this.executionEngine.terminate();
+        }
         this.element.remove();
         console.debug(`repl ${this.name} -- destroy()`);
     }
@@ -166,7 +168,7 @@ export default class REPL {
 
     /** Used by Atom to identify the view when opening. */
     getURI() {
-        return 'atom://xnode-sandbox';
+        return `atom://xnode-sandbox/${this.id}`;
     }
 
     /** Used by Atom to place the pane in the window. */
