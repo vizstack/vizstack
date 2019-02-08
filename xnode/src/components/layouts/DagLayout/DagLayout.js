@@ -7,10 +7,10 @@ import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
 import type {
-    DagElementId,
+    DagNodeId,
+    DagNodeSpec,
     DagEdgeId,
     DagEdgeSpec,
-    DagContainerSpec,
 } from '../../../state/viztable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
@@ -18,26 +18,6 @@ import layout from './layout';
 import type { Edge, Node } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../services/data-utils';
 
-function buildArrowheadMarker(id, color) {
-    return (
-        <marker
-            key={id}
-            id={id}
-            viewBox='-5 -3 5 6'
-            refX='0'
-            refY='0'
-            markerUnits='strokeWidth'
-            markerWidth='4'
-            markerHeight='3'
-            orient='auto'
-        >
-            <path
-                d='M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z'
-                fill={color}
-            />
-        </marker>
-    );
-}
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -55,55 +35,40 @@ class DagNode extends React.PureComponent<{
     width: number,
     height: number,
 
+    /** Expansion state. */
+    isExpanded: boolean,
+
     /** Callback on component resize. */
     onResize: (number, number) => void,
 }> {
     render() {
-        const { classes, x, y, width, height, viewerProps, onResize } = this.props;
+        const { classes, x, y, width, height, viewerProps, isExpanded, onResize } = this.props;
+
         return (
             <g>
-                <foreignObject x={x} y={y} width={width} height={height} className={classes.node}>
-                    <Measure
-                        bounds
-                        onResize={(contentRect) =>
-                            onResize(contentRect.bounds.width, contentRect.bounds.height)
-                        }
-                    >
-                        {({ measureRef }) => (
-                            <div ref={measureRef} style={{ display: 'inline-block' }}>
-                                <Viewer {...viewerProps} />
-                            </div>
-                        )}
-                    </Measure>
-                </foreignObject>
+                {isExpanded ? (
+                    <rect x={x} y={y} width={width} height={height} className={classes.nodeExpanded} />
+                ) : (
+                    <foreignObject x={x} y={y} width={width} height={height} className={classes.node}>
+                        <Measure
+                            bounds
+                            onResize={(contentRect) =>
+                                onResize(contentRect.bounds.width, contentRect.bounds.height)
+                            }
+                        >
+                            {({ measureRef }) => (
+                                <div ref={measureRef} style={{ display: 'inline-block' }}>
+                                    <Viewer {...viewerProps} />
+                                </div>
+                            )}
+                        </Measure>
+                    </foreignObject>
+                )}
             </g>
         );
     }
 }
 
-/**
- * This pure dumb component renders a graph container as an SVG component that contains other nodes
- * and containers.
- */
-class DagContainer extends React.PureComponent<{
-    /** CSS-in-JS styling object. */
-    classes: {},
-
-    /** Position and size properties. */
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-}> {
-    render() {
-        const { classes, x, y, width, height } = this.props;
-        return (
-            <g>
-                <rect x={x} y={y} width={width} height={height} className={classes.dagContainer} />
-            </g>
-        );
-    }
-}
 
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
@@ -221,7 +186,8 @@ class DagEdge extends React.PureComponent<{
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-const kInitialNodeWidth = 100000;
+const kNodeInitialWidth = 100000;
+const kNodeResizeTolerance = 5;
 class DagLayout extends React.Component<
     {
         /** CSS-in-JS styling object. */
@@ -231,17 +197,15 @@ class DagLayout extends React.Component<
 
         /** Node elements that are props to `Viewer` sub-components. */
         nodes: {
-            [DagElementId]: ViewerProps,
+            [DagNodeId]: {
+                viewerProps: ViewerProps,
+                spec: DagNodeSpec,
+            },
         },
 
         /** Edge specifications of which nodes to connect. */
         edges: {
             [DagEdgeId]: DagEdgeSpec,
-        },
-
-        /** Container specifications for how to layout and group nodes. */
-        containers: {
-            [DagElementId]: DagContainerSpec,
         },
     },
     {
@@ -250,19 +214,16 @@ class DagLayout extends React.Component<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagElementId]: Node,
+            [DagNodeId]: Node,
         },
         edges: {
             [DagEdgeId]: Edge,
         },
-        containers: {
-            [DagElementId]: Node,
-        },
 
         /** Arrangement of graph elements after layout, sorted in ascending z-order. */
         ordering: Array<{
-            type: 'node' | 'edge' | 'container',
-            id: DagElementId | DagEdgeId,
+            type: 'node' | 'edge',
+            id: DagNodeId | DagEdgeId,
         }>,
 
         /** Size of the graph determined by layout engine. */
@@ -293,7 +254,6 @@ class DagLayout extends React.Component<
             shouldLayout: false,
             nodes: {},
             edges: {},
-            containers: {},
             ordering: [],
             size: {
                 width: 0,
@@ -310,43 +270,35 @@ class DagLayout extends React.Component<
         this.setState(
             Immutable({
                 shouldLayout: false,  // False so no layout until sizes all populated.
-                nodes: obj2obj(this.props.nodes, (k, v) => [
+                nodes: obj2obj(this.props.nodes, (k, { spec }) => [
                     k,
                     {
                         id: k,
-                        children: [],
-                        width: kInitialNodeWidth,  // Allow space for `Viewer` to be rendered.
+                        children: spec.children,
+                        flowDirection: spec.flowDirection,
+                        alignChildren: spec.alignChildren,
+                        ports: spec.ports,
+                        width: kNodeInitialWidth,  // Allow space for `Viewer` to be rendered.
+                        height: undefined,  // Needs to be populated.
                     },
                 ]),
-                edges: obj2obj(this.props.edges, (k, v) => [
+                edges: obj2obj(this.props.edges, (k, spec) => [
                     k,
                     {
                         id: k,
-                        startId: v.startId,
-                        endId: v.endId,
-                        startSide: v.startSide || 'up',
-                        endSide: v.endSide || 'down',
-                    },
-                ]),
-                containers: obj2obj(this.props.containers, (k, v) => [
-                    k,
-                    {
-                        id: k,
-                        children: v.elements,
-                        orientation:
-                            v.flowDirection === 'left' || v.flowDirection === 'right'
-                                ? 'horizontal'
-                                : 'vertical',
+                        startId: spec.startId,
+                        endId: spec.endId,
+                        startPort: spec.startPort,
+                        endPort: spec.endPort,
                     },
                 ]),
                 ordering: [
                     ...obj2arr(this.props.nodes, (k, v) => ({ type: 'node', id: k })),
-                    ...obj2arr(this.props.containers, (k, v) => ({ type: 'container', id: k })),
                     ...obj2arr(this.props.edges, (k, v) => ({ type: 'edge', id: k })),
                 ],
                 size: {
-                    width: 0,
-                    height: 0,
+                    width: 400,  // TODO
+                    height: 400,
                 },
             }),
         );
@@ -359,18 +311,14 @@ class DagLayout extends React.Component<
         // Prevent component from re-rendering each time a dimension is populated/updated unless all
         // dimensions are populated.
         const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height);
-        console.log(
-            'DagLayout -- shouldComponentUpdate(): ',
-            shouldUpdate,
-            'nextState.nodes',
-            Object.values(nextState.nodes),
-        );
+        console.log('DagLayout -- shouldComponentUpdate(): ', shouldUpdate);
         return shouldUpdate;
     }
 
     componentDidUpdate() {
         // Performing the layout will change the state, so we wrap it in a condition to prevent
         // infinite looping.
+        console.log('DagLayout -- componentDidUpdate()');
         if (this.state.shouldLayout) {
             console.debug('DagLayout -- componentDidUpdate(): shouldLayout = true so will layout');
             this._layoutGraph();
@@ -384,23 +332,26 @@ class DagLayout extends React.Component<
      * @param height
      * @private
      */
-    _onElementResize(nodeId: DagElementId, width: number, height: number) {
+    _onNodeResize(nodeId: DagNodeId, width: number, height: number) {
         console.log(`DagLayout -- _onElementResize(${nodeId}, ${width}, ${height})`);
-        // TODO: formalize this tolerance measure
-        const oldWidth = this.state.nodes[nodeId].width;
-        const oldHeight = this.state.nodes[nodeId].height;
+
+        // Do not react to resizes beyond some tolerance, e.g. due to platform instabilities or
+        // trivial appearance changes.
+        const prevWidth = this.state.nodes[nodeId].width;
+        const prevHeight = this.state.nodes[nodeId].height;
         if (
-            oldWidth !== undefined &&
-            oldHeight !== undefined &&
-            -5 < oldWidth - width < 5 &&
-            -5 < oldHeight - height < 5
+            prevWidth !== undefined &&
+            prevHeight !== undefined &&
+            -kNodeResizeTolerance < prevWidth - width < kNodeResizeTolerance &&
+            -kNodeResizeTolerance < prevHeight - height < kNodeResizeTolerance
         ) {
             return;
         }
+
         this.setState((state) =>
             Immutable(state)
                 .merge({ nodes: { [nodeId]: { width, height } } }, { deep: true })
-                .set('shouldLayout', true),
+                .set('shouldLayout', true)
         );
     }
 
@@ -409,13 +360,10 @@ class DagLayout extends React.Component<
      * @private
      */
     _layoutGraph() {
-        const { nodes, edges, containers } = this.state;
-        const containerKeys = new Set(Object.keys(containers));
+        const { nodes, edges } = this.state;
 
         layout(
-            Object.values(nodes.asMutable({ deep: true })).concat(
-                Object.values(containers.asMutable({ deep: true })),
-            ),
+            Object.values(nodes.asMutable({ deep: true })),
             Object.values(edges.asMutable({ deep: true })),
             (
                 width: number,
@@ -424,9 +372,6 @@ class DagLayout extends React.Component<
                 edges: Array<Edge>,
             ) => {
                 console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
-                // Separate nodes from containers.
-                let containers = nodes.filter((node) => containerKeys.has(node.id));
-
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
                 const elements = [...nodes, ...edges];
                 elements.sort(({ z: z1 }, { z: z2 }) => z1 - z2);
@@ -434,20 +379,10 @@ class DagLayout extends React.Component<
                 // Save elements into state, and no more layout out until explicitly triggered.
                 this.setState((state) =>
                     Immutable(state).merge({
-                        nodes: arr2obj(
-                            nodes,
-                            (elem) => (!containerKeys.has(elem.id) ? [elem.id, elem] : undefined), // TODO: Change value to elem
-                        ),
-                        containers: arr2obj(nodes, (elem) =>
-                            containerKeys.has(elem.id) ? [elem.id, elem] : undefined,
-                        ),
-                        edges: arr2obj(edges, (elem) => [elem.id, elem]),
+                        nodes: arr2obj(nodes, (node) => [node.id, node]),
+                        edges: arr2obj(edges, (edge) => [edge.id, edge]),
                         ordering: elements.map((elem) => ({
-                            type: elem.points
-                                ? 'edge'
-                                : containerKeys.has(elem.id)
-                                ? 'container'
-                                : 'node',
+                            type: elem.points ? 'edge' : 'node',
                             id: elem.id,
                         })),
                         size: { width, height },
@@ -458,12 +393,31 @@ class DagLayout extends React.Component<
         );
     }
 
+    _buildArrowheadMarker(id, color) {
+        return (
+            <marker
+                key={id}
+                id={id}
+                viewBox='-5 -3 5 6'
+                refX='0'
+                refY='0'
+                markerUnits='strokeWidth'
+                markerWidth='4'
+                markerHeight='3'
+                orient='auto'
+            >
+                <path
+                    d='M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z'
+                    fill={color}
+                />
+            </marker>
+        );
+    }
+
     /**
-     * Renders a DAG with nodes, edges, and containers. Nodes can contain `Viewer` objects. Edges
-     * can have string labels. Containers can be collapsed or expanded.
+     * Renders a DAG with nodes and edges. Nodes can contain `Viewer` objects or other nodes,
+     * depending on expansion mode. Edges can have string labels.
      */
-    // arrowheads = [makeArrowheadMarker(...), ...]
-    // <defs>{arrowheads}</defs>
     render() {
         const { classes } = this.props;
         const { ordering, size } = this.state;
@@ -474,6 +428,7 @@ class DagLayout extends React.Component<
             <div className={classes.frame}>
                 <div className={classes.graph}>
                     <svg width={size.width} height={size.height}>
+                        <defs>{[this._buildArrowheadMarker('arrowheadBase', '#FF0000')]}</defs>
                         <rect
                             x={0}
                             y={0}
@@ -485,7 +440,7 @@ class DagLayout extends React.Component<
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const viewerProps = this.props.nodes[id];
+                                    const { viewerProps, spec } = this.props.nodes[id];
                                     const { x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
@@ -495,35 +450,24 @@ class DagLayout extends React.Component<
                                             y={y}
                                             width={width}
                                             height={height}
+                                            isExpanded={false/*!spec.children*/}
                                             classes={classes}
                                             onResize={(width, height) =>
-                                                this._onElementResize(id, width, height)
+                                                this._onNodeResize(id, width, height)
                                             }
                                         />
                                     );
                                 }
-
                                 case 'edge': {
                                     const { points } = this.state.edges[id];
                                     return (
-                                        <DagEdge key={`e${id}`} points={points} classes={classes} />
-                                    );
-                                }
-
-                                case 'container': {
-                                    const { x, y, width, height } = this.state.containers[id];
-                                    return (
-                                        <DagContainer
-                                            key={`c${id}`}
-                                            x={x}
-                                            y={y}
-                                            width={width}
-                                            height={height}
+                                        <DagEdge
+                                            key={`e${id}`}
+                                            points={points}
                                             classes={classes}
                                         />
                                     );
                                 }
-
                                 default:
                                     console.error('Got unrecognized graph element');
                                     return null;
@@ -614,8 +558,7 @@ const styles = (theme) => ({
         // ].join(', '),
     },
 
-    /** Container styles. */
-    dagContainer: {
+    nodeExpanded: {
         fill: '#000000', // TODO: Change this.
         fillOpacity: 0.17,
         strokeWidth: 3,
