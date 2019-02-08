@@ -364,7 +364,7 @@ class _DagLayoutNode:
     def to_dict(self) -> Mapping[str, Any]:
         return {
             'vizId': self.viz,
-            'elements': [item.get_id() for item in self.elements],
+            'children': [item.get_id() for item in self.elements],
             'flowDirection': self.flow_direction,
             'isExpanded': self.is_expanded,
             'isInteractive': self.is_interactive,

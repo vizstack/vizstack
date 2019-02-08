@@ -273,9 +273,9 @@ export default function layout(
     // Use both real and dummy `Vertex`, and no `Group`. The `Link`s
     new cola.Layout()
         .avoidOverlaps(false)
-        .nodes(graph.vertices.real + graph.vertices.dummy)
-        .links(graph.links.real + graph.links.dummy)
-        .constraints(graph.constraints.real + graph.constraints.dummy)
+        .nodes(graph.vertices.real.concat(graph.vertices.dummy))
+        .links(graph.links.real.concat(graph.links.dummy))
+        .constraints(graph.constraints.real.concat(graph.constraints.dummy))
         .linkDistance(30) // TODO: choose
         .symmetricDiffLinkLengths(5) // TODO: Choose
         .convergenceThreshold(1e-4) // TODO: Choose
@@ -325,6 +325,7 @@ export default function layout(
     }
     function getVertexDims(nodeId: NodeId) {
         const v: Vertex = graph.vertices.real[vertexIdxLookup[nodeId]];
+        console.log(nodeId, vertexIdxLookup, graph.vertices.real, v);
         return {
             x: v.x - v.width / 2, // TODO: +pad?
             y: v.y - v.height / 2,
