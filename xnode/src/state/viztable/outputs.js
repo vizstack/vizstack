@@ -64,12 +64,24 @@ export type LayoutModel = GridLayoutModel | DagLayoutModel | FlowLayoutModel;
 
 /** Grid layout is __. */
 export type GridLayoutModel = {
-    /** col, row, width, height */
-    geometries: Array<[VizId, number, number, number, number]>,
+    type: 'GridLayout',
+    contents: {
+        elements: Array<{
+            vizId: VizId,
+            col: number,
+            row: number,
+            width: number,
+            height: number,
+        }>,
+    },
+    
 }
 
 export type FlowLayoutModel = {
-    elements: Array<VizId>,
+    type: 'FlowLayout',
+    contents: {
+        elements: Array<VizId>,
+    },
 }
 
 /** Dag layout is ___. */

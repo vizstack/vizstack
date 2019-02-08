@@ -154,12 +154,14 @@ class Viewer extends React.Component<
                         nodes={obj2obj(nodes, (id, spec) => [
                             id,
                             {
-                                vizId: spec.vizId,
-                                fetchVizModel,
+                                viewerProps: {
+                                    vizId: spec.vizId,
+                                    fetchVizModel,
+                                },
+                                spec: spec,
                             },
                         ])}
                         edges={edges}
-                        containers={containers}
                     />
                 );
         }
