@@ -1,5 +1,6 @@
 import * as React from 'react';
 import LinearProgress from "@material-ui/core/LinearProgress";
+import {withStyles} from "@material-ui/core/styles/index";
 
 /**
  * This dumb component exposes the `LinearProgress` Material UI component in a manner that can be interacted with via
@@ -66,6 +67,11 @@ class DOMProgress extends React.Component<{
     }
 }
 
-// Using withStyles() here causes the wrong component to get mounted to the window and seems to make this component
-// inaccessible
-export default DOMProgress;
+// To inject styles into component
+// -------------------------------
+
+/** CSS-in-JS styling object. */
+const styles = (theme) => ({
+});
+
+export default withStyles(styles)(DOMProgress);

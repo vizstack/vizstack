@@ -23,11 +23,7 @@ class SandboxSettingsModal extends React.Component<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    settingsFileExists: boolean,
-
-    settingsPath: string,
-
-    onSelect: (string, string, string) => void,
+    onSelect: (sandboxName: string) => void,
 }, {
     currentSandboxName: string,
 
@@ -36,49 +32,28 @@ class SandboxSettingsModal extends React.Component<{
             pythonPath: string,
             scriptPath: string,
         }
-    }
+    },
 }> {
     /**
      * Constructor.
      */
     constructor(props) {
         super(props);
-        let sandboxes = {};
-        if (props.settingsFileExists) {
-            sandboxes = this.getSandboxes();
-        }
         this.state = {
-            sandboxes,
+            sandboxes: [],
             currentSandboxName: null,
         }
     }
 
-    componentDidUpdate(prevProps) {
-        if (!prevProps.settingsFileExists && this.props.settingsFileExists) {
-            this.setState({
-                sandboxes: this.getSandboxes(),
-            })
-        }
-    }
-
-    getSandboxes() {
-        const { settingsPath } = this.props;
-        return yaml.safeLoad(fs.readFileSync(settingsPath)).sandboxes;
+    updateSandboxes(sandboxes: {}) {
+        this.setState({sandboxes});
     }
 
     onSandboxSelected(sandboxName) {
-        const { sandboxes } = this.state;
-        const { pythonPath, scriptPath } = sandboxes[sandboxName];
-        this.props.onSelect(sandboxName, pythonPath, scriptPath);
+        this.props.onSelect(sandboxName);
         this.setState({
             currentSandboxName: sandboxName,
         })
-    }
-
-    submitSelection() {
-        const { sandboxes, currentSandboxName } = this.state;
-        const { pythonPath, scriptPath } = sandboxes[currentSandboxName];
-        this.props.onSelect(currentSandboxName, pythonPath, scriptPath);
     }
 
     /**
@@ -88,16 +63,10 @@ class SandboxSettingsModal extends React.Component<{
     render() {
         const { classes } = this.props;
         const { currentSandboxName, sandboxes } = this.state;
-
-        let pythonPath, scriptPath;
-        if (currentSandboxName) {
-            pythonPath = sandboxes[currentSandboxName].pythonPath;
-            pythonPath = getMinimalDisambiguatedPaths(
-                Object.values(sandboxes).map((sandbox) => sandbox.pythonPath))[pythonPath];
-            scriptPath = sandboxes[currentSandboxName].scriptPath;
-            scriptPath = getMinimalDisambiguatedPaths(
-                Object.values(sandboxes).map((sandbox) => sandbox.scriptPath))[scriptPath];
-        }
+        const { pythonPath, scriptPath } = currentSandboxName in sandboxes ? sandboxes[currentSandboxName] : {
+            pythonPath: undefined,
+            scriptPath: undefined,
+        };
 
         return (
             <div className={classes.root}>
@@ -110,11 +79,10 @@ class SandboxSettingsModal extends React.Component<{
                             value: sandboxName, label: sandboxName,
                         }))}
                     placeholder={"Select a sandbox..."}
-                    onMenuOpen={() => this.setState({sandboxes: this.getSandboxes()})}
                     onChange={(selected) => this.onSandboxSelected(selected.value)}
                 />
                 <div className={classes.details}>
-                    {pythonPath && scriptPath ? `${pythonPath} | ${scriptPath}` : undefined}
+                    {pythonPath !== undefined && scriptPath !== undefined ? `${pythonPath} | ${scriptPath}` : undefined}
                 </div>
             </div>
         );

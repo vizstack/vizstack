@@ -5,6 +5,9 @@ import SandboxSettingsView from './views/sandbox-settings';
 import REPL from './views/repl';
 
 import { getMinimalDisambiguatedPaths } from './services/path-utils';
+import yaml from "js-yaml";
+import fs from 'fs';
+import path from 'path';
 
 // Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
 let RERUN_DELAY = 2000;
@@ -24,7 +27,13 @@ export default {
     // Time that the active editor was last changed.
     lastChangedTime: null,
 
+    changedFiles: [],
+
     changeInterval: null,
+
+    settings: {sandboxes: {}},
+
+    settingsErrors: [],
 
     /**
      * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
@@ -38,9 +47,18 @@ export default {
             atom.workspace.addOpener((uri) => {
                 if (uri.startsWith('atom://xnode-sandbox')) {
                     const uriTokens = uri.split('/');
-                    const repl = new REPL(uriTokens[3], () => this.waitAndRerun(null, null, 0));
+                    const settingsPath = path.join(atom.project.getPaths()[0], 'xnode.yaml');
+                    const repl = new REPL(uriTokens[3], (repl, sandboxName) =>
+                        this.updateReplSandbox(repl, sandboxName, true));
                     this.repls.push(repl);
                     console.debug('root -- new REPL added');
+
+                    if (!fs.existsSync(settingsPath)) {
+                        this.createSettingsFile(settingsPath);
+                    }
+                    else {
+                        this.reloadSettings(settingsPath);
+                    }
                     return repl;
                 }
             }),
@@ -62,7 +80,7 @@ export default {
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
                 'xnode:create-sandbox': () => {
-                    atom.workspace.open(`atom://xnode-sandbox/${this.repls.length}`);
+                    atom.workspace.open(`atom://xnode-sandbox/${Math.max(...this.repls.map((repl) => repl.id)) + 1}`);
                 }
             }),
 
@@ -113,6 +131,22 @@ export default {
         console.debug('root -- sandbox settings panel opened');
     },
 
+    createSettingsFile(settingsPath) {
+        atom.workspace.open(settingsPath).then(editor => {
+            editor.insertText('# Define your sandbox configurations here.\n');
+            editor.insertText(yaml.safeDump({
+                'sandboxes': {
+                    'MySandbox1': {
+                        'pythonPath' : null,
+                        'scriptPath' : null,
+                    }
+                }
+            }));
+            editor.save();
+            this.reloadSettings(settingsPath);
+        });
+    },
+
     /**
      * Rerun the REPL script if `delay` has elapsed since last change.
      * @param changedPath
@@ -120,6 +154,7 @@ export default {
      * @param delay
      */
     waitAndRerun(changedPath, changes, delay) {
+        this.changedFiles.push(changedPath);
         this.lastChangedTime = new Date();
         clearInterval(this.changeInterval);
         this.changeInterval = setInterval(() => {
@@ -137,14 +172,120 @@ export default {
         setTimeout(() => {
             const now = new Date();
             if (now - this.lastChangedTime >= delay) {
+                const changedSettingsFile = this.changedFiles.find(
+                    (filePath) => filePath !== null && filePath.endsWith('xnode.yaml'));
+                if (changedSettingsFile !== undefined) {
+                    this.reloadSettings(changedSettingsFile);
+                }
+                this.changedFiles = [];
                 clearInterval(this.changeInterval);
                 this.repls
                     .filter((repl) => !repl.isDestroyed)
                     .forEach((repl) => {
                         console.debug('root -- signaling change to REPL');
+                        // TODO: pass all of the changed files to the REPL
                         repl.onFileChanged(changedPath, changes);
                     });
             }
         }, delay + 10); // Allow some buffer time
+    },
+
+    updateReplSandbox(repl, sandboxName, shouldRerun) {
+        repl.sandboxName = sandboxName;
+        const { pythonPath, scriptPath } = this.settings.sandboxes[sandboxName];
+        let error;
+        if (typeof pythonPath !== 'string') {
+            error = atom.notifications.addError(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`);
+            this.settingsErrors.push(error);
+            return;
+        }
+        if (typeof scriptPath !== 'string') {
+            error = atom.notifications.addError(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`);
+            this.settingsErrors.push(error);
+            return;
+        }
+        repl.createEngine(pythonPath, scriptPath);
+        if (shouldRerun) {
+            this.waitAndRerun(null, null, RERUN_DELAY);
+        }
+    },
+
+    reloadSettings(settingsPath) {
+        this.settingsErrors.forEach((error) => error.dismiss());
+        this.settingsErrors = [];
+        let newSettings;
+        try {
+            newSettings = yaml.safeLoad(fs.readFileSync(settingsPath));
+        }
+        catch(e) {
+            let error;
+            if (e.name === 'YAMLException') {
+                error = atom.notifications.addError('"xnode.yaml" could not be parsed successfully.', {
+                    buttons: [
+                        {
+                            text: 'Retry',
+                            onDidClick: () => this.reloadSettings(settingsPath),
+                        }
+                    ],
+                    dismissable: true,
+                });
+            }
+            else {
+                error = atom.notifications.addError('"xnode.yaml" could not be found in this project.', {
+                    buttons: [
+                        {
+                            text: 'Retry',
+                            onDidClick: () => this.reloadSettings(settingsPath),
+                        },
+                        {
+                            text: 'Create xnode.yaml',
+                            onDidClick: () => this.createSettingsFile(settingsPath),
+                        }
+                    ],
+                    dismissable: true,
+                });
+            }
+            this.settingsErrors.push(error);
+            return;
+        }
+        console.debug('root -- settings file updated', newSettings);
+        if (typeof newSettings !== 'object' || newSettings === null || !('sandboxes' in newSettings)) {
+            let error = atom.notifications.addError('"xnode.yaml" is missing the "sandboxes" field.', {
+                buttons: [
+                    {
+                        text: 'Retry',
+                        onDidClick: () => this.reloadSettings(settingsPath),
+                    }
+                ],
+                dismissable: true,
+            });
+            this.settingsErrors.push(error);
+            return;
+        }
+        const updatedSandboxes = [];
+        const deletedSandboxes = [];
+
+        Object.entries(this.settings.sandboxes)
+            .forEach(([sandboxName, {pythonPath, scriptPath}]) => {
+                if (!(sandboxName in newSettings.sandboxes)) {
+                    deletedSandboxes.push(sandboxName);
+                }
+                else if (pythonPath !== newSettings.sandboxes[sandboxName].pythonPath ||
+                         scriptPath !== newSettings.sandboxes[sandboxName].scriptPath) {
+                    updatedSandboxes.push(sandboxName);
+                }
+            });
+
+        this.settings = newSettings;
+
+        this.repls.filter((repl) => !repl.isDestroyed).forEach((repl) => {
+           if (deletedSandboxes.includes(repl.sandboxName)) {
+               repl.destroy();
+           }
+           if (updatedSandboxes.includes(repl.sandboxName)) {
+               this.updateReplSandbox(repl, repl.sandboxName, false);
+           }
+           repl.sandboxSelectComponent.updateSandboxes(this.settings.sandboxes);
+        });
     },
 };

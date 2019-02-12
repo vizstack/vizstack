@@ -65,7 +65,6 @@ class Viewer extends React.Component<
         super(props);
         const { vizTable, vizId } = this.props;
 
-        console.log(vizTable, vizId);
         // Set initial state based on what model is available.
         let expansionMode = 'summary';
         expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;

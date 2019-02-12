@@ -65,10 +65,11 @@ export default class REPL {
      * @param scriptPath
      *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
      */
-    constructor(id: number, onSandboxChange: () => void) {
+    constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void) {
         this.id = id;
-        this.name = '';
+        this.sandboxName = '';  // To be set once a sandbox has been selected
         this.isDestroyed = false; // TODO: Why do we need this?
+        this.onSandboxSelected = onSandboxSelected;
 
         // Initialize REPL state
         this.executionEngine = undefined;
@@ -76,29 +77,9 @@ export default class REPL {
         // Initialize Redux store & connect to main reducer
         // TODO: re-add devtools
         this.store = createStore(mainReducer, applyMiddleware(thunk));
-
-        let settingsFileExists = false;
-
-        const settingsPath = path.join(atom.project.getPaths()[0], 'xnode.yaml');
-        if (!fs.existsSync(settingsPath)) {
-            atom.workspace.open(settingsPath).then(editor => {
-                settingsFileExists = true;
-                editor.insertText('# Define your sandbox configurations here.\n');
-                editor.insertText(yaml.safeDump({
-                    'sandboxes': {
-                        'MySandbox1': {
-                            'pythonPath' : null,
-                            'scriptPath' : null,
-                        }
-                    }
-                }))
-            });
-        } else {
-            settingsFileExists = true;
-        }
-
         // Initialize React root component for Canvas
         this.progressComponent = undefined;
+        this.sandboxSelectComponent = undefined;
         this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
@@ -108,18 +89,13 @@ export default class REPL {
                         flexDirection: 'column',
                         height: '100%',
                     }}>
-                        <Progress ref={(element) => {this.progressComponent = element}}/>
+                        <Progress innerRef={(element) => {this.progressComponent = element;}}/>
                         <div style={{
                             width: '100%',
                         }}>
                             <SandboxSettings
-                                settingsFileExists={settingsFileExists}
-                                settingsPath={settingsPath}
-                                onSelect={(sandboxName, pythonPath, scriptPath) => {
-                                    this.name = sandboxName;
-                                    this.executionEngine = this._createEngine(pythonPath, scriptPath);
-                                    onSandboxChange();
-                                }} />
+                                innerRef={(element) => {this.sandboxSelectComponent = element;}}
+                                onSelect={(sandboxName) => this.onSandboxSelected(this, sandboxName)} />
                         </div>
                         <Canvas
                             style={{
@@ -133,7 +109,7 @@ export default class REPL {
             this.element,
         );
 
-        console.debug(`repl ${this.name} - constructed`);
+        console.debug(`repl ${this.id} - constructed`);
     }
 
     /**
@@ -150,7 +126,7 @@ export default class REPL {
             this.executionEngine.terminate();
         }
         this.element.remove();
-        console.debug(`repl ${this.name} -- destroy()`);
+        console.debug(`repl ${this.id} -- destroy()`);
     }
 
     // =================================================================================================================
@@ -159,7 +135,7 @@ export default class REPL {
 
     /** Used by Atom to show title in a tab. */
     getTitle() {
-        return `[canvas] ${this.name}`;
+        return `[canvas] ${this.sandboxName}`;
     }
 
     /** Used by Atom to show icon next to title in a tab. */
@@ -199,7 +175,7 @@ export default class REPL {
      * @returns {PythonShell}
      *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
-    _createEngine(pythonPath: string, scriptPath: string) {
+    createEngine(pythonPath: string, scriptPath: string) {
         if (this.executionEngine) {
             this.executionEngine.terminate();
             this.executionEngine = undefined;
@@ -210,7 +186,7 @@ export default class REPL {
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message: ExecutionEngineMessage) => {
-            console.debug(`repl ${this.name} -- received message: `, JSON.parse(message));
+            console.debug(`repl ${this.id} -- received message: `, JSON.parse(message));
             const { viewedVizId, vizTableSlice, shouldRefresh, scriptFinished } = JSON.parse(message);
             if (shouldRefresh) {
                 this.store.dispatch(clearCanvasAction());
@@ -229,7 +205,7 @@ export default class REPL {
             // focus so the user can keep typing.
             atom.views.getView(atom.workspace.getActiveTextEditor()).focus();
         });
-        return executionEngine;
+        this.executionEngine = executionEngine;
     }
 
     /**
@@ -247,7 +223,7 @@ export default class REPL {
             (existingSpec.compactModel === null && modelType === 'compact') ||
             (existingSpec.fullModel === null && modelType === 'full')
         ) {
-            console.debug(`repl ${this.name} -- fetching viz (${vizId})`);
+            console.debug(`repl ${this.id} -- fetching viz (${vizId})`);
             this.executionEngine.send(`fetch:${vizId}?${modelType}`);
         }
     }
@@ -262,7 +238,7 @@ export default class REPL {
      */
     onFileChanged(filePath: string, changes: {}) {
         changes = ''; // TODO: Right now not sending specific changes.
-        console.debug(`repl ${this.name} -- change to ${filePath}`);
+        console.debug(`repl ${this.id} -- change to ${filePath}`);
         if (this.executionEngine) {
             this.executionEngine.send(`change:${filePath}?${changes}`);
             this.progressComponent.showIndeterminate();
