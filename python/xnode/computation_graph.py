@@ -10,7 +10,7 @@ See get_viz.md for underlying principles and concepts.
 import wrapt
 import inspect
 from collections import deque
-from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz, _DagLayoutNode
+from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz, DagLayoutNode
 from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
 
 # TODO: state outputs need a special placement
@@ -178,10 +178,10 @@ class GraphData:
         if self.creator_op is None:
             return layout
 
-        op_to_node: Dict[_FunctionCall, _DagLayoutNode] = {
+        op_to_node: Dict[_FunctionCall, DagLayoutNode] = {
             self.creator_op: layout.create_node(self.creator_op)
         }
-        op_to_secret_container_node: Dict[_FunctionCall, _DagLayoutNode] = dict()
+        op_to_secret_container_node: Dict[_FunctionCall, DagLayoutNode] = dict()
         layout.create_edge(op_to_node[self.creator_op], graphdata_to_node[self])
         ops: List[_FunctionCall] = [self.creator_op]
         while len(ops) > 0:

@@ -20,6 +20,7 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
+python/docs/_build
 
 # dotenv
 .env

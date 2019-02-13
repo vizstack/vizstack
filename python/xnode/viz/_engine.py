@@ -22,7 +22,7 @@ class VisualizationEngine:
         def __init__(
                 self, viz_spec: VizSpec, full_viz_model: VizModel, compact_viz_model: VizModel,
                 full_viz_refs: List[VizId], compact_viz_refs: List[VizId],
-                expansion_mode: ExpansionMode
+                expansion_mode: Optional[ExpansionMode]
         ) -> None:
             """Constructor.
 
@@ -41,7 +41,7 @@ class VisualizationEngine:
             self.full_viz_refs: List[VizId] = full_viz_refs
             # must be subset of full refs
             self.compact_viz_refs: List[VizId] = compact_viz_refs
-            self.expansion_mode: ExpansionMode = expansion_mode
+            self.expansion_mode: Optional[ExpansionMode] = expansion_mode
 
     def __init__(self) -> None:
         """Constructor."""
@@ -206,7 +206,7 @@ class VisualizationEngine:
             viz_slice[viz_id] = copy(self._cache[viz_id].viz_spec)
             expansion_mode = (
                 force_expansion_mode if force_expansion_mode is not None else self._cache[viz_id].expansion_mode
-                if self._cache[viz_id].expansion_mode != ExpansionMode.NONE else ExpansionMode
+                if self._cache[viz_id].expansion_mode is not None else ExpansionMode
                 .FULL if parent_expansion_mode == ExpansionMode.NONE else ExpansionMode
                 .COMPACT if parent_expansion_mode == ExpansionMode.FULL else ExpansionMode.SUMMARY
             )

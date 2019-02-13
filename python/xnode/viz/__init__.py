@@ -55,16 +55,16 @@ _CURRENT = []
 
 
 def get_viz(o: Any) -> 'Viz':
-    """Gets the `Viz` object associated with `o`.
+    """Gets the Viz associated with ``o``.
 
-    If `o` is already a Viz, it is returned unchanged. If `o` has a visualization function, its value is returned.
-    Otherwise, a default visualization for `o`, depending on its type, is returned.
+    If ``o`` is already a Viz, it is returned unchanged. If ``o`` has an ``xn()`` method, its value is returned.
+    Otherwise, a default visualization for ``o``, depending on its type, is returned.
 
     Args:
         o: An object to be visualized.
 
     Returns:
-        A Viz object describing how to render `o`.
+        A Viz which describes how to render ``o``.
     """
     global _CURRENT
     if o in _CURRENT:
@@ -159,22 +159,22 @@ def get_viz(o: Any) -> 'Viz':
 class Viz:
     """Interface for new Viz objects.
 
-    Each Viz should be a subclass of Viz, and must pass an optional name and a default expansion state to the
-    constructor. The subclasses should also implement `compile_full()`, which creates a full VizModel,
-    `compile_compact()`, which creates a compact VizModel, and `__str__()`, which is used to generate the text for
+    Each Primitive and Layout should be a subclass of ``Viz``. The subclasses should also implement `compile_full()`,
+    which creates a full ``VizModel``, `compile_compact()`, which creates a compact VizModel, and `__str__()`,
+    which is used to generate the text for
     its summary model.
     """
 
-    def __init__(self, name: Optional[str], expansion_mode: ExpansionMode) -> None:
+    def __init__(self, summary: Optional[str], expansion_mode: Optional[ExpansionMode]) -> None:
         """Constructor.
 
         Args:
-            name: An optional name to assign to this Viz, which will be shown in its summary state.
+            summary: An optional name to assign to this Viz, which will be shown in its summary expansion mode.
             expansion_mode: The expansion state this Viz should take if none is specifically given in the watch
                 expression.
         """
-        self._name: Optional[str] = name
-        self.default_expansion_mode: ExpansionMode = expansion_mode
+        self._summary: Optional[str] = summary
+        self.default_expansion_mode: Optional[ExpansionMode] = expansion_mode
 
     def compile_full(self) -> Tuple[VizModel, Iterable['Viz']]:
         """Creates a VizModel which describes this Viz and can be sent to a client for rendering.
@@ -201,7 +201,7 @@ class Viz:
             A TextPrimitiveModel whose text is the name of this Viz if given in the constructor, or otherwise this
                 Viz's string representation.
         """
-        return TokenPrimitive(str(self) if self._name is None else self._name).compile_summary()
+        return TokenPrimitive(str(self) if self._summary is None else self._summary).compile_summary()
 
     def __str__(self) -> str:
         """Returns a string which describes the basic properties of the Viz.
@@ -216,29 +216,27 @@ class Viz:
 
 class TextPrimitive(Viz):
     """
-    A Viz which is a single, contiguous block of text content.
+    A Primitive which renders a contiguous block of text.
     """
 
-    def __init__(self, text: str, color: Color = Color.INVISIBLE) -> None:
-        """Constructor.
-
+    def __init__(self, text: str, background_color: Color = Color.INVISIBLE) -> None:
+        """
         Args:
-            val: The text to include on the token, or an object whose string representation should be written on the
-                token.
-            color: The background color of the token.
+            text: The text which should be rendered.
+            background_color: The background color of the text.
         """
         super(TextPrimitive, self).__init__(None, ExpansionMode.FULL)
         self._text: str = text
-        self._color: Color = color
+        self._color: Color = background_color
 
     def compile_full(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, self._color.value), []
+        return TextPrimitiveModel(self._text, str(self._color.value)), []
 
     def compile_compact(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, self._color.value), []
+        return TextPrimitiveModel(self._text, str(self._color.value)), []
 
     def compile_summary(self) -> 'TextPrimitiveModel':
-        return TextPrimitiveModel(self._text, self._color.value)
+        return TextPrimitiveModel(self._text, str(self._color.value))
 
     def __str__(self) -> str:
         return self._text
@@ -246,27 +244,33 @@ class TextPrimitive(Viz):
 
 class TokenPrimitive(TextPrimitive):
     """
-    A Viz which is a single, contiguous block of text content.
+    A Primitive which renders a string representation of any object.
     """
 
-    def __init__(self, val: Any) -> None:
-        """Constructor.
-
-        Args:
-            val: The text to include on the token, or an object whose string representation should be written on the
-                token.
-            color: The background color of the token.
+    def __init__(self, o: Any) -> None:
         """
-        super(TokenPrimitive, self).__init__(str(val), Color.DEFAULT)
+        Args:
+            o: The object whose string representation should be rendered.
+        """
+        super(TokenPrimitive, self).__init__(str(o), Color.DEFAULT)
 
 
 class FlowLayout(Viz):
+    """
+    A Layout which renders other Vizzes as a series of inline elements.
+    """
 
     COMPACT_LEN = 3
 
-    def __init__(self, elements: Sequence[Any], name: Optional[str] = None, expansion_mode: ExpansionMode =
-    ExpansionMode.NONE) -> None:
-        super(FlowLayout, self).__init__(name, expansion_mode)
+    def __init__(self, elements: List[Any], summary: Optional[str] = None, expansion_mode: Optional[ExpansionMode] =
+                None) -> None:
+        """
+        Args:
+            elements: A sequence of objects which should be visualized.
+            summary: An optional string which will be shown when the ``FlowLayout`` is in its summary expansion mode.
+            expansion_mode: An optional expansion mode which the ``FlowLayout`` should adopt by default.
+        """
+        super(FlowLayout, self).__init__(summary, expansion_mode)
         self._elements = [get_viz(o) for o in elements]
 
     def compile_full(self) -> Tuple['FlowLayoutModel', Iterable[Viz]]:
@@ -283,15 +287,15 @@ class DagLayout(Viz):
 
     def __init__(
             self, flow_direction: Optional[str] = None, align_children: Optional[bool] = None,
-            name: Optional[str] = None,
-            expansion_mode: ExpansionMode = ExpansionMode.NONE
+            summary: Optional[str] = None,
+            expansion_mode: Optional[ExpansionMode] = None
     ) -> None:
-        super(DagLayout, self).__init__(name, expansion_mode)
+        super(DagLayout, self).__init__(summary, expansion_mode)
         self._flow_direction = flow_direction
         self._align_children = align_children
-        self._nodes: List['_DagLayoutNode'] = []
-        self._edges: List['_DagLayoutEdge'] = []
-        self._alignments: List[List['_DagLayoutNode']] = []
+        self._nodes: List['DagLayoutNode'] = []
+        self._edges: List['DagLayoutEdge'] = []
+        self._alignments: List[List['DagLayoutNode']] = []
 
     def compile_full(self) -> Tuple['DagLayoutModel', Iterable[Viz]]:
         return (
@@ -313,33 +317,33 @@ class DagLayout(Viz):
             align_children: Optional[bool] = None,
             is_expanded: Optional[bool] = None,
             is_interactive: Optional[bool] = None,
-            is_visible: Optional[bool] = None) -> '_DagLayoutNode':
-        node = _DagLayoutNode(str(len(self._nodes)),
-                              get_viz(o),
-                              flow_direction,
-                              align_children,
-                              is_expanded,
-                              is_interactive,
-                              is_visible)
+            is_visible: Optional[bool] = None) -> 'DagLayoutNode':
+        node = DagLayoutNode(str(len(self._nodes)),
+                             get_viz(o),
+                             flow_direction,
+                             align_children,
+                             is_expanded,
+                             is_interactive,
+                             is_visible)
         self._nodes.append(node)
         return node
 
     def create_edge(
-            self, start: '_DagLayoutNode', end: '_DagLayoutNode', start_port: Optional[str] = None,
+            self, start: 'DagLayoutNode', end: 'DagLayoutNode', start_port: Optional[str] = None,
             end_port: Optional[str] = None
-    ) -> '_DagLayoutEdge':
-        edge = _DagLayoutEdge(str(len(self._edges)), start, end, start_port, end_port)
+    ) -> 'DagLayoutEdge':
+        edge = DagLayoutEdge(str(len(self._edges)), start, end, start_port, end_port)
         self._edges.append(edge)
         return edge
 
-    def align_elements(self, elements: List['_DagLayoutNode']) -> None:
+    def align_elements(self, elements: List['DagLayoutNode']) -> None:
         self._alignments.append(elements)
 
     def __str__(self) -> str:
         return 'graph'
 
 
-class _DagLayoutNode:
+class DagLayoutNode:
 
     def __init__(self, node_id: str, viz: 'Viz',
                  flow_direction: Optional[str],
@@ -354,9 +358,9 @@ class _DagLayoutNode:
         self.is_interactive = is_interactive
         self.is_visible = is_visible
         self.align_children = align_children
-        self.elements: List['_DagLayoutNode'] = []
+        self.elements: List['DagLayoutNode'] = []
         self.ports: Dict[str, Mapping[str, Union[str, int]]] = {}
-        self.container: Optional['_DagLayoutNode'] = None
+        self.container: Optional['DagLayoutNode'] = None
 
     def get_id(self) -> str:
         return self.node_id
@@ -381,33 +385,33 @@ class _DagLayoutNode:
             'order': order,
         }
 
-    def add_child(self, child: '_DagLayoutNode') -> None:
+    def add_child(self, child: 'DagLayoutNode') -> None:
         assert child.container is None
         child.container = self
         self.elements.append(child)
 
-    def remove_child(self, child: '_DagLayoutNode') -> None:
+    def remove_child(self, child: 'DagLayoutNode') -> None:
         assert child in self.elements
         assert child.container == self
         child.container = None
         self.elements.remove(child)
 
-    def is_ancestor(self, descendant: '_DagLayoutNode') -> bool:
+    def is_ancestor(self, descendant: 'DagLayoutNode') -> bool:
         if len(self.elements) == 0:
             return False
         if descendant in self.elements:
             return True
         return any([child.is_ancestor(descendant) for child in self.elements])
 
-    def get_container(self) -> Optional['_DagLayoutNode']:
+    def get_container(self) -> Optional['DagLayoutNode']:
         return self.container
 
 
-class _DagLayoutEdge:
+class DagLayoutEdge:
 
     def __init__(
-            self, edge_id: str, start: '_DagLayoutNode',
-            end: '_DagLayoutNode', start_port: Optional[str], end_port: Optional[str]
+            self, edge_id: str, start: 'DagLayoutNode',
+            end: 'DagLayoutNode', start_port: Optional[str], end_port: Optional[str]
     ) -> None:
         self.edge_id = edge_id
         self.start = start
@@ -429,7 +433,7 @@ class _DagLayoutEdge:
 
 class GridLayout(Viz):
     """
-   A Viz which shows other Vizzes laid out in a grid of rows and columns.
+   A Layout which renders other Vizzes in a flexibly-sized grid.
    """
 
     # How many key-value pairs to show in the compact form of this Viz.
@@ -439,16 +443,20 @@ class GridLayout(Viz):
     def __init__(
             self,
             elements: List[Tuple[Any, int, int, int, int]],
-            name: Optional[str] = None,
-            expansion_mode: ExpansionMode = ExpansionMode.NONE
+            summary: Optional[str] = None,
+            expansion_mode: Optional[ExpansionMode] = None
     ) -> None:
-        """Constructor.
-
-        Args:
-            name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
         """
-        super(GridLayout, self).__init__(name, expansion_mode)
+        Args:
+            elements: The contents of the grid as a list of tuples. Each tuple is of the form
+                ``(obj, col, row, width, height)``,
+                where ``obj`` is the object to be visualized, ``col`` is its horizontal position in the grid,
+                ``row`` is its vertical position, ``width`` is the number of columns it should span, and ``height``
+                is the number of rows it should span.
+            summary: An optional string which will be shown when the ``GridLayout`` is in its summary expansion mode.
+            expansion_mode: An optional expansion mode which the ``GridLayout`` should adopt by default.
+        """
+        super(GridLayout, self).__init__(summary, expansion_mode)
         self._num_cols = max(x + w for _, x, _, w, _ in elements) if len(elements) > 0 else 1
         self._num_rows = max(y + h for _, _, y, _, h in elements) if len(elements) > 0 else 1
         self._elements: List[Tuple[Viz, int, int, int, int]] = [(get_viz(o), x, y, w, h)
@@ -488,30 +496,30 @@ class GridLayout(Viz):
 
 class SequenceLayout(GridLayout):
     """
-    A Viz which is a series of other Vizzes shown in fixed order.
+    A Layout which renders other Vizzes as blocks arranged in a fixed order.
     """
 
     def __init__(
             self,
-            elements: Sequence[Any],
+            elements: List[Any],
             orientation: str = 'horizontal',
-            name: Optional[str] = None,
-            expansion_mode: ExpansionMode = ExpansionMode.NONE
+            summary: Optional[str] = None,
+            expansion_mode: Optional[ExpansionMode] = None
     ) -> None:
-        """Constructor.
-
+        """
         Args:
-            elements: An iterable of objects whose Vizzes should be shown in sequence.
+            elements: A sequence of objects which should be visualized.
             orientation: How to arrange the elements of this Viz. Should be either "horizontal" or "vertical".
-            name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
+            summary: An optional string which will be shown when the ``SequenceLayout`` is in its summary expansion
+                mode.
+            expansion_mode: An optional expansion mode which the ``SequenceLayout`` should adopt by default.
         """
         if orientation == 'horizontal':
             super(SequenceLayout, self).__init__([(elem, i, 0, 1, 1) for i, elem in enumerate(elements)],
-                                                 name, expansion_mode)
+                                                 summary, expansion_mode)
         elif orientation == 'vertical':
             super(SequenceLayout, self).__init__([(elem, 0, i, 1, 1) for i, elem in enumerate(elements)],
-                                                 name, expansion_mode)
+                                                 summary, expansion_mode)
         else:
             raise ValueError('Provided orientation "{}" not recognized.'.format(orientation))
 
@@ -521,28 +529,29 @@ class SequenceLayout(GridLayout):
 
 class KeyValueLayout(GridLayout):
     """
-    A Viz which shows pairs of other Vizzes as key-value pairs.
+    A Layout which renders other Vizzes as key-value pairs.
     """
 
     def __init__(
             self,
-            key_value_mapping: Mapping[Any, Any],
-            name: Optional[str] = None,
-            expansion_mode: ExpansionMode = ExpansionMode.NONE
+            key_value_mapping: Dict[Any, Any],
+            summary: Optional[str] = None,
+            expansion_mode: Optional[ExpansionMode] = None
     ) -> None:
         """Constructor.
 
         Args:
-            key_value_mapping: A mapping of objects whose Vizzes should be shown as key-value pairs.
-            name: An optional name to assign to this Viz, which will be shown in its summary state.
-            expansion_mode: The expansion state this Viz should take if none is given in the watch expression.
+            key_value_mapping: A mapping of objects which should be visualized as key-value pairs
+            summary: An optional string which will be shown when the ``KeyValueLayout`` is in its summary expansion
+                mode.
+            expansion_mode: An optional expansion mode which the ``KeyValueLayout`` should adopt by default.
         """
         keys = list(key_value_mapping.keys())
         super(KeyValueLayout, self).__init__([(key, 0, i, 1, 1) for i, key in enumerate(keys)] +
                                              [(TextPrimitive(':'), 1, i, 1, 1) for i in range(len(
                                                  keys))] +
                                              [(key_value_mapping[key], 2, i, 1, 1) for i, key in enumerate(keys)],
-                                             name, expansion_mode)
+                                             summary, expansion_mode)
 
     def __str__(self) -> str:
         return '{ ... }'
@@ -560,8 +569,8 @@ class TextPrimitiveModel(VizModel):
 class DagLayoutModel(VizModel):
 
     def __init__(
-            self, nodes: List['_DagLayoutNode'], edges: List['_DagLayoutEdge'],
-            alignments: List[List['_DagLayoutNode']], flow_direction: Optional[str], align_children: Optional[str]
+            self, nodes: List['DagLayoutNode'], edges: List['DagLayoutEdge'],
+            alignments: List[List['DagLayoutNode']], flow_direction: Optional[str], align_children: Optional[str]
     ) -> None:
         super(DagLayoutModel, self).__init__(
             'DagLayout', {

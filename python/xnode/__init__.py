@@ -1,3 +1,8 @@
+"""
+This file defines the ``view()`` function, which can be used with the Xnode plugin to render objects of any type
+beautifully.
+"""
+
 from typing import Callable, Any
 from xnode.constants import ExpansionMode
 
