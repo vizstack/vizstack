@@ -216,7 +216,7 @@ class Viz:
 
 class TextPrimitive(Viz):
     """
-    A Primitive which renders a contiguous block of text.
+    A Viz which renders a contiguous block of text.
     """
 
     def __init__(self, text: str, background_color: Color = Color.INVISIBLE) -> None:
@@ -244,7 +244,7 @@ class TextPrimitive(Viz):
 
 class TokenPrimitive(TextPrimitive):
     """
-    A Primitive which renders a string representation of any object.
+    A Viz which renders a string representation of any object.
     """
 
     def __init__(self, o: Any) -> None:
@@ -257,7 +257,7 @@ class TokenPrimitive(TextPrimitive):
 
 class FlowLayout(Viz):
     """
-    A Layout which renders other Vizzes as a series of inline elements.
+    A Viz which renders other Vizzes as a series of inline elements.
     """
 
     COMPACT_LEN = 3
@@ -433,7 +433,7 @@ class DagLayoutEdge:
 
 class GridLayout(Viz):
     """
-   A Layout which renders other Vizzes in a flexibly-sized grid.
+   A Viz which renders other Vizzes in a flexibly-sized grid.
    """
 
     # How many key-value pairs to show in the compact form of this Viz.
@@ -496,7 +496,7 @@ class GridLayout(Viz):
 
 class SequenceLayout(GridLayout):
     """
-    A Layout which renders other Vizzes as blocks arranged in a fixed order.
+    A Viz which renders other Vizzes as blocks arranged in a fixed order.
     """
 
     def __init__(
@@ -529,7 +529,7 @@ class SequenceLayout(GridLayout):
 
 class KeyValueLayout(GridLayout):
     """
-    A Layout which renders other Vizzes as key-value pairs.
+    A Viz which renders other Vizzes as key-value pairs.
     """
 
     def __init__(
