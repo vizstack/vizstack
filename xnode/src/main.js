@@ -191,34 +191,21 @@ export default {
     },
 
     updateReplSandbox(repl, sandboxName, shouldRerun) {
-        repl.sandboxName = sandboxName;
         const { pythonPath, scriptPath } = this.settings.sandboxes[sandboxName];
-        let error;
-        if (typeof pythonPath !== 'string') {
-            error = atom.notifications.addError(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`);
-            this.settingsErrors.push(error);
-            return;
-        }
-        if (typeof scriptPath !== 'string') {
-            error = atom.notifications.addError(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`);
-            this.settingsErrors.push(error);
-            return;
-        }
+        repl.sandboxName = sandboxName;
         repl.createEngine(pythonPath, scriptPath);
         if (shouldRerun) {
             this.waitAndRerun(null, null, RERUN_DELAY);
         }
     },
 
-    reloadSettings(settingsPath) {
-        this.settingsErrors.forEach((error) => error.dismiss());
-        this.settingsErrors = [];
-        let newSettings;
+    parseSettings(settingsPath) {
+        let settings;
+        let error;
         try {
-            newSettings = yaml.safeLoad(fs.readFileSync(settingsPath));
+            settings = yaml.safeLoad(fs.readFileSync(settingsPath));
         }
         catch(e) {
-            let error;
             if (e.name === 'YAMLException') {
                 error = atom.notifications.addError('"xnode.yaml" could not be parsed successfully.', {
                     buttons: [
@@ -245,12 +232,10 @@ export default {
                     dismissable: true,
                 });
             }
-            this.settingsErrors.push(error);
-            return;
+            return { error };
         }
-        console.debug('root -- settings file updated', newSettings);
-        if (typeof newSettings !== 'object' || newSettings === null || !('sandboxes' in newSettings)) {
-            let error = atom.notifications.addError('"xnode.yaml" is missing the "sandboxes" field.', {
+        if (typeof settings !== 'object' || settings === null || !('sandboxes' in settings)) {
+            error = atom.notifications.addError('"xnode.yaml" is missing the "sandboxes" field.', {
                 buttons: [
                     {
                         text: 'Retry',
@@ -259,9 +244,60 @@ export default {
                 ],
                 dismissable: true,
             });
-            this.settingsErrors.push(error);
-            return;
+            return { error };
         }
+        for (let [sandboxName, sandbox] of Object.entries(settings.sandboxes)) {
+            if (typeof sandbox !== 'object' || sandbox === null) {
+                error = atom.notifications.addError(`Sandbox ${sandboxName} must be an object with "pythonPath" and "scriptPath" fields.`, {
+                    buttons: [
+                        {
+                            text: 'Retry',
+                            onDidClick: () => this.reloadSettings(settingsPath),
+                        }
+                    ],
+                    dismissable: true,
+                });
+                return { error };
+            }
+            const { pythonPath, scriptPath } = sandbox;
+            if (typeof pythonPath !== 'string') {
+                error = atom.notifications.addError(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, {
+                    buttons: [
+                        {
+                            text: 'Retry',
+                            onDidClick: () => this.reloadSettings(settingsPath),
+                        }
+                    ],
+                    dismissable: true,
+                });
+                return { error };
+            }
+            if (typeof scriptPath !== 'string') {
+                error = atom.notifications.addError(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, {
+                    buttons: [
+                        {
+                            text: 'Retry',
+                            onDidClick: () => this.reloadSettings(settingsPath),
+                        }
+                    ],
+                    dismissable: true,
+                });
+                return { error };
+            }
+        }
+        return { settings };
+    },
+
+    reloadSettings(settingsPath) {
+        console.debug('root -- settings file updated');
+        this.settingsErrors.forEach((error) => error.dismiss());
+        this.settingsErrors = [];
+        const { settings: newSettings, error } = this.parseSettings(settingsPath);
+        if (error !== undefined) {
+           this.settingsErrors.push(error);
+           return;
+        }
+
         const updatedSandboxes = [];
         const deletedSandboxes = [];
 
