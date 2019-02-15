@@ -219,7 +219,7 @@ class TextPrimitive(Viz):
     A Viz which renders a contiguous block of text.
     """
 
-    def __init__(self, text: str, background_color: Color = Color.INVISIBLE) -> None:
+    def __init__(self, text: str, background_color: Color = Color.DEFAULT) -> None:
         """
         Args:
             text: The text which should be rendered.
@@ -252,7 +252,7 @@ class TokenPrimitive(TextPrimitive):
         Args:
             o: The object whose string representation should be rendered.
         """
-        super(TokenPrimitive, self).__init__(str(o), Color.DEFAULT)
+        super(TokenPrimitive, self).__init__(str(o), Color.PRIMARY)
 
 
 class FlowLayout(Viz):

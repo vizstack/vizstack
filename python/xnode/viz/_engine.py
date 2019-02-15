@@ -197,7 +197,7 @@ class VisualizationEngine:
         """
         viz_slice: VizTableSlice = VizTableSlice(dict())
         to_add: MutableSequence[Tuple[VizId, ExpansionMode, Optional[ExpansionMode]]] = [
-            (viz_id, ExpansionMode.NONE, expansion_mode)
+            (viz_id, None, expansion_mode)
         ]
         while len(to_add) > 0:
             viz_id, parent_expansion_mode, force_expansion_mode = to_add.pop()
@@ -207,7 +207,7 @@ class VisualizationEngine:
             expansion_mode = (
                 force_expansion_mode if force_expansion_mode is not None else self._cache[viz_id].expansion_mode
                 if self._cache[viz_id].expansion_mode is not None else ExpansionMode
-                .FULL if parent_expansion_mode == ExpansionMode.NONE else ExpansionMode
+                .FULL if parent_expansion_mode is None else ExpansionMode
                 .COMPACT if parent_expansion_mode == ExpansionMode.FULL else ExpansionMode.SUMMARY
             )
 
