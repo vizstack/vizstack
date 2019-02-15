@@ -1,5 +1,5 @@
-from computation_graph import track_function
 import xnode
+from xnode.computation_graph import track_function
 
 
 class ChildFn:
@@ -33,5 +33,5 @@ grandparent_fn = track_function(grandparent_fn)
 x = grandparent_fn(0, 1)
 graph = x.xn().compile_full()[0]
 # print(graph)
-print(len(graph.contents['nodes']), len(graph.contents['containers']))
+
 xnode.view(x)

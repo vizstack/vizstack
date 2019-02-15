@@ -76,13 +76,15 @@ export default function layout(
     nodes: Array<Node>,
     edges: Array<Edge>,
     callback: (width: number, height: number, nodes: Array<Node>, edges: Array<Edge>) => void,
-    options?: {
+    config?: {
         alignments?: Array<Array<NodeId>>,
         flowDirection?: 'north' | 'south' | 'east' | 'west',
         flowSpacing?: number,
         alignChildren?: boolean,
     },
 ) {
+    // TODO: Handle defaults
+
     const kFlowGap = 30; // Distance between adjacent objects in a flow.
     const kDefaultNodeSize = 0; // Default node width/height if not specified.
     const kGroupPadding = 10; // Interior padding between group boundary and contents.
@@ -96,7 +98,7 @@ export default function layout(
         if (processed.has(nodeId)) return;
         processed.add(nodeId);
         const node = nodes[nodeIdxLookup[nodeId]];
-        if (!node.children) {
+        if (node.children.length === 0) {
             numChildlessNodes += 1;
             return;
         }
@@ -172,28 +174,32 @@ export default function layout(
      */
     function processNode(
         nodeId: NodeId,
-        processed: Set<NodeId>,
+        processed: { [NodeId]:{} },
     ): {
-        vertexIdx?: VertexIdx,
-        groupIdx?: GroupIdx,
-        type: 'real' | 'dummy',
+        type: 'real',
+        vertexIdx: VertexIdx,  // Actual vertex.
+    } | {
+        type: 'dummy',
+        vertexIdx: VertexIdx,  // Dummy vertex.
+        groupIdx: GroupIdx,
     } {
-        if (processed.has(nodeId)) return;
-        processed.add(nodeId);
+        if (processed[nodeId]) return processed[nodeId];
         const node = nodes[nodeIdxLookup[nodeId]];
 
         // Node has no children, so build a leaf `Vertex`.
-        if (!node.children) {
+        if (node.children.length === 0) {
             const vertexIdx: VertexIdx = addVertex(
                 nodeId,
                 { width: node.width || kDefaultNodeSize, height: node.height || kDefaultNodeSize },
                 'real',
             );
-            return { vertexIdx, type: 'real' };
+            const result = { type: 'real', vertexIdx };
+            processed[nodeId] = result;
+            return result;
         }
 
         // Create all children. Make a dummy `Vertex` to act as group center by add `Link` from
-        // it to each of the children. Make `Group` for nodes with children.
+        // it to each of the children. Make `Group` only for nodes with children.
         const dummyIdx: VertexIdx = addVertex(nodeId, { width: 0, height: 0 }, 'dummy');
         const group: Group = { leaves: [], groups: [], padding: kGroupPadding };
         for (let childId of node.children) {
@@ -202,11 +208,8 @@ export default function layout(
                 groupIdx: childGroupIdx,
                 type: childType,
             } = processNode(childId, processed);
-            addLink({ source: dummyIdx, target: vertexIdxLookup[childId].idx }, [
-                'dummy',
-                childType,
-            ]);
-            if (childGroupIdx !== undefined) {
+            addLink({ source: dummyIdx, target: childVertexIdx }, ['dummy', childType]);
+            if (childType === 'dummy') {
                 group.groups.push(childGroupIdx);
             } else {
                 group.leaves.push(childVertexIdx);
@@ -215,12 +218,20 @@ export default function layout(
         const groupIdx: GroupIdx = addGroup(nodeId, group);
 
         // TODO: Add `AlignConstraint` if specified to align children.
-        return { groupIdx, type: 'dummy' };
-    }
-    const processSet: Set<NodeId> = new Set();
-    nodes.forEach((node) => processNode(node.id, processSet));
 
-    function processEdge(startId: NodeId, endId: NodeId) {
+        const result = { type: 'dummy', vertexIdx: dummyIdx, groupIdx };
+        processed[nodeId] = result;
+        return result;
+    }
+    const processCache: { [NodeId]: {} } = {};
+    console.log("layout.js -- nodes = ", nodes, "edges = ", edges);
+    nodes.forEach((node) => processNode(node.id, processCache));
+
+
+    function processEdge(
+        startId: NodeId,
+        endId: NodeId,
+    ) {
         const { idx: startVertexIdx, type: startVertexType } = vertexIdxLookup[startId];
         const { idx: endVertexIdx, type: endVertexType } = vertexIdxLookup[endId];
 
@@ -229,7 +240,7 @@ export default function layout(
 
         // Add `SeparationConstraint` to enforce flow, according to least common ancestor.
         const lcaId: NodeId = findLowestCommonAncestor(parentIdLookup, startId, endId);
-        if (!lcaId) return;
+        if (lcaId === null) return;
         const lca: Node = nodes[nodeIdxLookup[lcaId]];
         let options: { axis: 'x' | 'y', gap: number };
         switch (lca.flowDirection) {
@@ -252,11 +263,12 @@ export default function layout(
             left: startVertexIdx,
             right: endVertexIdx,
             ...options,
-        });
+        }, [startVertexType, endVertexType]);
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
 
-    console.log('DONE PROCESSING', graph);
+
+    console.log('layout.js -- Done processing input nodes/edges.', graph);
 
     // function processAlignment(alignment: Array<NodeId>) {
     //     // TODO: Add `AlignConstraint` for alignments (but need to specify direction)
@@ -276,8 +288,8 @@ export default function layout(
         .nodes(graph.vertices.real.concat(graph.vertices.dummy))
         .links(graph.links.real.concat(graph.links.dummy))
         .constraints(graph.constraints.real.concat(graph.constraints.dummy))
-        .linkDistance(30) // TODO: choose
-        .symmetricDiffLinkLengths(5) // TODO: Choose
+        .linkDistance(100) // TODO: choose
+        .symmetricDiffLinkLengths(100) // TODO: Choose
         .convergenceThreshold(1e-4) // TODO: Choose
         .start(100, 0, 0, 0, false); // TODO: Choose
 
@@ -293,9 +305,9 @@ export default function layout(
         .links(graph.links.real)
         .constraints(graph.constraints.real)
         .groups(graph.groups)
-        .groupCompactness(1e-4) // TODO: Choose
-        .linkDistance(30) // TODO: Choose
-        .symmetricDiffLinkLengths(5) // TODO: Choose
+        .groupCompactness(1e-5) // TODO: Choose
+        .linkDistance(100) // TODO: Choose
+        .symmetricDiffLinkLengths(100) // TODO: Choose
         .convergenceThreshold(1e-3) // TODO: Choose
         .start(50, 0, 100, 0, false); // TODO: Choose
 
@@ -311,49 +323,83 @@ export default function layout(
 
     // Step 5: Translate back to user format.
 
-    // const vertexIdxLookupReverse = obj2obj(vertexIdxLookup, (k, v) => [`${v}`, k]);
-    // const groupIdxLookupReverse = obj2obj(groupIdxLookup, (k, v) => [`${v}`, k]);
-    function getGroupDims(nodeId: NodeId) {
+    type Dims = {
+        x: number,
+        y: number,
+        z: number,
+        width: number,
+        height: number,
+    };
+
+    function getGroupDims(nodeId: NodeId): Dims {
         const g: Group = graph.groups[groupIdxLookup[nodeId]];
+        console.log('layout.js -- getGroupDims', nodeId);
         return {
             x: g.bounds.x,
             y: g.bounds.y,
-            z: 0, // TODO
+            z: 1, // TODO
             width: g.bounds.width(),
             height: g.bounds.height(),
         };
     }
-    function getVertexDims(nodeId: NodeId) {
-        const v: Vertex = graph.vertices.real[vertexIdxLookup[nodeId]];
-        console.log(nodeId, vertexIdxLookup, graph.vertices.real, v);
+    function getVertexDims(nodeId: NodeId): Dims {
+        const v: Vertex = graph.vertices.real[vertexIdxLookup[nodeId].idx];
+        console.log('layout.js -- getVertexDims', nodeId, vertexIdxLookup, graph.vertices.real, v);
         return {
             x: v.x - v.width / 2, // TODO: +pad?
             y: v.y - v.height / 2,
-            z: 0, // TODO
+            z: 1, // TODO
             width: v.width,
             height: v.height,
         };
     }
-    function getNodeDims(nodeId: NodeId) {
-        if (groupIdxLookup[nodeId]) {
-            return getGroupDims(nodeId);
+
+    let minX, minY, maxX, maxY;
+    const nodeDimsLookup: {[NodeId]: Dims} = {}
+    for(let node of nodes) {
+        const { id } = node;
+        let dims: Dims;
+        if (vertexIdxLookup[id].type === 'dummy') {
+            dims = getGroupDims(id);
         } else {
-            return getVertexDims(nodeId);
+            dims = getVertexDims(id);
         }
+        nodeDimsLookup[id] = dims;
+
+        // Update bounds, if applicable.
+        minX = minX === undefined ? dims.x : Math.min(minX, dims.x);
+        minY = minY === undefined ? dims.y : Math.min(minY, dims.y);
+        maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
+        maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
 
     callback(
-        500, // TODO: width
-        500, // TODO: height
+        maxX - minX, // width
+        maxY - minY, // height
         nodes.map((node) => {
             const { id } = node;
-            return { ...node, ...getNodeDims(id) };
+            const dims: Dims = nodeDimsLookup[id];
+            return {
+                ...node,
+                x: dims.x - minX,
+                y: dims.y - minY,
+                z: dims.z,
+                width: dims.width,
+                height: dims.height,
+            };
         }),
         edges.map((edge) => {
             const { startId, endId } = edge;
-            const start = getNodeDims(startId);
-            const end = getNodeDims(endId);
-            return { ...edge, points: [[start.x, start.y], [end.x, end.y]], z: 0 }; // TODO
+            const start: Dims = nodeDimsLookup[startId];
+            const end: Dims = nodeDimsLookup[endId];
+            return {
+                ...edge,
+                points: [
+                    [start.x - minX + start.width/2, start.y - minY + start.height/2],
+                    [end.x - minX + end.width/2, end.y - minY + end.height/2],
+                ],
+                z: 0,  // TODO
+            };
         }),
     );
 }
@@ -428,10 +474,3 @@ type AlignConstraint = {
 };
 
 type Constraint = SeparationConstraint | AlignConstraint;
-
-type Graph = {
-    vertices: Array<Vertex>,
-    links: Array<Link>,
-    constraints: Array<Constraint>,
-    groups: Array<Group>,
-};
