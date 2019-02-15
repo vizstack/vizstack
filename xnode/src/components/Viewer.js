@@ -110,31 +110,32 @@ class Viewer extends React.Component<
             isHovered,
             isFullyExpanded: expansionMode === 'full'
         };
-        let elements;
         switch (model.type) {
             // Primitives
             // ----------
 
-            case 'TextPrimitive':
+            case 'TextPrimitive': {
                 const { text, color } = (model: TextPrimitiveModel).contents;
                 return <TextPrimitive
                     {...generalProps}
                     text={text}
                     color={color ? color : 'primary'} />;
+            }
 
             // Layouts
             // -------
 
-            case 'FlowLayout':
-                elements = (model: FlowLayoutModel).contents.elements;
+            case 'FlowLayout': {
+                const { elements } = (model: FlowLayoutModel).contents;
                 return <FlowLayout
                     {...generalProps}
                     elements={elements.map((vizId) => {
                         return {vizId, fetchVizModel}
-                    })} />;
+                    })}/>;
+            }
 
-            case 'GridLayout':
-                elements = (model: GridLayoutModel).contents.elements;
+            case 'GridLayout': {
+                const { elements } = (model: GridLayoutModel).contents;
                 return (
                     <GridLayout
                         {...generalProps}
@@ -144,8 +145,9 @@ class Viewer extends React.Component<
                         }, col, row, width, height]))}
                     />
                 );
+            }
 
-            case 'DagLayout':
+            case 'DagLayout': {
                 const { nodes, containers, edges } = (model: DagLayoutModel).contents;
                 return (
                     <DagLayout
@@ -163,6 +165,7 @@ class Viewer extends React.Component<
                         edges={edges}
                     />
                 );
+            }
         }
     }
 

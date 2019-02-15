@@ -81,6 +81,10 @@ class DagEdge extends React.PureComponent<{
     /** Curve point coordinates. */
     points: Array<[number, number]>,
 
+    shape?: "curve" | "line" ,
+
+    color?: "primary" | "secondary",
+
     id: number,
     baseColor: string,
     selectedColor: string,
@@ -103,11 +107,12 @@ class DagEdge extends React.PureComponent<{
     render() {
         const {
             classes,
+            points,
+            shape,
+
             id,
             baseColor,
             selectedColor,
-            points,
-            isCurved,
             isBackground,
             isHovered,
             isSelected,
@@ -119,24 +124,26 @@ class DagEdge extends React.PureComponent<{
             onMouseLeave,
         } = this.props;
 
-        if (!points) {
+        if (!points || points.length === 0) {
             return null;
         }
 
-        let pathString = null;
-        if (isCurved) {
-            let curveGenerator = line().curve(curveBasis);
-            pathString = curveGenerator(points.map(({ x, y }) => [x, y]));
-        } else {
-            let linearGenerator = line().curve(curveLinear);
-            pathString = linearGenerator(points.map(({ x, y }) => [x, y]));
+        let path = null;
+        switch(shape) {
+            case 'curve':
+                path = line().curve(curveBasis)(points);
+                break;
+            case 'line':
+            default:
+                path = line().curve(curveLinear)(points);
+                break;
         }
 
         // Edge id needs to be globally unique, not just within this svg component
         return (
             <g>
                 <path
-                    d={pathString}
+                    d={path}
                     className={classNames({
                         [classes.edgeHotspot]: true,
                     })}
@@ -147,13 +154,13 @@ class DagEdge extends React.PureComponent<{
                 />
                 <path
                     id={id}
-                    d={pathString}
+                    d={path}
                     pointerEvents='none'
                     style={{
                         stroke: isSelected ? selectedColor : baseColor,
                         markerEnd: isSelected
-                            ? `url(#arrowheadSelected${id})`
-                            : `url(#arrowheadBase${id})`,
+                            ? `url(#arrow-selected${id})`
+                            : `url(#arrow-base${id})`,
                     }}
                     className={classNames({
                         [classes.edge]: true,
@@ -297,8 +304,8 @@ class DagLayout extends React.Component<
                     ...obj2arr(this.props.edges, (k, v) => ({ type: 'edge', id: k })),
                 ],
                 size: {
-                    width: 400,  // TODO
-                    height: 400,
+                    width: 0,
+                    height: 0,
                 },
             }),
         );
@@ -310,7 +317,9 @@ class DagLayout extends React.Component<
     shouldComponentUpdate(nextProps, nextState) {
         // Prevent component from re-rendering each time a dimension is populated/updated unless all
         // dimensions are populated.
-        const shouldUpdate = Object.values(nextState.nodes).every((node) => node.height);
+        const shouldUpdate = Object.values(nextState.nodes)
+            .filter((node) => node.children.length === 0)  // Only keep leaves.
+            .every((node) => node.height);
         console.log('DagLayout -- shouldComponentUpdate(): ', shouldUpdate);
         return shouldUpdate;
     }
@@ -333,7 +342,7 @@ class DagLayout extends React.Component<
      * @private
      */
     _onNodeResize(nodeId: DagNodeId, width: number, height: number) {
-        console.log(`DagLayout -- _onElementResize(${nodeId}, ${width}, ${height})`);
+        console.log(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height})`);
 
         // Do not react to resizes beyond some tolerance, e.g. due to platform instabilities or
         // trivial appearance changes.
@@ -428,7 +437,7 @@ class DagLayout extends React.Component<
             <div className={classes.frame}>
                 <div className={classes.graph}>
                     <svg width={size.width} height={size.height}>
-                        <defs>{[this._buildArrowheadMarker('arrowheadBase', '#FF0000')]}</defs>
+                        <defs>{[this._buildArrowheadMarker('arrow-base', '#FF0000')]}</defs>
                         <rect
                             x={0}
                             y={0}
@@ -450,7 +459,7 @@ class DagLayout extends React.Component<
                                             y={y}
                                             width={width}
                                             height={height}
-                                            isExpanded={false/*!spec.children*/}
+                                            isExpanded={spec.children.length !== 0}
                                             classes={classes}
                                             onResize={(width, height) =>
                                                 this._onNodeResize(id, width, height)
