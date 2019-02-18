@@ -7,7 +7,7 @@ from inspect import currentframe, getframeinfo
 from multiprocessing import Queue
 from os.path import normpath, normcase
 from types import FrameType
-from typing import Callable, Mapping, Union, Any, Optional
+from typing import Callable, Mapping, Union, Any, Optional, List
 
 import traceback
 import xnode
@@ -34,16 +34,19 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
     # Public methods.
     # ==================================================================================================================
 
-    def execute(self, script_path: str) -> None:
+    def execute(self, script_path: str, script_args: List[str]) -> None:
         """Execute a script within the `_ScriptExecutor` instance, allowing its flow to be controlled by the instance.
 
         `_execute()` should be called only once per `_ScriptExecutor` instance, as its behavior is unknown after
         multiple runs.
 
         Args:
-            script_path (str): The absolute path to the user-written script to be executed.
+            script_path: The absolute path to the user-written script to be executed.
+            script_args: Arguments that should be passed to the executed script.
         """
-        self._runscript(_ScriptExecutor._normalize_path(script_path))
+        normalized_path = _ScriptExecutor._normalize_path(script_path)
+        sys.argv = [normalized_path] + script_args
+        self._runscript(normalized_path)
 
     # ==================================================================================================================
     # `pdb` overrides.
@@ -109,7 +112,8 @@ class _PrintOverwriter:
             assert frame is not None
             frame_info = getframeinfo(frame.f_back)
             filename, lineno = frame_info.filename, frame_info.lineno
-            viz_id: VizId = self._engine.take_snapshot(self._unprinted_text, filename, lineno)
+            viz_id: VizId = self._engine.take_snapshot(self._unprinted_text, _ScriptExecutor._normalize_path(
+                filename), lineno)
             viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
             self._send_message(viz_slice, viz_id, False, False)
             self._unprinted_text = ''
@@ -171,7 +175,7 @@ def _execute_watch(send_message: _SendMessage, engine: VisualizationEngine, *obj
         assert frame is not None
         frame_info = getframeinfo(frame.f_back.f_back)
         filename, lineno = frame_info.filename, frame_info.lineno
-        viz_id: VizId = engine.take_snapshot(obj, filename, lineno)
+        viz_id: VizId = engine.take_snapshot(obj, _ScriptExecutor._normalize_path(filename), lineno)
         viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id,
                                                              expansion_mode=None if expansion_mode is None
                                                              else ExpansionMode(expansion_mode))
@@ -203,7 +207,7 @@ def _fetch_viz(
 # ======================================================================================================================
 
 
-def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> None:
+def run_script(receive_queue: Queue, send_queue: Queue, script_path: str, script_args: List[str]) -> None:
     """Runs a given script, writing the vizzes of watched objects to a queue and then writing the vizzes of
     additional variables requested by a client to another queue.
 
@@ -218,6 +222,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
             the parent.
         send_queue: A queue shared with the calling process to which this process writes messages.
         script_path: The absolute path to a user-written script to be executed.
+        script_args: Arguments that should be passed to the executed script.
     """
     send_message: _SendMessage = functools.partial(_send_message, send_queue)
 
@@ -233,7 +238,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str) -> Non
     executor: _ScriptExecutor = _ScriptExecutor()
     try:
         send_message(None, None, True, False)
-        executor.execute(script_path)
+        executor.execute(script_path, script_args)
         # Indicate to the client that the script has finished executing
         send_message(None, None, False, True)
         while True:

@@ -43,14 +43,15 @@ class _ExecutionManager:
 
     _THREAD_QUIT: str = 'quit'
 
-    def __init__(self, script_path: str) -> None:
+    def __init__(self, script_path: str, script_args: List[str]) -> None:
         """Creates a process to execute the user-written script and a thread to read the returned viz slices.
 
         Args:
             script_path: the absolute path to the user-written script to be executed.
+            script_args: Arguments that should be passed to the executed script.
         """
         self.exec_process, self.print_queue, self.fetch_queue = _ExecutionManager._start_exec_process(
-            script_path
+            script_path, script_args
         )
         self.print_thread = threading.Thread(
             target=_ExecutionManager._start_print_thread,
@@ -88,7 +89,7 @@ class _ExecutionManager:
         })
 
     @staticmethod
-    def _start_exec_process(script_path: str) -> Tuple[Process, Queue, Queue]:
+    def _start_exec_process(script_path: str, script_args: List[str]) -> Tuple[Process, Queue, Queue]:
         """Starts a new process, which runs a user-written script inside of a Pdb instance.
 
         Two queues are created to communicate with the new process; one is filled by the subprocess with
@@ -97,6 +98,7 @@ class _ExecutionManager:
 
         Args:
             script_path: The path to a user-written script to be executed in the subprocess.
+            script_args: Arguments that should be passed to the executed script.
 
         Returns:
             The handle to the subprocess.
@@ -105,7 +107,7 @@ class _ExecutionManager:
         """
         fetch_queue: Queue = Queue()
         print_queue: Queue = Queue()
-        process: Process = Process(target=run_script, args=(fetch_queue, print_queue, script_path))
+        process: Process = Process(target=run_script, args=(fetch_queue, print_queue, script_path, script_args))
         process.daemon = True
         process.start()
         print_queue.get()  # gotta do this here once for some reason
@@ -162,7 +164,7 @@ def _should_execute(script_path: str, message) -> bool:
     return True
 
 
-def _execute(exec_manager: Optional[_ExecutionManager], script_path: str) -> _ExecutionManager:
+def _execute(exec_manager: Optional[_ExecutionManager], script_path: str, script_args: List[str]) -> _ExecutionManager:
     """Creates a new `_ExecutionManager` to run a given script, printing any watched objects to stdout as
     ExecutionEngineMessages.
 
@@ -172,13 +174,14 @@ def _execute(exec_manager: Optional[_ExecutionManager], script_path: str) -> _Ex
     Args:
         exec_manager: The existing `_ExecutionManager`, if one exists.
         script_path: Absolute path to the user-written script to be executed.
+        script_args: Arguments that should be passed to the script at ``script_path``.
 
     Returns:
         A new manager which will run `script_path` and print its watched expressions.
     """
     if exec_manager:
         exec_manager.terminate()
-    exec_manager = _ExecutionManager(script_path)
+    exec_manager = _ExecutionManager(script_path, script_args)
     assert exec_manager is not None
     return exec_manager
 
@@ -210,16 +213,17 @@ def _fetch_viz(exec_manager: _ExecutionManager, message: str) -> None:
 # ======================================================================================================================
 
 
-def _read_args() -> str:
+def _read_args() -> Tuple[List[str], List[str]]:
     """Read the path to the user-written script which should be executed by the engine from the command line.
 
     Returns:
         Absolute path to the script to be executed.
     """
     parser: argparse.ArgumentParser = argparse.ArgumentParser()
-    parser.add_argument('scripts', type=str, nargs='+')
+    parser.add_argument('--scriptPaths', type=str, nargs='+')
+    parser.add_argument('--scriptArgs', type=str, nargs='*')
     args = parser.parse_args()
-    return args.scripts
+    return args.scriptPaths, args.scriptArgs
 
 
 def main() -> None:
@@ -230,7 +234,7 @@ def main() -> None:
     message.
     """
 
-    script_paths: str = _read_args()
+    script_paths, script_args = _read_args()
     for script_path in script_paths:
         if os.path.isfile(script_path):
             break
@@ -239,7 +243,7 @@ def main() -> None:
         message: str = input()
         if message.startswith(_EDIT_HEADER):
             if _should_execute(script_path, message):
-                exec_manager = _execute(exec_manager, script_path)
+                exec_manager = _execute(exec_manager, script_path, script_args)
 
         elif message.startswith(_FETCH_HEADER):
             if exec_manager:

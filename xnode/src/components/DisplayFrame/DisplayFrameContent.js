@@ -33,15 +33,11 @@ class DisplayFrameContent extends React.PureComponent<{
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     content: {
-        // Fill rest of vertical space in DisplayFrame container
-        flexGrow: 1,
-
         // Allow absolute positioning of children
         position: 'relative',
 
-        // Layout child components vertically
-        display: 'flex',
-        flexDirection: 'column',
+        // Allow children to occupy entire width, even if overflowing
+        display: 'inline-block',
 
         // Content display properties
         overflow: 'auto',

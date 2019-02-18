@@ -175,13 +175,14 @@ export default class REPL {
      * @returns {PythonShell}
      *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
      */
-    createEngine(pythonPath: string, scriptPath: string) {
+    createEngine(pythonPath: string, scriptPath: string, scriptArgs: Array) {
         if (this.executionEngine) {
             this.executionEngine.terminate();
             this.executionEngine = undefined;
         }
         let options = {
-            args: [scriptPath, path.join(atom.project.getPaths()[0], scriptPath)],
+            args: ['--scriptPaths', scriptPath, path.join(atom.project.getPaths()[0], scriptPath),
+                   '--scriptArgs', ...scriptArgs],
             pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
