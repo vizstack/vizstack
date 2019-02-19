@@ -44,8 +44,10 @@ class ViewerDisplayFrame extends React.Component<{
         return (
             <div className={classes.container}>
                 <DisplayFrame>
-                    <DisplayFrameContent>
-                        {children}
+                    <DisplayFrameContent orientation="horizontal">
+                        <div className={classes.contents}>
+                            {children}
+                        </div>
                         <div className={classes.buttons}>{buttonsComponents}</div>
                     </DisplayFrameContent>
                 </DisplayFrame>
@@ -63,10 +65,13 @@ const styles = (theme) => ({
         paddingTop: theme.spacing.unit,
         paddingBottom: theme.spacing.unit,
     },
+    contents: {
+        flexGrow: 1,
+        overflow: 'auto',
+    },
     buttons: {
-        position: 'absolute',
-        right: theme.spacing.unit,
-        top: theme.spacing.unit,
+        display: 'flex',
+        flexDirection: 'column',
     },
 });
 

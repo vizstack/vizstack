@@ -17,13 +17,27 @@ class DisplayFrameContent extends React.PureComponent<{
 
     /** Class tags to allow additional styling of container. */
     className?: string,
+
+    /** Direction which to lay out children. */
+    orientation: "horizontal" | "vertical",
 }> {
+    static defaultProps = {
+        orientation: "vertical",
+    }
+
     /**
      * Renders a content container with specific styling and vertical layout properties.
      */
     render() {
-        const { classes, children, className } = this.props;
-        return <div className={classNames(classes.content, className)}>{children}</div>;
+        const { classes, children, className, orientation } = this.props;
+        return (
+            <div className={classNames(classes.content, className)}
+                 style={{
+                     flexDirection: orientation === "horizontal" ? "row" : "column",
+                 }}>
+                {children}
+            </div>
+        );
     }
 }
 
@@ -41,7 +55,6 @@ const styles = (theme) => ({
 
         // Layout child components vertically
         display: 'flex',
-        flexDirection: 'column',
 
         // Content display properties
         overflow: 'auto',

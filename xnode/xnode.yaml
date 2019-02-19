@@ -1,0 +1,8 @@
+# Define your sandbox configurations here.
+sandboxes:
+  NoGraphSandbox:
+    pythonPath: python3.6
+    scriptPath: test/no_graph.py
+  GraphSandbox:
+    pythonPath: python3.6
+    scriptPath: test/graph_layout.py

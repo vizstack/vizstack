@@ -116,10 +116,12 @@ class Viewer extends React.Component<
 
             case 'TextPrimitive': {
                 const { text, color } = (model: TextPrimitiveModel).contents;
-                return <TextPrimitive
+                return (
+                    <TextPrimitive
                     {...generalProps}
                     text={text}
-                    color={color ? color : 'primary'} />;
+                    color={color ? color : 'primary'} />
+                );
             }
 
             // Layouts
@@ -127,11 +129,13 @@ class Viewer extends React.Component<
 
             case 'FlowLayout': {
                 const { elements } = (model: FlowLayoutModel).contents;
-                return <FlowLayout
+                return (
+                    <FlowLayout
                     {...generalProps}
                     elements={elements.map((vizId) => {
                         return {vizId, fetchVizModel}
-                    })}/>;
+                    })}/>
+                );
             }
 
             case 'GridLayout': {
@@ -172,7 +176,7 @@ class Viewer extends React.Component<
     /** Renderer. */
     render() {
         const { vizId, vizTable, classes } = this.props;
-        const { expansionMode } = this.state;
+        const { isHovered, expansionMode } = this.state;
 
         const vizSpec: VizSpec = vizTable[vizId];
         if (!vizSpec) {
@@ -199,7 +203,13 @@ class Viewer extends React.Component<
                 model = vizSpec.summaryModel;
                 break;
         }
-        return this.getVizComponent(model);
+        return [
+            this.getVizComponent(model),
+            <span className={classNames({
+                [classes.indicator]: true,
+                [classes.hovered]: isHovered,
+            })}>{expansionMode}</span>
+        ];
     }
 }
 
@@ -208,9 +218,14 @@ class Viewer extends React.Component<
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    // css-key: value,// Border for highlighting
-    box: {
+    indicator: {
+        fontSize: 8,
+        textAlign: 'center',
+        visibility: 'hidden',
     },
+    hovered: {
+        visibility: 'visible',
+    }
 });
 
 // To inject application state into component
