@@ -80,7 +80,8 @@ export default {
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
                 'xnode:create-sandbox': () => {
-                    atom.workspace.open(`atom://xnode-sandbox/${Math.max(...this.repls.map((repl) => repl.id)) + 1}`);
+                    const replId = this.repls.length > 0 ? Math.max(...this.repls.map((repl) => repl.id)) + 1 : 0;
+                    atom.workspace.open(`atom://xnode-sandbox/${replId}`);
                 }
             }),
 
@@ -137,8 +138,9 @@ export default {
             editor.insertText(yaml.safeDump({
                 'sandboxes': {
                     'MySandbox1': {
-                        'pythonPath' : null,
-                        'scriptPath' : null,
+                        'pythonPath' : 'TODO: specify a Python executable',
+                        'scriptPath' : 'TODO: specify a Python script to run',
+                        'scriptArgs': [],
                     }
                 }
             }));
@@ -191,9 +193,9 @@ export default {
     },
 
     updateReplSandbox(repl, sandboxName, shouldRerun) {
-        const { pythonPath, scriptPath } = this.settings.sandboxes[sandboxName];
+        const { pythonPath, scriptPath, scriptArgs } = this.settings.sandboxes[sandboxName];
         repl.sandboxName = sandboxName;
-        repl.createEngine(pythonPath, scriptPath);
+        repl.createEngine(pythonPath, scriptPath, scriptArgs);
         if (shouldRerun) {
             this.waitAndRerun(null, null, RERUN_DELAY);
         }
@@ -202,86 +204,56 @@ export default {
     parseSettings(settingsPath) {
         let settings;
         let error;
+        const createErrorNotification = (message, extraButtons) => {
+            return atom.notifications.addError(message, {
+                buttons: [
+                    {
+                        text: 'Retry',
+                        onDidClick: () => this.reloadSettings(settingsPath),
+                    },
+                    ...extraButtons,
+                ],
+                dismissable: true,
+            });
+        };
+
         try {
             settings = yaml.safeLoad(fs.readFileSync(settingsPath));
         }
         catch(e) {
             if (e.name === 'YAMLException') {
-                error = atom.notifications.addError('"xnode.yaml" could not be parsed successfully.', {
-                    buttons: [
-                        {
-                            text: 'Retry',
-                            onDidClick: () => this.reloadSettings(settingsPath),
-                        }
-                    ],
-                    dismissable: true,
-                });
+                error = createErrorNotification('"xnode.yaml" could not be parsed successfully.', []);
             }
             else {
-                error = atom.notifications.addError('"xnode.yaml" could not be found in this project.', {
-                    buttons: [
-                        {
-                            text: 'Retry',
-                            onDidClick: () => this.reloadSettings(settingsPath),
-                        },
-                        {
-                            text: 'Create xnode.yaml',
-                            onDidClick: () => this.createSettingsFile(settingsPath),
-                        }
-                    ],
-                    dismissable: true,
-                });
+                error = createErrorNotification('"xnode.yaml" could not be found in this project.', [
+                    {
+                        text: 'Create xnode.yaml',
+                        onDidClick: () => this.createSettingsFile(settingsPath),
+                    }
+                ]);
             }
             return { error };
         }
         if (typeof settings !== 'object' || settings === null || !('sandboxes' in settings)) {
-            error = atom.notifications.addError('"xnode.yaml" is missing the "sandboxes" field.', {
-                buttons: [
-                    {
-                        text: 'Retry',
-                        onDidClick: () => this.reloadSettings(settingsPath),
-                    }
-                ],
-                dismissable: true,
-            });
+            error = createErrorNotification('"xnode.yaml" is missing the "sandboxes" field.', []);
             return { error };
         }
         for (let [sandboxName, sandbox] of Object.entries(settings.sandboxes)) {
             if (typeof sandbox !== 'object' || sandbox === null) {
-                error = atom.notifications.addError(`Sandbox ${sandboxName} must be an object with "pythonPath" and "scriptPath" fields.`, {
-                    buttons: [
-                        {
-                            text: 'Retry',
-                            onDidClick: () => this.reloadSettings(settingsPath),
-                        }
-                    ],
-                    dismissable: true,
-                });
+                error = createErrorNotification(`Sandbox ${sandboxName} must be an object with "pythonPath", "scriptPath", and "scriptArgs" fields.`, []);
                 return { error };
             }
-            const { pythonPath, scriptPath } = sandbox;
+            const { pythonPath, scriptPath, scriptArgs } = sandbox;
             if (typeof pythonPath !== 'string') {
-                error = atom.notifications.addError(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, {
-                    buttons: [
-                        {
-                            text: 'Retry',
-                            onDidClick: () => this.reloadSettings(settingsPath),
-                        }
-                    ],
-                    dismissable: true,
-                });
+                error = createErrorNotification(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, []);
                 return { error };
             }
             if (typeof scriptPath !== 'string') {
-                error = atom.notifications.addError(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, {
-                    buttons: [
-                        {
-                            text: 'Retry',
-                            onDidClick: () => this.reloadSettings(settingsPath),
-                        }
-                    ],
-                    dismissable: true,
-                });
+                error = createErrorNotification(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, []);
+                return { error };
+            }
+            if (!Array.isArray(scriptArgs)) {
+                error = createErrorNotification(`"scriptArgs" for sandbox ${sandboxName} in "xnode.yaml" must be a list.`, []);
                 return { error };
             }
         }
@@ -298,27 +270,28 @@ export default {
            return;
         }
 
-        const updatedSandboxes = [];
-        const deletedSandboxes = [];
+        const updatedSandboxes = new Set();
+        const deletedSandboxes = new Set();
 
         Object.entries(this.settings.sandboxes)
-            .forEach(([sandboxName, {pythonPath, scriptPath}]) => {
+            .forEach(([sandboxName, {pythonPath, scriptPath, scriptArgs}]) => {
                 if (!(sandboxName in newSettings.sandboxes)) {
-                    deletedSandboxes.push(sandboxName);
+                    deletedSandboxes.add(sandboxName);
                 }
                 else if (pythonPath !== newSettings.sandboxes[sandboxName].pythonPath ||
-                         scriptPath !== newSettings.sandboxes[sandboxName].scriptPath) {
-                    updatedSandboxes.push(sandboxName);
+                         scriptPath !== newSettings.sandboxes[sandboxName].scriptPath ||
+                         scriptArgs !== newSettings.sandboxes[sandboxName].scriptArgs) {
+                    updatedSandboxes.add(sandboxName);
                 }
             });
 
         this.settings = newSettings;
 
         this.repls.filter((repl) => !repl.isDestroyed).forEach((repl) => {
-           if (deletedSandboxes.includes(repl.sandboxName)) {
+           if (deletedSandboxes.has(repl.sandboxName)) {
                repl.destroy();
            }
-           if (updatedSandboxes.includes(repl.sandboxName)) {
+           if (updatedSandboxes.has(repl.sandboxName)) {
                this.updateReplSandbox(repl, repl.sandboxName, false);
            }
            repl.sandboxSelectComponent.updateSandboxes(this.settings.sandboxes);

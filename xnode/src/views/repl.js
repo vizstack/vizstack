@@ -60,12 +60,15 @@ type ExecutionEngineMessage = {
 export default class REPL {
     /**
      * Constructor.
-     * @param pythonPath
-     *      The path to the Python executable that should be used to execute the requested script.
-     * @param scriptPath
-     *     The absolute path of the main script tied to this `REPL`, which will be executed and visualized.
+     *
+     * @param id
+     *      A numerical identifier unique to this REPL among all active REPL instances.
+     * @param onSandboxSelected
+     *      A function which should be executed whenever a new sandbox configuration is selected for this REPL. The
+     *      first argument is this REPL instance and the second is the name of the selected sandbox configuration. This
+     *      function should trigger a call to `this.createEngine()`.
      */
-    constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void) {
+    constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void): void {
         this.id = id;
         this.sandboxName = '';  // To be set once a sandbox has been selected
         this.isDestroyed = false; // TODO: Why do we need this?
@@ -172,16 +175,17 @@ export default class REPL {
      *      The path to the Python executable that should be used to run the script.
      * @param {string} scriptPath
      *      The path to the Python script whose data should be visualized in the canvas.
-     * @returns {PythonShell}
-     *      A Python subprocess with which `REPL` can communicate to acquire evaluated watch statements.
+     * @param scriptArgs
+     *      An array of arguments which should be passed to the executed script.
      */
-    createEngine(pythonPath: string, scriptPath: string) {
+    createEngine(pythonPath: string, scriptPath: string, scriptArgs: Array): void {
         if (this.executionEngine) {
             this.executionEngine.terminate();
             this.executionEngine = undefined;
         }
         let options = {
-            args: [scriptPath, path.join(atom.project.getPaths()[0], scriptPath)],
+            args: ['--scriptPaths', scriptPath, path.join(atom.project.getPaths()[0], scriptPath),
+                   '--scriptArgs', ...scriptArgs],
             pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
