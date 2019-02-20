@@ -43,12 +43,11 @@ VIZ_FN = 'xn'
 # An enum which includes every color a Viz can take.
 # TODO: determine what color options should be available
 class Color(Enum):
-    EMPHASIS = 'emphasis'
+    DEFAULT = 'default'
     PRIMARY = 'primary'
     SECONDARY = 'secondary'
     ERROR = 'error'
     INVISIBLE = 'invisible'
-    DEFAULT = None
 
 
 # TODO: this is a bad way to stop cyclic generation of vizzes
@@ -230,24 +229,26 @@ class TextPrimitive(Viz):
     A Viz which renders a contiguous block of text.
     """
 
-    def __init__(self, text: str, background_color: Color = Color.DEFAULT) -> None:
+    def __init__(self, text: str, color: Optional[Color] = None, variant: Optional[str] = None) -> None:
         """
         Args:
             text: The text which should be rendered.
-            background_color: The background color of the text.
+            color: The color of the text.
+            variant: The variant of the text; one of either "plain" or "token".
         """
         super(TextPrimitive, self).__init__(None, ExpansionMode.FULL)
         self._text: str = text
-        self._color: Color = background_color
+        self._color: Color = color
+        self._variant: str = variant
 
     def compile_full(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, str(self._color.value)), []
+        return TextPrimitiveModel(self._text, str(self._color.value), self._variant), []
 
     def compile_compact(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, str(self._color.value)), []
+        return TextPrimitiveModel(self._text, str(self._color.value), self._variant), []
 
     def compile_summary(self) -> 'TextPrimitiveModel':
-        return TextPrimitiveModel(self._text, str(self._color.value))
+        return TextPrimitiveModel(self._text, str(self._color.value), self._variant)
 
     def __str__(self) -> str:
         return self._text
@@ -286,7 +287,7 @@ class TokenPrimitive(TextPrimitive):
         Args:
             o: The object whose string representation should be rendered.
         """
-        super(TokenPrimitive, self).__init__(str(o), Color.PRIMARY)
+        super(TokenPrimitive, self).__init__(str(o), Color.PRIMARY, 'token')
 
 
 class FlowLayout(Viz):
@@ -498,6 +499,13 @@ class GridLayout(Viz):
         self._right_ellipsis = TextPrimitive('...')
         self._bottom_ellipsis = TextPrimitive('...')
 
+    def __add__(self, other: Tuple[Any, int, int, int, int]) -> 'GridLayout':
+        elem, x, y, w, h = other
+        self._elements.append((get_viz(elem), x, y, w, h))
+        self._num_cols = max(self._num_cols, x + w)
+        self._num_rows = max(self._num_rows, y + h)
+        return self
+
     def compile_full(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
         return (
             GridLayoutModel(self._elements),
@@ -535,7 +543,7 @@ class SequenceLayout(GridLayout):
 
     def __init__(
             self,
-            elements: List[Any],
+            elements: Optional[List[Any]] = None,
             orientation: str = 'horizontal',
             summary: Optional[str] = None,
             expansion_mode: Optional[ExpansionMode] = None
@@ -548,7 +556,11 @@ class SequenceLayout(GridLayout):
                 mode.
             expansion_mode: An optional expansion mode which the ``SequenceLayout`` should adopt by default.
         """
-        if orientation == 'horizontal':
+        self._orientation = orientation
+        if elements is None:
+            super(SequenceLayout, self).__init__([],
+                                                 summary, expansion_mode)
+        elif orientation == 'horizontal':
             super(SequenceLayout, self).__init__([(elem, i, 0, 1, 1) for i, elem in enumerate(elements)],
                                                  summary, expansion_mode)
         elif orientation == 'vertical':
@@ -556,6 +568,15 @@ class SequenceLayout(GridLayout):
                                                  summary, expansion_mode)
         else:
             raise ValueError('Provided orientation "{}" not recognized.'.format(orientation))
+
+    def __add__(self, other: Any) -> 'SequenceLayout':
+        if self._orientation == 'horizontal':
+            self._elements.append((get_viz(other), len(self._elements), 0, 1, 1))
+            self._num_cols += 1
+        elif self._orientation == 'vertical':
+            self._elements.append((get_viz(other), 0, len(self._elements), 1, 1))
+            self._num_rows += 1
+        return self
 
     def __str__(self) -> str:
         return '[ ... ]'
@@ -593,10 +614,11 @@ class KeyValueLayout(GridLayout):
 
 class TextPrimitiveModel(VizModel):
 
-    def __init__(self, text: str, color: Optional[str]) -> None:
+    def __init__(self, text: str, color: Optional[str], variant: Optional[str]) -> None:
         super(TextPrimitiveModel, self).__init__('TextPrimitive', {
             'text': text,
             'color': color,
+            'variant': variant,
         })
 
 
