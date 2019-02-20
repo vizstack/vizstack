@@ -12,5 +12,5 @@ def largest_num(list: List[int]) -> int:
 
 if __name__ == "__main__":
     # Run tests
-    xnode.view(digits_to_number([1, 2, 3, 0]))
-    xnode.view(digits_to_number([0, 1, 2, 3]))
+    xnode.show(digits_to_number([1, 2, 3, 0]))
+    xnode.show(digits_to_number([0, 1, 2, 3]))

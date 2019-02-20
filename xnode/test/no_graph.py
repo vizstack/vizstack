@@ -23,7 +23,7 @@ class MyClass:
 
 
 
-xnode.view(MyClass())
+xnode.show(MyClass())
 
 b = {}
 a = {'x': b,
@@ -32,8 +32,8 @@ b['y'] = a
 
 # xnode.view(xnode)
 
-xnode.view(my_fn)
+xnode.show(my_fn)
 
 
 l = [10, 2, 3, 2341, 2134, 2134, 213, 2134]
-xnode.view(l)
+xnode.show(l)

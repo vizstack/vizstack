@@ -68,6 +68,15 @@ class SandboxSettingsModal extends React.Component<{
             scriptPath: undefined,
         };
 
+        // The react-select component uses its own obnoxious styles API, so we're unable to access our themes.
+        const selectStyles = {
+            control: (base) => ({
+                ...base,
+                height: '20px',
+                minHeight: '20px',
+            }),
+        };
+
         return (
             <div className={classes.root}>
                 <Select
@@ -79,11 +88,13 @@ class SandboxSettingsModal extends React.Component<{
                             value: sandboxName, label: sandboxName,
                         }))}
                     placeholder={"Select a sandbox..."}
+                    styles={selectStyles}
+                    className={classes.select}
                     onChange={(selected) => this.onSandboxSelected(selected.value)}
                 />
-                <div className={classes.details}>
-                    {pythonPath !== undefined && scriptPath !== undefined ? `${pythonPath} | ${scriptPath}` : undefined}
-                </div>
+                {pythonPath !== undefined && scriptPath !== undefined ? <div className={classes.details}>
+                    {`${pythonPath} | ${scriptPath}`}
+                </div> : undefined}
             </div>
         );
     }
@@ -95,14 +106,21 @@ class SandboxSettingsModal extends React.Component<{
 /** CSS-in-JS styling object. */
 const styles = (theme) => ({
     root: {
-        display: 'block',
+        display: 'flex',
         marginLeft: 'auto',
         marginRight: 'auto',
         textAlign: 'center',
+        alignItems: 'center',
+    },
+    select: {
+        flexGrow: 1,
+        fontSize: theme.typography.fontSize.primary,
+        padding: theme.spacing.unit,
     },
     details: {
+        flexGrow: 1,
         color: theme.palette.text.secondary,
-        fontSize: theme.typography.fontSize.secondary,
+        fontSize: theme.typography.fontSize.primary,
     }
 });
 

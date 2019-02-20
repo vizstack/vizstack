@@ -34,4 +34,4 @@ x = grandparent_fn(0, 1)
 graph = x.xn().compile_full()[0]
 # print(graph)
 
-xnode.view(x)
+xnode.show(x)

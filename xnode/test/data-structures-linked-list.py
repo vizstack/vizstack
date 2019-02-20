@@ -1,3 +1,3 @@
 import xnode
 
-xnode.view(86)
+xnode.show(86)

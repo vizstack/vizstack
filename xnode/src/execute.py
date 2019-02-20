@@ -230,7 +230,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str, script
     send_message(None, None, False, False)
 
     engine: VisualizationEngine = VisualizationEngine()
-    xnode.set_view_fn(functools.partial(_execute_watch, send_message, engine))
+    xnode.set_show_fn(functools.partial(_execute_watch, send_message, engine))
 
     # Replace stdout with an object that queues all statements printed by the user script as messages
     sys.stdout = _PrintOverwriter(engine, send_message)  # type: ignore

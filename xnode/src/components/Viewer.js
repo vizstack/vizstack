@@ -19,6 +19,7 @@ import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
 import TextPrimitive from './primitives/TextPrimitive';
+import ImagePrimitive from './primitives/ImagePrimitive';
 
 // Viz layouts
 import GridLayout from './layouts/GridLayout';
@@ -121,6 +122,15 @@ class Viewer extends React.Component<
                     {...generalProps}
                     text={text}
                     color={color ? color : 'primary'} />
+                );
+            }
+
+            case 'ImagePrimitive': {
+                const { filePath } = (model: TextPrimitiveModel).contents;
+                return (
+                    <ImagePrimitive
+                        {...generalProps}
+                        filePath={filePath} />
                 );
             }
 

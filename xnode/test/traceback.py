@@ -1,5 +1,5 @@
 import xnode
 
 x = 86
-xnode.view(x)
+xnode.show(x)
 print(k)

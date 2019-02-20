@@ -6,6 +6,7 @@ from typing import Sequence, Any, Mapping, Iterable, Optional, List, Tuple, Unio
 from enum import Enum
 import types
 import inspect
+import imghdr
 from xnode.constants import VizModel, ExpansionMode
 
 # TODO: potentially use these remnants of the old get_viz engine
@@ -127,7 +128,17 @@ def get_viz(o: Any) -> 'Viz':
             contents.extend([TextPrimitive('Fields'), staticfields])
         viz = SequenceLayout(contents, orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
-        viz = TokenPrimitive(o)
+        if isinstance(o, str):
+            try:
+                header = imghdr.what(o)
+                if header == 'jpeg' or header == 'png':
+                    viz = ImagePrimitive(o)
+                else:
+                    viz = TokenPrimitive(o)
+            except IOError:
+                viz = TokenPrimitive(o)
+        else:
+            viz = TokenPrimitive(o)
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -240,6 +251,29 @@ class TextPrimitive(Viz):
 
     def __str__(self) -> str:
         return self._text
+
+
+class ImagePrimitive(Viz):
+    """
+    A Viz which renders an image as read from a file.
+    """
+
+    def __init__(self, file_path: str, expansion_mode: Optional[ExpansionMode] = None) -> None:
+        """
+        Args:
+            file_path: The local path to the image file.
+        """
+        super(ImagePrimitive, self).__init__(None, expansion_mode)
+        self._file_path: str = file_path
+
+    def compile_full(self) -> Tuple['ImagePrimitiveModel', Iterable[Viz]]:
+        return ImagePrimitiveModel(self._file_path), []
+
+    def compile_compact(self) -> Tuple['ImagePrimitiveModel', Iterable[Viz]]:
+        return ImagePrimitiveModel(self._file_path), []
+
+    def __str__(self) -> str:
+        return self._file_path
 
 
 class TokenPrimitive(TextPrimitive):
@@ -563,6 +597,14 @@ class TextPrimitiveModel(VizModel):
         super(TextPrimitiveModel, self).__init__('TextPrimitive', {
             'text': text,
             'color': color,
+        })
+
+
+class ImagePrimitiveModel(VizModel):
+
+    def __init__(self, file_path: str) -> None:
+        super(ImagePrimitiveModel, self).__init__('ImagePrimitive', {
+            'filePath': file_path,
         })
 
 

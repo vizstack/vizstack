@@ -63,7 +63,7 @@ class _SequenceTest:
 #     )
 # def test_view_object_with_xn_that_returns_token_should_print_message(capsys) -> None:
 #     reload(xn)
-#     xn.set_view_fn(_view_fn)
+#     xn.set_show_fn(_view_fn)
 #     test_obj = _TokenTest(10)
 #     xn.view(test_obj)
 #     assert {
@@ -86,7 +86,7 @@ class _SequenceTest:
 #
 # def test_view_object_with_xn_that_returns_sequence_should_print_message(capsys) -> None:
 #     reload(xn)
-#     xn.set_view_fn(_view_fn)
+#     xn.set_show_fn(_view_fn)
 #     test_obj = _SequenceTest([_TokenTest(1), _TokenTest(2), _TokenTest(3), _TokenTest(4)])
 #     xn.view(test_obj)
 #     output = json.loads(capsys.readouterr().out.strip())

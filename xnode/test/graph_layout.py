@@ -18,7 +18,7 @@ n4.add_child(n1)
 n4.add_child(n2)
 n4.add_child(n3)
 
-xnode.view(g)
+xnode.show(g)
 
 # =====================
 # 1 group with children.
@@ -40,7 +40,7 @@ n5 = g.create_node("n5", flow_direction="east")
 g.create_edge(n4, n5)
 
 
-xnode.view(g)
+xnode.show(g)
 
 # =====================
 
@@ -71,4 +71,4 @@ n9 = g.create_node("n9")
 g.create_edge(n8, n9)
 n5.add_child(n9)
 
-xnode.view(g)
+xnode.show(g)

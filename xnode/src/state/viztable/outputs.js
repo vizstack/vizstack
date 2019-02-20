@@ -43,7 +43,7 @@ export type VizModel = PrimitiveModel | LayoutModel;
 // Visual "building blocks".
 
 /** Any primitive model. */
-export type PrimitiveModel = TextPrimitiveModel;
+export type PrimitiveModel = TextPrimitiveModel | ImagePrimitiveModel;
 
 /** Token primitive is __. */
 export type TextPrimitiveModel = {
@@ -51,6 +51,14 @@ export type TextPrimitiveModel = {
     contents: {
         text: string,
         color?: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
+    },
+};
+
+/** Image primitive is __. */
+export type ImagePrimitiveModel = {
+    type: 'ImagePrimitive',
+    contents: {
+        filePath: string,
     },
 };
 
