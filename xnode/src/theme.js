@@ -1,4 +1,7 @@
 import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
+import PrimaryColor from '@material-ui/core/colors/indigo';
+import SecondaryColor from '@material-ui/core/colors/indigo';
+import ErrorColor from '@material-ui/core/colors/indigo';
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
  *  For in-depth description, go to: https://material-ui-next.com/customization/themes/.
@@ -12,54 +15,33 @@ export default createMuiTheme({
         monospace: {
             fontFamily: '"Roboto Mono", "Courier", monospace',
         },
+        sansSerif: {
+            fontFamily: '"Roboto", "Helvetica Neue", sans-serif',
+        },
     },
     shape: {
         border: {
             style: 'solid',
             width: 1,
-            radius: 4,
+            radius: 2,
         },
     },
     palette: {
-        primary: {
-            // TODO: fix these colors
-            light: "#7986cb",
-            main: "#3f51b5",
-            dark: "#303f9f",
-            contrastText: "#fff",
-        },
-        secondary: {
-            light: "#7986cb",
-            main: "#3f51b5",
-            dark: "#303f9f",
-            contrastText: "#fff",
-        },
-        emphasis: {
-            light: "#7986cb",
-            main: "#3f51b5",
-            dark: "#303f9f",
-            contrastText: "#fff",
-        },
-        error: {
-            light: "#7986cb",
-            main: "#3f51b5",
-            dark: "#303f9f",
-            contrastText: "#fff",
-        },
+        primary: PrimaryColor,
+        secondary: SecondaryColor,
+        error: ErrorColor,
         text: {
             primary: 'rgba(255, 255, 255, 0.87)',
             secondary: 'rgba(255, 255, 255, 0.54)',
             disabled: 'rgba(255, 255, 255, 0.38)',
             hint: 'rgba(255, 255, 255, 0.38)',
         },
-        background: {
-            'default': '#fafafa'
-        },
     },
     spacing: {
-        tight: 0,
+        smallest: 1,
+        small: 2,
         unit: 4,
-        separate: 10,
+        large: 8,
     },
     overrides: {
         MuiIconButton: {

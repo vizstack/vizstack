@@ -53,10 +53,9 @@ class GridLayout extends React.PureComponent<{
 
         return (
             <div className={classNames({
-                [classes.grid]       : true,
+                [classes.grid]: true,
                 [classes.compactGrid]: !isFullyExpanded,
-                [classes.hoveredGrid]    : isHovered,
-                [classes.notHoveredGrid] : !isHovered,
+                [classes.hoveredGrid]: isHovered,
             })}
                  {...mouseProps}
             >
@@ -67,7 +66,6 @@ class GridLayout extends React.PureComponent<{
                             className={classNames({
                                 [classes.cell]           : true,
                                 [classes.hoveredCell]    : isHovered,
-                                [classes.notHoveredCell] : !isHovered,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -97,7 +95,7 @@ const styles = (theme) => ({
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
-        padding: theme.spacing.separate,
+        borderColor: 'transparent',
     },
     compactGrid: {
         gridGap: `${theme.spacing.tight}px`,
@@ -105,15 +103,10 @@ const styles = (theme) => ({
     hoveredGrid: {
         borderColor: theme.palette.primary.light,
     },
-    notHoveredGrid: {
-        borderColor: 'transparent',
-    },
     cell: {
     },
     hoveredCell: {
     },
-    notHoveredCell: {
-    }
 });
 
 export default withStyles(styles)(GridLayout);

@@ -34,7 +34,7 @@ class ViewerDisplayFrame extends React.Component<{
         const { classes, children, buttons } = this.props;
 
         const buttonsComponents = buttons.map((button, idx) => (
-            <Tooltip key={idx} placement='bottom' title={button.title}>
+            <Tooltip key={idx} placement='left' title={button.title}>
                 <IconButton aria-label={button.title} onClick={button.onClick}>
                     {button.icon}
                 </IconButton>

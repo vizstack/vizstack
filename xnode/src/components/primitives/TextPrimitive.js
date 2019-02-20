@@ -31,8 +31,14 @@ class TextPrimitive extends React.PureComponent<{
     text: string,
 
     /** The color scheme of the token. */
-    color: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
+    color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
+    variant?: 'plain' | 'token',
 }> {
+    static defaultProps = {
+        color: 'default',
+        type: 'plain',
+    };
+
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
@@ -41,17 +47,27 @@ class TextPrimitive extends React.PureComponent<{
             classes,
             text,
             color,
+            variant,
             mouseProps,
         } = this.props;
 
         const textBreaks = text.split('\n');
         return (
             <span className={classNames({
-                [classes.tokenText]  : true,
-                [classes.primary] : color === 'primary',
-                [classes.secondary] : color === 'secondary',
-                [classes.emphasis] : color === 'emphasis',
-                [classes.error] : color === 'error',
+                [classes.text]: true,
+
+                [classes.sansSerif]: variant === 'plain',
+                [classes.monospace]: variant === 'token',
+                [classes.framed]: variant === 'token',
+                [classes.invisible]: color === 'invisible',
+
+                [classes.primaryText]: variant === 'plain' && color === 'primary',
+                [classes.secondaryText]: variant === 'plain' && color === 'secondary',
+                [classes.errorText]: variant === 'plain' && color === 'error',
+
+                [classes.primaryMono]: variant === 'token' && color === 'primary',
+                [classes.secondaryMono]: variant === 'token' && color === 'secondary',
+                [classes.errorMono]: variant === 'token' && color === 'error',
                 })}
                   {...mouseProps}
             >{textBreaks.map((text, i) => {
@@ -72,43 +88,52 @@ class TextPrimitive extends React.PureComponent<{
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    tokenText: {
-        paddingLeft: theme.spacing.unit / 2,
-        paddingRight: theme.spacing.unit / 2,
-        paddingTop: theme.spacing.unit / 2,
-        paddingBottom: theme.spacing.unit / 2,
-        marginLeft: theme.spacing.unit,
-        marginRight: theme.spacing.unit,
+    text: {
         textAlign: 'left',
         overflow: 'hidden',
         width: 'fit-content',
-        fontFamily: theme.typography.monospace.fontFamily,
         fontSize: theme.typography.fontSize.primary,
         color: theme.palette.text.primary,
+    },
+
+    // Font styles.
+    sansSerif: theme.typography.sansSerif,
+    monospace: theme.typography.monospace,
+    framed: {
+        padding: theme.spacing.small,
         borderRadius: theme.shape.border.radius,
     },
-    primary: {
+    invisible: {
+        visibility: 'hidden',
+    },
+
+    // Sans-serif styles.
+    primaryText: {
+        color: theme.palette.primary.main,
+    },
+    secondaryText: {
+        color: theme.palette.secondary.main,
+    },
+    errorText: {
+        color: theme.palette.error.main,
+    },
+
+    // Monospace styles.
+    primaryMono: {
         backgroundColor: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,
         '&:hover': {
             backgroundColor: theme.palette.primary.light,
         }
     },
-    secondary: {
+    secondaryMono: {
         backgroundColor: theme.palette.secondary.main,
         color: theme.palette.secondary.contrastText,
         '&:hover': {
             backgroundColor: theme.palette.secondary.light,
         }
     },
-    emphasis: {
-        backgroundColor: theme.palette.emphasis.main,
-        color: theme.palette.emphasis.contrastText,
-        '&:hover': {
-            backgroundColor: theme.palette.emphasis.light,
-        }
-    },
-    error: {
+    errorMono: {
         backgroundColor: theme.palette.error.main,
         color: theme.palette.error.contrastText,
         '&:hover': {

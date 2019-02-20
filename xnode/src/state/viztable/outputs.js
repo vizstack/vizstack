@@ -50,7 +50,8 @@ export type TextPrimitiveModel = {
     type: 'TextPrimitive',
     contents: {
         text: string,
-        color?: 'emphasis' | 'primary' | 'secondary' | 'error' | 'invisible',
+        color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
+        variant?: 'plain' | 'token',
     },
 };
 

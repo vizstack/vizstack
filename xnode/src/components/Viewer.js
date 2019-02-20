@@ -213,13 +213,22 @@ class Viewer extends React.Component<
                 model = vizSpec.summaryModel;
                 break;
         }
-        return [
-            this.getVizComponent(model),
-            <span className={classNames({
-                [classes.indicator]: true,
-                [classes.hovered]: isHovered,
-            })}>{expansionMode}</span>
-        ];
+
+        // TODO: Remove this hack
+        const components = [this.getVizComponent(model)];
+        const isTextPrimitive = (
+            vizTable[vizId].fullModel &&
+            vizTable[vizId].fullModel.type === 'TextPrimitive'
+        );
+        if(!isTextPrimitive) {
+            components.push(
+                <span className={classNames({
+                    [classes.indicator]: true,
+                    [classes.hovered]: isHovered,
+                })}>{expansionMode}</span>
+            );
+        }
+        return components
     }
 }
 
