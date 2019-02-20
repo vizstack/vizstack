@@ -34,18 +34,17 @@ class ImagePrimitive extends React.PureComponent<{
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const {
-            classes,
-            filePath,
-            mouseProps,
-            isFullyExpanded,
-        } = this.props;
+        const { classes, filePath, mouseProps, isFullyExpanded } = this.props;
 
         return (
-            <img className={classNames({
-                [classes.image]: true,
-                [classes.compactImage]: !isFullyExpanded
-            })} src={filePath} {...mouseProps} />
+            <img
+                className={classNames({
+                    [classes.image]: true,
+                    [classes.compactImage]: !isFullyExpanded,
+                })}
+                src={filePath}
+                {...mouseProps}
+            />
         );
     }
 }
@@ -64,7 +63,7 @@ const styles = (theme) => ({
     compactImage: {
         width: '50%',
         height: '50%',
-    }
+    },
 });
 
 export default withStyles(styles)(ImagePrimitive);

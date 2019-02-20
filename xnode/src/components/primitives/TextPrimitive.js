@@ -36,49 +36,50 @@ class TextPrimitive extends React.PureComponent<{
 }> {
     static defaultProps = {
         color: 'default',
-        type: 'plain',
+        variant: 'plain',
     };
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const {
-            classes,
-            text,
-            color,
-            variant,
-            mouseProps,
-        } = this.props;
+        const { classes, text, color, variant, mouseProps } = this.props;
 
-        const textBreaks = text.split('\n');
-        return (
-            <span className={classNames({
-                [classes.text]: true,
+        const split = text.split('\n');
+        const lines = split.map((text, i) =>
+            i < split.length - 1 ? (
+                <span key={i}>
+                    {text}
+                    <br />
+                </span>
+            ) : (
+                <span key={i}>{text}</span>
+            ),
+        );
+        const names = classNames({
+            [classes.text]: true,
 
-                [classes.sansSerif]: variant === 'plain',
-                [classes.monospace]: variant === 'token',
-                [classes.framed]: variant === 'token',
-                [classes.invisible]: color === 'invisible',
+            [classes.sansSerif]: variant === 'plain',
+            [classes.monospace]: variant === 'token',
+            [classes.framed]: variant === 'token',
+            [classes.invisible]: color === 'invisible',
 
-                [classes.primaryText]: variant === 'plain' && color === 'primary',
-                [classes.secondaryText]: variant === 'plain' && color === 'secondary',
-                [classes.errorText]: variant === 'plain' && color === 'error',
+            [classes.primaryPlain]: variant === 'plain' && color === 'primary',
+            [classes.secondaryPlain]: variant === 'plain' && color === 'secondary',
+            [classes.errorPlain]: variant === 'plain' && color === 'error',
 
-                [classes.primaryMono]: variant === 'token' && color === 'primary',
-                [classes.secondaryMono]: variant === 'token' && color === 'secondary',
-                [classes.errorMono]: variant === 'token' && color === 'error',
-                })}
-                  {...mouseProps}
-            >{textBreaks.map((text, i) => {
-                if (i < textBreaks.length - 1) {
-                    return (
-                        <span key={i}>{text}<br/></span>
-                    )
-                } else {
-                    return <span key={i}>{text}</span>
-                }
-            })}</span>
+            [classes.primaryToken]: variant === 'token' && color === 'primary',
+            [classes.secondaryToken]: variant === 'token' && color === 'secondary',
+            [classes.errorToken]: variant === 'token' && color === 'error',
+        });
+        return variant === 'token' ? (
+            <div className={names} {...mouseProps}>
+                {lines}
+            </div>
+        ) : (
+            <span className={names} {...mouseProps}>
+                {lines}
+            </span>
         );
     }
 }
@@ -102,43 +103,47 @@ const styles = (theme) => ({
     framed: {
         padding: theme.spacing.small,
         borderRadius: theme.shape.border.radius,
+        display: 'inline-block',
+        verticalAlign: 'middle',
+        overflow: 'auto',
+        whiteSpace: 'nowrap',
     },
     invisible: {
         visibility: 'hidden',
     },
 
     // Sans-serif styles.
-    primaryText: {
+    primaryPlain: {
         color: theme.palette.primary.main,
     },
-    secondaryText: {
+    secondaryPlain: {
         color: theme.palette.secondary.main,
     },
-    errorText: {
+    errorPlain: {
         color: theme.palette.error.main,
     },
 
     // Monospace styles.
-    primaryMono: {
+    primaryToken: {
         backgroundColor: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,
         '&:hover': {
             backgroundColor: theme.palette.primary.light,
-        }
+        },
     },
-    secondaryMono: {
+    secondaryToken: {
         backgroundColor: theme.palette.secondary.main,
         color: theme.palette.secondary.contrastText,
         '&:hover': {
             backgroundColor: theme.palette.secondary.light,
-        }
+        },
     },
-    errorMono: {
+    errorToken: {
         backgroundColor: theme.palette.error.main,
         color: theme.palette.error.contrastText,
         '&:hover': {
             backgroundColor: theme.palette.error.light,
-        }
+        },
     },
 });
 

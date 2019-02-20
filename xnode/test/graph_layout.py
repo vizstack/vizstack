@@ -1,7 +1,6 @@
 import xnode
 import xnode.viz as viz
 
-
 # =====================
 # 1 group with children.
 
@@ -38,7 +37,6 @@ n4.add_child(n3)
 
 n5 = g.create_node("n5", flow_direction="east")
 g.create_edge(n4, n5)
-
 
 xnode.show(g)
 

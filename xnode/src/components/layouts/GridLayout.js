@@ -5,7 +5,7 @@ import { createSelector } from 'reselect';
 
 import Viewer from '../Viewer';
 import type { ViewerProps } from '../Viewer';
-import ColorLightBlue from "@material-ui/core/colors/lightBlue";
+import ColorLightBlue from '@material-ui/core/colors/lightBlue';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -34,8 +34,7 @@ class GridLayout extends React.PureComponent<{
     elements: Array<[ViewerProps, number, number, number, number]>,
 }> {
     /** Prop default values. */
-    static defaultProps = {
-    };
+    static defaultProps = {};
 
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
@@ -43,36 +42,31 @@ class GridLayout extends React.PureComponent<{
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const {
-            classes,
-            elements,
-            isFullyExpanded,
-            isHovered,
-            mouseProps,
-        } = this.props;
+        const { classes, elements, isFullyExpanded, isHovered, mouseProps } = this.props;
 
         return (
-            <div className={classNames({
-                [classes.grid]: true,
-                [classes.compactGrid]: !isFullyExpanded,
-                [classes.hoveredGrid]: isHovered,
-            })}
-                 {...mouseProps}
+            <div
+                className={classNames({
+                    [classes.grid]: true,
+                    [classes.compactGrid]: !isFullyExpanded,
+                    [classes.hoveredGrid]: isHovered,
+                })}
+                {...mouseProps}
             >
                 {elements.map(([viewerProps, col, row, width, height]) => {
                     return (
                         <div
                             key={viewerProps.vizId}
                             className={classNames({
-                                [classes.cell]           : true,
-                                [classes.hoveredCell]    : isHovered,
+                                [classes.cell]: true,
+                                [classes.hoveredCell]: isHovered,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
                                 gridRow: `${row + 1} / ${row + 1 + height}`,
-                            }
-                        }>
-                            <Viewer {...viewerProps}/>
+                            }}
+                        >
+                            <Viewer {...viewerProps} />
                         </div>
                     );
                 })}
@@ -88,7 +82,8 @@ class GridLayout extends React.PureComponent<{
 const styles = (theme) => ({
     grid: {
         display: 'inline-grid',
-        gridGap: `${theme.spacing.unit}px`,
+        verticalAlign: 'middle',
+        gridGap: `${theme.spacing.large}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
@@ -96,17 +91,17 @@ const styles = (theme) => ({
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
         borderColor: 'transparent',
+        paddingLeft: theme.spacing.small,
+        paddingRight: theme.spacing.small,
     },
     compactGrid: {
-        gridGap: `${theme.spacing.tight}px`,
+        gridGap: `${theme.spacing.large}px`, // Need px.
     },
     hoveredGrid: {
         borderColor: theme.palette.primary.light,
     },
-    cell: {
-    },
-    hoveredCell: {
-    },
+    cell: {},
+    hoveredCell: {},
 });
 
 export default withStyles(styles)(GridLayout);

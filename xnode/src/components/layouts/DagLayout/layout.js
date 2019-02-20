@@ -174,15 +174,17 @@ export default function layout(
      */
     function processNode(
         nodeId: NodeId,
-        processed: { [NodeId]:{} },
-    ): {
-        type: 'real',
-        vertexIdx: VertexIdx,  // Actual vertex.
-    } | {
-        type: 'dummy',
-        vertexIdx: VertexIdx,  // Dummy vertex.
-        groupIdx: GroupIdx,
-    } {
+        processed: { [NodeId]: {} },
+    ):
+        | {
+              type: 'real',
+              vertexIdx: VertexIdx, // Actual vertex.
+          }
+        | {
+              type: 'dummy',
+              vertexIdx: VertexIdx, // Dummy vertex.
+              groupIdx: GroupIdx,
+          } {
         if (processed[nodeId]) return processed[nodeId];
         const node = nodes[nodeIdxLookup[nodeId]];
 
@@ -224,14 +226,10 @@ export default function layout(
         return result;
     }
     const processCache: { [NodeId]: {} } = {};
-    console.log("layout.js -- nodes = ", nodes, "edges = ", edges);
+    console.log('layout.js -- nodes = ', nodes, 'edges = ', edges);
     nodes.forEach((node) => processNode(node.id, processCache));
 
-
-    function processEdge(
-        startId: NodeId,
-        endId: NodeId,
-    ) {
+    function processEdge(startId: NodeId, endId: NodeId) {
         const { idx: startVertexIdx, type: startVertexType } = vertexIdxLookup[startId];
         const { idx: endVertexIdx, type: endVertexType } = vertexIdxLookup[endId];
 
@@ -258,15 +256,17 @@ export default function layout(
                 options = { axis: 'y', gap: kFlowGap };
                 break;
         }
-        addConstraint({
-            type: 'separation',
-            left: startVertexIdx,
-            right: endVertexIdx,
-            ...options,
-        }, [startVertexType, endVertexType]);
+        addConstraint(
+            {
+                type: 'separation',
+                left: startVertexIdx,
+                right: endVertexIdx,
+                ...options,
+            },
+            [startVertexType, endVertexType],
+        );
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
-
 
     console.log('layout.js -- Done processing input nodes/edges.', graph);
 
@@ -355,8 +355,8 @@ export default function layout(
     }
 
     let minX, minY, maxX, maxY;
-    const nodeDimsLookup: {[NodeId]: Dims} = {}
-    for(let node of nodes) {
+    const nodeDimsLookup: { [NodeId]: Dims } = {};
+    for (let node of nodes) {
         const { id } = node;
         let dims: Dims;
         if (vertexIdxLookup[id].type === 'dummy') {
@@ -395,10 +395,10 @@ export default function layout(
             return {
                 ...edge,
                 points: [
-                    [start.x - minX + start.width/2, start.y - minY + start.height/2],
-                    [end.x - minX + end.width/2, end.y - minY + end.height/2],
+                    [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
+                    [end.x - minX + end.width / 2, end.y - minY + end.height / 2],
                 ],
-                z: 0,  // TODO
+                z: 0, // TODO
             };
         }),
     );

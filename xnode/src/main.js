@@ -5,7 +5,7 @@ import SandboxSettingsView from './views/sandbox-settings';
 import REPL from './views/repl';
 
 import { getMinimalDisambiguatedPaths } from './services/path-utils';
-import yaml from "js-yaml";
+import yaml from 'js-yaml';
 import fs from 'fs';
 import path from 'path';
 
@@ -31,7 +31,7 @@ export default {
 
     changeInterval: null,
 
-    settings: {sandboxes: {}},
+    settings: { sandboxes: {} },
 
     settingsErrors: [],
 
@@ -49,14 +49,14 @@ export default {
                     const uriTokens = uri.split('/');
                     const settingsPath = path.join(atom.project.getPaths()[0], 'xnode.yaml');
                     const repl = new REPL(uriTokens[3], (repl, sandboxName) =>
-                        this.updateReplSandbox(repl, sandboxName, true));
+                        this.updateReplSandbox(repl, sandboxName, true),
+                    );
                     this.repls.push(repl);
                     console.debug('root -- new REPL added');
 
                     if (!fs.existsSync(settingsPath)) {
                         this.createSettingsFile(settingsPath);
-                    }
-                    else {
+                    } else {
                         this.reloadSettings(settingsPath);
                     }
                     return repl;
@@ -80,9 +80,12 @@ export default {
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
                 'xnode:create-sandbox': () => {
-                    const replId = this.repls.length > 0 ? Math.max(...this.repls.map((repl) => repl.id)) + 1 : 0;
+                    const replId =
+                        this.repls.length > 0
+                            ? Math.max(...this.repls.map((repl) => repl.id)) + 1
+                            : 0;
                     atom.workspace.open(`atom://xnode-sandbox/${replId}`);
-                }
+                },
             }),
 
             // Destroy additional objects on package deactivation
@@ -133,17 +136,19 @@ export default {
     },
 
     createSettingsFile(settingsPath) {
-        atom.workspace.open(settingsPath).then(editor => {
+        atom.workspace.open(settingsPath).then((editor) => {
             editor.insertText('# Define your sandbox configurations here.\n');
-            editor.insertText(yaml.safeDump({
-                'sandboxes': {
-                    'MySandbox1': {
-                        'pythonPath' : 'TODO: specify a Python executable',
-                        'scriptPath' : 'TODO: specify a Python script to run',
-                        'scriptArgs': [],
-                    }
-                }
-            }));
+            editor.insertText(
+                yaml.safeDump({
+                    sandboxes: {
+                        MySandbox1: {
+                            pythonPath: 'TODO: specify a Python executable',
+                            scriptPath: 'TODO: specify a Python script to run',
+                            scriptArgs: [],
+                        },
+                    },
+                }),
+            );
             editor.save();
             this.reloadSettings(settingsPath);
         });
@@ -175,7 +180,8 @@ export default {
             const now = new Date();
             if (now - this.lastChangedTime >= delay) {
                 const changedSettingsFile = this.changedFiles.find(
-                    (filePath) => filePath !== null && filePath.endsWith('xnode.yaml'));
+                    (filePath) => filePath !== null && filePath.endsWith('xnode.yaml'),
+                );
                 if (changedSettingsFile !== undefined) {
                     this.reloadSettings(changedSettingsFile);
                 }
@@ -219,18 +225,22 @@ export default {
 
         try {
             settings = yaml.safeLoad(fs.readFileSync(settingsPath));
-        }
-        catch(e) {
+        } catch (e) {
             if (e.name === 'YAMLException') {
-                error = createErrorNotification('"xnode.yaml" could not be parsed successfully.', []);
-            }
-            else {
-                error = createErrorNotification('"xnode.yaml" could not be found in this project.', [
-                    {
-                        text: 'Create xnode.yaml',
-                        onDidClick: () => this.createSettingsFile(settingsPath),
-                    }
-                ]);
+                error = createErrorNotification(
+                    '"xnode.yaml" could not be parsed successfully.',
+                    [],
+                );
+            } else {
+                error = createErrorNotification(
+                    '"xnode.yaml" could not be found in this project.',
+                    [
+                        {
+                            text: 'Create xnode.yaml',
+                            onDidClick: () => this.createSettingsFile(settingsPath),
+                        },
+                    ],
+                );
             }
             return { error };
         }
@@ -240,20 +250,32 @@ export default {
         }
         for (let [sandboxName, sandbox] of Object.entries(settings.sandboxes)) {
             if (typeof sandbox !== 'object' || sandbox === null) {
-                error = createErrorNotification(`Sandbox ${sandboxName} must be an object with "pythonPath", "scriptPath", and "scriptArgs" fields.`, []);
+                error = createErrorNotification(
+                    `Sandbox ${sandboxName} must be an object with "pythonPath", "scriptPath", and "scriptArgs" fields.`,
+                    [],
+                );
                 return { error };
             }
             const { pythonPath, scriptPath, scriptArgs } = sandbox;
             if (typeof pythonPath !== 'string') {
-                error = createErrorNotification(`"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, []);
+                error = createErrorNotification(
+                    `"pythonPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`,
+                    [],
+                );
                 return { error };
             }
             if (typeof scriptPath !== 'string') {
-                error = createErrorNotification(`"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`, []);
+                error = createErrorNotification(
+                    `"scriptPath" for sandbox ${sandboxName} in "xnode.yaml" must be a string.`,
+                    [],
+                );
                 return { error };
             }
             if (!Array.isArray(scriptArgs)) {
-                error = createErrorNotification(`"scriptArgs" for sandbox ${sandboxName} in "xnode.yaml" must be a list.`, []);
+                error = createErrorNotification(
+                    `"scriptArgs" for sandbox ${sandboxName} in "xnode.yaml" must be a list.`,
+                    [],
+                );
                 return { error };
             }
         }
@@ -266,35 +288,39 @@ export default {
         this.settingsErrors = [];
         const { settings: newSettings, error } = this.parseSettings(settingsPath);
         if (error !== undefined) {
-           this.settingsErrors.push(error);
-           return;
+            this.settingsErrors.push(error);
+            return;
         }
 
         const updatedSandboxes = new Set();
         const deletedSandboxes = new Set();
 
-        Object.entries(this.settings.sandboxes)
-            .forEach(([sandboxName, {pythonPath, scriptPath, scriptArgs}]) => {
+        Object.entries(this.settings.sandboxes).forEach(
+            ([sandboxName, { pythonPath, scriptPath, scriptArgs }]) => {
                 if (!(sandboxName in newSettings.sandboxes)) {
                     deletedSandboxes.add(sandboxName);
-                }
-                else if (pythonPath !== newSettings.sandboxes[sandboxName].pythonPath ||
-                         scriptPath !== newSettings.sandboxes[sandboxName].scriptPath ||
-                         scriptArgs !== newSettings.sandboxes[sandboxName].scriptArgs) {
+                } else if (
+                    pythonPath !== newSettings.sandboxes[sandboxName].pythonPath ||
+                    scriptPath !== newSettings.sandboxes[sandboxName].scriptPath ||
+                    scriptArgs !== newSettings.sandboxes[sandboxName].scriptArgs
+                ) {
                     updatedSandboxes.add(sandboxName);
                 }
-            });
+            },
+        );
 
         this.settings = newSettings;
 
-        this.repls.filter((repl) => !repl.isDestroyed).forEach((repl) => {
-           if (deletedSandboxes.has(repl.sandboxName)) {
-               repl.destroy();
-           }
-           if (updatedSandboxes.has(repl.sandboxName)) {
-               this.updateReplSandbox(repl, repl.sandboxName, false);
-           }
-           repl.sandboxSelectComponent.updateSandboxes(this.settings.sandboxes);
-        });
+        this.repls
+            .filter((repl) => !repl.isDestroyed)
+            .forEach((repl) => {
+                if (deletedSandboxes.has(repl.sandboxName)) {
+                    repl.destroy();
+                }
+                if (updatedSandboxes.has(repl.sandboxName)) {
+                    this.updateReplSandbox(repl, repl.sandboxName, false);
+                }
+                repl.sandboxSelectComponent.updateSandboxes(this.settings.sandboxes);
+            });
     },
 };

@@ -8,8 +8,8 @@ import yaml from 'js-yaml';
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
-import { getMinimalDisambiguatedPaths } from "../services/path-utils";
-import Select from 'react-select'
+import { getMinimalDisambiguatedPaths } from '../services/path-utils';
+import Select from 'react-select';
 import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';
 import IconButton from '@material-ui/core/IconButton';
@@ -18,22 +18,24 @@ import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import Tooltip from '@material-ui/core/Tooltip';
 import InputLabel from '@material-ui/core/InputLabel';
 
+class SandboxSettingsModal extends React.Component<
+    {
+        /** CSS-in-JS styling object. */
+        classes: {},
 
-class SandboxSettingsModal extends React.Component<{
-    /** CSS-in-JS styling object. */
-    classes: {},
-
-    onSelect: (sandboxName: string) => void,
-}, {
-    currentSandboxName: string,
-
-    sandboxes: {
-        [string]: {
-            pythonPath: string,
-            scriptPath: string,
-        }
+        onSelect: (sandboxName: string) => void,
     },
-}> {
+    {
+        currentSandboxName: string,
+
+        sandboxes: {
+            [string]: {
+                pythonPath: string,
+                scriptPath: string,
+            },
+        },
+    },
+> {
     /**
      * Constructor.
      */
@@ -42,18 +44,18 @@ class SandboxSettingsModal extends React.Component<{
         this.state = {
             sandboxes: [],
             currentSandboxName: null,
-        }
+        };
     }
 
     updateSandboxes(sandboxes: {}) {
-        this.setState({sandboxes});
+        this.setState({ sandboxes });
     }
 
     onSandboxSelected(sandboxName) {
         this.props.onSelect(sandboxName);
         this.setState({
             currentSandboxName: sandboxName,
-        })
+        });
     }
 
     /**
@@ -63,10 +65,13 @@ class SandboxSettingsModal extends React.Component<{
     render() {
         const { classes } = this.props;
         const { currentSandboxName, sandboxes } = this.state;
-        const { pythonPath, scriptPath } = currentSandboxName in sandboxes ? sandboxes[currentSandboxName] : {
-            pythonPath: undefined,
-            scriptPath: undefined,
-        };
+        const { pythonPath, scriptPath } =
+            currentSandboxName in sandboxes
+                ? sandboxes[currentSandboxName]
+                : {
+                      pythonPath: undefined,
+                      scriptPath: undefined,
+                  };
 
         // The react-select component uses its own obnoxious styles API, so we're unable to access our themes.
         const selectStyles = {
@@ -80,21 +85,28 @@ class SandboxSettingsModal extends React.Component<{
         return (
             <div className={classes.root}>
                 <Select
-                    value={currentSandboxName !== null ? {
-                        value: currentSandboxName, label: currentSandboxName,
-                    } : undefined}
-                    options=
-                        {Object.keys(sandboxes).map((sandboxName) => ({
-                            value: sandboxName, label: sandboxName,
-                        }))}
-                    placeholder={"Select a sandbox..."}
+                    value={
+                        currentSandboxName !== null
+                            ? {
+                                  value: currentSandboxName,
+                                  label: currentSandboxName,
+                              }
+                            : undefined
+                    }
+                    options={Object.keys(sandboxes).map((sandboxName) => ({
+                        value: sandboxName,
+                        label: sandboxName,
+                    }))}
+                    placeholder={'Select a sandbox...'}
                     styles={selectStyles}
                     className={classes.select}
                     onChange={(selected) => this.onSandboxSelected(selected.value)}
                 />
-                {pythonPath !== undefined && scriptPath !== undefined ? <div className={classes.details}>
-                    {`${pythonPath} | ${scriptPath}`}
-                </div> : undefined}
+                {pythonPath !== undefined && scriptPath !== undefined ? (
+                    <div className={classes.details}>{`${pythonPath} | ${scriptPath}`}</div>
+                ) : (
+                    undefined
+                )}
             </div>
         );
     }
@@ -121,7 +133,7 @@ const styles = (theme) => ({
         flexGrow: 1,
         color: theme.palette.text.secondary,
         fontSize: theme.typography.fontSize.primary,
-    }
+    },
 });
 
 export default withStyles(styles)(SandboxSettingsModal);

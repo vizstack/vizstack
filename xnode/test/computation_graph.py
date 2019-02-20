@@ -3,6 +3,7 @@ from xnode.computation_graph import track_function
 
 
 class ChildFn:
+
     def __init__(self):
         self.state = 1
 

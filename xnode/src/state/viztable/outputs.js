@@ -83,15 +83,14 @@ export type GridLayoutModel = {
             height: number,
         }>,
     },
-    
-}
+};
 
 export type FlowLayoutModel = {
     type: 'FlowLayout',
     contents: {
         elements: Array<VizId>,
     },
-}
+};
 
 /** Dag layout is ___. */
 export type DagNodeId = string;

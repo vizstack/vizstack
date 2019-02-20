@@ -85,11 +85,11 @@ class Viewer extends React.Component<
      */
     getVizComponent(model: VizModel): React.Component {
         const { isHovered, expansionMode } = this.state;
-        const { vizId, fetchVizModel } = this.props;
+        const { vizId, vizTable, fetchVizModel } = this.props;
         // Each Viz component receives `mouseProps`, which define mouse events for highlighting and viewer expansion.
         // The Viz component must add these props to a node in its `render()` function. This allows the Viz to control
         // what its outermost node is instead of the Viewer having to wrap it.
-        const mouseProps = {
+        let mouseProps = {
             onClick: (e) => {
                 e.stopPropagation();
                 const expansionModeNext = kModelTransitionOrder[expansionMode];
@@ -105,33 +105,29 @@ class Viewer extends React.Component<
                 this.setState((state) => Immutable(state).set('isHovered', false));
             },
         };
+        const isTextPrimitive =
+            vizTable[vizId].fullModel && vizTable[vizId].fullModel.type === 'TextPrimitive';
+        if (isTextPrimitive) mouseProps = {}; // TODO: Remove this hack.
 
         const generalProps = {
             mouseProps,
             isHovered,
-            isFullyExpanded: expansionMode === 'full'
+            isFullyExpanded: expansionMode === 'full',
         };
         switch (model.type) {
             // Primitives
             // ----------
 
             case 'TextPrimitive': {
-                const { text, color } = (model: TextPrimitiveModel).contents;
+                const { text, color, variant } = (model: TextPrimitiveModel).contents;
                 return (
-                    <TextPrimitive
-                    {...generalProps}
-                    text={text}
-                    color={color ? color : 'primary'} />
+                    <TextPrimitive {...generalProps} text={text} color={color} variant={variant} />
                 );
             }
 
             case 'ImagePrimitive': {
                 const { filePath } = (model: TextPrimitiveModel).contents;
-                return (
-                    <ImagePrimitive
-                        {...generalProps}
-                        filePath={filePath} />
-                );
+                return <ImagePrimitive {...generalProps} filePath={filePath} />;
             }
 
             // Layouts
@@ -141,10 +137,11 @@ class Viewer extends React.Component<
                 const { elements } = (model: FlowLayoutModel).contents;
                 return (
                     <FlowLayout
-                    {...generalProps}
-                    elements={elements.map((vizId) => {
-                        return {vizId, fetchVizModel}
-                    })}/>
+                        {...generalProps}
+                        elements={elements.map((vizId) => {
+                            return { vizId, fetchVizModel };
+                        })}
+                    />
                 );
             }
 
@@ -153,10 +150,16 @@ class Viewer extends React.Component<
                 return (
                     <GridLayout
                         {...generalProps}
-                        elements={elements.map(([vizId, col, row, width, height]) => ([{
-                            vizId,
-                            fetchVizModel,
-                        }, col, row, width, height]))}
+                        elements={elements.map(([vizId, col, row, width, height]) => [
+                            {
+                                vizId,
+                                fetchVizModel,
+                            },
+                            col,
+                            row,
+                            width,
+                            height,
+                        ])}
                     />
                 );
             }
@@ -215,20 +218,21 @@ class Viewer extends React.Component<
         }
 
         // TODO: Remove this hack
-        const components = [this.getVizComponent(model)];
-        const isTextPrimitive = (
-            vizTable[vizId].fullModel &&
-            vizTable[vizId].fullModel.type === 'TextPrimitive'
-        );
-        if(!isTextPrimitive) {
-            components.push(
-                <span className={classNames({
-                    [classes.indicator]: true,
-                    [classes.hovered]: isHovered,
-                })}>{expansionMode}</span>
-            );
-        }
-        return components
+        return this.getVizComponent(model);
+        // const components = [this.getVizComponent(model)];
+        // const isTextPrimitive = (
+        //     vizTable[vizId].fullModel &&
+        //     vizTable[vizId].fullModel.type === 'TextPrimitive'
+        // );
+        // if(!isTextPrimitive) {
+        //     components.push(
+        //         <span className={classNames({
+        //             [classes.indicator]: true,
+        //             [classes.indicatorHovered]: isHovered,
+        //         })}>{expansionMode}</span>
+        //     );
+        // }
+        // return components;
     }
 }
 
@@ -242,9 +246,9 @@ const styles = (theme) => ({
         textAlign: 'center',
         visibility: 'hidden',
     },
-    hovered: {
+    indicatorHovered: {
         visibility: 'visible',
-    }
+    },
 });
 
 // To inject application state into component

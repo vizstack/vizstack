@@ -70,7 +70,7 @@ export default class REPL {
      */
     constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void): void {
         this.id = id;
-        this.sandboxName = '';  // To be set once a sandbox has been selected
+        this.sandboxName = ''; // To be set once a sandbox has been selected
         this.isDestroyed = false; // TODO: Why do we need this?
         this.onSandboxSelected = onSandboxSelected;
 
@@ -87,24 +87,39 @@ export default class REPL {
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                    }}>
-                        <Progress innerRef={(element) => {this.progressComponent = element;}}/>
-                        <div style={{
-                            width: '100%',
-                        }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            height: '100%',
+                        }}
+                    >
+                        <Progress
+                            innerRef={(element) => {
+                                this.progressComponent = element;
+                            }}
+                        />
+                        <div
+                            style={{
+                                width: '100%',
+                            }}
+                        >
                             <SandboxSettings
-                                innerRef={(element) => {this.sandboxSelectComponent = element;}}
-                                onSelect={(sandboxName) => this.onSandboxSelected(this, sandboxName)} />
+                                innerRef={(element) => {
+                                    this.sandboxSelectComponent = element;
+                                }}
+                                onSelect={(sandboxName) =>
+                                    this.onSandboxSelected(this, sandboxName)
+                                }
+                            />
                         </div>
                         <Canvas
                             style={{
                                 flexGrow: 1,
                             }}
-                            fetchVizModel={(vizId, modelType) => this.fetchVizModel(vizId, modelType)}
+                            fetchVizModel={(vizId, modelType) =>
+                                this.fetchVizModel(vizId, modelType)
+                            }
                         />
                     </div>
                 </MuiThemeProvider>
@@ -184,14 +199,21 @@ export default class REPL {
             this.executionEngine = undefined;
         }
         let options = {
-            args: ['--scriptPaths', scriptPath, path.join(atom.project.getPaths()[0], scriptPath),
-                   '--scriptArgs', ...scriptArgs],
+            args: [
+                '--scriptPaths',
+                scriptPath,
+                path.join(atom.project.getPaths()[0], scriptPath),
+                '--scriptArgs',
+                ...scriptArgs,
+            ],
             pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message: ExecutionEngineMessage) => {
             console.debug(`repl ${this.id} -- received message: `, JSON.parse(message));
-            const { viewedVizId, vizTableSlice, shouldRefresh, scriptFinished } = JSON.parse(message);
+            const { viewedVizId, vizTableSlice, shouldRefresh, scriptFinished } = JSON.parse(
+                message,
+            );
             if (shouldRefresh) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearVizTableAction());
@@ -246,8 +268,7 @@ export default class REPL {
         if (this.executionEngine) {
             this.executionEngine.send(`change:${filePath}?${changes}`);
             this.progressComponent.showIndeterminate();
-        }
-        else {
+        } else {
             this.progressComponent.hide();
         }
     }

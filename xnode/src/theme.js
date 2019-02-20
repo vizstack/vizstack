@@ -1,7 +1,7 @@
 import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
 import PrimaryColor from '@material-ui/core/colors/indigo';
-import SecondaryColor from '@material-ui/core/colors/indigo';
-import ErrorColor from '@material-ui/core/colors/indigo';
+import SecondaryColor from '@material-ui/core/colors/pink';
+import ErrorColor from '@material-ui/core/colors/red';
 
 /** CSS-in-JS custom theme object to set visual properties (fonts, colors, spacing, etc.) of Material UI components.
  *  For in-depth description, go to: https://material-ui-next.com/customization/themes/.
@@ -42,6 +42,7 @@ export default createMuiTheme({
         small: 2,
         unit: 4,
         large: 8,
+        largest: 16,
     },
     overrides: {
         MuiIconButton: {

@@ -44,10 +44,8 @@ class ViewerDisplayFrame extends React.Component<{
         return (
             <div className={classes.container}>
                 <DisplayFrame>
-                    <DisplayFrameContent orientation="horizontal">
-                        <div className={classes.contents}>
-                            {children}
-                        </div>
+                    <DisplayFrameContent orientation='horizontal'>
+                        <div className={classes.contents}>{children}</div>
                         <div className={classes.buttons}>{buttonsComponents}</div>
                     </DisplayFrameContent>
                 </DisplayFrame>

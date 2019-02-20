@@ -33,8 +33,7 @@ class FlowLayout extends React.PureComponent<{
     elements: Array<ViewerProps>,
 }> {
     /** Prop default values. */
-    static defaultProps = {
-    };
+    static defaultProps = {};
 
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
@@ -42,25 +41,19 @@ class FlowLayout extends React.PureComponent<{
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const {
-            classes,
-            elements,
-            isHovered,
-            mouseProps,
-        } = this.props;
+        const { classes, elements, isHovered, mouseProps } = this.props;
 
         return (
-            <div className={classNames({
-                [classes.root]: true,
-                [classes.hovered]: isHovered,
-                [classes.notHovered]: !isHovered,
-            })}
-                 {...mouseProps}
+            <div
+                className={classNames({
+                    [classes.root]: true,
+                    [classes.hovered]: isHovered,
+                    [classes.notHovered]: !isHovered,
+                })}
+                {...mouseProps}
             >
                 {elements.map((viewerProps, i) => {
-                    return (
-                        <Viewer key={i} {...viewerProps} />
-                    )
+                    return <Viewer key={i} {...viewerProps} />;
                 })}
             </div>
         );

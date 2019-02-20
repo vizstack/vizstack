@@ -72,6 +72,6 @@
     "pytest": "cd src/ && python3 -m pytest",
     "jstest": "jest",
     "typecheck": "cd src/ && flow && mypy .",
-    "format": "prettier --config ./.prettierrc --write 'src/**/*.js' && yapf -r -i -e 'venv/*,node_modules/*' src/**/*.py"
+    "format": "prettier --config ./.prettierrc --write 'src/**/*.js' && yapf -r -i -e 'venv/*,node_modules/*' ../python/xnode/**/*.py"
   }
 }
