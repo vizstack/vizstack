@@ -43,7 +43,6 @@ VIZ_FN = 'xn'
 # An enum which includes every color a Viz can take.
 # TODO: determine what color options should be available
 class Color(Enum):
-    DEFAULT = 'default'
     PRIMARY = 'primary'
     SECONDARY = 'secondary'
     ERROR = 'error'
@@ -89,7 +88,7 @@ def get_viz(o: Any) -> 'Viz':
             else:
                 kwargs[param_name] = param.default
         viz = SequenceLayout([
-            TextPrimitive('Function: {}'.format(o.__name__)),
+            SequenceLayout([TextPrimitive('Function:'), o.__name__]),
             TextPrimitive('Positional Arguments'),
             args,
             TextPrimitive('Keyword Arguments'),
@@ -229,7 +228,7 @@ class TextPrimitive(Viz):
     A Viz which renders a contiguous block of text.
     """
 
-    def __init__(self, text: str, color: Color = Color.DEFAULT, variant: Optional[str] = None) -> None:
+    def __init__(self, text: str, color: Optional[Color] = None, variant: Optional[str] = None) -> None:
         """
         Args:
             text: The text which should be rendered.
@@ -242,13 +241,16 @@ class TextPrimitive(Viz):
         self._variant: str = variant
 
     def compile_full(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, str(self._color.value), self._variant), []
+        return TextPrimitiveModel(self._text, str(self._color.value) if self._color is not None else self._color,
+                                  self._variant), []
 
     def compile_compact(self) -> Tuple['TextPrimitiveModel', Iterable[Viz]]:
-        return TextPrimitiveModel(self._text, str(self._color.value), self._variant), []
+        return TextPrimitiveModel(self._text, str(self._color.value) if self._color is not None else self._color,
+                                  self._variant), []
 
     def compile_summary(self) -> 'TextPrimitiveModel':
-        return TextPrimitiveModel(self._text, str(self._color.value), self._variant)
+        return TextPrimitiveModel(self._text, str(self._color.value) if self._color is not None else self._color,
+                                  self._variant)
 
     def __str__(self) -> str:
         return self._text
@@ -543,7 +545,7 @@ class SequenceLayout(GridLayout):
 
     def __init__(
             self,
-            elements: Optional[List[Any]] = None,
+            elements: Optional[Sequence[Any]] = None,
             orientation: str = 'horizontal',
             summary: Optional[str] = None,
             expansion_mode: Optional[ExpansionMode] = None
