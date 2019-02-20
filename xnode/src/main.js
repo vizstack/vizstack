@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Elapsed time (in ms) while editor is unchanged before triggering a REPL script rerun.
-let RERUN_DELAY = 2000;
+let RERUN_DELAY = 0;
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
@@ -70,8 +70,7 @@ export default {
                         editor.addGutter({ name: 'xnode-watch-gutter' });
                     }
                     const changes = null; // TODO: get changes from last edit
-                    editor.onDidChange(() => {
-                        editor.save();
+                    editor.onDidSave(() => {
                         this.waitAndRerun(editor.getPath(), changes, RERUN_DELAY);
                     });
                 }
