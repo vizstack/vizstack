@@ -229,7 +229,7 @@ class TextPrimitive(Viz):
     A Viz which renders a contiguous block of text.
     """
 
-    def __init__(self, text: str, color: Optional[Color] = None, variant: Optional[str] = None) -> None:
+    def __init__(self, text: str, color: Color = Color.DEFAULT, variant: Optional[str] = None) -> None:
         """
         Args:
             text: The text which should be rendered.
