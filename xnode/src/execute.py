@@ -3,6 +3,7 @@ import json
 import pdb
 import re
 import sys
+import os
 from inspect import currentframe, getframeinfo
 from multiprocessing import Queue
 from os.path import normpath, normcase
@@ -46,6 +47,7 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
         """
         normalized_path = _ScriptExecutor._normalize_path(script_path)
         sys.argv = [normalized_path] + script_args
+        os.chdir(os.path.dirname(normalized_path))
         self._runscript(normalized_path)
 
     # ==================================================================================================================
