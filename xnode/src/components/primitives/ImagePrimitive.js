@@ -57,12 +57,9 @@ const styles = (theme) => ({
     image: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
-        width: '100%',
-        height: '100%',
     },
     compactImage: {
-        width: '50%',
-        height: '50%',
+        width: theme.shape.image.small.width,
     },
 });
 

@@ -25,6 +25,11 @@ export default createMuiTheme({
             width: 1,
             radius: 2,
         },
+        image: {
+            small: {
+                width: 50,
+            }
+        }
     },
     palette: {
         primary: PrimaryColor,

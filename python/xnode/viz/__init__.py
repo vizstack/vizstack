@@ -296,8 +296,8 @@ class ImagePrimitive(Viz):
     def compile_compact(self) -> Tuple['ImagePrimitiveModel', Iterable[Viz]]:
         return ImagePrimitiveModel(self._file_path), []
 
-    def __str__(self) -> str:
-        return self._file_path
+    def compile_summary(self):
+        return ImagePrimitiveModel(self._file_path)
 
 
 class TokenPrimitive(TextPrimitive):
