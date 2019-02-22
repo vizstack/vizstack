@@ -130,17 +130,7 @@ def get_viz(o: Any) -> 'Viz':
             contents.extend([TextPrimitive('Fields'), staticfields])
         viz = SequenceLayout(contents, orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
-        if isinstance(o, str):
-            try:
-                header = imghdr.what(o)
-                if header == 'jpeg' or header == 'png':
-                    viz = ImagePrimitive(o)
-                else:
-                    viz = TokenPrimitive(o)
-            except IOError:
-                viz = TokenPrimitive(o)
-        else:
-            viz = TokenPrimitive(o)
+        viz = TokenPrimitive(o)
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
