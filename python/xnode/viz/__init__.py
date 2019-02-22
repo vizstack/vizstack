@@ -6,7 +6,7 @@ from typing import Sequence, Any, Mapping, Iterable, Optional, List, Tuple, Unio
 from enum import Enum
 import types
 import inspect
-import imghdr
+import os
 from xnode.constants import VizModel, ExpansionMode
 
 # TODO: potentially use these remnants of the old get_viz engine
@@ -278,7 +278,7 @@ class ImagePrimitive(Viz):
             file_path: The local path to the image file.
         """
         super(ImagePrimitive, self).__init__(None, expansion_mode)
-        self._file_path: str = file_path
+        self._file_path: str = os.path.abspath(file_path)
 
     def compile_full(self) -> Tuple['ImagePrimitiveModel', Iterable[Viz]]:
         return ImagePrimitiveModel(self._file_path), []

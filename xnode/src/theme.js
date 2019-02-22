@@ -27,7 +27,7 @@ export default createMuiTheme({
         },
         image: {
             small: {
-                width: 50,
+                width: 75,
             }
         }
     },
