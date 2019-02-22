@@ -538,10 +538,10 @@ class GridLayout(Viz):
                                          min(h, self.COMPACT_ROWS - y)))
         if extends_right:
             visible_elements.append((self._right_ellipsis, self.COMPACT_COLS,
-                                     0, 1, self.COMPACT_ROWS))
+                                     0, 1, min(self.COMPACT_ROWS, self._num_rows)))
         if extends_below:
             visible_elements.append((self._bottom_ellipsis, 0,
-                                     self.COMPACT_ROWS, self.COMPACT_COLS, 1))
+                                     self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
         return (GridLayoutModel(visible_elements),
                 [o for o, _, _, _, _ in visible_elements])
 

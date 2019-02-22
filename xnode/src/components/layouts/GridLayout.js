@@ -100,7 +100,9 @@ const styles = (theme) => ({
     hoveredGrid: {
         borderColor: theme.palette.primary.light,
     },
-    cell: {},
+    cell: {
+        textAlign: 'center',
+    },
     hoveredCell: {},
 });
 
