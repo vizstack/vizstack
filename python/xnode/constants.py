@@ -31,7 +31,9 @@ class VizModel(_Dataclass):
 
     def __init__(self, type: str, contents: VizContents) -> None:
         self.type: str = type
-        self.contents: VizContents = contents
+        self.contents: VizContents = {
+            key: value for key, value in contents.items() if value is not None
+        }
 
 
 # The format of objects which describe a particular visualization and its metadata that are sent to clients. We use a
