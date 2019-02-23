@@ -25,13 +25,19 @@ class ViewerDisplayFrame extends React.Component<{
         onClick: () => mixed,
         icon: React.Node,
     }>,
+
+    croppedHeight?: number,
 }> {
+    static defaultProps = {
+        croppedHeight: 300,
+    };
+
     /**
      * Renders child components inside the common frame/header/content, with `additionalIcons`/`additionalText`
      * providing any viewer-specific modifications to header.
      */
     render() {
-        const { classes, children, buttons } = this.props;
+        const { classes, children, buttons, croppedHeight } = this.props;
 
         const buttonsComponents = buttons.map((button, idx) => (
             <Tooltip key={idx} placement='left' title={button.title}>
@@ -45,7 +51,7 @@ class ViewerDisplayFrame extends React.Component<{
             <div className={classes.container}>
                 <DisplayFrame>
                     <DisplayFrameContent orientation='horizontal'>
-                        <div className={classes.contents}>{children}</div>
+                        <div className={classes.contents} style={{maxHeight: croppedHeight}}>{children}</div>
                         <div className={classes.buttons}>{buttonsComponents}</div>
                     </DisplayFrameContent>
                 </DisplayFrame>

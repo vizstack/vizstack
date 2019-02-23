@@ -47,6 +47,7 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
         """
         normalized_path = _ScriptExecutor._normalize_path(script_path)
         sys.argv = [normalized_path] + script_args
+        sys.path.append(os.path.dirname(normalized_path))
         os.chdir(os.path.dirname(normalized_path))
         self._runscript(normalized_path)
 

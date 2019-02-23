@@ -1,11 +1,6 @@
 import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
-import { createSelector } from 'reselect';
-
-import Typography from '@material-ui/core/Typography';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
-import ColorBlue from '@material-ui/core/colors/blue';
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
@@ -64,10 +59,12 @@ class TextPrimitive extends React.PureComponent<{
             [classes.framed]: variant === 'token',
             [classes.invisible]: color === 'invisible',
 
+            [classes.defaultPlain]: variant === 'plain' && color === 'default',
             [classes.primaryPlain]: variant === 'plain' && color === 'primary',
             [classes.secondaryPlain]: variant === 'plain' && color === 'secondary',
             [classes.errorPlain]: variant === 'plain' && color === 'error',
 
+            [classes.defaultToken]: variant === 'token' && color === 'default',
             [classes.primaryToken]: variant === 'token' && color === 'primary',
             [classes.secondaryToken]: variant === 'token' && color === 'secondary',
             [classes.errorToken]: variant === 'token' && color === 'error',
@@ -113,6 +110,9 @@ const styles = (theme) => ({
     },
 
     // Sans-serif styles.
+    defaultPlain: {
+        color: theme.palette.default.main,
+    },
     primaryPlain: {
         color: theme.palette.primary.main,
     },
@@ -124,6 +124,13 @@ const styles = (theme) => ({
     },
 
     // Monospace styles.
+    defaultToken: {
+        backgroundColor: theme.palette.default.main,
+        color: theme.palette.default.contrastText,
+        '&:hover': {
+            backgroundColor: theme.palette.default.light,
+        },
+    },
     primaryToken: {
         backgroundColor: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,

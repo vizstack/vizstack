@@ -90,9 +90,8 @@ const styles = (theme) => ({
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
-        borderColor: 'transparent',
-        paddingLeft: theme.spacing.small,
-        paddingRight: theme.spacing.small,
+        borderColor: theme.palette.atom.border,
+        padding: theme.spacing.unit,
     },
     compactGrid: {
         gridGap: `${theme.spacing.large}px`, // Need px.
@@ -101,7 +100,7 @@ const styles = (theme) => ({
         borderColor: theme.palette.primary.light,
     },
     cell: {
-        textAlign: 'center',
+        textAlign: 'left',
     },
     hoveredCell: {},
 });

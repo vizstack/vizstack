@@ -184,7 +184,7 @@ const styles = (theme) => ({
     canvasContainer: {
         height: '100%',
         overflow: 'auto',
-        padding: theme.spacing.unit * 2,
+        padding: theme.spacing.large,
     },
     frameContainer: {
         display: 'block',

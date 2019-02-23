@@ -1,4 +1,5 @@
 import createMuiTheme from '@material-ui/core/styles/createMuiTheme';
+import DefaultColor from '@material-ui/core/colors/blueGrey';
 import PrimaryColor from '@material-ui/core/colors/indigo';
 import SecondaryColor from '@material-ui/core/colors/pink';
 import ErrorColor from '@material-ui/core/colors/red';
@@ -32,6 +33,16 @@ export default createMuiTheme({
         }
     },
     palette: {
+        // TODO: Integrate with LESS styles from Atom
+        atom: {
+            background: '#282c34',
+            border: '#181a1f',
+        },
+        default: {
+            main: DefaultColor[500],
+            light: DefaultColor[300],
+            contrastText: DefaultColor[700],
+        },
         primary: PrimaryColor,
         secondary: SecondaryColor,
         error: ErrorColor,

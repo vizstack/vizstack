@@ -78,7 +78,7 @@ export default {
 
             // Register commands to `atom-workspace` (highest-level) scope
             atom.commands.add('atom-workspace', {
-                'xnode:create-sandbox': () => {
+                'xnode:show-canvas': () => {
                     const replId =
                         this.repls.length > 0
                             ? Math.max(...this.repls.map((repl) => repl.id)) + 1

@@ -4,8 +4,8 @@
             {
                 "type": "separator"
             }, {
-                "label": "Create New Sandbox",
-                "command": "xnode:create-sandbox"
+                "label": "Show Xnode Canvas",
+                "command": "xnode:show-canvas"
             }, {
                 "type": "separator"
             }
@@ -19,8 +19,8 @@
                     "label": "Xnode",
                     "submenu": [
                         {
-                          "label": "Create New Sandbox",
-                          "command": "xnode:create-sandbox"
+                          "label": "Show Xnode Canvas",
+                          "command": "xnode:show-canvas"
                         }
                     ]
                 }
