@@ -488,8 +488,8 @@ class GridLayout(Viz):
    """
 
     # How many key-value pairs to show in the compact form of this Viz.
-    COMPACT_COLS = 4
-    COMPACT_ROWS = 4
+    COMPACT_COLS = 5
+    COMPACT_ROWS = 5
 
     def __init__(self,
                  elements: List[Tuple[Any, int, int, int, int]],
@@ -529,16 +529,11 @@ class GridLayout(Viz):
 
     def compile_compact(self) -> Tuple['GridLayoutModel', Iterable[Viz]]:
         visible_elements = []
-        extends_right = False
-        extends_below = False
+        extends_right = self._num_cols > self.COMPACT_COLS
+        extends_below = self._num_rows > self.COMPACT_ROWS
         for o, x, y, w, h in self._elements:
-            if x > self.COMPACT_COLS:
-                extends_right = True
-            if y > self.COMPACT_ROWS:
-                extends_below = True
-            if x < self.COMPACT_COLS and y < self.COMPACT_ROWS:
-                visible_elements.append((o, x, y, min(w,
-                                                      self.COMPACT_COLS - x),
+            if (x < self.COMPACT_COLS - 1 or not extends_right) and (y < self.COMPACT_ROWS - 1 or not extends_below):
+                visible_elements.append((o, x, y, min(w, self.COMPACT_COLS - x),
                                          min(h, self.COMPACT_ROWS - y)))
         if extends_right:
             visible_elements.append((self._right_ellipsis, self.COMPACT_COLS,
