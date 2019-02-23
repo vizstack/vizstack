@@ -229,7 +229,10 @@ export default class REPL {
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
             // focus so the user can keep typing.
-            atom.views.getView(atom.workspace.getActiveTextEditor()).focus();
+            const activeEditor = atom.workspace.getActiveTextEditor();
+            if (activeEditor) {
+                atom.views.getView(activeEditor).focus();
+            }
         });
         this.executionEngine = executionEngine;
     }

@@ -90,11 +90,10 @@ def get_viz(o: Any) -> 'Viz':
         viz = SequenceLayout([
             SequenceLayout([TextPrimitive('Function:'), o.__name__]),
             TextPrimitive('Positional Arguments'),
-            args,
+            SequenceLayout(args, summary='args', expansion_mode=ExpansionMode.COMPACT),
             TextPrimitive('Keyword Arguments'),
-            kwargs,
-        ],
-                             orientation='vertical')
+            KeyValueLayout(kwargs, summary='kwargs', expansion_mode=ExpansionMode.COMPACT),
+        ], orientation='vertical')
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -109,7 +108,8 @@ def get_viz(o: Any) -> 'Viz':
             except Exception:
                 continue
         viz = SequenceLayout(
-            [TextPrimitive('Module: {}'.format(o.__name__)), attributes],
+            [TextPrimitive('Module: {}'.format(o.__name__)), KeyValueLayout(attributes, summary='attributes',
+                                                                            expansion_mode=ExpansionMode.COMPACT)],
             orientation='vertical')
     elif inspect.isclass(o):
         functions = dict()
@@ -125,9 +125,11 @@ def get_viz(o: Any) -> 'Viz':
                 continue
         contents = [TextPrimitive('Class: {}'.format(o.__name__))]
         if len(functions) > 0:
-            contents.extend([TextPrimitive('Functions'), functions])
+            contents.extend([TextPrimitive('Functions'), KeyValueLayout(functions, summary='functions',
+                                                                        expansion_mode=ExpansionMode.COMPACT)])
         if len(staticfields) > 0:
-            contents.extend([TextPrimitive('Fields'), staticfields])
+            contents.extend([TextPrimitive('Fields'), KeyValueLayout(staticfields, summary='fields',
+                                                                     expansion_mode=ExpansionMode.COMPACT)])
         viz = SequenceLayout(contents, orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
         viz = TokenPrimitive(o)
@@ -149,7 +151,8 @@ def get_viz(o: Any) -> 'Viz':
                 # and raise any error), just skip over instead of crashing
                 continue
         viz = SequenceLayout(
-            [TextPrimitive('Object: {}'.format(type(o).__name__)), contents],
+            [TextPrimitive('Object: {}'.format(type(o).__name__)), KeyValueLayout(contents, summary='fields',
+                                                                                  expansion_mode=ExpansionMode.COMPACT)],
             orientation='vertical')
     _CURRENT.pop()
     return viz
