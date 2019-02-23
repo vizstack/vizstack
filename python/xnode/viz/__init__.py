@@ -532,9 +532,9 @@ class GridLayout(Viz):
         extends_right = False
         extends_below = False
         for o, x, y, w, h in self._elements:
-            if x >= self.COMPACT_COLS:
+            if x > self.COMPACT_COLS:
                 extends_right = True
-            if y >= self.COMPACT_ROWS:
+            if y > self.COMPACT_ROWS:
                 extends_below = True
             if x < self.COMPACT_COLS and y < self.COMPACT_ROWS:
                 visible_elements.append((o, x, y, min(w,
