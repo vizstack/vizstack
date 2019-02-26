@@ -518,8 +518,8 @@ class GridLayout(Viz):
         self._elements: List[Tuple[Viz, int, int, int, int]] = [
             (get_viz(o), x, y, w, h) for o, x, y, w, h in elements
         ]
-        self._right_ellipsis = TextPrimitive('...')
-        self._bottom_ellipsis = TextPrimitive('...')
+        self._right_ellipsis = TextPrimitive('. . .')
+        self._bottom_ellipsis = TextPrimitive('. . .')
 
     def __add__(self, other: Tuple[Any, int, int, int, int]) -> 'GridLayout':
         elem, x, y, w, h = other
@@ -542,9 +542,9 @@ class GridLayout(Viz):
                                          min(h, self.COMPACT_ROWS - y)))
         if extends_right:
             visible_elements.append((self._right_ellipsis, self.COMPACT_COLS,
-                                     0, 1, min(self.COMPACT_ROWS, self._num_rows)))
+                                     min(self.COMPACT_ROWS, self._num_rows) // 2, 1, 1))
         if extends_below:
-            visible_elements.append((self._bottom_ellipsis, 0,
+            visible_elements.append((self._bottom_ellipsis, min(self.COMPACT_COLS, self._num_cols) // 2,
                                      self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
         return (GridLayoutModel(visible_elements),
                 [o for o, _, _, _, _ in visible_elements])
