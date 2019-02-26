@@ -131,7 +131,7 @@ class _FunctionCall:
         """
         return self if self.container is None else self.container.get_outermost_parent()
 
-    def xn(self) -> Viz:
+    def __view__(self) -> Viz:
         return TokenPrimitive(self.fn_name)
 
 
@@ -172,7 +172,7 @@ class GraphData:
         self.creator_op = creator_op
         self.creator_pos = creator_pos
 
-    def xn(self):
+    def __view__(self):
         layout: DagLayout = DagLayout()
         graphdata_to_node = {self: layout.create_node(self.obj)}
         if self.creator_op is None:

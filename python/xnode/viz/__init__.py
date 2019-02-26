@@ -30,7 +30,7 @@ from xnode.constants import VizModel, ExpansionMode
 # }
 
 # The name of the method on an object which should return a `Viz` depicting that object.
-VIZ_FN = 'xn'
+VIZ_FN = '__view__'
 
 # ======================================================================================================================
 # Viz function tools.
