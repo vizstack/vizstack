@@ -151,10 +151,7 @@ class Viewer extends React.Component<
                     <GridLayout
                         {...generalProps}
                         elements={elements.map(([vizId, col, row, width, height]) => [
-                            {
-                                vizId,
-                                fetchVizModel,
-                            },
+                            { vizId,fetchVizModel },
                             col,
                             row,
                             width,

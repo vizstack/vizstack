@@ -68,6 +68,8 @@ class TextPrimitive extends React.PureComponent<{
             [classes.primaryToken]: variant === 'token' && color === 'primary',
             [classes.secondaryToken]: variant === 'token' && color === 'secondary',
             [classes.errorToken]: variant === 'token' && color === 'error',
+
+            [classes.isHovered]
         });
         return variant === 'token' ? (
             <div className={names} {...mouseProps}>
@@ -111,7 +113,7 @@ const styles = (theme) => ({
 
     // Sans-serif styles.
     defaultPlain: {
-        color: theme.palette.default.main,
+        color: theme.palette.atom.text,
     },
     primaryPlain: {
         color: theme.palette.primary.main,
@@ -126,7 +128,7 @@ const styles = (theme) => ({
     // Monospace styles.
     defaultToken: {
         backgroundColor: theme.palette.default.main,
-        color: theme.palette.default.contrastText,
+        color: theme.palette.atom.text,
         '&:hover': {
             backgroundColor: theme.palette.default.light,
         },

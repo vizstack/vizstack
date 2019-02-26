@@ -137,21 +137,15 @@ const styles = (theme) => ({
         verticalAlign: 'middle',
     },
     elemCell: {
-        paddingLeft: 1, // TODO: Dehardcode this
-        paddingRight: 1, // TODO: Dehardcode this
-        paddingTop: 1, // TODO: Dehardcode this
-        paddingBottom: 1, // TODO: Dehardcode this
+        padding: theme.spacing.smallest,
     },
     indexCell: {
-        paddingLeft: 4, // TODO: Dehardcode this
-        paddingRight: 4, // TODO: Dehardcode this
-        paddingTop: 4, // TODO: Dehardcode this
-        paddingBottom: 4, // TODO: Dehardcode this
-        lineHeight: '6pt', // TODO: Dehardcode this
+        padding: theme.spacing.unit,
+        lineHeight: theme.typography.fontSize.caption,
     },
     indexText: {
         textAlign: 'center',
-        fontSize: '6pt', // TODO: Dehardcode this
+        fontSize: theme.typography.fontSize.caption,
         userSelect: 'none',
         cursor: 'default',
     },
