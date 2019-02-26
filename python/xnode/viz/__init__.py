@@ -585,7 +585,7 @@ class SequenceLayout(GridLayout):
                 grid_elements.append((TextPrimitive(end_motif), len(elements) + 1, 0, 1, 1))
             super(SequenceLayout, self).__init__(grid_elements, summary, expansion_mode)
         elif orientation == 'vertical':
-            grid_elements = [(elem, 1, i, 1, 1) for i, elem in enumerate(elements)]
+            grid_elements = [(elem, 1, i + 1, 1, 1) for i, elem in enumerate(elements)]
             if start_motif:
                 grid_elements.append((TextPrimitive(start_motif), 0, 0, 2, 1))
             if end_motif:
