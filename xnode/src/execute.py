@@ -115,7 +115,7 @@ class _PrintOverwriter:
             assert frame is not None
             frame_info = getframeinfo(frame.f_back)
             filename, lineno = frame_info.filename, frame_info.lineno
-            viz_id: VizId = self._engine.take_snapshot(self._unprinted_text, _ScriptExecutor._normalize_path(
+            viz_id: VizId = self._engine.take_snapshot(self._unprinted_text.rstrip(), _ScriptExecutor._normalize_path(
                 filename), lineno)
             viz_slice: VizTableSlice = self._engine.get_snapshot_slice(viz_id)
             self._send_message(viz_slice, viz_id, False, False)
