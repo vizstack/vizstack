@@ -653,7 +653,7 @@ class KeyValues(Grid):
 class TextPrimitiveModel(VizModel):
     def __init__(self, text: str, color: Optional[str],
                  variant: Optional[str]) -> None:
-        super(TextPrimitiveModel, self).__init__('Text', {
+        super(TextPrimitiveModel, self).__init__('TextPrimitive', {
             'text': text,
             'color': color,
             'variant': variant,
@@ -662,7 +662,7 @@ class TextPrimitiveModel(VizModel):
 
 class ImagePrimitiveModel(VizModel):
     def __init__(self, file_path: str) -> None:
-        super(ImagePrimitiveModel, self).__init__('Image', {
+        super(ImagePrimitiveModel, self).__init__('ImagePrimitive', {
             'filePath': file_path,
         })
 
@@ -690,13 +690,13 @@ class DagLayoutModel(VizModel):
 
 class GridLayoutModel(VizModel):
     def __init__(self, elements: List[Tuple['Viz', int, int, int, int]]):
-        super(GridLayoutModel, self).__init__('Grid', {
+        super(GridLayoutModel, self).__init__('GridLayout', {
             'elements': elements,
         })
 
 
 class FlowLayoutModel(VizModel):
     def __init__(self, elements: List['Viz']):
-        super(FlowLayoutModel, self).__init__('Flow', {
+        super(FlowLayoutModel, self).__init__('FlowLayout', {
             'elements': elements,
         })
