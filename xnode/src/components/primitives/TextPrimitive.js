@@ -68,8 +68,6 @@ class TextPrimitive extends React.PureComponent<{
             [classes.primaryToken]: variant === 'token' && color === 'primary',
             [classes.secondaryToken]: variant === 'token' && color === 'secondary',
             [classes.errorToken]: variant === 'token' && color === 'error',
-
-            [classes.isHovered]
         });
         return variant === 'token' ? (
             <div className={names} {...mouseProps}>
@@ -104,8 +102,6 @@ const styles = (theme) => ({
         borderRadius: theme.shape.border.radius,
         display: 'inline-block',
         verticalAlign: 'middle',
-        overflow: 'auto',
-        whiteSpace: 'nowrap',
     },
     invisible: {
         visibility: 'hidden',

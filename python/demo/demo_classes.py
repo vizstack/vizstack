@@ -57,7 +57,7 @@ class Location:
                 employee_id, first_name, last_name, position, birthday, email, photo_path = line.strip().split("\t")
                 year, month, day = birthday.split('-')
                 birthday = (year, month, day)
-                self.employees[employee_id] = Employee(employee_id, first_name, last_name, position, birthday,
+                self.employees[int(employee_id)] = Employee(int(employee_id), first_name, last_name, position, birthday,
                                                        email, photo_path)
         return self.employees
 
@@ -65,7 +65,7 @@ class Location:
         with open(filepath, 'r') as f:
             for line in f:
                 product_id, name, description, price = line.strip().split("\t")
-                self.products[product_id] = Product(product_id, name, price, description)
+                self.products[int(product_id)] = Product(int(product_id), name, float(price), description)
         return self.products
 
 
