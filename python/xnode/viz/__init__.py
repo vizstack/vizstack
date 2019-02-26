@@ -67,7 +67,7 @@ def get_viz(o: Any) -> 'Viz':
     global _CURRENT
     if o in _CURRENT:
         # TODO: deal with this better
-        return TokenPrimitive('<cyclic ref>')
+        return Token('<cyclic ref>')
     _CURRENT.append(o)
     if isinstance(o, Viz):
         viz = o
@@ -75,16 +75,16 @@ def get_viz(o: Any) -> 'Viz':
         viz = getattr(o, VIZ_FN)()
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
-        viz = SequenceLayout(o, start_motif='List[{}] ['.format(len(o)), end_motif=']', summary='List[{}]'.format(
+        viz = Sequence(o, start_motif='List[{}] ['.format(len(o)), end_motif=']', summary='List[{}]'.format(
             len(o)))
     elif isinstance(o, set):
-        viz = SequenceLayout(o, start_motif='Set[{}] {{'.format(len(o)), end_motif='}', summary='Set[{}]'.format(
+        viz = Sequence(o, start_motif='Set[{}] {{'.format(len(o)), end_motif='}', summary='Set[{}]'.format(
             len(o)))
     elif isinstance(o, tuple):
-        viz = SequenceLayout(o, start_motif='Tuple[{}] ('.format(len(o)), end_motif=')', summary='Tuple[{}]'.format(
+        viz = Sequence(o, start_motif='Tuple[{}] ('.format(len(o)), end_motif=')', summary='Tuple[{}]'.format(
             len(o)))
     elif isinstance(o, dict):
-        viz = KeyValueLayout(o, start_motif='Dict[{}] {{'.format(len(o)), end_motif='}', summary='Dict[{}]'.format(
+        viz = KeyValues(o, start_motif='Dict[{}] {{'.format(len(o)), end_motif='}', summary='Dict[{}]'.format(
             len(o)))
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
@@ -95,11 +95,11 @@ def get_viz(o: Any) -> 'Viz':
                 args.append(param_name)
             else:
                 kwargs[param_name] = param.default
-        viz = SequenceLayout([
-            SequenceLayout(args, start_motif='Positional Args [', end_motif=']', summary='Args',
-                           expansion_mode=ExpansionMode.COMPACT),
-            KeyValueLayout(kwargs, start_motif='Keyword Args {', end_motif='}', summary='Kwargs',
-                           expansion_mode=ExpansionMode.COMPACT),
+        viz = Sequence([
+            Sequence(args, start_motif='Positional Args [', end_motif=']', summary='Args',
+                     expansion_mode=ExpansionMode.COMPACT),
+            KeyValues(kwargs, start_motif='Keyword Args {', end_motif='}', summary='Kwargs',
+                      expansion_mode=ExpansionMode.COMPACT),
         ], start_motif='Function[{}] ('.format(o.__name__), end_motif=')', orientation='vertical',
             summary='Function[{}]'.format(o.__name__))
     elif inspect.ismodule(o):
@@ -115,8 +115,8 @@ def get_viz(o: Any) -> 'Viz':
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        viz = KeyValueLayout(attributes, start_motif='Module[{}] {{'.format(o.__name__), end_motif='}',
-                             summary='Module[{}]'.format(o.__name__))
+        viz = KeyValues(attributes, start_motif='Module[{}] {{'.format(o.__name__), end_motif='}',
+                        summary='Module[{}]'.format(o.__name__))
     elif inspect.isclass(o):
         functions = dict()
         staticfields = dict()
@@ -132,15 +132,15 @@ def get_viz(o: Any) -> 'Viz':
         contents = []
         if len(functions) > 0:
             contents.append(
-                KeyValueLayout(functions, start_motif='Functions {', end_motif='}',
-                               summary='Functions', expansion_mode=ExpansionMode.COMPACT))
+                KeyValues(functions, start_motif='Functions {', end_motif='}',
+                          summary='Functions', expansion_mode=ExpansionMode.COMPACT))
         if len(staticfields) > 0:
-            contents.append(KeyValueLayout(staticfields, start_motif='Fields {', end_motif='}',
-                                           summary='Fields', expansion_mode=ExpansionMode.COMPACT))
-        viz = SequenceLayout(contents, start_motif='Class[{}] ('.format(o.__name__), end_motif=')',
-                             summary='Class[{}]'.format(o.__name__), orientation='vertical')
+            contents.append(KeyValues(staticfields, start_motif='Fields {', end_motif='}',
+                                      summary='Fields', expansion_mode=ExpansionMode.COMPACT))
+        viz = Sequence(contents, start_motif='Class[{}] ('.format(o.__name__), end_motif=')',
+                       summary='Class[{}]'.format(o.__name__), orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
-        viz = TokenPrimitive(o if not isinstance(o, str) else '"{}"'.format(o))
+        viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -158,8 +158,8 @@ def get_viz(o: Any) -> 'Viz':
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        viz = KeyValueLayout(contents, start_motif='Instance[{}] {{'.format(type(o).__name__),
-                             end_motif='}', summary='Instance[{}]'.format(type(o).__name__))
+        viz = KeyValues(contents, start_motif='Instance[{}] {{'.format(type(o).__name__),
+                        end_motif='}', summary='Instance[{}]'.format(type(o).__name__))
     _CURRENT.pop()
     return viz
 
@@ -217,7 +217,7 @@ class Viz:
             A TextPrimitiveModel whose text is the name of this Viz if given in the constructor, or otherwise this
                 Viz's string representation.
         """
-        return TokenPrimitive(
+        return Token(
             str(self) if self._summary is None else self._summary
         ).compile_summary()
 
@@ -232,7 +232,7 @@ class Viz:
         raise NotImplementedError
 
 
-class TextPrimitive(Viz):
+class Text(Viz):
     """
     A Viz which renders a contiguous block of text.
     """
@@ -247,7 +247,7 @@ class TextPrimitive(Viz):
             color: The color of the text.
             variant: The variant of the text; one of either "plain" or "token".
         """
-        super(TextPrimitive, self).__init__(None, ExpansionMode.FULL)
+        super(Text, self).__init__(None, ExpansionMode.FULL)
         self._text: str = text
         self._color: Color = color
         self._variant: str = variant
@@ -274,7 +274,7 @@ class TextPrimitive(Viz):
         return self._text
 
 
-class ImagePrimitive(Viz):
+class Image(Viz):
     """
     A Viz which renders an image as read from a file.
     """
@@ -286,7 +286,7 @@ class ImagePrimitive(Viz):
         Args:
             file_path: The local path to the image file.
         """
-        super(ImagePrimitive, self).__init__(None, expansion_mode)
+        super(Image, self).__init__(None, expansion_mode)
         self._file_path: str = os.path.abspath(file_path)
 
     def compile_full(self) -> Tuple['ImagePrimitiveModel', Iterable[Viz]]:
@@ -298,8 +298,11 @@ class ImagePrimitive(Viz):
     def compile_summary(self):
         return ImagePrimitiveModel(self._file_path)
 
+    def __str__(self):
+        return 'Image'
 
-class TokenPrimitive(TextPrimitive):
+
+class Token(Text):
     """
     A Viz which renders a string representation of any object.
     """
@@ -309,10 +312,10 @@ class TokenPrimitive(TextPrimitive):
         Args:
             o: The object whose string representation should be rendered.
         """
-        super(TokenPrimitive, self).__init__(str(o), variant='token')
+        super(Token, self).__init__(str(o), variant='token')
 
 
-class FlowLayout(Viz):
+class Flow(Viz):
     """
     A Viz which renders other Vizzes as a series of inline elements.
     """
@@ -326,10 +329,10 @@ class FlowLayout(Viz):
         """
         Args:
             elements: A sequence of objects which should be visualized.
-            summary: An optional string which will be shown when the ``FlowLayout`` is in its summary expansion mode.
-            expansion_mode: An optional expansion mode which the ``FlowLayout`` should adopt by default.
+            summary: An optional string which will be shown when the ``Flow`` is in its summary expansion mode.
+            expansion_mode: An optional expansion mode which the ``Flow`` should adopt by default.
         """
-        super(FlowLayout, self).__init__(summary, expansion_mode)
+        super(Flow, self).__init__(summary, expansion_mode)
         self._elements = [get_viz(o) for o in elements]
 
     def compile_full(self) -> Tuple['FlowLayoutModel', Iterable[Viz]]:
@@ -487,7 +490,7 @@ class DagLayoutEdge:
         }
 
 
-class GridLayout(Viz):
+class Grid(Viz):
     """
    A Viz which renders other Vizzes in a flexibly-sized grid.
    """
@@ -507,10 +510,10 @@ class GridLayout(Viz):
                 where ``obj`` is the object to be visualized, ``col`` is its horizontal position in the grid,
                 ``row`` is its vertical position, ``width`` is the number of columns it should span, and ``height``
                 is the number of rows it should span.
-            summary: An optional string which will be shown when the ``GridLayout`` is in its summary expansion mode.
-            expansion_mode: An optional expansion mode which the ``GridLayout`` should adopt by default.
+            summary: An optional string which will be shown when the ``Grid`` is in its summary expansion mode.
+            expansion_mode: An optional expansion mode which the ``Grid`` should adopt by default.
         """
-        super(GridLayout, self).__init__(summary, expansion_mode)
+        super(Grid, self).__init__(summary, expansion_mode)
         self._num_cols = max(
             x + w for _, x, _, w, _ in elements) if len(elements) > 0 else 1
         self._num_rows = max(
@@ -518,10 +521,10 @@ class GridLayout(Viz):
         self._elements: List[Tuple[Viz, int, int, int, int]] = [
             (get_viz(o), x, y, w, h) for o, x, y, w, h in elements
         ]
-        self._right_ellipsis = TextPrimitive('. . .')
-        self._bottom_ellipsis = TextPrimitive('. . .')
+        self._right_ellipsis = Text('. . .')
+        self._bottom_ellipsis = Text('. . .')
 
-    def __add__(self, other: Tuple[Any, int, int, int, int]) -> 'GridLayout':
+    def __add__(self, other: Tuple[Any, int, int, int, int]) -> 'Grid':
         elem, x, y, w, h = other
         self._elements.append((get_viz(elem), x, y, w, h))
         self._num_cols = max(self._num_cols, x + w)
@@ -553,7 +556,7 @@ class GridLayout(Viz):
         return 'grid[{}, {}]'.format(self._num_cols, self._num_rows)
 
 
-class SequenceLayout(GridLayout):
+class Sequence(Grid):
     """
     A Viz which renders other Vizzes as blocks arranged in a fixed order.
     """
@@ -569,9 +572,9 @@ class SequenceLayout(GridLayout):
         Args:
             elements: A sequence of objects which should be visualized.
             orientation: How to arrange the elements of this Viz. Should be either "horizontal" or "vertical".
-            summary: An optional string which will be shown when the ``SequenceLayout`` is in its summary expansion
+            summary: An optional string which will be shown when the ``Sequence`` is in its summary expansion
                 mode.
-            expansion_mode: An optional expansion mode which the ``SequenceLayout`` should adopt by default.
+            expansion_mode: An optional expansion mode which the ``Sequence`` should adopt by default.
         """
         self._orientation = orientation
         if elements is None:
@@ -580,17 +583,17 @@ class SequenceLayout(GridLayout):
         if orientation == 'horizontal':
             grid_elements = [(elem, i + 1, 0, 1, 1) for i, elem in enumerate(elements)]
             if start_motif:
-                grid_elements.append((TextPrimitive(start_motif), 0, 0, 1, 1))
+                grid_elements.append((Text(start_motif), 0, 0, 1, 1))
             if end_motif:
-                grid_elements.append((TextPrimitive(end_motif), len(elements) + 1, 0, 1, 1))
-            super(SequenceLayout, self).__init__(grid_elements, summary, expansion_mode)
+                grid_elements.append((Text(end_motif), len(elements) + 1, 0, 1, 1))
+            super(Sequence, self).__init__(grid_elements, summary, expansion_mode)
         elif orientation == 'vertical':
             grid_elements = [(elem, 1, i + 1, 1, 1) for i, elem in enumerate(elements)]
             if start_motif:
-                grid_elements.append((TextPrimitive(start_motif), 0, 0, 2, 1))
+                grid_elements.append((Text(start_motif), 0, 0, 2, 1))
             if end_motif:
-                grid_elements.append((TextPrimitive(end_motif), 0, len(elements) + 1, 2, 1))
-            super(SequenceLayout, self).__init__(
+                grid_elements.append((Text(end_motif), 0, len(elements) + 1, 2, 1))
+            super(Sequence, self).__init__(
                 grid_elements,
                 summary, expansion_mode)
         else:
@@ -598,7 +601,7 @@ class SequenceLayout(GridLayout):
                 'Provided orientation "{}" not recognized.'.format(
                     orientation))
 
-    def __add__(self, other: Any) -> 'SequenceLayout':
+    def __add__(self, other: Any) -> 'Sequence':
         if self._orientation == 'horizontal':
             self._elements.append((get_viz(other), len(self._elements), 0, 1,
                                    1))
@@ -613,7 +616,7 @@ class SequenceLayout(GridLayout):
         return '[ ... ]'
 
 
-class KeyValueLayout(GridLayout):
+class KeyValues(Grid):
     """
     A Viz which renders other Vizzes as key-value pairs.
     """
@@ -628,20 +631,20 @@ class KeyValueLayout(GridLayout):
 
         Args:
             key_value_mapping: A mapping of objects which should be visualized as key-value pairs
-            summary: An optional string which will be shown when the ``KeyValueLayout`` is in its summary expansion
+            summary: An optional string which will be shown when the ``KeyValues`` is in its summary expansion
                 mode.
-            expansion_mode: An optional expansion mode which the ``KeyValueLayout`` should adopt by default.
+            expansion_mode: An optional expansion mode which the ``KeyValues`` should adopt by default.
         """
         keys = list(key_value_mapping.keys())
         elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(keys)] + [
-                (TextPrimitive(':'), 2, i + 1, 1, 1) for i in range(len(keys))
+                (Text(':'), 2, i + 1, 1, 1) for i in range(len(keys))
             ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
                  for i, key in enumerate(keys)]
         if start_motif is not None:
-            elements.append((TextPrimitive(start_motif), 0, 0, 4, 1))
+            elements.append((Text(start_motif), 0, 0, 4, 1))
         if end_motif is not None:
-            elements.append((TextPrimitive(end_motif), 0, len(key_value_mapping) + 1, 4, 1))
-        super(KeyValueLayout, self).__init__(elements, summary, expansion_mode)
+            elements.append((Text(end_motif), 0, len(key_value_mapping) + 1, 4, 1))
+        super(KeyValues, self).__init__(elements, summary, expansion_mode)
 
     def __str__(self) -> str:
         return '{ ... }'
@@ -650,7 +653,7 @@ class KeyValueLayout(GridLayout):
 class TextPrimitiveModel(VizModel):
     def __init__(self, text: str, color: Optional[str],
                  variant: Optional[str]) -> None:
-        super(TextPrimitiveModel, self).__init__('TextPrimitive', {
+        super(TextPrimitiveModel, self).__init__('Text', {
             'text': text,
             'color': color,
             'variant': variant,
@@ -659,7 +662,7 @@ class TextPrimitiveModel(VizModel):
 
 class ImagePrimitiveModel(VizModel):
     def __init__(self, file_path: str) -> None:
-        super(ImagePrimitiveModel, self).__init__('ImagePrimitive', {
+        super(ImagePrimitiveModel, self).__init__('Image', {
             'filePath': file_path,
         })
 
@@ -687,13 +690,13 @@ class DagLayoutModel(VizModel):
 
 class GridLayoutModel(VizModel):
     def __init__(self, elements: List[Tuple['Viz', int, int, int, int]]):
-        super(GridLayoutModel, self).__init__('GridLayout', {
+        super(GridLayoutModel, self).__init__('Grid', {
             'elements': elements,
         })
 
 
 class FlowLayoutModel(VizModel):
     def __init__(self, elements: List['Viz']):
-        super(FlowLayoutModel, self).__init__('FlowLayout', {
+        super(FlowLayoutModel, self).__init__('Flow', {
             'elements': elements,
         })

@@ -49,7 +49,7 @@ A _viz spec_ describes a particular object which is being visualized, including 
 ```
 - `"filePath"` is the full path of the file in which the Python backend was instructed to visualize the object (via a call to `xn.view()`).
 - `"lineNumber"` is the integer number of the line in `"filePath"` where the object was visualized (via `xn.view()`).
-- `"summaryModel"` is the VizModel which captures a fixed-size representation of the visualized object; currently, it is always a `TokenPrimitive`. It cannot reference other VizSpecs.
+- `"summaryModel"` is the VizModel which captures a fixed-size representation of the visualized object; currently, it is always a `Token`. It cannot reference other VizSpecs.
 - `"compactModel"` is the VizModel which captures a small glimpse of the visualized object, such as the first few elements of a sequence. It can reference other VizSpecs by their VizId. It is `null` if the model has not yet been requested by the frontend.
 - `"fullModel"` is the VizModel which captures the visualized object in its entirety, It can reference other VizSpecs by their VizId. It is `null` if the model has not yet been requested by the frontend. If non-`null`, `"compactModel"` is also non-`null`.
 

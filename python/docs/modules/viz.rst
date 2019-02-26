@@ -5,26 +5,26 @@
 
    .. autofunction:: xnode.viz.get_viz
 
-   .. autoclass:: xnode.viz.TextPrimitive
+   .. autoclass:: xnode.viz.Text
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.TokenPrimitive
+   .. autoclass:: xnode.viz.Token
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.FlowLayout
+   .. autoclass:: xnode.viz.Flow
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.GridLayout
+   .. autoclass:: xnode.viz.Grid
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.KeyValueLayout
+   .. autoclass:: xnode.viz.KeyValues
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.SequenceLayout
+   .. autoclass:: xnode.viz.Sequence
       
 	  .. automethod:: __init__

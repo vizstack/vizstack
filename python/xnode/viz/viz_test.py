@@ -1,4 +1,4 @@
-from xnode.viz import TokenPrimitive, SequenceLayout
+from xnode.viz import Token, Sequence
 
 
 class _TokenTest:
@@ -6,7 +6,7 @@ class _TokenTest:
         self.data = data
 
     def xn(self):
-        return TokenPrimitive(self.data)
+        return Token(self.data)
 
 
 class _SequenceTest:
@@ -14,7 +14,7 @@ class _SequenceTest:
         self.data = data
 
     def xn(self):
-        return SequenceLayout(self.data)
+        return Sequence(self.data)
 
 
 # TODO: use this to test viz engine
@@ -68,13 +68,13 @@ class _SequenceTest:
 #         'fileName': 'none',
 #         'lineNumber': 0,
 #         'compactVizModel': {
-#             'type': 'TokenPrimitive',
+#             'type': 'Token',
 #             'contents': {
 #                 'text': '10'
 #             }
 #         },
 #         'fullVizModel': {
-#             'type': 'TokenPrimitive',
+#             'type': 'Token',
 #             'contents': {
 #                 'text': '10'
 #             }

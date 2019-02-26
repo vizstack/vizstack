@@ -6,6 +6,8 @@ beautifully.
 from typing import Callable, Any
 from xnode.constants import ExpansionMode
 
+from xnode.viz import *
+
 
 # Required for PyPI packaging.
 name = 'xnode'

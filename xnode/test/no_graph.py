@@ -1,5 +1,5 @@
 import xnode
-from xnode.viz import FlowLayout, TextPrimitive
+from xnode.viz import Flow, Text
 
 
 def my_fn(x, y, t=None, v=0):
@@ -14,9 +14,9 @@ class MyClass:
         return 0
 
     def xn(self):
-        return FlowLayout(
+        return Flow(
             [
-                TextPrimitive(
+                Text(
                     'Contrary to popular belief, Lorem Ipsum is not simply random text. It has '
                     'roots in a piece of classical Latin literature from 45 BC, making it over '
                     '2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney '

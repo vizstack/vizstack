@@ -14,7 +14,7 @@ import traceback
 import xnode
 from xnode.constants import VizTableSlice, VizId, ExpansionMode, ExecutionEngineMessage
 from xnode.viz._engine import VisualizationEngine
-from xnode.viz import TextPrimitive, Color
+from xnode.viz import Text, Color
 
 # The type of the function which is called to send a message to the parent process.
 _SendMessage = Callable[[Optional[VizTableSlice], Optional[VizId], bool, bool], None]
@@ -266,7 +266,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str, script
             )
             assert result is not None
             viz_id: VizId = engine.take_snapshot(
-                TextPrimitive(clean_error_msg, Color.ERROR, 'token'), result.group(1), int(result.group(2))
+                Text(clean_error_msg, Color.ERROR, 'token'), result.group(1), int(result.group(2))
             )
             viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
             send_message(viz_slice, viz_id, False, True)
@@ -274,7 +274,7 @@ def run_script(receive_queue: Queue, send_queue: Queue, script_path: str, script
             try:
                 # if something goes wrong in parsing the traceback, write it directly
                 viz_id: VizId = engine.take_snapshot(
-                    TextPrimitive(raw_error_msg, Color.ERROR, 'token'), 'engine.py', 0
+                    Text(raw_error_msg, Color.ERROR, 'token'), 'engine.py', 0
                 )
                 viz_slice: VizTableSlice = engine.get_snapshot_slice(viz_id)
                 send_message(viz_slice, viz_id, False, True)

@@ -10,7 +10,7 @@ See get_viz.md for underlying principles and concepts.
 import wrapt
 import inspect
 from collections import deque
-from xnode.viz import VIZ_FN, DagLayout, TokenPrimitive, Viz, DagLayoutNode
+from xnode.viz import VIZ_FN, DagLayout, Token, Viz, DagLayoutNode
 from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
 
 # TODO: state outputs need a special placement
@@ -132,7 +132,7 @@ class _FunctionCall:
         return self if self.container is None else self.container.get_outermost_parent()
 
     def __view__(self) -> Viz:
-        return TokenPrimitive(self.fn_name)
+        return Token(self.fn_name)
 
 
 def _make_tracked_arg_list(args: Iterable[Any], arg_names: List[str]
