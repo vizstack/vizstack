@@ -101,13 +101,10 @@ const styles = (theme) => ({
         verticalAlign: 'middle',
     },
     elemCell: {
-        paddingLeft: 1, // TODO: Dehardcode this
-        paddingRight: 1, // TODO: Dehardcode this
-        paddingTop: 1, // TODO: Dehardcode this
-        paddingBottom: 1, // TODO: Dehardcode this
+        padding: theme.spacing.smallest,
     },
     indexCell: {
-        lineHeight: '6pt', // TODO: Dehardcode this
+        lineHeight: theme.typography.fontSize.caption,
     },
     motifText: {
         fontFamily: theme.typography.monospace.fontFamily,
@@ -119,7 +116,7 @@ const styles = (theme) => ({
         cursor: 'default',
     },
     indexText: {
-        fontSize: '6pt', // TODO: Dehardcode this
+        fontSize: theme.typography.fontSize.caption,
         userSelect: 'none',
         cursor: 'default',
     },

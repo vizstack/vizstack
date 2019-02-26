@@ -11,7 +11,8 @@ export default createMuiTheme({
     typography: {
         fontSize: {
             primary: 11,
-            secondary: 10,
+            secondary: 9,
+            caption: 6,
         },
         monospace: {
             fontFamily: '"Roboto Mono", "Courier", monospace',
@@ -37,11 +38,11 @@ export default createMuiTheme({
         atom: {
             background: '#282c34',
             border: '#181a1f',
+            text: '#9da5b4'
         },
         default: {
-            main: DefaultColor[500],
-            light: DefaultColor[300],
-            contrastText: DefaultColor[700],
+            main: '#353b45',
+            light: '#3a3f4b',
         },
         primary: PrimaryColor,
         secondary: SecondaryColor,

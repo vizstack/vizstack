@@ -144,8 +144,8 @@ class KeyValueLayout extends React.Component<{
 const styles = (theme) => ({
     keyValuePairList: {},
     keyValuePair: {
-        marginTop: 2, // TODO: Dehardcode this
-        marginBottom: 2, // TODO: Dehardcode this
+        marginTop: theme.spacing.small,
+        marginBottom: theme.spacing.small,
 
         // Layout child components horizontally
         display: 'flex',
@@ -156,12 +156,12 @@ const styles = (theme) => ({
         fontSize: '14pt', // TODO: de-hardcode this
     },
     keyValueItem: {
-        marginLeft: 2, // TODO: Dehardcode this
-        marginRight: 2, // TODO: Dehardcode this
+        marginLeft: theme.spacing.small,
+        marginRight: theme.spacing.small,
     },
     motifText: {
         fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '14pt', // TODO: Dehardcode this
+        fontSize: '14pt',
 
         // Vertically center text
         display: 'flex',
@@ -174,7 +174,7 @@ const styles = (theme) => ({
     },
     indexText: {
         textAlign: 'center',
-        fontSize: '8pt', // TODO: Dehardcode this
+        fontSize: theme.typography.fontSize.caption,
         userSelect: 'none',
         cursor: 'default',
     },

@@ -42,8 +42,8 @@ const styles = (theme) => ({
         userSelect: 'none',
 
         // Padding
-        paddingTop: 2,
-        paddingBottom: 2,
+        paddingTop: theme.spacing.small,
+        paddingBottom: theme.spacing.small,
         paddingLeft: theme.spacing.unit,
         paddingRight: theme.spacing.unit,
 
@@ -55,7 +55,7 @@ const styles = (theme) => ({
             flexShrink: 1,
             overflow: 'hidden',
             fontFamily: theme.typography.monospace.fontFamily,
-            fontSize: '9pt', // TODO: Dehardcode this
+            fontSize: theme.typography.fontSize.secondary,
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
         },
