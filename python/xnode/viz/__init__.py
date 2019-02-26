@@ -75,13 +75,17 @@ def get_viz(o: Any) -> 'Viz':
         viz = getattr(o, VIZ_FN)()
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
-        viz = SequenceLayout(o, start_motif='List[{}] ['.format(len(o)), end_motif=']')
+        viz = SequenceLayout(o, start_motif='List[{}] ['.format(len(o)), end_motif=']', summary='List[{}]'.format(
+            len(o)))
     elif isinstance(o, set):
-        viz = SequenceLayout(o, start_motif='Set[{}] {{'.format(len(o)), end_motif='}')
+        viz = SequenceLayout(o, start_motif='Set[{}] {{'.format(len(o)), end_motif='}', summary='Set[{}]'.format(
+            len(o)))
     elif isinstance(o, tuple):
-        viz = SequenceLayout(o, start_motif='Tuple[{}] ('.format(len(o)), end_motif=')')
+        viz = SequenceLayout(o, start_motif='Tuple[{}] ('.format(len(o)), end_motif=')', summary='Tuple[{}]'.format(
+            len(o)))
     elif isinstance(o, dict):
-        viz = KeyValueLayout(o, start_motif='Dict[{}] {{'.format(len(o)), end_motif='}')
+        viz = KeyValueLayout(o, start_motif='Dict[{}] {{'.format(len(o)), end_motif='}', summary='Dict[{}]'.format(
+            len(o)))
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
         args = []
@@ -96,7 +100,8 @@ def get_viz(o: Any) -> 'Viz':
                            expansion_mode=ExpansionMode.COMPACT),
             KeyValueLayout(kwargs, start_motif='Keyword Args {', end_motif='}', summary='Kwargs',
                            expansion_mode=ExpansionMode.COMPACT),
-        ], start_motif='Function[{}] ('.format(o.__name__), end_motif=')', orientation='vertical')
+        ], start_motif='Function[{}] ('.format(o.__name__), end_motif=')', orientation='vertical',
+            summary='Function[{}]'.format(o.__name__))
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
