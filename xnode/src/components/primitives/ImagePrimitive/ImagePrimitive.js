@@ -48,6 +48,7 @@ class ImagePrimitive extends React.PureComponent<{
                     e.target.onerror = null;
                     e.target.src = '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png';  // TODO: Remove this hack!
                 }}
+                title={filePath}
                 {...mouseProps}
             />
         );
