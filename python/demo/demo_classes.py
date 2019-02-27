@@ -1,5 +1,25 @@
 import xnode as xn
 
+def import_employees(filepath):
+    employees = {}
+    with open(filepath, 'r') as f:
+        for line in f:
+            employee_id, first_name, last_name, position, birthday, email, photo_path = line.strip().split("\t")
+            year, month, day = birthday.split('-')
+            birthday = (year, month, day)
+            employees[int(employee_id)] = Employee(int(employee_id), first_name, last_name, position, birthday,
+                                                   email, photo_path)
+    return employees
+
+def import_products(filepath):
+    products = {}
+    with open(filepath, 'r') as f:
+        for line in f:
+            product_id, name, description, price = line.strip().split("\t")
+            products[int(product_id)] = Product(int(product_id), name, float(price), description)
+    return products
+
+
 class Employee:
 
     def __init__(
@@ -20,18 +40,19 @@ class Employee:
         self.email = email
         self.photo_path = photo_path
 
-    def __view__(self):
-        y, m, d = self.birthday
-        return (
-            xn.Sequence([
-                xn.Image("photos/" + self.photo_path),
-                xn.Text("{}, {}".format(self.last_name, self.first_name)),
-                xn.Text("employee id: {}".format(self.employee_id)),
-                xn.Text("position: {}".format(self.position)),
-                xn.Text("birthdate: {}/{}/{}".format(m, d, y)),
-                xn.Text("email: {}".format(self.email)),
-            ], orientation='vertical')
-        )
+    # def __view__(self):
+    #     full_name = "{}, {}".format(self.last_name, self.first_name)
+    #     y, m, d = self.birthday
+    #     return (
+    #         xn.Sequence([
+    #             xn.Image("photos/" + self.photo_path),
+    #             xn.Text(full_name),
+    #             xn.Text("employee id: {}".format(self.employee_id)),
+    #             xn.Text("position: {}".format(self.position)),
+    #             xn.Text("birthdate: {}/{}/{}".format(m, d, y)),
+    #             xn.Text("email: {}".format(self.email)),
+    #         ], orientation='vertical', summary=full_name)
+    #     )
 
 
 class Product:
@@ -45,18 +66,17 @@ class Product:
 
 class Inventory:
 
-    def __init__(self, product_id, quantity, aisle_number=None):
+    def __init__(self, product_id, quantity):
         self.product_id = product_id
         self.quantity = quantity
-        self.aisle_number = aisle_number
 
 
 class Location:
 
-    def __init__(self, location_id):
+    def __init__(self, location_id, employees, products):
         self.location_id = location_id
-        self.employees = {}  # employee_id (int) -> Employee
-        self.products = {}  # product_id (int) -> Product
+        self.employees = employees  # employee_id (int) -> Employee
+        self.products = products  # product_id (int) -> Product
         self.inventory = {}  # product_id (int) -> Inventory
 
     def has_in_stock(self, product_id):
@@ -66,22 +86,9 @@ class Location:
     def has_employee(self, employee_id):
         return employee_id in self.employees
 
-    def import_employees(self, filepath):
-        with open(filepath, 'r') as f:
-            for line in f:
-                employee_id, first_name, last_name, position, birthday, email, photo_path = line.strip().split("\t")
-                year, month, day = birthday.split('-')
-                birthday = (year, month, day)
-                self.employees[int(employee_id)] = Employee(int(employee_id), first_name, last_name, position, birthday,
-                                                       email, photo_path)
-        return self.employees
-
-    def import_products(self, filepath):
-        with open(filepath, 'r') as f:
-            for line in f:
-                product_id, name, description, price = line.strip().split("\t")
-                self.products[int(product_id)] = Product(int(product_id), name, float(price), description)
-        return self.products
+    def update_inventory(self, product_id, quantity):
+        if product_id in self.products:
+            self.inventory[product_id] = Inventory(product_id, quantity)
 
 
 class Company:
@@ -108,7 +115,7 @@ class Company:
                 return loc
         return None
 
-    def add_location(self, location_id):
+    def add_location(self, location_id, employees, products):
         if location_id in self.locations: return self.locations[location_id]
-        self.locations[location_id] = Location(location_id)
+        self.locations[location_id] = Location(location_id, employees, products)
         return self.locations[location_id]
