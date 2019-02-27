@@ -1,4 +1,5 @@
 import * as React from 'react';
+import path from 'path';
 import classNames from 'classnames';
 import Immutable from 'seamless-immutable';
 import { withStyles } from '@material-ui/core/styles';
@@ -66,6 +67,8 @@ class Viewer extends React.Component<
         super(props);
         const { vizTable, vizId } = this.props;
 
+        this.marker = null;
+
         // Set initial state based on what model is available.
         let expansionMode = 'summary';
         expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;
@@ -99,10 +102,20 @@ class Viewer extends React.Component<
             onMouseOver: (e) => {
                 e.stopPropagation();
                 this.setState((state) => Immutable(state).set('isHovered', true));
+                atom.workspace.getTextEditors().forEach((editor) => {
+                    console.log(editor.getPath(), vizTable[vizId].filePath);
+                    if (editor.getPath().toLowerCase() === vizTable[vizId].filePath.toLowerCase()) {
+                        this.marker = editor.markBufferPosition([vizTable[vizId].lineNumber - 1, 0]);
+                        editor.decorateMarker(this.marker, {type: 'line', 'class': 'xn-watched-line'});
+                    }
+                });  // TODO: remove this Atom integration
             },
             onMouseOut: (e) => {
                 e.stopPropagation();
                 this.setState((state) => Immutable(state).set('isHovered', false));
+                if (this.marker !== null) {
+                    this.marker.destroy();
+                }
             },
         };
         const isTextPrimitive =
