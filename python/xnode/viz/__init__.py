@@ -2,7 +2,7 @@
 This file defines all functions and objects which can be used by developers to create visualizations for their objects.
 """
 
-from typing import Sequence, Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
+from typing import Iterable, Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 from enum import Enum
 import types
 import inspect
@@ -158,7 +158,8 @@ def get_viz(o: Any) -> 'Viz':
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        viz = KeyValues(contents, start_motif='Instance[{}] {{'.format(type(o).__name__),
+        viz = KeyValues(contents, item_separator='=',
+                        start_motif='Instance[{}] {{'.format(type(o).__name__),
                         end_motif='}', summary='Instance[{}]'.format(type(o).__name__))
     _CURRENT.pop()
     return viz
@@ -562,7 +563,7 @@ class Sequence(Grid):
     """
 
     def __init__(self,
-                 elements: Optional[Sequence[Any]] = None,
+                 elements: Optional[Iterable[Any]] = None,
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None,
                  orientation: str = 'horizontal',
@@ -623,6 +624,7 @@ class KeyValues(Grid):
 
     def __init__(self,
                  key_value_mapping: Dict[Any, Any],
+                 item_separator: str = ':',
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None,
                  summary: Optional[str] = None,
@@ -637,7 +639,7 @@ class KeyValues(Grid):
         """
         keys = list(key_value_mapping.keys())
         elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(keys)] + [
-                (Text(':'), 2, i + 1, 1, 1) for i in range(len(keys))
+                (Text(item_separator), 2, i + 1, 1, 1) for i in range(len(keys))
             ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
                  for i, key in enumerate(keys)]
         if start_motif is not None:

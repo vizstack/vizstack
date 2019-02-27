@@ -76,6 +76,7 @@ export default class REPL {
 
         // Initialize REPL state
         this.executionEngine = undefined;
+        this.marker = null;
 
         // Initialize Redux store & connect to main reducer
         // TODO: re-add devtools
@@ -120,6 +121,24 @@ export default class REPL {
                             fetchVizModel={(vizId, modelType) =>
                                 this.fetchVizModel(vizId, modelType)
                             }
+                            onViewerMouseOver={(vizId, filePath, lineNumber) => {
+                                atom.workspace.getTextEditors().forEach((editor) => {
+                                    if (editor.getPath().toLowerCase() === filePath.toLowerCase()) {
+                                        if (this.marker !== null) {
+                                            this.marker.destroy();
+                                            this.marker = null;
+                                        }
+                                        this.marker = editor.markBufferPosition([lineNumber - 1, 0]);
+                                        editor.decorateMarker(this.marker, {type: 'line', 'class': 'xn-watched-line'});
+                                    }
+                                });
+                            }}
+                            onViewerMouseOut={(vizId, filePath, lineNumber) => {
+                                if (this.marker !== null) {
+                                    this.marker.destroy();
+                                    this.marker = null;
+                                }
+                            }}
                         />
                     </div>
                 </MuiThemeProvider>
@@ -142,6 +161,10 @@ export default class REPL {
         this.isDestroyed = true;
         if (this.executionEngine) {
             this.executionEngine.terminate();
+        }
+        if (this.marker !== null) {
+            this.marker.destroy();
+            this.marker = null;
         }
         this.element.remove();
         console.debug(`repl ${this.id} -- destroy()`);

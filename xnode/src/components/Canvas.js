@@ -55,6 +55,9 @@ class Canvas extends React.Component<{
      */
     fetchVizModel: (vizId: VizId, modelType: string) => void,
 
+    onViewerMouseOver: (vizId: VizId, filePath: string, lineNumber: number) => void,
+    onViewerMouseOut: (vizId: VizId, filePath: string, lineNumber: number) => void,
+
     /**
      * See `state/canvas/actions/showViewerInCanvasAction()`.
      * @param vizId
@@ -102,7 +105,7 @@ class Canvas extends React.Component<{
      * @param idx
      */
     createFramedViewerComponent(viewerModel: ViewerModel, idx: number) {
-        const { showViewer, hideViewer, fetchVizModel } = this.props;
+        const { showViewer, hideViewer, fetchVizModel, onViewerMouseOver, onViewerMouseOut } = this.props;
         const { vizId, vizSpec } = viewerModel;
 
         const buttons = [
@@ -116,7 +119,8 @@ class Canvas extends React.Component<{
                 {!vizSpec ? (
                     kLoadingSpinner
                 ) : (
-                    <Viewer vizId={vizId} fetchVizModel={fetchVizModel} />
+                    <Viewer vizId={vizId} fetchVizModel={fetchVizModel} onViewerMouseOver={onViewerMouseOver}
+                    onViewerMouseOut={onViewerMouseOut}/>
                 )}
             </ViewerDisplayFrame>
         );

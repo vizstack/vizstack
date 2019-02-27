@@ -67,8 +67,6 @@ class Viewer extends React.Component<
         super(props);
         const { vizTable, vizId } = this.props;
 
-        this.marker = null;
-
         // Set initial state based on what model is available.
         let expansionMode = 'summary';
         expansionMode = vizTable[vizId].compactModel ? 'compact' : expansionMode;
@@ -88,7 +86,7 @@ class Viewer extends React.Component<
      */
     getVizComponent(model: VizModel): React.Component {
         const { isHovered, expansionMode } = this.state;
-        const { vizId, vizTable, fetchVizModel } = this.props;
+        const { vizId, vizTable, fetchVizModel, onViewerMouseOver, onViewerMouseOut } = this.props;
         // Each Viz component receives `mouseProps`, which define mouse events for highlighting and viewer expansion.
         // The Viz component must add these props to a node in its `render()` function. This allows the Viz to control
         // what its outermost node is instead of the Viewer having to wrap it.
@@ -102,20 +100,13 @@ class Viewer extends React.Component<
             onMouseOver: (e) => {
                 e.stopPropagation();
                 this.setState((state) => Immutable(state).set('isHovered', true));
-                atom.workspace.getTextEditors().forEach((editor) => {
-                    console.log(editor.getPath(), vizTable[vizId].filePath);
-                    if (editor.getPath().toLowerCase() === vizTable[vizId].filePath.toLowerCase()) {
-                        this.marker = editor.markBufferPosition([vizTable[vizId].lineNumber - 1, 0]);
-                        editor.decorateMarker(this.marker, {type: 'line', 'class': 'xn-watched-line'});
-                    }
-                });  // TODO: remove this Atom integration
+                onViewerMouseOver(vizId, vizTable[vizId].filePath, vizTable[vizId].lineNumber);
+
             },
             onMouseOut: (e) => {
                 e.stopPropagation();
                 this.setState((state) => Immutable(state).set('isHovered', false));
-                if (this.marker !== null) {
-                    this.marker.destroy();
-                }
+                onViewerMouseOut(vizId, vizTable[vizId].filePath, vizTable[vizId].lineNumber);
             },
         };
         const isTextPrimitive =
@@ -152,7 +143,7 @@ class Viewer extends React.Component<
                     <FlowLayout
                         {...generalProps}
                         elements={elements.map((vizId) => {
-                            return { vizId, fetchVizModel };
+                            return { vizId, fetchVizModel, onViewerMouseOver, onViewerMouseOut };
                         })}
                     />
                 );
@@ -164,7 +155,7 @@ class Viewer extends React.Component<
                     <GridLayout
                         {...generalProps}
                         elements={elements.map(([vizId, col, row, width, height]) => [
-                            { vizId,fetchVizModel },
+                            { vizId,fetchVizModel,onViewerMouseOver,onViewerMouseOut },
                             col,
                             row,
                             width,
@@ -185,6 +176,8 @@ class Viewer extends React.Component<
                                 viewerProps: {
                                     vizId: spec.vizId,
                                     fetchVizModel,
+                                    onViewerMouseOver,
+                                    onViewerMouseOut,
                                 },
                                 spec: spec,
                             },
