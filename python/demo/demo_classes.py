@@ -1,3 +1,5 @@
+import xnode as xn
+
 class Employee:
 
     def __init__(
@@ -17,6 +19,19 @@ class Employee:
         self.birthday = birthday
         self.email = email
         self.photo_path = photo_path
+
+    def __view__(self):
+        y, m, d = self.birthday
+        return (
+            xn.Sequence([
+                xn.Image("photos/" + self.photo_path),
+                xn.Text("{}, {}".format(self.last_name, self.first_name)),
+                xn.Text("employee id: {}".format(self.employee_id)),
+                xn.Text("position: {}".format(self.position)),
+                xn.Text("birthdate: {}/{}/{}".format(m, d, y)),
+                xn.Text("email: {}".format(self.email)),
+            ], orientation='vertical')
+        )
 
 
 class Product:

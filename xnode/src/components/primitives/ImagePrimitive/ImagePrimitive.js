@@ -34,15 +34,20 @@ class ImagePrimitive extends React.PureComponent<{
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, mouseProps, isFullyExpanded } = this.props;
+        const { classes, filePath, mouseProps, isFullyExpanded, isHovered } = this.props;
 
         return (
             <img
                 className={classNames({
                     [classes.image]: true,
                     [classes.compactImage]: !isFullyExpanded,
+                    [classes.hovered]: isHovered,
                 })}
                 src={filePath}
+                onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png';  // TODO: Remove this hack!
+                }}
                 {...mouseProps}
             />
         );
@@ -57,10 +62,17 @@ const styles = (theme) => ({
     image: {
         marginLeft: theme.spacing.unit,
         marginRight: theme.spacing.unit,
+        borderStyle: theme.shape.border.style,
+        borderWidth: theme.shape.border.width,
+        borderColor: 'transparent',
     },
     compactImage: {
         width: theme.shape.image.small.width,
     },
+    hovered: {
+
+        borderColor: theme.palette.primary.light,
+    }
 });
 
 export default withStyles(styles)(ImagePrimitive);

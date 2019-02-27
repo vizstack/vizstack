@@ -20,7 +20,7 @@ import { getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
 import TextPrimitive from './primitives/TextPrimitive';
-import ImagePrimitive from './primitives/ImagePrimitive';
+import ImagePrimitive from './primitives/ImagePrimitive/ImagePrimitive';
 
 // Viz layouts
 import GridLayout from './layouts/GridLayout';
@@ -192,6 +192,11 @@ class Viewer extends React.Component<
                         edges={edges}
                     />
                 );
+            }
+
+            default: {
+                console.error("Unrecognized Viewer model type: ", model.type);
+                return null;
             }
         }
     }

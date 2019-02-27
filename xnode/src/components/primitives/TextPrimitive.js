@@ -102,6 +102,7 @@ const styles = (theme) => ({
         borderRadius: theme.shape.border.radius,
         display: 'inline-block',
         verticalAlign: 'middle',
+        wordWrap: 'break-word',
     },
     invisible: {
         visibility: 'hidden',
