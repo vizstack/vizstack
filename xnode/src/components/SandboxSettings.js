@@ -97,7 +97,7 @@ class SandboxSettingsModal extends React.Component<
                         value: sandboxName,
                         label: sandboxName,
                     }))}
-                    placeholder={'Select a sandbox...'}
+                    placeholder={'Select a canvas...'}
                     styles={selectStyles}
                     className={classes.select}
                     onChange={(selected) => this.onSandboxSelected(selected.value)}

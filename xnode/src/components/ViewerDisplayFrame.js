@@ -51,7 +51,9 @@ class ViewerDisplayFrame extends React.Component<{
             <div className={classes.container}>
                 <DisplayFrame>
                     <DisplayFrameContent orientation='horizontal'>
-                        <div className={classes.contents} style={{maxHeight: croppedHeight}}>{children}</div>
+                        <div className={classes.contents} style={{ maxHeight: croppedHeight }}>
+                            {children}
+                        </div>
                         <div className={classes.buttons}>{buttonsComponents}</div>
                     </DisplayFrameContent>
                 </DisplayFrame>
@@ -68,6 +70,7 @@ const styles = (theme) => ({
     container: {
         paddingTop: theme.spacing.unit,
         paddingBottom: theme.spacing.unit,
+        cursor: 'auto',
     },
     contents: {
         flexGrow: 1,

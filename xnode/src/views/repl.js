@@ -128,8 +128,14 @@ export default class REPL {
                                             this.marker.destroy();
                                             this.marker = null;
                                         }
-                                        this.marker = editor.markBufferPosition([lineNumber - 1, 0]);
-                                        editor.decorateMarker(this.marker, {type: 'line', 'class': 'xn-watched-line'});
+                                        this.marker = editor.markBufferPosition([
+                                            lineNumber - 1,
+                                            0,
+                                        ]);
+                                        editor.decorateMarker(this.marker, {
+                                            type: 'line',
+                                            class: 'xn-watched-line',
+                                        });
                                     }
                                 });
                             }}

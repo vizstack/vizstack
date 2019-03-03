@@ -3,10 +3,6 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Typography from '@material-ui/core/Typography';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
-import ColorBlue from '@material-ui/core/colors/blue';
-
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
@@ -46,9 +42,10 @@ class ImagePrimitive extends React.PureComponent<{
                 src={filePath}
                 onError={(e) => {
                     e.target.onerror = null;
-                    e.target.src = '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png';  // TODO: Remove this hack!
+                    e.target.src =
+                        '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png'; // TODO: Remove this hack!
                 }}
-                title={filePath}
+                title={filePath.replace('/Users/Nikhil/Desktop/xnode/python/demo/', '')}
                 {...mouseProps}
             />
         );
@@ -71,9 +68,8 @@ const styles = (theme) => ({
         width: theme.shape.image.small.width,
     },
     hovered: {
-
         borderColor: theme.palette.primary.light,
-    }
+    },
 });
 
 export default withStyles(styles)(ImagePrimitive);

@@ -75,17 +75,29 @@ def get_viz(o: Any) -> 'Viz':
         viz = getattr(o, VIZ_FN)()
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
-        viz = Sequence(o, start_motif='List[{}] ['.format(len(o)), end_motif=']', summary='List[{}]'.format(
-            len(o)))
+        viz = Sequence(
+            o,
+            start_motif='List[{}] ['.format(len(o)),
+            end_motif=']',
+            summary='List[{}]'.format(len(o)))
     elif isinstance(o, set):
-        viz = Sequence(o, start_motif='Set[{}] {{'.format(len(o)), end_motif='}', summary='Set[{}]'.format(
-            len(o)))
+        viz = Sequence(
+            o,
+            start_motif='Set[{}] {{'.format(len(o)),
+            end_motif='}',
+            summary='Set[{}]'.format(len(o)))
     elif isinstance(o, tuple):
-        viz = Sequence(o, start_motif='Tuple[{}] ('.format(len(o)), end_motif=')', summary='Tuple[{}]'.format(
-            len(o)))
+        viz = Sequence(
+            o,
+            start_motif='Tuple[{}] ('.format(len(o)),
+            end_motif=')',
+            summary='Tuple[{}]'.format(len(o)))
     elif isinstance(o, dict):
-        viz = KeyValues(o, start_motif='Dict[{}] {{'.format(len(o)), end_motif='}', summary='Dict[{}]'.format(
-            len(o)))
+        viz = KeyValues(
+            o,
+            start_motif='Dict[{}] {{'.format(len(o)),
+            end_motif='}',
+            summary='Dict[{}]'.format(len(o)))
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
         args = []
@@ -96,12 +108,23 @@ def get_viz(o: Any) -> 'Viz':
             else:
                 kwargs[param_name] = param.default
         viz = Sequence([
-            Sequence(args, start_motif='Positional Args [', end_motif=']', summary='Args',
-                     expansion_mode=ExpansionMode.COMPACT),
-            KeyValues(kwargs, start_motif='Keyword Args {', end_motif='}', summary='Kwargs',
-                      expansion_mode=ExpansionMode.COMPACT),
-        ], start_motif='Function[{}] ('.format(o.__name__), end_motif=')', orientation='vertical',
-            summary='Function[{}]'.format(o.__name__))
+            Sequence(
+                args,
+                start_motif='Positional Args [',
+                end_motif=']',
+                summary='Args',
+                expansion_mode=ExpansionMode.COMPACT),
+            KeyValues(
+                kwargs,
+                start_motif='Keyword Args {',
+                end_motif='}',
+                summary='Kwargs',
+                expansion_mode=ExpansionMode.COMPACT),
+        ],
+                       start_motif='Function[{}] ('.format(o.__name__),
+                       end_motif=')',
+                       orientation='vertical',
+                       summary='Function[{}]'.format(o.__name__))
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -115,8 +138,11 @@ def get_viz(o: Any) -> 'Viz':
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        viz = KeyValues(attributes, start_motif='Module[{}] {{'.format(o.__name__), end_motif='}',
-                        summary='Module[{}]'.format(o.__name__))
+        viz = KeyValues(
+            attributes,
+            start_motif='Module[{}] {{'.format(o.__name__),
+            end_motif='}',
+            summary='Module[{}]'.format(o.__name__))
     elif inspect.isclass(o):
         functions = dict()
         staticfields = dict()
@@ -132,13 +158,26 @@ def get_viz(o: Any) -> 'Viz':
         contents = []
         if len(functions) > 0:
             contents.append(
-                KeyValues(functions, start_motif='Functions {', end_motif='}',
-                          summary='Functions', expansion_mode=ExpansionMode.COMPACT))
+                KeyValues(
+                    functions,
+                    start_motif='Functions {',
+                    end_motif='}',
+                    summary='Functions',
+                    expansion_mode=ExpansionMode.COMPACT))
         if len(staticfields) > 0:
-            contents.append(KeyValues(staticfields, start_motif='Fields {', end_motif='}',
-                                      summary='Fields', expansion_mode=ExpansionMode.COMPACT))
-        viz = Sequence(contents, start_motif='Class[{}] ('.format(o.__name__), end_motif=')',
-                       summary='Class[{}]'.format(o.__name__), orientation='vertical')
+            contents.append(
+                KeyValues(
+                    staticfields,
+                    start_motif='Fields {',
+                    end_motif='}',
+                    summary='Fields',
+                    expansion_mode=ExpansionMode.COMPACT))
+        viz = Sequence(
+            contents,
+            start_motif='Class[{}] ('.format(o.__name__),
+            end_motif=')',
+            summary='Class[{}]'.format(o.__name__),
+            orientation='vertical')
     elif isinstance(o, (str, int, float, bool)) or o is None:
         viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     else:
@@ -158,9 +197,12 @@ def get_viz(o: Any) -> 'Viz':
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        viz = KeyValues(contents, item_separator='=',
-                        start_motif='Instance[{}] {{'.format(type(o).__name__),
-                        end_motif='}', summary='Instance[{}]'.format(type(o).__name__))
+        viz = KeyValues(
+            contents,
+            item_separator='=',
+            start_motif='Instance[{}] {{'.format(type(o).__name__),
+            end_motif='}',
+            summary='Instance[{}]'.format(type(o).__name__))
     _CURRENT.pop()
     return viz
 
@@ -218,9 +260,8 @@ class Viz:
             A TextPrimitiveModel whose text is the name of this Viz if given in the constructor, or otherwise this
                 Viz's string representation.
         """
-        return Token(
-            str(self) if self._summary is None else self._summary
-        ).compile_summary()
+        return Token(str(self) if self._summary is None else self._summary
+                     ).compile_summary()
 
     def __str__(self) -> str:
         """Returns a string which describes the basic properties of the Viz.
@@ -541,15 +582,21 @@ class Grid(Viz):
         extends_right = self._num_cols > self.COMPACT_COLS
         extends_below = self._num_rows > self.COMPACT_ROWS
         for o, x, y, w, h in self._elements:
-            if (x < self.COMPACT_COLS - 1 or not extends_right) and (y < self.COMPACT_ROWS - 1 or not extends_below):
-                visible_elements.append((o, x, y, min(w, self.COMPACT_COLS - x),
+            if (x < self.COMPACT_COLS - 1
+                    or not extends_right) and (y < self.COMPACT_ROWS - 1
+                                               or not extends_below):
+                visible_elements.append((o, x, y, min(w,
+                                                      self.COMPACT_COLS - x),
                                          min(h, self.COMPACT_ROWS - y)))
         if extends_right:
-            visible_elements.append((self._right_ellipsis, self.COMPACT_COLS,
-                                     min(self.COMPACT_ROWS, self._num_rows) // 2, 1, 1))
+            visible_elements.append(
+                (self._right_ellipsis, self.COMPACT_COLS,
+                 min(self.COMPACT_ROWS, self._num_rows) // 2, 1, 1))
         if extends_below:
-            visible_elements.append((self._bottom_ellipsis, min(self.COMPACT_COLS, self._num_cols) // 2,
-                                     self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
+            visible_elements.append(
+                (self._bottom_ellipsis,
+                 min(self.COMPACT_COLS, self._num_cols) // 2,
+                 self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
         return (GridLayoutModel(visible_elements),
                 [o for o, _, _, _, _ in visible_elements])
 
@@ -582,21 +629,25 @@ class Sequence(Grid):
             elements = []
 
         if orientation == 'horizontal':
-            grid_elements = [(elem, i + 1, 0, 1, 1) for i, elem in enumerate(elements)]
+            grid_elements = [(elem, i + 1, 0, 1, 1)
+                             for i, elem in enumerate(elements)]
             if start_motif:
                 grid_elements.append((Text(start_motif), 0, 0, 1, 1))
             if end_motif:
-                grid_elements.append((Text(end_motif), len(elements) + 1, 0, 1, 1))
-            super(Sequence, self).__init__(grid_elements, summary, expansion_mode)
+                grid_elements.append((Text(end_motif), len(elements) + 1, 0, 1,
+                                      1))
+            super(Sequence, self).__init__(grid_elements, summary,
+                                           expansion_mode)
         elif orientation == 'vertical':
-            grid_elements = [(elem, 1, i + 1, 1, 1) for i, elem in enumerate(elements)]
+            grid_elements = [(elem, 1, i + 1, 1, 1)
+                             for i, elem in enumerate(elements)]
             if start_motif:
                 grid_elements.append((Text(start_motif), 0, 0, 2, 1))
             if end_motif:
-                grid_elements.append((Text(end_motif), 0, len(elements) + 1, 2, 1))
-            super(Sequence, self).__init__(
-                grid_elements,
-                summary, expansion_mode)
+                grid_elements.append((Text(end_motif), 0, len(elements) + 1, 2,
+                                      1))
+            super(Sequence, self).__init__(grid_elements, summary,
+                                           expansion_mode)
         else:
             raise ValueError(
                 'Provided orientation "{}" not recognized.'.format(
@@ -639,13 +690,14 @@ class KeyValues(Grid):
         """
         keys = list(key_value_mapping.keys())
         elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(keys)] + [
-                (Text(item_separator), 2, i + 1, 1, 1) for i in range(len(keys))
-            ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
-                 for i, key in enumerate(keys)]
+            (Text(item_separator), 2, i + 1, 1, 1) for i in range(len(keys))
+        ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
+             for i, key in enumerate(keys)]
         if start_motif is not None:
             elements.append((Text(start_motif), 0, 0, 4, 1))
         if end_motif is not None:
-            elements.append((Text(end_motif), 0, len(key_value_mapping) + 1, 4, 1))
+            elements.append((Text(end_motif), 0, len(key_value_mapping) + 1, 4,
+                             1))
         super(KeyValues, self).__init__(elements, summary, expansion_mode)
 
     def __str__(self) -> str:
