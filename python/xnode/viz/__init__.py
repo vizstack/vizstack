@@ -425,7 +425,7 @@ class DagLayoutNode:
         return self.node_id
 
     def to_dict(self) -> Mapping[str, Any]:
-        return {
+        all_values = {
             'vizId': self.viz,
             'children': [item.get_id() for item in self.elements],
             'flowDirection': self.flow_direction,
@@ -434,6 +434,9 @@ class DagLayoutNode:
             'isVisible': self.is_visible,
             'alignChildren': self.align_children,
             'ports': self.ports,
+        }
+        return {
+            key: value for key, value in all_values.items() if value is not None
         }
 
     # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
@@ -483,11 +486,14 @@ class DagLayoutEdge:
         return self.edge_id
 
     def to_dict(self) -> Mapping[str, Any]:
-        return {
+        all_values = {
             'startId': self.start.get_id(),
             'endId': self.end.get_id(),
             'startPort': self.start_port,
             'endPort': self.end_port,
+        }
+        return {
+            key: value for key, value in all_values.items() if value is not None
         }
 
 
