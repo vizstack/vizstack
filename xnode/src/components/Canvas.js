@@ -105,7 +105,13 @@ class Canvas extends React.Component<{
      * @param idx
      */
     createFramedViewerComponent(viewerModel: ViewerModel, idx: number) {
-        const { showViewer, hideViewer, fetchVizModel, onViewerMouseOver, onViewerMouseOut } = this.props;
+        const {
+            showViewer,
+            hideViewer,
+            fetchVizModel,
+            onViewerMouseOver,
+            onViewerMouseOut,
+        } = this.props;
         const { vizId, vizSpec } = viewerModel;
 
         const buttons = [
@@ -119,8 +125,12 @@ class Canvas extends React.Component<{
                 {!vizSpec ? (
                     kLoadingSpinner
                 ) : (
-                    <Viewer vizId={vizId} fetchVizModel={fetchVizModel} onViewerMouseOver={onViewerMouseOver}
-                    onViewerMouseOut={onViewerMouseOut}/>
+                    <Viewer
+                        vizId={vizId}
+                        fetchVizModel={fetchVizModel}
+                        onViewerMouseOver={onViewerMouseOver}
+                        onViewerMouseOut={onViewerMouseOut}
+                    />
                 )}
             </ViewerDisplayFrame>
         );

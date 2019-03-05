@@ -6,18 +6,10 @@ def import_employees(filepath):
         for line in f:
             employee_id, first_name, last_name, position, birthday, email, photo_path = line.strip().split("\t")
             year, month, day = birthday.split('-')
-            birthday = (year, month, day)
+            birthday = (int(year), int(month), int(day))
             employees[int(employee_id)] = Employee(int(employee_id), first_name, last_name, position, birthday,
                                                    email, photo_path)
     return employees
-
-def import_products(filepath):
-    products = {}
-    with open(filepath, 'r') as f:
-        for line in f:
-            product_id, name, description, price = line.strip().split("\t")
-            products[int(product_id)] = Product(int(product_id), name, float(price), description)
-    return products
 
 
 class Employee:
@@ -38,57 +30,21 @@ class Employee:
         self.position = position
         self.birthday = birthday
         self.email = email
-        self.photo_path = photo_path
+        self.photo_path = 'photos/' + photo_path
 
-    # def __view__(self):
-    #     full_name = "{}, {}".format(self.last_name, self.first_name)
-    #     y, m, d = self.birthday
-    #     return (
-    #         xn.Sequence([
-    #             xn.Image("photos/" + self.photo_path),
-    #             xn.Text(full_name),
-    #             xn.Text("employee id: {}".format(self.employee_id)),
-    #             xn.Text("position: {}".format(self.position)),
-    #             xn.Text("birthdate: {}/{}/{}".format(m, d, y)),
-    #             xn.Text("email: {}".format(self.email)),
-    #         ], orientation='vertical', summary=full_name)
-    #     )
+    def __view__(self):
+        y, m, d = self.birthday
+        return (
+            xn.Sequence([
+                xn.Image(self.photo_path),
+                xn.Text('{}, {}'.format(self.last_name, self.first_name)),
+                xn.Text('employee ID: {}'.format(self.employee_id)),
+                xn.Text('position: {}'.format(self.position)),
+                xn.Text('birthday: {}/{}/{}'.format(m, d, y))
+            ], orientation='vertical')
+        )
 
 
-class Product:
-
-    def __init__(self, product_id, name, price, description=None):
-        self.product_id = product_id
-        self.name = name
-        self.price = price
-        self.description = description
-
-
-class Inventory:
-
-    def __init__(self, product_id, quantity):
-        self.product_id = product_id
-        self.quantity = quantity
-
-
-class Location:
-
-    def __init__(self, location_id, employees, products):
-        self.location_id = location_id
-        self.employees = employees  # employee_id (int) -> Employee
-        self.products = products  # product_id (int) -> Product
-        self.inventory = {}  # product_id (int) -> Inventory
-
-    def has_in_stock(self, product_id):
-        if product_id not in self.inventory: return False
-        return self.inventory[product_id].quantity > 0
-
-    def has_employee(self, employee_id):
-        return employee_id in self.employees
-
-    def update_inventory(self, product_id, quantity):
-        if product_id in self.products:
-            self.inventory[product_id] = Inventory(product_id, quantity)
 
 
 class Company:
@@ -119,3 +75,48 @@ class Company:
         if location_id in self.locations: return self.locations[location_id]
         self.locations[location_id] = Location(location_id, employees, products)
         return self.locations[location_id]
+
+
+class Location:
+
+    def __init__(self, location_id, employees, products):
+        self.location_id = location_id
+        self.employees = employees  # employee_id (int) -> Employee
+        self.products = products  # product_id (int) -> Product
+        self.inventory = {}  # product_id (int) -> Inventory
+
+    def has_in_stock(self, product_id):
+        if product_id not in self.inventory: return False
+        return self.inventory[product_id].quantity > 0
+
+    def has_employee(self, employee_id):
+        return employee_id in self.employees
+
+    def update_inventory(self, product_id, quantity):
+        if product_id in self.products:
+            self.inventory[product_id] = Inventory(product_id, quantity)
+
+
+def import_products(filepath):
+    products = {}
+    with open(filepath, 'r') as f:
+        for line in f:
+            product_id, name, description, price = line.strip().split("\t")
+            products[int(product_id)] = Product(int(product_id), name, float(price), description)
+    return products
+
+
+class Product:
+
+    def __init__(self, product_id, name, price, description=None):
+        self.product_id = product_id
+        self.name = name
+        self.price = price
+        self.description = description
+
+
+class Inventory:
+
+    def __init__(self, product_id, quantity):
+        self.product_id = product_id
+        self.quantity = quantity

@@ -30,15 +30,15 @@ export default createMuiTheme({
         image: {
             small: {
                 width: 75,
-            }
-        }
+            },
+        },
     },
     palette: {
         // TODO: Integrate with LESS styles from Atom
         atom: {
             background: '#282c34',
             border: '#181a1f',
-            text: '#9da5b4'
+            text: '#9da5b4',
         },
         default: {
             main: '#353b45',
