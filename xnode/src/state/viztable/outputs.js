@@ -115,7 +115,6 @@ export type DagEdgeSpec = {
     endId: DagNodeId,
     startPort?: string,
     endPort?: string,
-    // TODO: Edge have Viz?
 };
 export type DagLayoutModel = {
     type: 'DagLayout',

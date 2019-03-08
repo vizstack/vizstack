@@ -16,7 +16,7 @@ import type {
     GridLayoutModel,
     DagLayoutModel,
 } from '../state/viztable/outputs';
-import { getVizTable, VizModel } from '../state/viztable/outputs';
+import { DagNodeId, getVizTable, VizModel } from '../state/viztable/outputs';
 
 // Viz primitives
 import TextPrimitive from './primitives/TextPrimitive';
@@ -101,7 +101,6 @@ class Viewer extends React.Component<
                 e.stopPropagation();
                 this.setState((state) => Immutable(state).set('isHovered', true));
                 onViewerMouseOver(vizId, vizTable[vizId].filePath, vizTable[vizId].lineNumber);
-
             },
             onMouseOut: (e) => {
                 e.stopPropagation();
@@ -155,7 +154,7 @@ class Viewer extends React.Component<
                     <GridLayout
                         {...generalProps}
                         elements={elements.map(([vizId, col, row, width, height]) => [
-                            { vizId,fetchVizModel,onViewerMouseOver,onViewerMouseOut },
+                            { vizId, fetchVizModel, onViewerMouseOver, onViewerMouseOut },
                             col,
                             row,
                             width,
@@ -166,7 +165,14 @@ class Viewer extends React.Component<
             }
 
             case 'DagLayout': {
-                const { nodes, containers, edges } = (model: DagLayoutModel).contents;
+                const {
+                    nodes,
+                    edges,
+                    alignments,
+                    flowDirection,
+                    flowSpacing,
+                    alignChildren,
+                } = (model: DagLayoutModel).contents;
                 return (
                     <DagLayout
                         {...generalProps}
@@ -183,12 +189,18 @@ class Viewer extends React.Component<
                             },
                         ])}
                         edges={edges}
+                        config={{
+                            alignments,
+                            flowDirection,
+                            flowSpacing,
+                            alignChildren,
+                        }}
                     />
                 );
             }
 
             default: {
-                console.error("Unrecognized Viewer model type: ", model.type);
+                console.error('Unrecognized Viewer model type: ', model.type);
                 return null;
             }
         }

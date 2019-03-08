@@ -224,6 +224,14 @@ class DagLayout extends React.Component<
         edges: {
             [DagEdgeId]: DagEdgeSpec,
         },
+
+        /** Graph configuration object. */
+        config: {
+            alignments?: Array<Array<DagNodeId>>,
+            flowDirection?: 'north' | 'south' | 'east' | 'west',
+            flowSpacing?: number,
+            alignChildren?: boolean,
+        },
     },
     {
         /** Whether the graph needs to be re-layout. */
@@ -380,6 +388,7 @@ class DagLayout extends React.Component<
      */
     _layoutGraph() {
         const { nodes, edges } = this.state;
+        const { config } = this.props;
 
         layout(
             Object.values(nodes.asMutable({ deep: true })),
@@ -404,6 +413,7 @@ class DagLayout extends React.Component<
                     }),
                 );
             },
+            config,
         );
     }
 
