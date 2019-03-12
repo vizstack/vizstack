@@ -1,3 +1,4 @@
+// @flow
 /**
  * Layout engine for a directed acyclic graph (DAG).
  *
@@ -14,7 +15,7 @@ export type Node = {
     id: NodeId,
 
     /** IDs of nodes that are strictly contained within this node. */
-    children?: Array<NodeId>,
+    children: Array<NodeId>,
 
     /** Direction in which the immediate children of this node will be arranged. */
     flowDirection?: 'north' | 'south' | 'east' | 'west',
@@ -96,7 +97,7 @@ export default function layout(
 
         // Distance between adjacent objects in a flow.
         flowSpacing: kFlowSpacing = 75,
-    } = config;
+    } = config || {};
 
     const kDefaultNodeSize = 0; // Default node width/height if not specified.
     const kGroupPadding = 10; // Interior padding between group boundary and contents.
@@ -126,6 +127,11 @@ export default function layout(
     const traverseSet: Set<NodeId> = new Set();
     nodes.forEach((node) => traverseNode(node.id, traverseSet));
 
+    const targetIdLookup: { [NodeId]: Array<NodeId> } = {};
+    function traverseEdge(node) {
+
+    }
+
     // TODO: Use topoligical sort finish_time to order nodes in terms of nesting. This allows
     // z-position calculations later?
 
@@ -135,81 +141,66 @@ export default function layout(
     // The "real" elements relate to actual user-defined elements.
     // The "dummy" elements relate to dummy elements inserted by this code for the sake of layout.
     const graph = {
-        vertices: {
-            real: [],
-            dummy: [],
-        },
-        links: {
-            real: [],
-            dummy: [],
-        },
-        constraints: {
-            real: [],
-            dummy: [],
-        },
+        vertices: [],
+        links: [],
+        constraints: [],
         groups: [],
     };
 
-    // Index into *combined* array of real and dummy `Vertex`.
-    // [  real  ][  dummy  ]
-    //  0    N-1  N
     type VertexIdx = number;
-    let vertexIdxLookup: { [NodeId]: { idx: VertexIdx, type: 'real' | 'dummy' } } = {};
+    let vertexIdxLookup: { [NodeId]: VertexIdx } = {};
 
-    function addVertex(nodeId: NodeId, vertex: Vertex, type: 'real' | 'dummy'): VertexIdx {
-        let idx: VertexIdx = graph.vertices[type].length;
-        if (type === 'dummy') idx += numChildlessNodes; //
-        vertexIdxLookup[nodeId] = { idx, type };
-        graph.vertices[type].push(vertex);
+    function addVertex(nodeId: NodeId, vertex: Vertex): VertexIdx {
+        let idx: VertexIdx = graph.vertices.length;
+        vertexIdxLookup[nodeId] = idx;
+        graph.vertices.push(vertex);
         return idx;
     }
 
     type GroupIdx = number;
     const groupIdxLookup: { [NodeId]: GroupIdx } = {};
 
-    function addGroup(nodeId: NodeId, group: Group): GroupIdx {
+    function addGroup(nodeId: NodeId, subgroups: Array<GroupIdx>, leaves: Array<VertexIdx>): GroupIdx {
         const idx: GroupIdx = graph.groups.length;
         groupIdxLookup[nodeId] = idx;
-        graph.groups.push(group);
+        graph.groups.push({ leaves: leaves, groups: subgroups, padding: kGroupPadding });
         return idx;
     }
 
-    function addLink(link: Link, types: ['real' | 'dummy', 'real' | 'dummy']): void {
-        if (types.every((type) => type === 'real')) {
-            graph.links.real.push(link);
-        } else {
-            graph.links.dummy.push(link);
-        }
+    const linkLookup: Set<string> = new Set();
+
+    function addLink(startIdx: VertexIdx, endIdx: VertexIdx): void {
+        const key = `${startIdx}->${endIdx}`;
+        if(linkLookup.has(key)) return;
+        linkLookup.add(key);
+        graph.links.push({ source: startIdx, target: endIdx });
     }
 
-    function addConstraint(constraint: Constraint, types: Array<'real' | 'dummy'>): void {
-        if (types.every((type) => type === 'real')) {
-            graph.constraints.real.push(constraint);
-        } else {
-            graph.constraints.dummy.push(constraint);
-        }
-    }
+    const separationConstraintLookup: Set<string> = new Set();
 
     function addSeparationConstraint(
-        startVertexIdx: VertexIdx,
-        endVertexIdx: Vertex,
-        types: ['real' | 'dummy', 'real' | 'dummy'],
+        startIdx: VertexIdx,
+        endIdx: VertexIdx,
         flowDirection: 'north' | 'south' | 'east' | 'west' = kFlowDirection,
     ): void {
+        const key = `${startIdx}-${flowDirection}->${endIdx}`;
+        if(separationConstraintLookup.has(key)) return;
+        separationConstraintLookup.add(key);
+
         let options;
         switch (flowDirection) {
             case 'west':
-                options = { axis: 'x', left: endVertexIdx, right: startVertexIdx };
+                options = { axis: 'x', left: endIdx, right: startIdx };
                 break;
             case 'north':
-                options = { axis: 'y', left: endVertexIdx, right: startVertexIdx };
+                options = { axis: 'y', left: endIdx, right: startIdx };
                 break;
             case 'east':
-                options = { axis: 'x', left: startVertexIdx, right: endVertexIdx };
+                options = { axis: 'x', left: startIdx, right: endIdx };
                 break;
             case 'south':
             default:
-                options = { axis: 'y', left: startVertexIdx, right: endVertexIdx };
+                options = { axis: 'y', left: startIdx, right: endIdx };
                 break;
         }
         const constraint = {
@@ -217,69 +208,51 @@ export default function layout(
             ...options,
             gap: kFlowSpacing,
         };
-        if (types.every((type) => type === 'real')) {
-            graph.constraints.real.push(constraint);
-        } else {
-            graph.constraints.dummy.push(constraint);
-        }
+        graph.constraints.push(constraint);
     }
 
     function processNode(
         nodeId: NodeId,
-        processed: { [NodeId]: {} },
-    ):
-        | {
-              type: 'real',
-              vertexIdx: VertexIdx, // Real vertex.
-          }
-        | {
-              type: 'dummy',
-              vertexIdx: VertexIdx, // Dummy vertex.
-              groupIdx: GroupIdx,
-          } {
+        processed: { [NodeId]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } },
+    ): { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } {
         if (processed[nodeId]) return processed[nodeId];
         const node = nodes[nodeIdxLookup[nodeId]];
 
         // Node has no children, so build a leaf `Vertex`.
         if (node.children.length === 0) {
-            const vertexIdx: VertexIdx = addVertex(
-                nodeId,
-                { width: node.width || kDefaultNodeSize, height: node.height || kDefaultNodeSize },
-                'real',
-            );
-            const result = { type: 'real', vertexIdx };
-            processed[nodeId] = result;
-            return result;
+            const vertexIdx: VertexIdx = addVertex(nodeId, {
+                width: node.width || kDefaultNodeSize,
+                height: node.height || kDefaultNodeSize,
+            });
+            processed[nodeId] = { vertexIdx };
+            return processed[nodeId];
         }
 
         // Create all children. Make a dummy `Vertex` to act as group center by add `Link` from
         // it to each of the children. Make `Group` only for nodes with children.
-        const dummyIdx: VertexIdx = addVertex(nodeId, { width: 0, height: 0 }, 'dummy');
-        const group: Group = { leaves: [], groups: [], padding: kGroupPadding };
+        const leaves: Array<VertexIdx> = [];
+        const subgroups: Array<GroupIdx> = [];
         for (let childId of node.children) {
             const {
                 vertexIdx: childVertexIdx,
                 groupIdx: childGroupIdx,
-                type: childType,
             } = processNode(childId, processed);
-            addLink({ source: dummyIdx, target: childVertexIdx }, ['dummy', childType]);
 
             // Update `Group` according to whether child is leaf or group.
-            if (childType === 'dummy') {
-                group.groups.push(childGroupIdx);
+            if (childGroupIdx !== undefined) {
+                subgroups.push(childGroupIdx);
             } else {
-                group.leaves.push(childVertexIdx);
+                leaves.push(childVertexIdx);
             }
         }
-        const groupIdx: GroupIdx = addGroup(nodeId, group);
+        const groupIdx: GroupIdx = addGroup(nodeId, subgroups, leaves);
 
         // TODO: Add `AlignConstraint` if specified to align children.
 
-        const result = { type: 'dummy', vertexIdx: dummyIdx, groupIdx };
-        processed[nodeId] = result;
-        return result;
+        processed[nodeId] = { groupIdx };
+        return processed[nodeId];
     }
-    const processCache: { [NodeId]: {} } = {};
+    const processCache: { [NodeId]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } } = {};
     nodes.forEach((node) => processNode(node.id, processCache));
 
     function findLeafDescendants(startId: NodeId): Array<NodeId> {
@@ -299,64 +272,34 @@ export default function layout(
     }
 
     function processEdge(startId: NodeId, endId: NodeId) {
-        const { idx: startVertexIdx, type: startVertexType } = vertexIdxLookup[startId];
-        const { idx: endVertexIdx, type: endVertexType } = vertexIdxLookup[endId];
-
-        // Add `Link` between created start and end `Vertex`.
-        addLink({ source: startVertexIdx, target: endVertexIdx }, [startVertexType, endVertexType]);
-
-        // Add `SeparationConstraint` to enforce flow in direction of least common ancestor. Must
-        // add for all the "real"/leaf children for start and end `Vertex` so that there exists
-        // constraints when only laying out with leaf.
+        // Add `Link` and `SeparationConstraint between *all pairs* leaf descendants of start and
+        // leaf descendants of end to enforce flow in direction of least common ancestor. This is
+        // needed since a `Node` can translate to either a `Vertex` or a `Group`, but a
+        // `SeparationConstraint` must be between two `Vertex`. Also, in practice, it seems that
+        // it is required to have a `Link` between two `Vertex` in order to constrain them.
         const lcaId: NodeId = findLowestCommonAncestor(parentIdLookup, startId, endId);
         let lcaFlowDirection = kFlowDirection;
         if (lcaId) lcaFlowDirection = nodes[nodeIdxLookup[lcaId]].flowDirection || lcaFlowDirection;
 
-        addSeparationConstraint(
-            startVertexIdx,
-            endVertexIdx,
-            [startVertexType, endVertexType],
-            lcaFlowDirection,
-        );
-
-        console.log('process edge', startId, endId, lcaId, lcaFlowDirection);
         for (let startLeafId of findLeafDescendants(startId)) {
             for (let endLeafId of findLeafDescendants(endId)) {
-                console.log('add child w/ id', startLeafId, endLeafId);
-                const { idx: startLeafIdx, type: startLeafType } = vertexIdxLookup[startLeafId];
-                const { idx: endLeafIdx, type: endLeafType } = vertexIdxLookup[endLeafId];
-                console.log('aka idxs', startLeafIdx, endLeafIdx);
-                addSeparationConstraint(
-                    startLeafIdx,
-                    endLeafIdx,
-                    [startLeafType, endLeafType],
-                    lcaFlowDirection,
-                );
-                addLink({ source: startLeafIdx, target: endLeafIdx }, ['real', 'real']); // TODO: These are just dummy
+                const startLeafIdx: VertexIdx = vertexIdxLookup[startLeafId];
+                const endLeafIdx: VertexIdx = vertexIdxLookup[endLeafId];
+                addSeparationConstraint(startLeafIdx, endLeafIdx, lcaFlowDirection);
+                addLink(startLeafIdx, endLeafIdx);
             }
         }
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
 
-    // graph.constraints.real = [
-    //     {type: "separation", axis: "x", left: 0, right: 2, gap: 75},
-    //     {type: "separation", axis: "x", left: 1, right: 2, gap: 75},
-    //     {type: "separation", axis: "x", left: 2, right: 3, gap: 75},
-    //     {type: "separation", axis: "x", left: 3, right: 4, gap: 75},
-    //     // {type: "separation", axis: "x", left: 2, right: 3, gap: 75},
-    // ]
-    //
-    // // TODO: Alignment constraint for orthogonal edges?
-    //
-    // graph.links.dummy.push({source: 6, target: 3})
-    // graph.links.real.push({source: 1, target: 3})
-
-    console.log('layout.js -- Done building up graph data structures.', graph);
+    // TODO: Alignment constraint for orthogonal edges?
 
     // function processAlignment(alignment: Array<NodeId>) {
     //     // TODO: Add `AlignConstraint` for alignments (but need to specify direction)
     // }
-    // if(alignments) alignments.forEach((alignment) => processAlignment(alignment))
+    // if(alignments) alignments.forEach((alignment) => processAlignment(alignment));
+
+    console.log('layout.js -- Done building up graph data structures.', graph);
 
     // =============================================================================================
     // Run Cola layout algorithms.
@@ -365,62 +308,22 @@ export default function layout(
 
     // Step 1: Preliminary layout.
     // ---------------------------
-    // Preliminary layout using dummy `Vertex` (instead of `Group`) and extra `Link` to
-    // promote clustering and constraint satisfaction. Overlap is allowed, since only the rough
-    // positions are required. After this step, real `Vertex` will keep the rough positions to
-    // use at the start of the next layout process.
+    // Calculate the relative positions of `Vertex` and `Groups` by applying all the `Constraint`s
+    // and with dummy `Links`. Overlap is not allowed. Positions are gridified.
 
-    // graph.vertices.all = graph.vertices.real.concat(graph.vertices.dummy);
-    // graph.links.all = graph.links.real.concat(graph.links.dummy);
-    // graph.constraints.all = graph.constraints.real.concat(graph.constraints.dummy);
-
-    // // Use both real and dummy `Vertex`, and no `Group`.
-    // new cola.Layout()
-    //     .avoidOverlaps(false)  // TODO: Remove?
-    //     .handleDisconnected(true)
-    //     .nodes(graph.vertices.real.concat(graph.vertices.dummy))
-    //     .links(graph.links.real.concat(graph.links.dummy))
-    //     .constraints(graph.constraints.real.concat(graph.constraints.dummy))
-    //     .groups(graph.groups) // REMOVE
-    //     .groupCompactness(1e-5) // TODO: Choose
-    //     .linkDistance(kFlowSpacing)
-    //     .convergenceThreshold(1e-4) // TODO: Choose
-    //     .start(20, 50, 100, 0, false, false); // TODO: Choose
-
-    // Step 2: Secondary layout.
-    // -------------------------
-    // Secondary layout with only the real `Vertex` (i.e., nodes with no children) and `Link`s
-    // (between real `Vertex`). Nested `Group` replace the dummy `Vertex`. Overlap is not
-    // allowed. Positions are gridified.
-
-    // graph.vertices.real = graph.vertices.all.slice(0, graph.vertices.real.length)
-    // graph.links.real = graph.links.all.slice(0, graph.links.real.length)
-    // graph.constraints.real = graph.constraints.all.slice(0, graph.constraints.real.length)
+    // TODO: Gridify positions?
 
     new cola.Layout()
         .avoidOverlaps(true)
         .handleDisconnected(true)
-        .nodes(graph.vertices.real)
-        .links(graph.links.real)
-        .constraints(graph.constraints.real)
+        .nodes(graph.vertices)
+        .links(graph.links)
+        .constraints(graph.constraints)
         .groups(graph.groups)
         .groupCompactness(1e-5) // TODO: Choose
         .linkDistance(kFlowSpacing)
         .convergenceThreshold(1e-3) // TODO: Choose
-        // .start(0, 0, 10, 0, false); // TODO: Choose
         .start(10, 20, 30, 0, false, false);
-    // .start(0, 0, 1, 0, false, false);
-
-    // new cola.Layout()
-    //     .avoidOverlaps(true)  // TODO: Remove?
-    //     .handleDisconnected(true)
-    //     .nodes(graph.vertices.real.concat(graph.vertices.dummy))
-    //     .links(graph.links.real.concat(graph.links.dummy))
-    //     .constraints(graph.constraints.real.concat(graph.constraints.dummy))
-    //     .groups(graph.groups) // REMOVE
-    //     .linkDistance(kFlowSpacing)
-    //     .convergenceThreshold(1e-3) // TODO: Choose
-    //     .start(10, 20, 30, 0, false, false); // TODO: Choose
 
     // Step 3: Retarget to ports.
     // --------------------------
@@ -446,7 +349,6 @@ export default function layout(
 
     function getGroupDims(nodeId: NodeId): Dims {
         const g: Group = graph.groups[groupIdxLookup[nodeId]];
-        // console.log('layout.js -- getGroupDims', nodeId);
         return {
             x: g.bounds.x,
             y: g.bounds.y,
@@ -456,8 +358,7 @@ export default function layout(
         };
     }
     function getVertexDims(nodeId: NodeId): Dims {
-        const v: Vertex = graph.vertices.real[vertexIdxLookup[nodeId].idx];
-        // console.log('layout.js -- getVertexDims', nodeId, vertexIdxLookup, graph.vertices.real, v);
+        const v: Vertex = graph.vertices[vertexIdxLookup[nodeId]];
         return {
             x: v.x - v.width / 2, // TODO: +pad?
             y: v.y - v.height / 2,
@@ -475,7 +376,7 @@ export default function layout(
     for (let node of nodes) {
         const { id } = node;
         let dims: Dims;
-        if (vertexIdxLookup[id].type === 'dummy') {
+        if (groupIdxLookup[id] !== undefined) {
             dims = getGroupDims(id);
         } else {
             dims = getVertexDims(id);
