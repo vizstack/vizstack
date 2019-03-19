@@ -123,6 +123,7 @@ class Viewer extends React.Component<
 
             case 'TextPrimitive': {
                 const { text, color, variant } = (model: TextPrimitiveModel).contents;
+
                 return (
                     <TextPrimitive {...generalProps} text={text} color={color} variant={variant} />
                 );

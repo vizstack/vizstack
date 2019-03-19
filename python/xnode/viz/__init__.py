@@ -7,6 +7,7 @@ from enum import Enum
 import types
 import inspect
 import os
+import random
 from xnode.constants import VizModel, ExpansionMode
 
 # TODO: potentially use these remnants of the old get_viz engine

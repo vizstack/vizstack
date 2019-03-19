@@ -213,7 +213,7 @@ class GraphData:
                 to_data_edges.append((op, output_graphdata))
 
             # create arg input nodes and edges to them
-            for input_graphdata in op.get_args() + op.get_state_inputs():
+            for input_graphdata in op.get_args():
                 if input_graphdata not in graphdata_to_node:
                     graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
                     if container_node is not None:
@@ -228,18 +228,21 @@ class GraphData:
 
             # add state inputs
             # for input_graphdata in op.get_state_inputs():
-            #     # for now, always create a new node and put it in a new container with the op
-            #     if (
-            #             input_graphdata in graphdata_to_node and
-            #             op_to_secret_container_node[op].is_ancestor(graphdata_to_node[input_graphdata].get_container())
-            #     ):
-            #         graphdata_to_node[input_graphdata].get_container().remove_child(graphdata_to_node[input_graphdata])
-            #         op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
-            #     else:
-            #         graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
-            #         # layout.create_edge(graphdata_node, op_node)
-            #         from_data_edges.append((input_graphdata, op))
-            #         op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
+                # for now, always create a new node and put it in a new container with the op
+                # if (
+                #         input_graphdata in graphdata_to_node and
+                #         op_to_secret_container_node[op].is_ancestor(graphdata_to_node[input_graphdata].get_container())
+                # ):
+                #     graphdata_to_node[input_graphdata].get_container().remove_child(graphdata_to_node[input_graphdata])
+                #     op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
+                # else:
+                #     graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
+                #     # layout.create_edge(graphdata_node, op_node)
+                #     from_data_edges.append((input_graphdata, op))
+                #     op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
+                # n = layout.create_node(input_graphdata.obj)
+                # layout.create_edge(n, op_to_node[op])
+                # op_to_secret_container_node[op].add_child(n)
 
         # promote data nodes up to a minimum acceptable height
         for (op, graphdata) in to_data_edges:
@@ -282,9 +285,6 @@ class GraphData:
                 kept_edges.append((graphdata_to_node[graphdata1], op_to_node[op1]))
         for start, end in kept_edges:
             layout.create_edge(start, end)
-
-        for op in op_to_node:
-            print(op.fn_name, op_to_node[op])
         return layout
 
 
@@ -340,7 +340,7 @@ def _track_magic_methods(obj_class):
     return methods
 
 
-def _track_data(obj, creator_op=None, creator_pos=-1) -> Any:
+def _track_data(obj, creator_op=None, creator_pos=-1, force=False) -> Any:
     """Creates a `GraphData` object which records the properties of `obj` and allows it to be shown in the graph.
 
     Any object which is not the output of a tracked function (see `_TrackedFunction`) is not, by default, shown in the
@@ -365,11 +365,11 @@ def _track_data(obj, creator_op=None, creator_pos=-1) -> Any:
         # Other classes, like Namespace, throw an exception if you `getattr` on any attribute.
         has_graphdata = False
 
-    if not has_graphdata:
+    if not has_graphdata or force:
         graphdata = GraphData(obj, creator_op, creator_pos)
         if not obj.__class__.__name__.startswith('__XNODE_GENERATED__'):
             new_class_dict = _track_magic_methods(obj.__class__)
-            new_class_dict[VIZ_FN] = getattr(graphdata, VIZ_FN)
+            # new_class_dict[VIZ_FN] = getattr(graphdata, VIZ_FN)
             try:
                 obj.__class__ = type(
                     '__XNODE_GENERATED__{}'.format(obj.__class__.__name__), (obj.__class__,),
@@ -413,6 +413,8 @@ def _gen_tracked_getattr(fn: Callable):
         # Have to use __getattribute__ here, not .xnode_current_op, to avoid calling this function infinitely
         if object.__getattribute__(self, 'xnode_current_op') is not None:
             op = object.__getattribute__(self, 'xnode_current_op')
+            # if hasattr(ret, 'xnode_graphdata'):
+            #     del ret.xnode_graphdata
             ret = _track_data(ret)
             op.state_inputs.append(('self.{}'.format(name), ret.xnode_graphdata))
         return ret
@@ -515,14 +517,19 @@ def _gen_tracked_call(fn: Callable):
             ret = c(*tracked_args, **tracked_kwargs)
         multiple_returns = isinstance(ret, tuple) and len(ret) > 1
         # TODO handle passthrough returns
+        input_graphdata = set(op.get_args())
         if multiple_returns:
             ret_tracked = tuple(
-                [_track_data(r, creator_op=op, creator_pos=i) for i, r in enumerate(ret)]
+                [_track_data(r, creator_op=op, creator_pos=i,
+                             force=hasattr(r, 'xnode_graphdata') and r.xnode_graphdata in input_graphdata)
+                 for i, r in enumerate(ret)]
             )
         else:
-            ret_tracked = _track_data(ret, creator_op=op, creator_pos=0)
-        op.outputs = [x.xnode_graphdata for x in ret_tracked
-                     ] if isinstance(ret_tracked, tuple) else [ret_tracked.xnode_graphdata]
+            ret_tracked = _track_data(ret, creator_op=op, creator_pos=0, force=hasattr(ret, 'xnode_graphdata') and
+                                                                               ret.xnode_graphdata in input_graphdata)
+        output_graphdata = [x.xnode_graphdata for x in ret_tracked] if isinstance(ret_tracked, tuple) else [
+            ret_tracked.xnode_graphdata]
+        op.outputs = output_graphdata
         op.set_contents()
         return ret_tracked
 
@@ -572,8 +579,8 @@ class _TrackedFunction(wrapt.ObjectProxy):
 def track_callable_class(cls):
     new_class_dict = {
         '__call__': _gen_tracked_call(cls),
-        '__getattribute__': _gen_tracked_getattr(cls),
-        '__setattr__': _gen_tracked_setattr(cls),
+        # '__getattribute__': _gen_tracked_getattr(cls),
+        # '__setattr__': _gen_tracked_setattr(cls),
     }
     return type(cls.__name__, (cls,), new_class_dict)
 
@@ -581,8 +588,8 @@ def track_callable_class(cls):
 def track_callable_instance(fn: Callable) -> Callable:
     new_class_dict = {
         '__call__': _gen_tracked_call(fn),
-        '__getattribute__': _gen_tracked_getattr(fn),
-        '__setattr__': _gen_tracked_setattr(fn),
+        # '__getattribute__': _gen_tracked_getattr(fn),
+        # '__setattr__': _gen_tracked_setattr(fn),
     }
     try:
         fn.__class__ = type(fn.__class__.__name__, (fn.__class__,), new_class_dict)
@@ -590,3 +597,7 @@ def track_callable_instance(fn: Callable) -> Callable:
         # The object is a function or lambda, which cannot be subclassed
         fn = _TrackedFunction(fn)
     return fn
+
+
+def get_graph(o: Any) -> GraphData:
+    return o.xnode_graphdata
