@@ -65,7 +65,7 @@ def get_viz(o: Any) -> 'Viz':
         A Viz which describes how to render ``o``.
     """
     global _CURRENT
-    if o in _CURRENT:
+    if o in _CURRENT and not (isinstance(o, (str, int, float, bool)) or o is None):
         # TODO: deal with this better
         return Token('<cyclic ref>')
     _CURRENT.append(o)
@@ -73,6 +73,8 @@ def get_viz(o: Any) -> 'Viz':
         viz = o
     elif hasattr(o, VIZ_FN):
         viz = getattr(o, VIZ_FN)()
+    elif isinstance(o, (str, int, float, bool)) or o is None:
+        viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
         viz = Sequence(
@@ -178,8 +180,6 @@ def get_viz(o: Any) -> 'Viz':
             end_motif=')',
             summary='Class[{}]'.format(o.__name__),
             orientation='vertical')
-    elif isinstance(o, (str, int, float, bool)) or o is None:
-        viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -466,6 +466,7 @@ class DagLayoutNode:
         return self.node_id
 
     def to_dict(self) -> Mapping[str, Any]:
+        assert self.container is None or self in self.container.elements
         all_values = {
             'vizId': self.viz,
             'children': [item.get_id() for item in self.elements],
@@ -505,7 +506,7 @@ class DagLayoutNode:
     def is_ancestor(self, descendant: 'DagLayoutNode') -> bool:
         if len(self.elements) == 0:
             return False
-        if descendant in self.elements:
+        if descendant in self.elements or descendant is self:
             return True
         return any([child.is_ancestor(descendant) for child in self.elements])
 

@@ -10,13 +10,14 @@ See get_viz.md for underlying principles and concepts.
 import wrapt
 import inspect
 from collections import deque
+from contextlib import contextmanager
 from xnode.viz import VIZ_FN, DagLayout, Token, Viz, DagLayoutNode
 from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
-
 # TODO: state outputs need a special placement
 # TODO: figure out where data nodes should go
 # TODO: re-document
 # TODO: naming (op is a bad name that we don't use anymore)
+
 
 # ======================================================================================================================
 # `_FunctionCall`.
@@ -82,13 +83,18 @@ class _FunctionCall:
         """
         contents: List[_FunctionCall] = list()
         ops_checked: Set[_FunctionCall] = {self}
-        inputs: Set[GraphData] = set(self.get_all_inputs())
+        inputs: Set[GraphData] = set(self.get_args())
+        # print(inputs)
         data_to_check: deque[GraphData] = deque(self.outputs)
+        # print(self.fn_name)
         while len(data_to_check) > 0:
             data: GraphData = data_to_check.popleft()
+            # print(data.obj)
+            # print(data)
             if data in inputs:
                 continue
             creator_op: _FunctionCall = data.creator_op
+            # print('created by {}'.format(creator_op.fn_name if creator_op is not None else None))
             if creator_op is not None and creator_op not in ops_checked:
                 outermost_parent: _FunctionCall = creator_op.get_outermost_parent()
                 contents.append(outermost_parent)
@@ -135,18 +141,6 @@ class _FunctionCall:
         return Token(self.fn_name)
 
 
-def _make_tracked_arg_list(args: Iterable[Any], arg_names: List[str]
-                          ) -> List[Tuple[str, Union[List['GraphData'], 'GraphData']]]:
-    # len(args) == len(arg_names)
-    arg_list: List[Tuple[str, Union[List['GraphData'], 'GraphData']]] = []
-    for arg_name, arg in zip(arg_names, args):
-        if hasattr(arg, '__iter__'):
-            arg_list.append((arg_name, [_track_data(obj).xnode_graphdata for obj in arg]))
-        else:
-            arg_list.append((arg_name, _track_data(arg).xnode_graphdata))
-    return arg_list
-
-
 # ======================================================================================================================
 # Graph data.
 # -----------
@@ -181,73 +175,116 @@ class GraphData:
         op_to_node: Dict[_FunctionCall, DagLayoutNode] = {
             self.creator_op: layout.create_node(self.creator_op)
         }
+        from_data_edges: List[Tuple[GraphData, _FunctionCall]] = []
+        to_data_edges: List[Tuple[_FunctionCall, GraphData]] = []
         op_to_secret_container_node: Dict[_FunctionCall, DagLayoutNode] = dict()
         layout.create_edge(op_to_node[self.creator_op], graphdata_to_node[self])
         ops: List[_FunctionCall] = [self.creator_op]
         while len(ops) > 0:
+            # Iterate over ops, assuming node has already been created
             op = ops.pop()
-            op_node = op_to_node[op]
 
             # add to secret container
             op_to_secret_container_node[op] = layout.create_node(
-                None, flow_direction='right', is_visible=False
+                None, flow_direction='east', is_visible=False
             )
             op_to_secret_container_node[op].add_child(op_to_node[op])
 
-            # create container ancestry
-            container_op = op.container
-            child = op_to_secret_container_node[op]
-            while container_op is not None:
-                if container_op not in op_to_node:
-                    op_to_node[container_op] = layout.create_node(container_op)
-                    op_to_node[container_op].add_child(child)
-                    # if not graphdatum_added_to_container:
-                    #     op_to_node[container_op].add_child(graphdata_to_node[])
-                    child = op_to_node[container_op]
-                    container_op = container_op.container
+            # create container
+            if op.container is not None:
+                if op.container not in op_to_node:
+                    op_to_node[op.container] = layout.create_node(op.container)
+                    op_to_node[op.container].add_child(op_to_secret_container_node[op])
+                    ops.append(op.container)
                 else:
-                    op_to_node[container_op].add_child(child)
-                    break
+                    op_to_node[op.container].add_child(op_to_secret_container_node[op])
 
+            container_node = op_to_secret_container_node[op].get_container()
+
+            # create output nodes and add edges to them
             for output_graphdata in op.outputs:
-                c = graphdata_to_node[output_graphdata].get_container()
-                while c is not None and not c.is_ancestor(op_to_node[op]):
-                    c.remove_child(graphdata_to_node[output_graphdata])
-                    c = c.get_container()
-                    if c is not None:
-                        c.add_child(graphdata_to_node[output_graphdata])
+                if output_graphdata not in graphdata_to_node:
+                    graphdata_to_node[output_graphdata] = layout.create_node(output_graphdata.obj)
+                    if container_node is not None:
+                        container_node.add_child(
+                            graphdata_to_node[output_graphdata]
+                        )
+                # layout.create_edge(op_node, graphdata_to_node[output_graphdata])
+                to_data_edges.append((op, output_graphdata))
 
-            # add input data nodes
-            for input_graphdata in op.get_args():
-                # Only create a new data node if one does not exist, or if the data is a leaf
-                if input_graphdata not in graphdata_to_node or input_graphdata.creator_op is None:
+            # create arg input nodes and edges to them
+            for input_graphdata in op.get_args() + op.get_state_inputs():
+                if input_graphdata not in graphdata_to_node:
                     graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
-                    # call get_container() twice to keep it out of the secret container
-                    op_to_secret_container_node[op].get_container().add_child(
-                        graphdata_to_node[input_graphdata]
-                    )
-
-                c = graphdata_to_node[input_graphdata].get_container()
-                while c is not None and not c.is_ancestor(op_to_node[op]):
-                    c.remove_child(graphdata_to_node[input_graphdata])
-                    c = c.get_container()
-                    if c is not None:
-                        c.add_child(graphdata_to_node[input_graphdata])
-
-                layout.create_edge(graphdata_to_node[input_graphdata], op_node)
-                if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
-                    creator_op_node = layout.create_node(input_graphdata.creator_op)
-                    layout.create_edge(creator_op_node, graphdata_to_node[input_graphdata])
-                    op_to_node[input_graphdata.creator_op] = creator_op_node
-                    ops.append(input_graphdata.creator_op)
+                    if container_node is not None:
+                        container_node.add_child(
+                            graphdata_to_node[input_graphdata]
+                        )
+                    if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
+                        op_to_node[input_graphdata.creator_op] = layout.create_node(input_graphdata.creator_op)
+                        ops.append(input_graphdata.creator_op)
+                # layout.create_edge(graphdata_to_node[input_graphdata], op_node)
+                from_data_edges.append((input_graphdata, op))
 
             # add state inputs
-            for input_graphdata in op.get_state_inputs():
-                # for now, always create a new node and put it in a new container with the op
-                graphdata_node = layout.create_node(input_graphdata.obj)
-                layout.create_edge(graphdata_node, op_node)
-                op_to_secret_container_node[op].add_child(graphdata_node)
+            # for input_graphdata in op.get_state_inputs():
+            #     # for now, always create a new node and put it in a new container with the op
+            #     if (
+            #             input_graphdata in graphdata_to_node and
+            #             op_to_secret_container_node[op].is_ancestor(graphdata_to_node[input_graphdata].get_container())
+            #     ):
+            #         graphdata_to_node[input_graphdata].get_container().remove_child(graphdata_to_node[input_graphdata])
+            #         op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
+            #     else:
+            #         graphdata_to_node[input_graphdata] = layout.create_node(input_graphdata.obj)
+            #         # layout.create_edge(graphdata_node, op_node)
+            #         from_data_edges.append((input_graphdata, op))
+            #         op_to_secret_container_node[op].add_child(graphdata_to_node[input_graphdata])
 
+        # promote data nodes up to a minimum acceptable height
+        for (op, graphdata) in to_data_edges:
+            c = graphdata_to_node[graphdata].get_container()
+            if c is not None and c.is_visible is False:
+                continue
+            while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
+                c.remove_child(graphdata_to_node[graphdata])
+                c = c.get_container()
+                if c is not None:
+                    c.add_child(graphdata_to_node[graphdata])
+
+        for (graphdata, op) in from_data_edges:
+            c = graphdata_to_node[graphdata].get_container()
+            if c is not None and c.is_visible is False:
+                continue
+            while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
+                c.remove_child(graphdata_to_node[graphdata])
+                c = c.get_container()
+                if c is not None:
+                    c.add_child(graphdata_to_node[graphdata])
+
+        # TODO: optimize this
+        kept_edges = []
+        for i, (op1, graphdata1) in enumerate(to_data_edges):
+            found_child = False
+            for (op2, graphdata2) in to_data_edges:
+                if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
+                    found_child = True
+                    break
+            if not found_child:
+                kept_edges.append((op_to_node[op1], graphdata_to_node[graphdata1]))
+        for i, (graphdata1, op1) in enumerate(from_data_edges):
+            found_child = False
+            for (graphdata2, op2) in from_data_edges:
+                if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
+                    found_child = True
+                    break
+            if not found_child:
+                kept_edges.append((graphdata_to_node[graphdata1], op_to_node[op1]))
+        for start, end in kept_edges:
+            layout.create_edge(start, end)
+
+        for op in op_to_node:
+            print(op.fn_name, op_to_node[op])
         return layout
 
 
@@ -372,11 +409,11 @@ def _gen_tracked_getattr(fn: Callable):
     g = fn.__getattribute__
 
     def _tracked_getattr(self, name):
-        ret = g(name)
+        ret = g(self, name)
         # Have to use __getattribute__ here, not .xnode_current_op, to avoid calling this function infinitely
         if object.__getattribute__(self, 'xnode_current_op') is not None:
-            ret = _track_data(ret)
             op = object.__getattribute__(self, 'xnode_current_op')
+            ret = _track_data(ret)
             op.state_inputs.append(('self.{}'.format(name), ret.xnode_graphdata))
         return ret
 
@@ -386,20 +423,28 @@ def _gen_tracked_getattr(fn: Callable):
 def _gen_tracked_setattr(fn: Callable):
     s = fn.__setattr__
 
+    # if inspect.getfullargspec(s).args[0] == 'self':
+    #     needs_self = True
+    # else:
+    #     needs_self = False
+
     def _tracked_setattr(self, name, value):
         # Have to use __getattribute__ here, not .xnode_current_op, to avoid calling the tracked getattr
-        if name is not 'xnode_current_op' and object.__getattribute__(
-                self, 'xnode_current_op') is not None:
-            op = object.__getattribute__(self, 'xnode_current_op')
-            value = _track_data(value, creator_op=op)
-        s(name, value)
+        try:
+            if name is not 'xnode_current_op' and object.__getattribute__(
+                    self, 'xnode_current_op') is not None:
+                op = object.__getattribute__(self, 'xnode_current_op')
+                value = _track_data(value)
+        except AttributeError:
+            pass
+        s(self, name, value)
 
     return _tracked_setattr
 
 
 def _gen_tracked_call(fn: Callable):
     c = fn.__call__
-    # TODO: this is custom tailored for PyTorch, and we should generalize it in the future
+    # TODO: this is custom tailored for PyTorch, and we should generalize it
     try:
         if hasattr(fn, 'forward'):
             # `getfullargspec` will work on PyTorch modules, but won't get arg names. Need to get from `forward`
@@ -419,23 +464,55 @@ def _gen_tracked_call(fn: Callable):
     except AttributeError:
         _op_name = fn.__class__.__name__
 
+    if _arg_names[0] == 'self':
+        needs_self = True
+    else:
+        needs_self = False
+
     def _tracked_call(self, *args, **kwargs):
         arg_names: List[str] = (
             _arg_names[(len(_arg_names) - len(args)):] +
             [_varargs for _ in range(len(args) - len(_arg_names))]
         )
+        tracked_args = []
+        for arg in args:
+            # TODO: re-add iterable breaking
+            # if isinstance(arg, tuple):
+            #     tracked_args.append((_track_data(obj) for obj in arg))
+            # elif isinstance(arg, list):
+            #     tracked_args.append([_track_data(obj) for obj in arg])
+            # elif isinstance(arg, set):
+            #     tracked_args.append({_track_data(obj) for obj in arg})
+            # else:
+            tracked_args.append(_track_data(arg))
 
         kwarg_keys = list(kwargs.keys())
+        tracked_kwargs = []
+        for key in kwarg_keys:
+            arg = kwargs[key]
+            # if isinstance(arg, tuple):
+            #     tracked_args.append((_track_data(obj) for obj in arg))
+            # elif isinstance(arg, list):
+            #     tracked_args.append([_track_data(obj) for obj in arg])
+            # elif isinstance(arg, set):
+            #     tracked_args.append({_track_data(obj) for obj in arg})
+            # else:
+            tracked_kwargs.append(_track_data(arg))
         op = _FunctionCall(
-            _op_name, _make_tracked_arg_list(args, arg_names),
-            _make_tracked_arg_list([kwargs[k] for k in kwarg_keys], kwarg_keys)
+            _op_name,
+            list(zip(arg_names, [arg.xnode_graphdata for arg in tracked_args])),
+            list(zip(kwarg_keys, [arg.xnode_graphdata for arg in tracked_kwargs]))
         )
+        tracked_kwargs = {
+            key: value for key, value in zip(kwarg_keys, tracked_kwargs)
+        }
+        # This catches cases like tracked addition operators, which cannot have children anyway
         try:
             self.xnode_current_op = op
-            ret = c(*args, **kwargs)
+            ret = c(*tracked_args, **tracked_kwargs) if not needs_self else c(self, *tracked_args, **tracked_kwargs)
             self.xnode_current_op = None
         except AttributeError:
-            ret = c(*args, **kwargs)
+            ret = c(*tracked_args, **tracked_kwargs)
         multiple_returns = isinstance(ret, tuple) and len(ret) > 1
         # TODO handle passthrough returns
         if multiple_returns:
@@ -444,8 +521,8 @@ def _gen_tracked_call(fn: Callable):
             )
         else:
             ret_tracked = _track_data(ret, creator_op=op, creator_pos=0)
-        op.outputs = (x.xnode_graphdata for x in ret_tracked
-                     ) if isinstance(ret_tracked, tuple) else (ret_tracked.xnode_graphdata,)
+        op.outputs = [x.xnode_graphdata for x in ret_tracked
+                     ] if isinstance(ret_tracked, tuple) else [ret_tracked.xnode_graphdata]
         op.set_contents()
         return ret_tracked
 
@@ -453,7 +530,7 @@ def _gen_tracked_call(fn: Callable):
 
 
 class _TrackedFunction(wrapt.ObjectProxy):
-    """Wraps a callable object, creating a `_FunctionCall` whenever called and creating a `GraphData` for each output."""
+    """Wraps a callable, creating a `_FunctionCall` whenever called and creating a `GraphData` for each output."""
 
     def __init__(self, obj: Callable) -> None:
         """Constructor.
@@ -492,7 +569,16 @@ class _TrackedFunction(wrapt.ObjectProxy):
 # ======================================================================================================================
 
 
-def track_function(fn: Callable) -> Callable:
+def track_callable_class(cls):
+    new_class_dict = {
+        '__call__': _gen_tracked_call(cls),
+        '__getattribute__': _gen_tracked_getattr(cls),
+        '__setattr__': _gen_tracked_setattr(cls),
+    }
+    return type(cls.__name__, (cls,), new_class_dict)
+
+
+def track_callable_instance(fn: Callable) -> Callable:
     new_class_dict = {
         '__call__': _gen_tracked_call(fn),
         '__getattribute__': _gen_tracked_getattr(fn),
