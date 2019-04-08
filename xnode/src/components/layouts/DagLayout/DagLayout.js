@@ -37,11 +37,14 @@ class DagNode extends React.PureComponent<{
     /** Expansion state. */
     isExpanded: boolean,
 
+    /** */
+    isVisible: boolean,
+
     /** Callback on component resize. */
     onResize: (number, number) => void,
 }> {
     render() {
-        const { classes, x, y, width, height, viewerProps, isExpanded, onResize } = this.props;
+        const { classes, x, y, width, height, viewerProps, isVisible, isExpanded, onResize } = this.props;
 
         return (
             <g>
@@ -51,7 +54,7 @@ class DagNode extends React.PureComponent<{
                         y={y}
                         width={width}
                         height={height}
-                        className={classes.nodeExpanded}
+                        className={isVisible === false ? classes.nodeInvisible : classes.nodeExpanded}
                     />
                 ) : (
                     <foreignObject
@@ -474,6 +477,7 @@ class DagLayout extends React.Component<
                                             y={y}
                                             width={width}
                                             height={height}
+                                            isVisible={spec.isVisible}
                                             isExpanded={spec.children.length !== 0}
                                             classes={classes}
                                             onResize={(width, height) =>
@@ -578,10 +582,14 @@ const styles = (theme) => ({
         // ].join(', '),
     },
 
+    nodeInvisible: {
+        fill: '#FFFFFF', // TODO: Change this.
+        fillOpacity: 0.1,
+    },
+
     nodeExpanded: {
         fill: '#000000', // TODO: Change this.
-        fillOpacity: 0.17,
-        strokeWidth: 3,
+        fillOpacity: 0.1,
     },
 });
 

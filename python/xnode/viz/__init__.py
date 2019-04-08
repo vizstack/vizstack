@@ -485,7 +485,7 @@ class DagLayoutNode:
     # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
     def create_port(self,
                     port_name: str,
-                    side: Optional[str] = None,
+                    side: str,
                     order: Optional[int] = None):
         assert port_name not in self.ports
         self.ports[port_name] = {

@@ -9,7 +9,7 @@ See get_viz.md for underlying principles and concepts.
 """
 import wrapt
 import inspect
-from collections import deque
+from collections import deque, defaultdict
 from contextlib import contextmanager
 from xnode.viz import VIZ_FN, DagLayout, Token, Viz, DagLayoutNode
 from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
@@ -175,14 +175,14 @@ class GraphData:
         op_to_node: Dict[_FunctionCall, DagLayoutNode] = {
             self.creator_op: layout.create_node(self.creator_op)
         }
-        from_data_edges: List[Tuple[GraphData, _FunctionCall]] = []
-        to_data_edges: List[Tuple[_FunctionCall, GraphData]] = []
+        from_data_edges: Dict[GraphData, List[Tuple[_FunctionCall, str]]] = defaultdict(list)
+        to_data_edges: Dict[GraphData, List[Tuple[_FunctionCall, str]]] = defaultdict(list)
         op_to_secret_container_node: Dict[_FunctionCall, DagLayoutNode] = dict()
         layout.create_edge(op_to_node[self.creator_op], graphdata_to_node[self])
-        ops: List[_FunctionCall] = [self.creator_op]
-        while len(ops) > 0:
+        ops_to_add: List[_FunctionCall] = [self.creator_op]
+        while len(ops_to_add) > 0:
             # Iterate over ops, assuming node has already been created
-            op = ops.pop()
+            op = ops_to_add.pop()
 
             # add to secret container
             op_to_secret_container_node[op] = layout.create_node(
@@ -195,14 +195,16 @@ class GraphData:
                 if op.container not in op_to_node:
                     op_to_node[op.container] = layout.create_node(op.container)
                     op_to_node[op.container].add_child(op_to_secret_container_node[op])
-                    ops.append(op.container)
+                    ops_to_add.append(op.container)
                 else:
                     op_to_node[op.container].add_child(op_to_secret_container_node[op])
 
             container_node = op_to_secret_container_node[op].get_container()
 
             # create output nodes and add edges to them
-            for output_graphdata in op.outputs:
+            for i, output_graphdata in enumerate(op.outputs):
+                port_name: str = '{}_out'.format(i)
+                op_to_node[op].create_port(port_name, 'south')
                 if output_graphdata not in graphdata_to_node:
                     graphdata_to_node[output_graphdata] = layout.create_node(output_graphdata.obj)
                     if container_node is not None:
@@ -210,7 +212,11 @@ class GraphData:
                             graphdata_to_node[output_graphdata]
                         )
                 # layout.create_edge(op_node, graphdata_to_node[output_graphdata])
-                to_data_edges.append((op, output_graphdata))
+                to_data_edges[output_graphdata].append((op, port_name))
+
+            # TODO: when input slicing is re-added, fix this
+            for i in range(len(op.args) + len(op.kwargs)):
+                op_to_node[op].create_port('{}_in'.format(i), 'north')
 
             # create arg input nodes and edges to them
             for input_graphdata in op.get_args():
@@ -222,9 +228,9 @@ class GraphData:
                         )
                     if input_graphdata.creator_op is not None and input_graphdata.creator_op not in op_to_node:
                         op_to_node[input_graphdata.creator_op] = layout.create_node(input_graphdata.creator_op)
-                        ops.append(input_graphdata.creator_op)
+                        ops_to_add.append(input_graphdata.creator_op)
                 # layout.create_edge(graphdata_to_node[input_graphdata], op_node)
-                from_data_edges.append((input_graphdata, op))
+                from_data_edges[input_graphdata].append((op, '{}_in'.format(input_graphdata.creator_pos)))
 
             # add state inputs
             # for input_graphdata in op.get_state_inputs():
@@ -245,47 +251,77 @@ class GraphData:
                 # op_to_secret_container_node[op].add_child(n)
 
         # promote data nodes up to a minimum acceptable height
-        for (op, graphdata) in to_data_edges:
+        all_graphdata = set(to_data_edges.keys()).union(from_data_edges.keys())
+        for graphdata in all_graphdata:
             c = graphdata_to_node[graphdata].get_container()
             if c is not None and c.is_visible is False:
                 continue
-            while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
-                c.remove_child(graphdata_to_node[graphdata])
-                c = c.get_container()
-                if c is not None:
-                    c.add_child(graphdata_to_node[graphdata])
+            ops: List[_FunctionCall] = [t[0] for t in to_data_edges[graphdata] + from_data_edges[graphdata]]
+            for op in ops:
+                while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
+                    c.remove_child(graphdata_to_node[graphdata])
+                    c = c.get_container()
+                    if c is not None:
+                        c.add_child(graphdata_to_node[graphdata])
 
-        for (graphdata, op) in from_data_edges:
-            c = graphdata_to_node[graphdata].get_container()
-            if c is not None and c.is_visible is False:
-                continue
-            while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
-                c.remove_child(graphdata_to_node[graphdata])
-                c = c.get_container()
-                if c is not None:
-                    c.add_child(graphdata_to_node[graphdata])
+        # for (graphdata, op) in from_data_edges:
+        #     c = graphdata_to_node[graphdata].get_container()
+        #     if c is not None and c.is_visible is False:
+        #         continue
+        #     while c is not None and not (c.is_ancestor(op_to_node[op]) and c.is_visible is not False):
+        #         c.remove_child(graphdata_to_node[graphdata])
+        #         c = c.get_container()
+        #         if c is not None:
+        #             c.add_child(graphdata_to_node[graphdata])
 
-        # TODO: optimize this
-        kept_edges = []
-        for i, (op1, graphdata1) in enumerate(to_data_edges):
-            found_child = False
-            for (op2, graphdata2) in to_data_edges:
-                if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
-                    found_child = True
-                    break
-            if not found_child:
-                kept_edges.append((op_to_node[op1], graphdata_to_node[graphdata1]))
-        for i, (graphdata1, op1) in enumerate(from_data_edges):
-            found_child = False
-            for (graphdata2, op2) in from_data_edges:
-                if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
-                    found_child = True
-                    break
-            if not found_child:
-                kept_edges.append((graphdata_to_node[graphdata1], op_to_node[op1]))
-        for start, end in kept_edges:
-            layout.create_edge(start, end)
+        for graphdata, edges in from_data_edges.items():
+            segments = get_edge_routes(graphdata_to_node[graphdata], edges, op_to_node)
+            for start_node, start_port, end_node, end_port in segments:
+                layout.create_edge(start_node, end_node, start_port, end_port)
+
+        for graphdata, edges in to_data_edges.items():
+            segments = get_edge_routes(graphdata_to_node[graphdata], edges, op_to_node)
+            for end_node, end_port, start_node, start_port in segments:
+                layout.create_edge(start_node, end_node, start_port, end_port)
+        # kept_edges = []
+        # for i, (op1, graphdata1) in enumerate(to_data_edges):
+        #     found_child = False
+        #     for (op2, graphdata2) in to_data_edges:
+        #         if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
+        #             found_child = True
+        #             break
+        #     if not found_child:
+        #         kept_edges.append((op_to_node[op1], graphdata_to_node[graphdata1]))
+        # for i, (graphdata1, op1) in enumerate(from_data_edges):
+        #     found_child = False
+        #     for (graphdata2, op2) in from_data_edges:
+        #         if graphdata1 is graphdata2 and op1 is not op2 and op_to_node[op1].is_ancestor(op_to_node[op2]):
+        #             found_child = True
+        #             break
+        #     if not found_child:
+        #         kept_edges.append((graphdata_to_node[graphdata1], op_to_node[op1]))
+        # for start, end in kept_edges:
+        #     layout.create_edge(start, end)
         return layout
+
+
+def get_edge_routes(data_node: DagLayoutNode,
+                    ops: List[Tuple[_FunctionCall, str]],
+                    op_to_node: Dict[_FunctionCall, DagLayoutNode]
+                    ) -> List[Tuple[DagLayoutNode, str, DagLayoutNode, str]]:
+    segments: List[Tuple[DagLayoutNode, str, DagLayoutNode, str]] = []
+    for op, port_name in ops:
+        node = op_to_node[op]
+        parent: Optional[Tuple[DagLayoutNode, str]] = None
+        for other_op, other_port_name in ops:
+            other_node = op_to_node[other_op]
+            if other_node is node:
+                continue
+            if other_node.is_ancestor(node) and (parent is None or parent[0].is_ancestor(other_node)):
+                parent = (other_node, other_port_name)
+        segments.append((parent[0], parent[1], node, port_name)
+                        if parent is not None else (data_node, None, node, port_name))
+    return segments
 
 
 def _gen_magic_method(obj_class, fn_name):
