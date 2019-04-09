@@ -230,8 +230,8 @@ export default class REPL {
         let options = {
             args: [
                 '--scriptPaths',
-                scriptPath,
                 path.join(atom.project.getPaths()[0], scriptPath),
+                scriptPath,
                 '--scriptArgs',
                 ...scriptArgs,
             ],
