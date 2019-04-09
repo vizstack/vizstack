@@ -21,11 +21,13 @@ def single_group(num=3, direction="south", links=False, container=True):
     # compile(g)
     xnode.show(g)
 
+# When there are no edges, there is no flow.
 # single_group(direction="south")
 # single_group(direction="east")
 # single_group(direction="north")
 # single_group(direction="west")
-#
+
+# When there are edges, there is flow.
 # single_group(direction="south", links=True)
 # single_group(direction="east", links=True)
 # single_group(direction="north", links=True)
@@ -53,8 +55,12 @@ def single_group_2_directions():
 
     n3 = g.create_node("n3")
     n4 = g.create_node("n4")
+    n5 = g.create_node("n5")
+    n7 = g.create_node("n7")
     g.create_edge(n6, n3)
     g.create_edge(n3, n4)
+    g.create_edge(n3, n5)
+    g.create_edge(n3, n7)
 
     xnode.show(g)
 
@@ -91,8 +97,20 @@ def nested_groups():
     g.create_edge(n6, n8)
     g.create_edge(n2, n3)
 
-
-
     xnode.show(g)
 
 nested_groups()
+
+# =====================
+
+def parent_to_descendant():
+    g = viz.DagLayout()
+
+    n0 = g.create_node("n0")
+    n1 = g.create_node("n1")
+    n1.add_child(n0)
+    g.create_edge(n1, n0)
+
+    xnode.show(g)
+
+# parent_to_descendant()
