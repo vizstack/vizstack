@@ -28,7 +28,7 @@ export type ViewerProps = {
 };
 
 /**
- * This smart component parses a VizSpec and assembles a corresponding Viz rendering.
+ * This smart component parses a DisplaySpec and assembles a corresponding Viz rendering.
  */
 class Viewer extends React.Component<{
     /** Specification of View's root model and sub-models.*/

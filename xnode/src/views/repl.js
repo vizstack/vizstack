@@ -1,3 +1,5 @@
+// @flow
+
 // React + Redux services
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -22,30 +24,26 @@ import cuid from 'cuid';
 import SandboxSettings from '../components/SandboxSettings';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import { addVizTableSliceAction, clearVizTableAction } from '../state/viztable/actions';
+import { addDisplaySpecAction, clearDisplayTableAction } from '../state/displaytable/actions';
 import {
-    createViewerAction,
     clearCanvasAction,
     showViewerInCanvasAction,
 } from '../state/canvas/actions';
-import type { VizId, VizSpec } from '../state/viztable/outputs';
-import { getVizSpec } from '../state/viztable/outputs';
+import type { ViewSpec } from '../core/schema';
+import type { VizId, DisplaySpec } from '../state/displaytable/outputs';
+import { getVizSpec } from '../state/displaytable/outputs';
 import Progress from '../components/DOMProgress';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
 
-type ExecutionEngineMessage = {
-    // Top-level viz created directly from a `xn.view()` call. Is displayed in its own ViewerSpec in the Canvas.
-    viewedVizId?: VizId,
-
-    // VizTable slice to add into central VizTable.
-    vizTableSlice?: { [VizId]: VizSpec },
-
-    // Whether the VizTable should be cleared. The backend may determine that the changes to files are
-    // irrelevant for visualization, and so the current VizTable can be maintained.
-    shouldRefresh: boolean,
-};
+type DebuggerMessage = {
+    filePath: string,
+    lineNumber: number,
+    viewSpec: ViewSpec,
+    scriptStart: boolean,
+    scriptEnd: boolean,
+}
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -58,6 +56,21 @@ type ExecutionEngineMessage = {
  * be thought of as an isolated environment for experimenting with a particular program script, along with any sandbox
  */
 export default class REPL {
+    id: number = -1;
+    sandboxName: string = '';  // To be set once a sandbox has been selected
+    isDestroyed: boolean = false;  // TODO: why do we need this?
+    onSandboxSelected: (repl: REPL, sandboxName: string) => void = () => {};
+    executionEngine = undefined;
+    pythonPath: string = '';
+    scriptPath: string = '';
+    scriptArgs: Array<string> = [];
+    marker = null;
+    store = createStore(mainReducer, applyMiddleware(thunk));  // TODO: re-add devtools
+    progressComponent = undefined;
+    sandboxSelectComponent = undefined;
+    element = document.createElement('div');
+
+
     /**
      * Constructor.
      *
@@ -70,21 +83,9 @@ export default class REPL {
      */
     constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void): void {
         this.id = id;
-        this.sandboxName = ''; // To be set once a sandbox has been selected
-        this.isDestroyed = false; // TODO: Why do we need this?
         this.onSandboxSelected = onSandboxSelected;
 
-        // Initialize REPL state
-        this.executionEngine = undefined;
-        this.marker = null;
 
-        // Initialize Redux store & connect to main reducer
-        // TODO: re-add devtools
-        this.store = createStore(mainReducer, applyMiddleware(thunk));
-        // Initialize React root component for Canvas
-        this.progressComponent = undefined;
-        this.sandboxSelectComponent = undefined;
-        this.element = document.createElement('div');
         ReactDOM.render(
             <ReduxProvider store={this.store}>
                 <MuiThemeProvider theme={XnodeMuiTheme}>
@@ -222,7 +223,7 @@ export default class REPL {
      * @param scriptArgs
      *      An array of arguments which should be passed to the executed script.
      */
-    createEngine(pythonPath: string, scriptPath: string, scriptArgs: Array): void {
+    createEngine(): void {
         if (this.executionEngine) {
             this.executionEngine.terminate();
             this.executionEngine = undefined;
@@ -230,30 +231,29 @@ export default class REPL {
         let options = {
             args: [
                 '--scriptPaths',
-                path.join(atom.project.getPaths()[0], scriptPath),
-                scriptPath,
+                path.join(atom.project.getPaths()[0], this.scriptPath),
+                this.scriptPath,
                 '--scriptArgs',
-                ...scriptArgs,
+                ...this.scriptArgs,
             ],
-            pythonPath,
+            pythonPath: this.pythonPath,
         };
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
-        executionEngine.on('message', (message: ExecutionEngineMessage) => {
-            console.debug(`repl ${this.id} -- received message: `, JSON.parse(message));
-            const { fileName, lineNumber, viewSpec, scriptStart, scriptEnd } = JSON.parse(
-                message,
+        executionEngine.on('message', (messageString: string) => {
+            console.debug(`repl ${this.id} -- received message: `, JSON.parse(messageString));
+            const message: DebuggerMessage = JSON.parse(
+                messageString,
             );
+            const { filePath, lineNumber, viewSpec, scriptStart, scriptEnd } = message;
             if (scriptStart) {
                 this.store.dispatch(clearCanvasAction());
-                this.store.dispatch(clearVizTableAction());
+                this.store.dispatch(clearDisplayTableAction());
             }
-            // TODO: state
-            // if (viewSpec) {
-            //     this.store.dispatch(addVizTableSliceAction(vizTableSlice));
-            // }
-            // if (viewedVizId) {
-            //     this.store.dispatch(showViewerInCanvasAction(viewedVizId));
-            // }
+            if (viewSpec) {
+                const displayId = cuid();
+                this.store.dispatch(addDisplaySpecAction(displayId, {filePath, lineNumber, viewSpec}));
+                this.store.dispatch(showViewerInCanvasAction({displayId}))
+            }
             if (scriptEnd) {
                 this.progressComponent.hide();
             }
@@ -264,6 +264,7 @@ export default class REPL {
                 atom.views.getView(activeEditor).focus();
             }
         });
+        executionEngine.send('start');
         this.executionEngine = executionEngine;
     }
 
@@ -271,7 +272,7 @@ export default class REPL {
      * Fetches from the execution engine a model for a viz.
      *
      * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will preserve the invariant
-     * for `VizSpec` (e.g. if "full" is the model name, both `fullModel` and `compactModel` will be filled).
+     * for `DisplaySpec` (e.g. if "full" is the model name, both `fullModel` and `compactModel` will be filled).
      * @param vizId
      * @param modelType
      *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
@@ -299,7 +300,9 @@ export default class REPL {
         changes = ''; // TODO: Right now not sending specific changes.
         console.debug(`repl ${this.id} -- change to ${filePath}`);
         if (this.executionEngine) {
-            this.executionEngine.send(`change:${filePath}?${changes}`);
+            this.executionEngine.terminate();
+            this.createEngine();
+            // this.executionEngine.send(`change:${filePath}?${changes}`);
             this.progressComponent.showIndeterminate();
         } else {
             this.progressComponent.hide();

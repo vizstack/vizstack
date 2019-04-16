@@ -1,0 +1,1 @@
+export { displaytableReducer } from './reducers';

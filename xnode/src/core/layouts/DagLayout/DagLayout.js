@@ -12,7 +12,7 @@ import type {
     DagNodeSpec,
     DagEdgeId,
     DagEdgeSpec,
-} from '../../../state/viztable/outputs';
+} from '../../../state/displaytable/outputs';
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
 import layout from './layout';

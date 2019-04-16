@@ -200,7 +200,10 @@ export default {
     updateReplSandbox(repl, sandboxName, shouldRerun) {
         const { pythonPath, scriptPath, scriptArgs } = this.settings.sandboxes[sandboxName];
         repl.sandboxName = sandboxName;
-        repl.createEngine(pythonPath, scriptPath, scriptArgs);
+        repl.pythonPath = pythonPath;
+        repl.scriptPath = scriptPath;
+        repl.scriptArgs = scriptArgs;
+        repl.createEngine();
         if (shouldRerun) {
             this.waitAndRerun(null, null, RERUN_DELAY);
         }

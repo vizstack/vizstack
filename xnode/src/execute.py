@@ -105,11 +105,7 @@ class _PrintOverwriter:
     def write(self, text: str) -> None:
         self._unprinted_text += text
         if self._unprinted_text.endswith('\n') and self._unprinted_text != '\n':
-            frame: Optional[FrameType] = currentframe()
-            assert frame is not None
-            frame_info = getframeinfo(frame.f_back)
-            filename, line_number = frame_info.filename, frame_info.lineno
-            visual_debugger._send_message(filename, line_number, xnode.assemble(self._unprinted_text), False, False)
+            visual_debugger.view(self._unprinted_text)
             self._unprinted_text = ''
 
     def flush(self) -> None:
@@ -153,7 +149,11 @@ def _main() -> None:
         script_path: The absolute path to a user-written script to be executed.
         script_args: Arguments that should be passed to the executed script.
     """
+    # Wait for the parent process to tell this process to start
+    input()
+
     # Replace stdout with an object that queues all statements printed by the user script as messages
+    # TODO: overwrite normal print statements
     sys.stdout = _PrintOverwriter()  # type: ignore
 
     executor: _ScriptExecutor = _ScriptExecutor()

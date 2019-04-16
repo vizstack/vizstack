@@ -1,11 +1,11 @@
 import Immutable from 'seamless-immutable';
 import { CanvasActions } from './actions';
-import type { VizId } from '../viztable/outputs';
+import type { Display } from './outputs';
 
 /** Root reducer's state slice shape. */
 export type CanvasState = {
     // List of VizIds in order of display.
-    layout: Array<VizId>,
+    layout: Array<Display>,
 };
 
 /** Root reducer's initial state slice. */
@@ -48,11 +48,11 @@ function clearCanvasReducer(state, action) {
  * @param action
  */
 function showViewerInCanvasReducer(state, action) {
-    const { vizId, insertAfterIdx } = action;
+    const { display, insertAfterIdx } = action;
     return state.update('layout', (prev) =>
         Immutable([]).concat(
             insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-            [vizId],
+            [display],
             insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
         ),
     );
@@ -64,10 +64,10 @@ function showViewerInCanvasReducer(state, action) {
  * @param action
  */
 function hideViewerInCanvasReducer(state, action) {
-    const { vizId } = action;
-    const removeIdx = state.layout.findIndex((id) => id === vizId);
+    const { display, viewId } = action;
+    const removeIdx = state.layout.findIndex(({displayId, viewId}) => displayId === display.displayId && viewId === display.viewId);
     if (removeIdx === -1) {
-        console.error('Could not hide viewer; no viewer with `viewId` ', vizId);
+        console.error('Could not hide viewer; no viewer with `displayId` ', displayId, ' and `viewId` ', viewId);
         return state;
     }
     return state.update('layout', (arr) =>

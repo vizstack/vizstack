@@ -29,8 +29,8 @@ import {
 
 // Miscellaneous utils
 import { getCanvasLayout } from '../state/canvas/outputs';
-import { getVizTable } from '../state/viztable/outputs';
-import type { VizId, VizSpec } from '../state/viztable/outputs';
+import { getVizTable } from '../state/displaytable/outputs';
+import type { VizId, DisplaySpec } from '../state/displaytable/outputs';
 import { getMinimalDisambiguatedPaths } from '../services/path-utils';
 
 /** Component to display when loading data */
@@ -141,6 +141,7 @@ class Canvas extends React.Component<{
      */
     render() {
         const { classes, viewerModels } = this.props;
+        return <div />;
 
         // Only display minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = viewerModels.map(
@@ -214,7 +215,7 @@ type ViewerModel = {
     vizId: VizId,
 
     // Specification of top-level Viz.
-    vizSpec: VizSpec,
+    vizSpec: DisplaySpec,
 };
 
 /**
@@ -225,7 +226,7 @@ type ViewerModel = {
 const assembleViewerModels: ({}) => Array<ViewerModel> = createSelector(
     (state) => getCanvasLayout(state.canvas),
     (state) => getVizTable(state.viztable),
-    (layout: Array<VizId>, vizTable: { [VizId]: VizSpec }): Array<ViewerModel> => {
+    (layout: Array<VizId>, vizTable: { [VizId]: DisplaySpec }): Array<ViewerModel> => {
         return layout.map((vizId) => {
             return {
                 vizId,
@@ -255,6 +256,6 @@ function mapDispatchToProps(dispatch) {
 }
 
 export default connect(
-    mapStateToProps,
-    mapDispatchToProps,
+    // mapStateToProps,
+    // mapDispatchToProps,
 )(withStyles(styles)(Canvas));

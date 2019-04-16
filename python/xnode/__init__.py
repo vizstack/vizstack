@@ -62,7 +62,6 @@ def assemble(obj: Any) -> str:
         view_dict: Dict[str, Union[View, JsonType]] = view_obj.assemble_dict()
         referenced_views: List[View] = []
         view_json: Dict[str, JsonType] = _replace_view_with_id(view_dict, referenced_views)
-        print(view_obj, view_json)
         models[view_id] = view_json
         to_add += referenced_views
     assert obj_view_id is not None

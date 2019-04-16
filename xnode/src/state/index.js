@@ -1,9 +1,9 @@
 import { combineReducers } from 'redux-seamless-immutable';
-import { viztableReducer } from './viztable';
+import { displaytableReducer } from './displaytable';
 import { canvasReducer } from './canvas';
 
 /** Highest-level reducer for store root. Simply dispatches to other reducers. */
 export default combineReducers({
-    viztable: viztableReducer,
+    viztable: displaytableReducer,
     canvas: canvasReducer,
 });
