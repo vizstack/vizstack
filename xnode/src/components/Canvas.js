@@ -15,7 +15,7 @@ import type {
 } from 'react-beautiful-dnd';
 
 // Viewer and frame
-import Viewer from './Viewer';
+import Viewer from '../core/Viewer';
 import ViewerDisplayFrame from './ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
@@ -49,8 +49,8 @@ class Canvas extends React.Component<{
     viewerModels: Array<ViewerModel>,
 
     /**
-     * See `views/repl/fetchVizModel(vizId)`.
-     * @param vizId
+     * See `views/repl/fetchVizModel(viewId)`.
+     * @param viewId
      * @param modelType
      */
     fetchVizModel: (vizId: VizId, modelType: string) => void,

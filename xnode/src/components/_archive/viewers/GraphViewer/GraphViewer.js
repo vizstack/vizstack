@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import DAGViz from '../../../layouts/DagLayout/DagLayout';
+import DAGViz from '../../../../core/layouts/DagLayout/DagLayout';
 import DAGBuilder from './dag-builder';
 
 import ColorPink from '@material-ui/core/colors/pink';
@@ -191,7 +191,7 @@ class _ComputationGraph {
      * @param {string} symbolId
      *      The symbol ID of a `graphcontainer` or a `graphop`.
      * @returns {DAGNode|DAGBuilder}
-     *      The object on which `addNode()` should be called to create a `DAGNode` for the symbol with ID `vizId`.
+     *      The object on which `addNode()` should be called to create a `DAGNode` for the symbol with ID `viewId`.
      * @private
      */
     _getParentNode(symbolId) {
@@ -213,10 +213,10 @@ class _ComputationGraph {
      * @param {string} symbolId
      *      The symbol ID of the object whose associated `DAGNode` should be returned.
      * @param {?string} connectedSymbolId
-     *      The symbol ID fo a `graphop` to which the symbol with ID `vizId` is connected; for `graphdata` instances,
+     *      The symbol ID fo a `graphop` to which the symbol with ID `viewId` is connected; for `graphdata` instances,
      *      this is required and will affect which `DAGNode` is returned.
      * @returns {DAGNode}
-     *      The `DAGNode` that represents the symbol with ID `vizId`, as connected to the symbol with ID
+     *      The `DAGNode` that represents the symbol with ID `viewId`, as connected to the symbol with ID
      *      `connectedSymbolId`.
      * @private
      */
@@ -234,7 +234,7 @@ class _ComputationGraph {
             const node = this._getParentNode(symbolId).addNode(-1);
             node.setCollapsedWidth(kOpNodeWidth);
             node.setCollapsedHeight(kOpNodeHeight);
-            node.addMetadata('vizId', symbolId);
+            node.addMetadata('viewId', symbolId);
             node.addMetadata('type', 'graphop');
             node.addMetadata('label', this._getFunctionName(symbolId));
             this._opNodes[symbolId] = node;
@@ -245,7 +245,7 @@ class _ComputationGraph {
             const node = this._getParentNode(symbolId).addNode(this._getTemporalStep(symbolId));
             node.setCollapsedWidth(kCollapsedAbstractiveWidth);
             node.setCollapsedHeight(kCollapsedAbstractiveHeight);
-            node.addMetadata('vizId', symbolId);
+            node.addMetadata('viewId', symbolId);
             node.addMetadata('type', 'graphcontainer');
             node.addMetadata('label', this._getFunctionName(symbolId));
             if (this._getTemporalStep(symbolId) >= 0) {
@@ -276,7 +276,7 @@ class _ComputationGraph {
             const node = parentNode.addNode(-1);
             node.setCollapsedWidth(kDataNodeWidth);
             node.setCollapsedHeight(kDataNodeHeight);
-            node.addMetadata('vizId', symbolId);
+            node.addMetadata('viewId', symbolId);
             node.addMetadata('type', 'graphdata');
 
             if (connectedSymbolId !== null) {
@@ -303,7 +303,7 @@ class _ComputationGraph {
             const endNode = this._getNode(endSymbolId, startSymbolId);
             const edge = startNode.addEdge(startPos, endNode);
             edge.unifyWith(symbolId);
-            edge.addMetadata('vizId', symbolId);
+            edge.addMetadata('viewId', symbolId);
             edge.addMetadata('label', argName);
         });
         // Add any data nodes that had no connecting edges; we don't need to do this for op nodes, since they cannot be
@@ -368,7 +368,7 @@ class GraphViewer extends Component {
      * the information to do so, build the DAG.
      */
     componentDidUpdate() {
-        const { vizId, vizTable, data } = this.props;
+        const { viewId, vizTable, data } = this.props;
         const { built } = this.state;
         if (!built && symbolId in symbolTable && data !== null) {
             this.buildDAG(symbolId);
@@ -466,7 +466,7 @@ class GraphViewer extends Component {
      *      The symbol ID of the head data node of the computation graph.
      */
     buildDAG(headSymbolId) {
-        const { vizId } = this.props;
+        const { viewId } = this.props;
         console.debug(`GraphViewer (${symbolId}) -- building DAG`);
         const computationGraph = this.loadGraphBackwards(headSymbolId);
         const builder = computationGraph.createDAGBuilder((graphWidth, graphHeight, nodes, edges) =>

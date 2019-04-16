@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../../primitives/TextPrimitive';
+import TokenViz from '../../../core/primitives/TextPrimitive';
 
 /**
  * This dumb component renders visualization for a 2D matrix of elements.

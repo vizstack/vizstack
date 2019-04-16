@@ -26,13 +26,18 @@ class Example extends React.Component<
         // key: value,
     };
 
-    /** Constructor. */
+    /**
+     * Constructor.
+     * @param props
+     */
     constructor(props) {
         super(props);
         this.state = Immutable({});
     }
 
-    /** Renderer. */
+    /**
+     * Renderer.
+     */
     render() {
         const { classes } = this.props;
         return (

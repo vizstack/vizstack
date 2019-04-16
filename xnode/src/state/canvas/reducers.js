@@ -67,7 +67,7 @@ function hideViewerInCanvasReducer(state, action) {
     const { vizId } = action;
     const removeIdx = state.layout.findIndex((id) => id === vizId);
     if (removeIdx === -1) {
-        console.error('Could not hide viewer; no viewer with `vizId` ', vizId);
+        console.error('Could not hide viewer; no viewer with `viewId` ', vizId);
         return state;
     }
     return state.update('layout', (arr) =>

@@ -10,7 +10,7 @@ import * as cola from 'webcola';
 import { arr2obj, obj2obj } from '../../../services/data-utils';
 
 export type NodeId = string;
-export type Node = {
+export type NodeIn = {
     /** String ID unique among all nodes in a graph. */
     id: NodeId,
 
@@ -27,33 +27,48 @@ export type Node = {
     /** Named points on node boundaries that serve as the source/destination of edges. */
     ports?: {
         [string]: {
-            // Absolute location of side on which port resides. If undefined, any side will work.
-            side?: 'north' | 'south' | 'east' | 'west',
+            /** Absolute location of side on which port resides. */
+            side: 'north' | 'south' | 'east' | 'west',
 
-            // Determines ordering of ports on the same side. If undefined, any ordering will work.
+            /** Order of port on its specified side. If undefined, any order will work. */
             order?: number,
-
-            // Layout coordinates populated by layout engine.
-            x?: number,
-            y?: number,
         },
     },
 
-    /** Size dimensions populated after rendering. Can be specified by client (for childless nodes),
-     *  but might be overwritten by layout engine. */
+    /** Size dimensions of leaf nodes with fixed sizes; parent node dimensions will be populated. */
     width?: number,
     height?: number,
+};
+export type NodeOut = {
+    ...NodeIn,
+
+    flowDirection: 'north' | 'south' | 'east' | 'west',
+    alignChildren: boolean,
+    ports?: {
+        [string]: {
+            side: 'north' | 'south' | 'east' | 'west',
+            order: number,
+
+            /** Port coordinates populated by layout engine. */
+            x: number,
+            y: number,
+        }
+    },
+
+    /** Size dimensions populated by layout engine. */
+    width: number,
+    height: number,
 
     /** Layout coordinates populated by layout engine. */
-    x?: number,
-    y?: number,
-    z?: number,
+    x: number,
+    y: number,
+    z: number,
 };
 
 // TODO: Expansion, caching + identity fn
 
 export type EdgeId = string;
-export type Edge = {
+export type EdgeIn = {
     /** String ID unique among all edges in a graph. */
     id: EdgeId,
 
@@ -64,10 +79,13 @@ export type Edge = {
     /** Name of ports to connect to. If undefined, any side will work. */
     startPort?: string,
     endPort?: string,
+};
+export type EdgeOut = {
+    ...EdgeIn,
 
     /** Layout coordinates populated by layout engine. */
-    points?: Array<[number, number]>,
-    z?: number,
+    points: { x: number, y: number }[],
+    z: number,
 };
 
 /**
@@ -78,15 +96,17 @@ export type Edge = {
  * @param alignments
  */
 export default function layout(
-    nodes: Array<Node>,
-    edges: Array<Edge>,
-    callback: (width: number, height: number, nodes: Array<Node>, edges: Array<Edge>) => void,
-    config?: {
+    nodes: NodeIn[],
+    edges: EdgeIn[],
+    callback: (width: number, height: number, nodes: NodeOut[], edges: EdgeOut[]) => void,
+    config: {
         alignments?: Array<Array<NodeId>>,
         flowDirection?: 'north' | 'south' | 'east' | 'west',
         flowSpacing?: number,
         alignChildren?: boolean,
-    },
+        nodeMargin?: number,
+        edgeMargin?: number,
+    } = {},
 ) {
     // =============================================================================================
     // Constants.
@@ -97,10 +117,16 @@ export default function layout(
 
         // Distance between adjacent objects in a flow.
         flowSpacing: kFlowSpacing = 75,
-    } = config || {};
+
+        // Whether all children in a flow are aligned.
+        alignChildren: kAlignChildren = false,
+    } = config;
 
     const kDefaultNodeSize = 0; // Default node width/height if not specified.
     const kGroupPadding = 10; // Interior padding between group boundary and contents.
+    const kGroupMargin = 20;  // Distance between adjacent group boundaries.
+    const kNodeMargin = 20;  // Distance between adjacent node boundaries.
+    const kEdgeMargin = 5;  // Distance between adjacent edges.
 
     // =============================================================================================
     // Preliminary information gathering.
@@ -110,13 +136,13 @@ export default function layout(
     type NodeIdx = number;
     const nodeIdxLookup: { [NodeId]: NodeIdx } = arr2obj(nodes, (node, idx) => [node.id, idx]);
     const parentIdLookup: { [NodeId]: NodeId } = {};
-    let numChildlessNodes = 0;
+    let numLeafNodes = 0;
     function traverseNode(nodeId: NodeId, processed: Set<NodeId>) {
         if (processed.has(nodeId)) return;
         processed.add(nodeId);
         const node = nodes[nodeIdxLookup[nodeId]];
         if (node.children.length === 0) {
-            numChildlessNodes += 1;
+            numLeafNodes += 1;
             return;
         }
         for (let childId of node.children) {
@@ -139,10 +165,11 @@ export default function layout(
     // Build up data structures for Cola layout.
 
     // The "real" elements relate to actual user-defined elements.
-    // The "dummy" elements relate to dummy elements inserted by this code for the sake of layout.
+    // The "fake" elements relate to elements inserted by this code for the sake of layout.
     const graph = {
         vertices: [],
         links: [],
+        linksReal: [],
         constraints: [],
         groups: [],
     };
@@ -159,6 +186,8 @@ export default function layout(
 
     type GroupIdx = number;
     const groupIdxLookup: { [NodeId]: GroupIdx } = {};
+    // Note: This `idx` is 0-indexed, but the computed `index` by WebCola starts after the largest
+    // vertex `index`.
 
     function addGroup(nodeId: NodeId, subgroups: Array<GroupIdx>, leaves: Array<VertexIdx>): GroupIdx {
         const idx: GroupIdx = graph.groups.length;
@@ -167,9 +196,33 @@ export default function layout(
         return idx;
     }
 
-    const linkLookup: Set<string> = new Set();
+    function getNodeInfo(nodeId: NodeId): {|
+        type: 'vertex',
+        idx: VertexIdx,
+        obj: Vertex,
+    |} | {|
+        type: 'group',
+        idx: GroupIdx,
+        obj: Group,
+    |} | null {
+        if(vertexIdxLookup[nodeId] !== undefined) {
+            return {
+                type: 'vertex',
+                idx: vertexIdxLookup[nodeId],
+                obj: graph.vertices[vertexIdxLookup[nodeId]],
+            };
+        } else if(groupIdxLookup[nodeId] !== undefined) {
+            return {
+                type: 'group',
+                idx: groupIdxLookup[nodeId],
+                obj: graph.groups[groupIdxLookup[nodeId]],
+            };
+        }
+        return null;
+    }
 
-    function addLink(startIdx: VertexIdx, endIdx: VertexIdx): void {
+    const linkLookup: Set<string> = new Set();
+    function addLink(startIdx: VertexIdx | GroupIdx, endIdx: VertexIdx | GroupIdx): void {
         const key = `${startIdx}->${endIdx}`;
         if(linkLookup.has(key)) return;
         linkLookup.add(key);
@@ -177,16 +230,21 @@ export default function layout(
     }
 
     const separationConstraintLookup: Set<string> = new Set();
-
     function addSeparationConstraint(
         startIdx: VertexIdx,
         endIdx: VertexIdx,
         flowDirection: 'north' | 'south' | 'east' | 'west' = kFlowDirection,
+        kwargs: {
+            gap?: number,
+            equality?: boolean,
+        } = {},
     ): void {
         const key = `${startIdx}-${flowDirection}->${endIdx}`;
         if(separationConstraintLookup.has(key)) return;
         separationConstraintLookup.add(key);
 
+        // Note: Negative gaps were found NOT to work, even on simple cases of 2 nodes. Instead,
+        // we must reverse the left and right terms in the constraint inequality.
         let options;
         switch (flowDirection) {
             case 'west':
@@ -203,10 +261,13 @@ export default function layout(
                 options = { axis: 'y', left: startIdx, right: endIdx };
                 break;
         }
+
+        const { gap = kFlowSpacing, equality = false } = kwargs;
         const constraint = {
             type: 'separation',
             ...options,
-            gap: kFlowSpacing,
+            gap,
+            equality,
         };
         graph.constraints.push(constraint);
     }
@@ -218,7 +279,7 @@ export default function layout(
         if (processed[nodeId]) return processed[nodeId];
         const node = nodes[nodeIdxLookup[nodeId]];
 
-        // Node has no children, so build a leaf `Vertex`.
+        // NodeIn has no children, so build a leaf `Vertex`.
         if (node.children.length === 0) {
             const vertexIdx: VertexIdx = addVertex(nodeId, {
                 width: node.width || kDefaultNodeSize,
@@ -241,7 +302,8 @@ export default function layout(
             // Update `Group` according to whether child is leaf or group.
             if (childGroupIdx !== undefined) {
                 subgroups.push(childGroupIdx);
-            } else {
+            }
+            if (childVertexIdx !== undefined) {
                 leaves.push(childVertexIdx);
             }
         }
@@ -274,25 +336,56 @@ export default function layout(
     function processEdge(startId: NodeId, endId: NodeId) {
         // Add `Link` and `SeparationConstraint between *all pairs* leaf descendants of start and
         // leaf descendants of end to enforce flow in direction of least common ancestor. This is
-        // needed since a `Node` can translate to either a `Vertex` or a `Group`, but a
+        // needed since a `NodeIn` can translate to either a `Vertex` or a `Group`, but a
         // `SeparationConstraint` must be between two `Vertex`. Also, in practice, it seems that
         // it is required to have a `Link` between two `Vertex` in order to constrain them.
-        const lcaId: NodeId = findLowestCommonAncestor(parentIdLookup, startId, endId);
+        const lcaId: NodeId | null = findLowestCommonAncestor(parentIdLookup, startId, endId);
         let lcaFlowDirection = kFlowDirection;
         if (lcaId) lcaFlowDirection = nodes[nodeIdxLookup[lcaId]].flowDirection || lcaFlowDirection;
 
+        // Add dummy nodes to separate left and right groups.
+        // const dummyA: Vertex = { width: 0, height: 0 };
+        // // const dummyB: Vertex = { width: 0, height: 0 };
+        // const dummyAIdx: VertexIdx = graph.vertices.length;
+        // // const dummyBIdx: VertexIdx = graph.vertices.length + 1;
+        // // graph.vertices.push(dummyA, dummyB);
+        // // addLink(dummyAIdx, dummyBIdx);
+        // // addSeparationConstraint(dummyAIdx, dummyBIdx, lcaFlowDirection, { equality: true })
+        // graph.vertices.push(dummyA);
+        // if (lcaId) graph.groups[groupIdxLookup[lcaId] - numLeafNodes].leaves.push(dummyAIdx)
+        // graph.links.push({ source: getNodeInfo(startId).obj, target: getNodeInfo(endId).obj });
+
+        // for (let startLeafId of findLeafDescendants(startId)) {
+        //     const startLeafIdx: VertexIdx = vertexIdxLookup[startLeafId];
+        //     addLink(startLeafIdx, dummyAIdx);
+        //     addSeparationConstraint(startLeafIdx, dummyAIdx, lcaFlowDirection, {gap: kFlowSpacing/2});
+        // }
+        // for (let endLeafId of findLeafDescendants(endId)) {
+        //     const endLeafIdx: VertexIdx = vertexIdxLookup[endLeafId];
+        //     addLink(dummyAIdx, endLeafIdx);
+        //     addSeparationConstraint(dummyAIdx, endLeafIdx, lcaFlowDirection, {gap: kFlowSpacing/2});
+        // }
+
+        // TODO: Make not hacky
+        graph.linksReal.push({
+            sourceId: startId,
+            targetId: endId,
+        });
+
         for (let startLeafId of findLeafDescendants(startId)) {
+            const startLeafIdx: VertexIdx = vertexIdxLookup[startLeafId];
             for (let endLeafId of findLeafDescendants(endId)) {
-                const startLeafIdx: VertexIdx = vertexIdxLookup[startLeafId];
                 const endLeafIdx: VertexIdx = vertexIdxLookup[endLeafId];
-                addSeparationConstraint(startLeafIdx, endLeafIdx, lcaFlowDirection);
                 addLink(startLeafIdx, endLeafIdx);
+                addSeparationConstraint(startLeafIdx, endLeafIdx, lcaFlowDirection);
             }
         }
+
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
 
-    // TODO: Alignment constraint for orthogonal edges?
+    // TODO: Alignment constraint for orthogonal edges (for single item edges)
+    // TODO: BFS layer-wise alignment constraint (offset so start flow at same level)
 
     // function processAlignment(alignment: Array<NodeId>) {
     //     // TODO: Add `AlignConstraint` for alignments (but need to specify direction)
@@ -303,17 +396,13 @@ export default function layout(
 
     // =============================================================================================
     // Run Cola layout algorithms.
-    // start(unconstrained iters, user constraints iters, user + overlap constraints iters,
-    // "grid snap" iters using nodes[0].width, run async?)
 
-    // Step 1: Preliminary layout.
-    // ---------------------------
+    // Step 1: Graph layout.
+    // ---------------------
     // Calculate the relative positions of `Vertex` and `Groups` by applying all the `Constraint`s
-    // and with dummy `Links`. Overlap is not allowed. Positions are gridified.
+    // and with dummy `Links`. Overlap is not allowed.
 
-    // TODO: Gridify positions?
-
-    new cola.Layout()
+    let layout = new cola.Layout()
         .avoidOverlaps(true)
         .handleDisconnected(true)
         .nodes(graph.vertices)
@@ -323,7 +412,16 @@ export default function layout(
         .groupCompactness(1e-5) // TODO: Choose
         .linkDistance(kFlowSpacing)
         .convergenceThreshold(1e-3) // TODO: Choose
-        .start(10, 20, 30, 0, false, false);
+        .start(
+            10 /* unconstrained iters */,
+            20 /* user constraints iters */,
+            30 /* user + overlap constraints iters */,
+            0 /* grid snap" iters using nodes[0].width */,
+            false /* run async */,
+            false /* center grpah on restart */,
+        );
+
+    console.log('layout.js -- Done with preliminary layout.', graph);
 
     // Step 3: Retarget to ports.
     // --------------------------
@@ -334,7 +432,57 @@ export default function layout(
     // Step 4: Route edges within gridified positions.
     // -----------------------------------------------
 
-    // TODO
+    // After layout, there are several changes in the `Vertex` and `Group`  objects.
+    type Bounds = {
+        x: number,
+        y: number,
+        width: () => number,
+        height: () => number,
+        inflate: (number) => Bounds,
+    };
+    type VertexPopulated = {
+        ...Vertex,
+        index: number,
+        bounds: Bounds,
+    };
+    type GroupPopulated = {
+        ...Group,
+        index: number,
+        bounds: Bounds,
+        leaves: VertexPopulated[],
+        groups: GroupPopulated[],
+        children?: number[],
+    };
+
+    // Add margin around the vertices and groups, and perpare for routing.
+    ((graph.vertices: any[]): VertexPopulated[]).forEach((v) => {
+        // v.bounds = v.bounds.inflate(-kNodeMargin);
+    });
+    ((graph.groups: any[]): GroupPopulated[]).forEach((g) => {
+        // g.bounds = g.bounds.inflate(-kGroupMargin);
+        g.children = g.groups.map((sg) => sg.index).concat(g.leaves.map((l) => l.index));
+    });
+    const router = new cola.GridRouter(
+        graph.vertices.concat(graph.groups),
+        {
+            getChildren: (v) => v.children,
+            getBounds: (v) => v.bounds,
+        },
+        kNodeMargin,  // TODO: - kGroupMargin?
+    );
+    graph.linksReal = graph.linksReal.map((e) => {
+        const sourceInfo = getNodeInfo(e.sourceId);
+        const targetInfo = getNodeInfo(e.targetId);
+        return {
+            source: sourceInfo.obj,
+            target: targetInfo.obj,
+        };
+    });
+
+    console.log("B");
+    const routes = router.routeEdges(graph.linksReal, kEdgeMargin, (e) => e.source.index, (e) => e.target.index);
+    const points = routes.map((route) => [route[0][0]].concat(...route.map((seg) => seg[1])));
+    console.log("C");
 
     // Step 5: Translate back to user format.
     // --------------------------------------
@@ -368,10 +516,10 @@ export default function layout(
         };
     }
 
-    let minX = null,
-        minY = null,
-        maxX = null,
-        maxY = null;
+    let minX,
+        minY,
+        maxX,
+        maxY;
     const nodeDimsLookup: { [NodeId]: Dims } = {};
     for (let node of nodes) {
         const { id } = node;
@@ -384,15 +532,20 @@ export default function layout(
         nodeDimsLookup[id] = dims;
 
         // Update bounds, if applicable.
-        minX = minX === null ? dims.x : Math.min(minX, dims.x);
-        minY = minY === null ? dims.y : Math.min(minY, dims.y);
-        maxX = maxX === null ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
-        maxY = maxY === null ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
+        minX = minX === undefined ? dims.x : Math.min(minX, dims.x);
+        minY = minY === undefined ? dims.y : Math.min(minY, dims.y);
+        maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
+        maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
+    }
+
+    if(minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
+        console.error("Cannot calculate one of minX, minY, maxX, maxY for graph.");
+        return;
     }
 
     callback(
-        maxX - minX, // width
-        maxY - minY, // height
+        maxX - minX,  // width
+        maxY - minY,  // height
         nodes.map((node) => {
             const { id } = node;
             const dims: Dims = nodeDimsLookup[id];
@@ -405,17 +558,18 @@ export default function layout(
                 height: dims.height,
             };
         }),
-        edges.map((edge) => {
+        edges.map((edge, i) => {
             const { startId, endId } = edge;
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
             return {
                 ...edge,
-                points: [
-                    [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
-                    [end.x - minX + end.width / 2, end.y - minY + end.height / 2],
-                ],
-                z: 0, // TODO
+                points: points[i].map((point) => [point.x - minX, point.y - minY]),
+                // points: [
+                //     [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
+                //     [end.x - minX + end.width / 2, end.y - minY + end.height / 2],
+                // ],
+                z: Math.max(start.z, end.z) + 0.5,  // Edges appear above nodes.
             };
         }),
     );
@@ -425,7 +579,7 @@ export function findLowestCommonAncestor(
     parents: { [NodeId]: NodeId },
     leftId: NodeId,
     rightId: NodeId,
-): NodeId {
+): NodeId | null {
     const visited: Set<NodeId> = new Set();
     let left: NodeId = leftId;
     let right: NodeId = rightId;
@@ -460,9 +614,9 @@ type Vertex = {
 };
 
 type Group = {
-    leaves?: number[], // Idxs of vertices directly within group.
-    groups?: number[], // Idxs of other groups nested within group.
-    padding?: number, // Interior padding of group.
+    leaves: number[],  // Idxs of vertices directly within group.
+    groups: number[],  // Idxs of other groups nested within group.
+    padding?: number,  // Interior padding of group.
 };
 
 type Link = {
@@ -475,19 +629,19 @@ type SeparationConstraint = {
     // nodes[left][axis] + gap <= nodes[right][axis]
     type: 'separation',
     axis: 'x' | 'y',
-    left: number, // Idx of vertex in input array.
-    right: number, // Idx of vertex in input array.
-    gap: number, // Separation between boundaries of vertices.
+    left: number,  // Idx of vertex in input array.
+    right: number,  // Idx of vertex in input array.
+    gap: number,  // Separation between boundaries of vertices.
     equality?: boolean, // Whether to enforce equality.
 };
 
 type AlignConstraint = {
     type: 'alignment',
     axis: 'x' | 'y',
-    offsets: Array<{
-        node: number, // Idx of vertex in input array.
-        offset: number, // Offset from alignment axis (in px).
-    }>,
+    offsets: {
+        node: number,  // Idx of vertex in input array.
+        offset: number,  // Offset from alignment axis (in px).
+    }[],
 };
 
 type Constraint = SeparationConstraint | AlignConstraint;

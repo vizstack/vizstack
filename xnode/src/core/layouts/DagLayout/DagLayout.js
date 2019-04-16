@@ -1,3 +1,4 @@
+// @flow
 import * as React from 'react';
 import classNames from 'classnames';
 import Immutable from 'seamless-immutable';
@@ -15,7 +16,7 @@ import type {
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
 import layout from './layout';
-import type { Edge, Node } from './layout';
+import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../services/data-utils';
 
 /**
@@ -242,10 +243,10 @@ class DagLayout extends React.Component<
 
         /** Graph element specifications, but now with size and position information. */
         nodes: {
-            [DagNodeId]: Node,
+            [DagNodeId]: NodeOut,
         },
         edges: {
-            [DagEdgeId]: Edge,
+            [DagEdgeId]: EdgeOut,
         },
 
         /** Arrangement of graph elements after layout, sorted in ascending z-order. */
@@ -396,7 +397,7 @@ class DagLayout extends React.Component<
         layout(
             Object.values(nodes.asMutable({ deep: true })),
             Object.values(edges.asMutable({ deep: true })),
-            (width: number, height: number, nodes: Array<Node>, edges: Array<Edge>) => {
+            (width: number, height: number, nodes: NodeOut[], edges: EdgeOut) => {
                 console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
                 const elements = [...nodes, ...edges];

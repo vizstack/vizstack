@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
-import TokenViz from '../../primitives/TextPrimitive';
+import TokenViz from '../../../core/primitives/TextPrimitive';
 
 /**
  * This dumb component renders a viewer for a Python primitive (none, float, int, complex, bool). A string is the
