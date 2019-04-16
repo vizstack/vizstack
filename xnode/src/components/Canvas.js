@@ -141,8 +141,7 @@ class Canvas extends React.Component<{
      */
     render() {
         const { classes, viewerModels } = this.props;
-        return <div />;
-
+        
         // Only display minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = viewerModels.map(
             (viewerModel: ViewerModel) => viewerModel.vizSpec.filePath,
@@ -256,6 +255,6 @@ function mapDispatchToProps(dispatch) {
 }
 
 export default connect(
-    // mapStateToProps,
-    // mapDispatchToProps,
+    mapStateToProps,
+    mapDispatchToProps,
 )(withStyles(styles)(Canvas));
