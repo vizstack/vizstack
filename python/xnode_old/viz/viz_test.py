@@ -1,4 +1,4 @@
-from xnode.viz import Token, Sequence
+from xnode_old.viz import Token, Sequence
 
 
 class _TokenTest:

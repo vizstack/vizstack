@@ -5,14 +5,13 @@ should be visualized. Function calls are "tracked" by `_FunctionCall` objects, w
 and the arguments it was given. Finally, containers are "tracked" with `GraphContainer` objects, which record their
 contents.
 
-See get_viz.md for underlying principles and concepts.
+See _get_view.md for underlying principles and concepts.
 """
 import wrapt
 import inspect
 from collections import deque, defaultdict
-from contextlib import contextmanager
-from xnode.viz import VIZ_FN, DagLayout, Token, Viz, DagLayoutNode
-from typing import Callable, List, Tuple, Any, Optional, Union, Set, Iterable, Dict
+from xnode_old.viz import DagLayout, Token, Viz, DagLayoutNode
+from typing import Callable, List, Tuple, Any, Optional, Union, Set, Dict
 # TODO: state outputs need a special placement
 # TODO: figure out where data nodes should go
 # TODO: re-document

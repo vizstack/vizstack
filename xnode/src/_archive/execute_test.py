@@ -4,8 +4,8 @@ import os
 from multiprocessing import Queue
 from typing import Mapping, Optional, Tuple
 
-import execute
-from xnode.constants import ExpansionMode
+from _archive import execute
+from xnode_old import ExpansionMode
 
 _RESET_MESSAGE: Mapping[str, Optional[bool]] = {
     'viewedVizId': None,

@@ -5,8 +5,8 @@ from multiprocessing import Process, Queue
 from typing import Optional, Tuple, List
 import os
 
-from xnode.constants import VizId, ExpansionMode
-from execute import run_script
+from xnode_old import VizId, ExpansionMode
+from _archive.execute import run_script
 
 # ======================================================================================================================
 # Request prefixes.

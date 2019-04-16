@@ -33,7 +33,7 @@ import { getVizSpec } from '../state/viztable/outputs';
 import Progress from '../components/DOMProgress';
 
 /** Path to main Python module for `ExecutionEngine`. */
-const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../engine.py');
+const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
 
 type ExecutionEngineMessage = {
     // Top-level viz created directly from a `xn.view()` call. Is displayed in its own ViewerSpec in the Canvas.
@@ -240,20 +240,21 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (message: ExecutionEngineMessage) => {
             console.debug(`repl ${this.id} -- received message: `, JSON.parse(message));
-            const { viewedVizId, vizTableSlice, shouldRefresh, scriptFinished } = JSON.parse(
+            const { fileName, lineNumber, viewSpec, scriptStart, scriptEnd } = JSON.parse(
                 message,
             );
-            if (shouldRefresh) {
+            if (scriptStart) {
                 this.store.dispatch(clearCanvasAction());
                 this.store.dispatch(clearVizTableAction());
             }
-            if (vizTableSlice) {
-                this.store.dispatch(addVizTableSliceAction(vizTableSlice));
-            }
-            if (viewedVizId) {
-                this.store.dispatch(showViewerInCanvasAction(viewedVizId));
-            }
-            if (scriptFinished) {
+            // TODO: state
+            // if (viewSpec) {
+            //     this.store.dispatch(addVizTableSliceAction(vizTableSlice));
+            // }
+            // if (viewedVizId) {
+            //     this.store.dispatch(showViewerInCanvasAction(viewedVizId));
+            // }
+            if (scriptEnd) {
                 this.progressComponent.hide();
             }
             // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore

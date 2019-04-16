@@ -1,5 +1,5 @@
-from xnode.constants import VizTableSlice, VizSpec, ExecutionEngineMessage, VizId
-from xnode.viz import TextPrimitiveModel
+from xnode_old.constants import VizTableSlice, VizSpec, ExecutionEngineMessage, VizId
+from xnode_old.viz import TextPrimitiveModel
 
 
 def test_two_messages_with_same_args_should_be_equal():

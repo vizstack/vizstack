@@ -1,12 +1,12 @@
 """
-This file contains all of the logic needed to translate `Viz` objects into JSON strings that can be sent to renderers.
+This file contains all of the logic needed to translate `View` objects into JSON strings that can be sent to renderers.
 """
 
 from copy import copy
 from typing import List, MutableMapping, Any, Optional, MutableSequence, MutableSet, Tuple, overload, Dict
 
-from xnode.constants import VizSpec, VizModel, VizId, ExpansionMode, SnapshotId, VizTableSlice
-from xnode.viz import Viz, get_viz
+from xnode_old.constants import VizSpec, VizModel, VizId, ExpansionMode, SnapshotId, VizTableSlice
+from xnode_old.viz import Viz, get_viz
 
 # TODO: do we need snapshot IDs anymore?
 
@@ -51,13 +51,13 @@ class VisualizationEngine:
         self._next_snapshot_id: SnapshotId = SnapshotId(0)
 
     @staticmethod
-    def _get_viz_id(obj: 'Viz', snapshot_id: SnapshotId) -> VizId:
-        """Gets the VizId for a particular Viz object at a particular snapshot."""
+    def _get_viz_id(obj: 'View', snapshot_id: SnapshotId) -> VizId:
+        """Gets the VizId for a particular View object at a particular snapshot."""
         return VizId('@id:{}!{}!'.format(str(id(obj)), snapshot_id))
 
     @staticmethod
     @overload
-    def _replace_viz_with_viz_ids(o: 'Viz', snapshot_id: SnapshotId) -> VizId:
+    def _replace_viz_with_viz_ids(o: 'View', snapshot_id: SnapshotId) -> VizId:
         ...
 
     @staticmethod
@@ -74,7 +74,7 @@ class VisualizationEngine:
 
     @staticmethod
     def _replace_viz_with_viz_ids(o, snapshot_id):
-        """Recursively generates a version of `o` where all Viz objects are replaced by their respective _VizIds.
+        """Recursively generates a version of `o` where all View objects are replaced by their respective _VizIds.
 
         No changes are made to `o`.
 
@@ -108,7 +108,7 @@ class VisualizationEngine:
 
     def _cache_slice(self, obj: Any, file_path: str, line_number: int,
                      snapshot_id: SnapshotId) -> VizId:
-        """Creates the Viz for `obj`, then generates a _CacheEntry for that Viz and every Viz it references.
+        """Creates the View for `obj`, then generates a _CacheEntry for that View and every View it references.
 
         Args:
             obj: Any Python object whose visualization info should be cached.
