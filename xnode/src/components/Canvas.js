@@ -21,17 +21,13 @@ import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 
 // Custom Redux actions
-import {
-    showViewerInCanvasAction,
-    hideViewerInCanvasAction,
-    reorderViewerInCanvasAction,
-} from '../state/canvas/actions';
+import { addDisplayAction, removeDisplayAction, reorderDisplayAction } from '../state/canvas';
 
 // Miscellaneous utils
-import { getCanvasLayout } from '../state/canvas/outputs';
-import { getVizTable } from '../state/displaytable/outputs';
-import type { VizId, DisplaySpec } from '../state/displaytable/outputs';
-import { getMinimalDisambiguatedPaths } from '../services/path-utils';
+import { getCanvasLayout } from '../state/canvas';
+import { getDisplaySpecs } from '../state/displaytable';
+import type { DisplayId, DisplaySpec } from '../state/displaytable';
+import { getMinimalDisambiguatedPaths } from '../utils/path-utils';
 
 /** Component to display when loading data */
 const kLoadingSpinner = <span className='loading loading-spinner-tiny inline-block' />;
@@ -46,30 +42,30 @@ class Canvas extends React.Component<{
     classes: {},
 
     /** `ViewerModel` objects for rendering. See `assembleViewerModels()`. */
-    viewerModels: Array<ViewerModel>,
+    viewerModels: ViewerModel[],
 
     /**
      * See `views/repl/fetchVizModel(viewId)`.
      * @param viewId
      * @param modelType
      */
-    fetchVizModel: (vizId: VizId, modelType: string) => void,
+    fetchVizModel: (vizId: DisplayId, modelType: string) => void,
 
-    onViewerMouseOver: (vizId: VizId, filePath: string, lineNumber: number) => void,
-    onViewerMouseOut: (vizId: VizId, filePath: string, lineNumber: number) => void,
+    onViewerMouseOver: (vizId: DisplayId, filePath: string, lineNumber: number) => void,
+    onViewerMouseOut: (vizId: DisplayId, filePath: string, lineNumber: number) => void,
 
     /**
      * See `state/canvas/actions/showViewerInCanvasAction()`.
      * @param vizId
      * @param insertAfterIdx?
      */
-    showViewer: (vizId: VizId, insertAfterIdx?: number) => void,
+    showViewer: (vizId: DisplayId, insertAfterIdx?: number) => void,
 
     /**
      * See `state/canvas/actions/hideViewerInCanvasAction()`.
      * @param vizId
      */
-    hideViewer: (vizId: VizId) => void,
+    hideViewer: (vizId: DisplayId) => void,
 
     /**
      * See `state/canvas/actions/reorderViewerInCanvasAction()`.
@@ -141,7 +137,7 @@ class Canvas extends React.Component<{
      */
     render() {
         const { classes, viewerModels } = this.props;
-        
+
         // Only display minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = viewerModels.map(
             (viewerModel: ViewerModel) => viewerModel.vizSpec.filePath,
@@ -211,44 +207,37 @@ const styles = (theme) => ({
 
 type ViewerModel = {
     // Unique VizId of top-level Viz.
-    vizId: VizId,
+    vizId: DisplayId,
 
     // Specification of top-level Viz.
     vizSpec: DisplaySpec,
 };
 
-/**
- * Selector to assemble a Viewer object from the current Redux state.
- * TODO: check if this has issues with multiple canvases accessing the same selector
- * @param state
- */
-const assembleViewerModels: ({}) => Array<ViewerModel> = createSelector(
-    (state) => getCanvasLayout(state.canvas),
-    (state) => getVizTable(state.viztable),
-    (layout: Array<VizId>, vizTable: { [VizId]: DisplaySpec }): Array<ViewerModel> => {
-        return layout.map((vizId) => {
-            return {
-                vizId,
-                vizSpec: vizTable[vizId],
-            };
-        });
-    },
-);
-
 /** Connects application state objects to component props. */
-function mapStateToProps(state, props) {
-    return {
-        viewerModels: assembleViewerModels(state),
-    };
+function mapStateToProps() {
+    return (state, props) => ({
+        viewerModels: createSelector(
+            (state) => getCanvasLayout(state.canvas),
+            (state) => getDisplaySpecs(state.viztable),
+            (layout: Display[], vizTable: { [DisplayId]: DisplaySpec }): ViewerModel[] => {
+                return layout.map((vizId) => {
+                    return {
+                        vizId,
+                        vizSpec: vizTable[vizId],
+                    };
+                });
+            },
+        )(state, props),
+    });
 }
 
 /** Connects bound action creator functions to component props. */
 function mapDispatchToProps(dispatch) {
     return bindActionCreators(
         {
-            showViewer: showViewerInCanvasAction,
-            hideViewer: hideViewerInCanvasAction,
-            reorderViewer: reorderViewerInCanvasAction,
+            showViewer: addDisplayAction,
+            hideViewer: removeDisplayAction,
+            reorderViewer: reorderDisplayAction,
         },
         dispatch,
     );

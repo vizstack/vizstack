@@ -15,7 +15,7 @@
     "@material-ui/icons": "^2.0.3",
     "atom": "^1.1.0",
     "classnames": "^2.2.6",
-    "cuid": "^2.1.4",
+    "cuid": "^2.1.6",
     "d3": "^5.7.0",
     "elkjs": "^0.4.0",
     "js-yaml": "^3.12.1",
@@ -48,12 +48,13 @@
     "@babel/preset-env": "^7.1.0",
     "@babel/preset-flow": "^7.0.0",
     "@babel/preset-react": "^7.0.0",
+    "@types/seamless-immutable": "^7.1.8",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^23.6.0",
     "flow-bin": "^0.81.0",
     "jest": "^23.6.0",
     "npm-watch": "^0.4.0",
-    "prettier": "1.15.2",
+    "prettier": "^1.17.0",
     "regenerator-runtime": "^0.13.1",
     "remote-redux-devtools": "^0.5.13"
   },
@@ -73,7 +74,7 @@
     "pytest": "cd src/ && python3 -m pytest",
     "jstest": "jest",
     "typecheck": "cd src/ && flow && mypy .",
-    "flow": "flow src",
+    "flow": "flow src/",
     "format": "prettier --config ./.prettierrc --write 'src/**/*.js' && yapf -r -i -e 'venv/*,node_modules/*' ../python/xnode/**/*.py"
   }
 }

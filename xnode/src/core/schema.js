@@ -5,7 +5,7 @@ export type ViewSpec = {
     rootId: ViewId,
     models: {
         [ViewId]: ViewModel,
-    }
+    },
 };
 
 /** Unique identifier of a view from a snapshot in time. */
@@ -13,7 +13,6 @@ export type ViewId = string;
 
 /** Schema model for a single view. */
 export type ViewModel = PrimitiveModel | LayoutModel;
-
 
 // =================================================================================================
 // Primitives (aka "visual building blocks").
@@ -42,12 +41,11 @@ export type ImagePrimitiveModel = {
 };
 // TODO: Is this best? What about URL? Constructed plot/matrix?
 
-
 // =================================================================================================
 // Layouts (aka "configurations of building blocks").
 
 /** Any layout model. */
-export type LayoutModel = GridLayoutModel | DagLayoutModel | FlowLayoutModel;
+export type LayoutModel = GridLayoutModel | SwitchLayoutModel | FlowLayoutModel | DagLayoutModel;
 
 /** Grid layout arranges its elements in a grid, with elements potentially spanning multiple
  *  rows and/or columns. */

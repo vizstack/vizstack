@@ -24,14 +24,14 @@ import cuid from 'cuid';
 import SandboxSettings from '../components/SandboxSettings';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import { addDisplaySpecAction, clearDisplayTableAction } from '../state/displaytable/actions';
+import type { DisplayId, DisplaySpec } from '../state/displaytable';
 import {
-    clearCanvasAction,
-    showViewerInCanvasAction,
-} from '../state/canvas/actions';
+    getDisplaySpec,
+    addDisplaySpecAction,
+    clearDisplayTableAction,
+} from '../state/displaytable';
+import { clearCanvasAction, showViewerInCanvasAction } from '../state/canvas';
 import type { ViewSpec } from '../core/schema';
-import type { VizId, DisplaySpec } from '../state/displaytable/outputs';
-import { getVizSpec } from '../state/displaytable/outputs';
 import Progress from '../components/DOMProgress';
 
 /** Path to main Python module for `ExecutionEngine`. */
@@ -43,7 +43,7 @@ type DebuggerMessage = {
     viewSpec: ViewSpec,
     scriptStart: boolean,
     scriptEnd: boolean,
-}
+};
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
@@ -57,19 +57,18 @@ type DebuggerMessage = {
  */
 export default class REPL {
     id: number = -1;
-    sandboxName: string = '';  // To be set once a sandbox has been selected
-    isDestroyed: boolean = false;  // TODO: why do we need this?
+    sandboxName: string = ''; // To be set once a sandbox has been selected
+    isDestroyed: boolean = false; // TODO: why do we need this?
     onSandboxSelected: (repl: REPL, sandboxName: string) => void = () => {};
     executionEngine = undefined;
     pythonPath: string = '';
     scriptPath: string = '';
     scriptArgs: Array<string> = [];
     marker = null;
-    store = createStore(mainReducer, applyMiddleware(thunk));  // TODO: re-add devtools
+    store = createStore(mainReducer, applyMiddleware(thunk)); // TODO: re-add devtools
     progressComponent = undefined;
     sandboxSelectComponent = undefined;
     element = document.createElement('div');
-
 
     /**
      * Constructor.
@@ -84,7 +83,6 @@ export default class REPL {
     constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void): void {
         this.id = id;
         this.onSandboxSelected = onSandboxSelected;
-
 
         ReactDOM.render(
             <ReduxProvider store={this.store}>
@@ -241,9 +239,7 @@ export default class REPL {
         let executionEngine = new PythonShell(EXECUTION_ENGINE_PATH, options);
         executionEngine.on('message', (messageString: string) => {
             console.debug(`repl ${this.id} -- received message: `, JSON.parse(messageString));
-            const message: DebuggerMessage = JSON.parse(
-                messageString,
-            );
+            const message: DebuggerMessage = JSON.parse(messageString);
             const { filePath, lineNumber, viewSpec, scriptStart, scriptEnd } = message;
             if (scriptStart) {
                 this.store.dispatch(clearCanvasAction());
@@ -251,8 +247,10 @@ export default class REPL {
             }
             if (viewSpec) {
                 const displayId = cuid();
-                this.store.dispatch(addDisplaySpecAction(displayId, {filePath, lineNumber, viewSpec}));
-                this.store.dispatch(showViewerInCanvasAction({displayId}))
+                this.store.dispatch(
+                    addDisplaySpecAction(displayId, { filePath, lineNumber, viewSpec }),
+                );
+                this.store.dispatch(showViewerInCanvasAction({ displayId }));
             }
             if (scriptEnd) {
                 this.progressComponent.hide();
@@ -277,8 +275,8 @@ export default class REPL {
      * @param modelType
      *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
      */
-    fetchVizModel(vizId: VizId, modelType: 'compact' | 'full') {
-        const existingSpec = getVizSpec(this.store.getState().viztable, vizId);
+    fetchVizModel(vizId: DisplayId, modelType: 'compact' | 'full') {
+        const existingSpec = getDisplaySpec(this.store.getState().viztable, vizId);
         if (
             (existingSpec.compactModel === null && modelType === 'compact') ||
             (existingSpec.fullModel === null && modelType === 'full')

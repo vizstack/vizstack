@@ -1,1 +1,2 @@
-export { canvasReducer } from './reducers';
+export default from './canvas';
+export * from './canvas';

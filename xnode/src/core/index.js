@@ -1,2 +1,2 @@
-export { default } from './Viewer'
+export { default } from './Viewer';
 export * from './schema';

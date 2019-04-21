@@ -60,19 +60,25 @@ const styles = (theme) => ({
 
 export default withStyles(styles)(Example);
 
-// TODO: For dumb components, just use the code above. Delete the code below and `connect`, `bindActionCreators`
-// `createSelector` imports. For smart components, use the code below.
+// TODO: For dumb components, just use the code above. Delete the code below and `connect`,
+// `bindActionCreators` `createSelector` imports. For smart components, use the code below.
 
 // To inject application state into component
 // ------------------------------------------
 
 /** Connects application state objects to component props. */
-function mapStateToProps(state, props) {
-    // Second argument `props` is manually set prop
-    return (state, props) => {
+function mapStateToProps() {
+    // By returning function, it is possible to customize for each instance of a component depending
+    // on its state and props. Also it creates a different selector for each instance so they don't
+    // clash.
+    return (state, props) => ({
         // propName1: state.subslice,
-        // propName2: doSomethingSelector(state)
-    };
+        // propName2: createSelector(
+        //     (state) => state.subslice,
+        //     (state, props) => props.value,
+        //     (subslice, value) => subslice[0] + value,
+        // )(state, props),
+    });
 }
 
 /** Connects bound action creator functions to component props. */

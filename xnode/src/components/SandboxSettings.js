@@ -8,7 +8,7 @@ import yaml from 'js-yaml';
 import Typography from '@material-ui/core/Typography';
 import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
-import { getMinimalDisambiguatedPaths } from '../services/path-utils';
+import { getMinimalDisambiguatedPaths } from '../utils/path-utils';
 import Select from 'react-select';
 import Input from '@material-ui/core/Input';
 import MenuItem from '@material-ui/core/MenuItem';

@@ -4,7 +4,7 @@ import SandboxSettingsView from './views/sandbox-settings';
 
 import REPL from './views/repl';
 
-import { getMinimalDisambiguatedPaths } from './services/path-utils';
+import { getMinimalDisambiguatedPaths } from './utils/path-utils';
 import yaml from 'js-yaml';
 import fs from 'fs';
 import path from 'path';
@@ -14,7 +14,7 @@ let RERUN_DELAY = 0;
 
 /**
  * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
- * activated by Atom, including the consumption of other services, the creation/destruction of the views, and state
+ * activated by Atom, including the consumption of other utils, the creation/destruction of the views, and state
  * serialization.
  */
 export default {

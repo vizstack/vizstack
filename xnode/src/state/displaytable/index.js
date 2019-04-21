@@ -1,1 +1,2 @@
-export { displaytableReducer } from './reducers';
+export default from './displaytable';
+export * from './displaytable';

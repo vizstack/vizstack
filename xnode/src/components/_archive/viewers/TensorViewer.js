@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { createSelector } from 'reselect';
 
 import MatrixViz from '../viz/MatrixViz';
-import { fixedWidthNumber } from '../../../services/format-utils';
+import { fixedWidthNumber } from '../../../utils/format-utils';
 
 /**
  * This dumb component renders a viewer for a tensor variable. It converts between the Canvas data structures
