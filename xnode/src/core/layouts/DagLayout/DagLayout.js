@@ -7,17 +7,12 @@ import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
-import type {
-    DagNodeId,
-    DagNodeSpec,
-    DagEdgeId,
-    DagEdgeSpec,
-} from '../../../state/displaytable/outputs';
+import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel } from '../../schema';
 import Viewer from '../../Viewer';
 import type { ViewerProps } from '../../Viewer';
 import layout from './layout';
 import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
-import { arr2obj, obj2arr, obj2obj } from '../../../services/data-utils';
+import { arr2obj, obj2arr, obj2obj } from '../../../utils/data-utils';
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -45,7 +40,17 @@ class DagNode extends React.PureComponent<{
     onResize: (number, number) => void,
 }> {
     render() {
-        const { classes, x, y, width, height, viewerProps, isVisible, isExpanded, onResize } = this.props;
+        const {
+            classes,
+            x,
+            y,
+            width,
+            height,
+            viewerProps,
+            isVisible,
+            isExpanded,
+            onResize,
+        } = this.props;
 
         return (
             <g>
@@ -55,7 +60,9 @@ class DagNode extends React.PureComponent<{
                         y={y}
                         width={width}
                         height={height}
-                        className={isVisible === false ? classes.nodeInvisible : classes.nodeExpanded}
+                        className={
+                            isVisible === false ? classes.nodeInvisible : classes.nodeExpanded
+                        }
                     />
                 ) : (
                     <foreignObject
@@ -220,13 +227,13 @@ class DagLayout extends React.Component<
         nodes: {
             [DagNodeId]: {
                 viewerProps: ViewerProps,
-                spec: DagNodeSpec,
+                spec: DagNodeModel,
             },
         },
 
         /** Edge specifications of which nodes to connect. */
         edges: {
-            [DagEdgeId]: DagEdgeSpec,
+            [DagEdgeId]: DagEdgeModel,
         },
 
         /** Graph configuration object. */

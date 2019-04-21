@@ -7,7 +7,7 @@
  */
 
 import * as cola from 'webcola';
-import { arr2obj, obj2obj } from '../../../services/data-utils';
+import { arr2obj, obj2obj } from '../../../utils/data-utils';
 
 export type NodeId = string;
 export type NodeIn = {
@@ -52,7 +52,7 @@ export type NodeOut = {
             /** Port coordinates populated by layout engine. */
             x: number,
             y: number,
-        }
+        },
     },
 
     /** Size dimensions populated by layout engine. */
@@ -124,9 +124,9 @@ export default function layout(
 
     const kDefaultNodeSize = 0; // Default node width/height if not specified.
     const kGroupPadding = 10; // Interior padding between group boundary and contents.
-    const kGroupMargin = 20;  // Distance between adjacent group boundaries.
-    const kNodeMargin = 20;  // Distance between adjacent node boundaries.
-    const kEdgeMargin = 5;  // Distance between adjacent edges.
+    const kGroupMargin = 20; // Distance between adjacent group boundaries.
+    const kNodeMargin = 20; // Distance between adjacent node boundaries.
+    const kEdgeMargin = 5; // Distance between adjacent edges.
 
     // =============================================================================================
     // Preliminary information gathering.
@@ -154,9 +154,7 @@ export default function layout(
     nodes.forEach((node) => traverseNode(node.id, traverseSet));
 
     const targetIdLookup: { [NodeId]: Array<NodeId> } = {};
-    function traverseEdge(node) {
-
-    }
+    function traverseEdge(node) {}
 
     // TODO: Use topoligical sort finish_time to order nodes in terms of nesting. This allows
     // z-position calculations later?
@@ -189,29 +187,38 @@ export default function layout(
     // Note: This `idx` is 0-indexed, but the computed `index` by WebCola starts after the largest
     // vertex `index`.
 
-    function addGroup(nodeId: NodeId, subgroups: Array<GroupIdx>, leaves: Array<VertexIdx>): GroupIdx {
+    function addGroup(
+        nodeId: NodeId,
+        subgroups: Array<GroupIdx>,
+        leaves: Array<VertexIdx>,
+    ): GroupIdx {
         const idx: GroupIdx = graph.groups.length;
         groupIdxLookup[nodeId] = idx;
         graph.groups.push({ leaves: leaves, groups: subgroups, padding: kGroupPadding });
         return idx;
     }
 
-    function getNodeInfo(nodeId: NodeId): {|
-        type: 'vertex',
-        idx: VertexIdx,
-        obj: Vertex,
-    |} | {|
-        type: 'group',
-        idx: GroupIdx,
-        obj: Group,
-    |} | null {
-        if(vertexIdxLookup[nodeId] !== undefined) {
+    function getNodeInfo(
+        nodeId: NodeId,
+    ):
+        | {|
+              type: 'vertex',
+              idx: VertexIdx,
+              obj: Vertex,
+          |}
+        | {|
+              type: 'group',
+              idx: GroupIdx,
+              obj: Group,
+          |}
+        | null {
+        if (vertexIdxLookup[nodeId] !== undefined) {
             return {
                 type: 'vertex',
                 idx: vertexIdxLookup[nodeId],
                 obj: graph.vertices[vertexIdxLookup[nodeId]],
             };
-        } else if(groupIdxLookup[nodeId] !== undefined) {
+        } else if (groupIdxLookup[nodeId] !== undefined) {
             return {
                 type: 'group',
                 idx: groupIdxLookup[nodeId],
@@ -224,7 +231,7 @@ export default function layout(
     const linkLookup: Set<string> = new Set();
     function addLink(startIdx: VertexIdx | GroupIdx, endIdx: VertexIdx | GroupIdx): void {
         const key = `${startIdx}->${endIdx}`;
-        if(linkLookup.has(key)) return;
+        if (linkLookup.has(key)) return;
         linkLookup.add(key);
         graph.links.push({ source: startIdx, target: endIdx });
     }
@@ -240,7 +247,7 @@ export default function layout(
         } = {},
     ): void {
         const key = `${startIdx}-${flowDirection}->${endIdx}`;
-        if(separationConstraintLookup.has(key)) return;
+        if (separationConstraintLookup.has(key)) return;
         separationConstraintLookup.add(key);
 
         // Note: Negative gaps were found NOT to work, even on simple cases of 2 nodes. Instead,
@@ -294,10 +301,10 @@ export default function layout(
         const leaves: Array<VertexIdx> = [];
         const subgroups: Array<GroupIdx> = [];
         for (let childId of node.children) {
-            const {
-                vertexIdx: childVertexIdx,
-                groupIdx: childGroupIdx,
-            } = processNode(childId, processed);
+            const { vertexIdx: childVertexIdx, groupIdx: childGroupIdx } = processNode(
+                childId,
+                processed,
+            );
 
             // Update `Group` according to whether child is leaf or group.
             if (childGroupIdx !== undefined) {
@@ -380,7 +387,6 @@ export default function layout(
                 addSeparationConstraint(startLeafIdx, endLeafIdx, lcaFlowDirection);
             }
         }
-
     }
     edges.forEach((edge) => processEdge(edge.startId, edge.endId));
 
@@ -468,7 +474,7 @@ export default function layout(
             getChildren: (v) => v.children,
             getBounds: (v) => v.bounds,
         },
-        kNodeMargin,  // TODO: - kGroupMargin?
+        kNodeMargin, // TODO: - kGroupMargin?
     );
     graph.linksReal = graph.linksReal.map((e) => {
         const sourceInfo = getNodeInfo(e.sourceId);
@@ -479,10 +485,15 @@ export default function layout(
         };
     });
 
-    console.log("B");
-    const routes = router.routeEdges(graph.linksReal, kEdgeMargin, (e) => e.source.index, (e) => e.target.index);
+    console.log('B');
+    const routes = router.routeEdges(
+        graph.linksReal,
+        kEdgeMargin,
+        (e) => e.source.index,
+        (e) => e.target.index,
+    );
     const points = routes.map((route) => [route[0][0]].concat(...route.map((seg) => seg[1])));
-    console.log("C");
+    console.log('C');
 
     // Step 5: Translate back to user format.
     // --------------------------------------
@@ -516,10 +527,7 @@ export default function layout(
         };
     }
 
-    let minX,
-        minY,
-        maxX,
-        maxY;
+    let minX, minY, maxX, maxY;
     const nodeDimsLookup: { [NodeId]: Dims } = {};
     for (let node of nodes) {
         const { id } = node;
@@ -538,14 +546,14 @@ export default function layout(
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
 
-    if(minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
-        console.error("Cannot calculate one of minX, minY, maxX, maxY for graph.");
+    if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
+        console.error('Cannot calculate one of minX, minY, maxX, maxY for graph.');
         return;
     }
 
     callback(
-        maxX - minX,  // width
-        maxY - minY,  // height
+        maxX - minX, // width
+        maxY - minY, // height
         nodes.map((node) => {
             const { id } = node;
             const dims: Dims = nodeDimsLookup[id];
@@ -569,7 +577,7 @@ export default function layout(
                 //     [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
                 //     [end.x - minX + end.width / 2, end.y - minY + end.height / 2],
                 // ],
-                z: Math.max(start.z, end.z) + 0.5,  // Edges appear above nodes.
+                z: Math.max(start.z, end.z) + 0.5, // Edges appear above nodes.
             };
         }),
     );
@@ -614,9 +622,9 @@ type Vertex = {
 };
 
 type Group = {
-    leaves: number[],  // Idxs of vertices directly within group.
-    groups: number[],  // Idxs of other groups nested within group.
-    padding?: number,  // Interior padding of group.
+    leaves: number[], // Idxs of vertices directly within group.
+    groups: number[], // Idxs of other groups nested within group.
+    padding?: number, // Interior padding of group.
 };
 
 type Link = {
@@ -629,9 +637,9 @@ type SeparationConstraint = {
     // nodes[left][axis] + gap <= nodes[right][axis]
     type: 'separation',
     axis: 'x' | 'y',
-    left: number,  // Idx of vertex in input array.
-    right: number,  // Idx of vertex in input array.
-    gap: number,  // Separation between boundaries of vertices.
+    left: number, // Idx of vertex in input array.
+    right: number, // Idx of vertex in input array.
+    gap: number, // Separation between boundaries of vertices.
     equality?: boolean, // Whether to enforce equality.
 };
 
@@ -639,8 +647,8 @@ type AlignConstraint = {
     type: 'alignment',
     axis: 'x' | 'y',
     offsets: {
-        node: number,  // Idx of vertex in input array.
-        offset: number,  // Offset from alignment axis (in px).
+        node: number, // Idx of vertex in input array.
+        offset: number, // Offset from alignment axis (in px).
     }[],
 };
 
