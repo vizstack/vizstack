@@ -19,7 +19,7 @@ const initialState: ExampleState = Immutable({
 // Definitions (public).
 
 /** Description of type. */
-export type ExampleType = 'string';
+export type ExampleType = string;
 
 // =================================================================================================
 // State accessors (public).
@@ -48,7 +48,7 @@ export default function rootReducer(
     action: ExampleAction = {},
 ): ExampleState {
     switch (action.type) {
-        case 'action1':
+        case 'Action1':
             return syncReducer(state, action);
         default:
             return state; // No effect by default
@@ -57,7 +57,7 @@ export default function rootReducer(
 
 // -------------------------------------------------------------------------------------------------
 
-type Action1 = {| type: 'action1', value: number |};
+type Action1 = {| type: 'Action1', value: number |};
 
 /**
  * Description.

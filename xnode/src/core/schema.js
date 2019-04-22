@@ -1,17 +1,17 @@
 // @flow
 
 /** Normalized data structure produced by assembler, rehydrated from JSON. */
-export type ViewSpec = {
+export type View = {
     rootId: ViewId,
     models: {
         [ViewId]: ViewModel,
     },
 };
 
-/** Unique identifier of a view from a snapshot in time. */
+/** Unique identifier of a `View`. */
 export type ViewId = string;
 
-/** Schema model for a single view. */
+/** Assembled "building blocks" of a `View`. */
 export type ViewModel = PrimitiveModel | LayoutModel;
 
 // =================================================================================================

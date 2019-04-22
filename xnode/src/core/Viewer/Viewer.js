@@ -5,36 +5,36 @@ import Immutable from 'seamless-immutable';
 import type {
     ViewId,
     ViewModel,
-    ViewSpec,
+    View,
     TextPrimitiveModel,
     ImagePrimitiveModel,
     GridLayoutModel,
     FlowLayoutModel,
     SwitchLayoutModel,
     DagLayoutModel,
-} from './schema';
+} from '../schema';
 
 // Primitives
-import TextPrimitive from './primitives/TextPrimitive';
-import ImagePrimitive from './primitives/ImagePrimitive';
+import TextPrimitive from '../primitives/TextPrimitive/TextPrimitive';
+import ImagePrimitive from '../primitives/ImagePrimitive/index';
 
 // Layouts
-import GridLayout from './layouts/GridLayout';
-import DagLayout from './layouts/DagLayout';
-import FlowLayout from './layouts/FlowLayout';
+import GridLayout from '../layouts/GridLayout/GridLayout';
+import DagLayout from '../layouts/DagLayout/index';
+import FlowLayout from '../layouts/FlowLayout/FlowLayout';
 
 export type ViewerProps = {};
 
 /**
- * This smart component parses a DisplaySpec and assembles a corresponding Viz rendering.
+ * This smart component parses a Snapshot and assembles a corresponding Viz rendering.
  */
 class Viewer extends React.Component<
     {
         /** Specification of View's root model and sub-models.*/
-        viewSpec: ViewSpec,
+        view: View,
 
         /** Unique `ViewId` for the `ViewModel` to be rendered by this `Viewer` at the current
-         *  level of nesting. If unspecified, the `rootId` from `viewSpec` is used. */
+         *  level of nesting. If unspecified, the `rootId` from `view` is used. */
         viewId?: ViewId,
 
         /** Mouse interactions. */
@@ -60,15 +60,15 @@ class Viewer extends React.Component<
 
     /** Renderer. */
     render() {
-        const { viewSpec, viewId } = this.props;
+        const { view, viewId } = this.props;
         const { onClick, onMouseOver, onMouseOut } = this.props;
         const { isHovered } = this.state;
 
         // Explicitly specified model for current viewer, or root-level model by default.
-        const currId: ViewId = viewId || viewSpec.rootId;
-        const model: ViewModel = viewSpec.models[currId];
+        const currId: ViewId = viewId || view.rootId;
+        const model: ViewModel = view.models[currId];
         if (!model) {
-            console.error('Invalid ViewId within ViewSpec: ', currId, viewSpec);
+            console.error('Invalid ViewId within View: ', currId, view);
             return null;
         }
 

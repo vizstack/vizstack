@@ -14,65 +14,60 @@ import type {
     DraggableProvided,
 } from 'react-beautiful-dnd';
 
-// Viewer and frame
-import Viewer from '../core/Viewer';
+// Xnode core
+import Viewer from '../core';
+import type { ViewId } from '../core';
+
 import ViewerDisplayFrame from './ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
 import RemoveIcon from '@material-ui/icons/DeleteOutlined';
 
 // Custom Redux actions
-import { addDisplayAction, removeDisplayAction, reorderDisplayAction } from '../state/canvas';
+import { addInspectorAction, removeInspectorAction, reorderInspectorAction } from '../state/canvas';
 
 // Miscellaneous utils
 import { getCanvasLayout } from '../state/canvas';
-import { getDisplaySpecs } from '../state/displaytable';
-import type { DisplayId, DisplaySpec } from '../state/displaytable';
+import type { SnapshotInspector } from '../state/canvas';
+import { getSnapshots } from '../state/snapshot-table';
+import type { SnapshotId, Snapshot } from '../state/snapshot-table';
 import { getMinimalDisambiguatedPaths } from '../utils/path-utils';
 
 /** Component to display when loading data */
 const kLoadingSpinner = <span className='loading loading-spinner-tiny inline-block' />;
-const kLoadingMsg = 'Loading ...';
 
 /**
- * This smart component serves as an interactive workspace for inspecting variable viewers. It displays a collection
- * of `ViewerFrame` objects that can be moved with drag-and-drop.
+ * This smart component serves as an interactive workspace for inspecting `Snapshot`s. It
+ * displays a collection of `SnapshotInspector` objects that can be moved with drag-and-drop.
  */
 class Canvas extends React.Component<{
     /** CSS-in-JS styling object. */
     classes: {},
 
-    /** `ViewerModel` objects for rendering. See `assembleViewerModels()`. */
-    viewerModels: ViewerModel[],
+    /** `LayoutedSnapshot` objects for rendering. */
+    layoutedSnapshots: LayoutedSnapshot[],
+
+    onViewerMouseOver: (vizId: SnapshotId, filePath: string, lineNumber: number) => void,
+    onViewerMouseOut: (vizId: SnapshotId, filePath: string, lineNumber: number) => void,
 
     /**
-     * See `views/repl/fetchVizModel(viewId)`.
-     * @param viewId
-     * @param modelType
-     */
-    fetchVizModel: (vizId: DisplayId, modelType: string) => void,
-
-    onViewerMouseOver: (vizId: DisplayId, filePath: string, lineNumber: number) => void,
-    onViewerMouseOut: (vizId: DisplayId, filePath: string, lineNumber: number) => void,
-
-    /**
-     * See `state/canvas/actions/showViewerInCanvasAction()`.
-     * @param vizId
+     * See `state/canvas`.
+     * @param snapshotId
      * @param insertAfterIdx?
      */
-    showViewer: (vizId: DisplayId, insertAfterIdx?: number) => void,
+    addInspector: (snapshotId: SnapshotId, insertAfterIdx?: number) => void,
 
     /**
-     * See `state/canvas/actions/hideViewerInCanvasAction()`.
-     * @param vizId
+     * See `state/canvas`.
+     * @param snapshotId
      */
-    hideViewer: (vizId: DisplayId) => void,
+    removeInspector: (snapshotId: SnapshotId) => void,
 
     /**
-     * See `state/canvas/actions/reorderViewerInCanvasAction()`.
+     * See `state/canvas`.
      * @param startIdx
      * @param endIdx
      */
-    reorderViewer: (startIdx: number, endIdx: number) => void,
+    reorderInspector: (startIdx: number, endIdx: number) => void,
 }> {
     /** Constructor. */
     constructor(props) {
@@ -90,9 +85,9 @@ class Canvas extends React.Component<{
      * @param provided
      */
     onDragEnd(result: DropResult, provided: HookProvided) {
-        const { reorderViewer } = this.props;
+        const { reorderInspector } = this.props;
         if (!result.destination) return;
-        reorderViewer(result.source.index, result.destination.index);
+        reorderInspector(result.source.index, result.destination.index);
     }
 
     /**
@@ -100,32 +95,24 @@ class Canvas extends React.Component<{
      * @param viewer
      * @param idx
      */
-    createFramedViewerComponent(viewerModel: ViewerModel, idx: number) {
-        const {
-            showViewer,
-            hideViewer,
-            fetchVizModel,
-            onViewerMouseOver,
-            onViewerMouseOut,
-        } = this.props;
-        const { vizId, vizSpec } = viewerModel;
+    createFramedViewerComponent(ls: LayoutedSnapshot, idx: number) {
+        const { addInspector, removeInspector, } = this.props;
+        const { snapshotId, viewId, snapshot } = ls;
 
         const buttons = [
             // TODO: Duplicate should also replicate the existing state of a viewer
-            { title: 'Duplicate', icon: <DuplicateIcon />, onClick: () => showViewer(vizId, idx) },
-            { title: 'Remove', icon: <RemoveIcon />, onClick: () => hideViewer(vizId) },
+            { title: 'Duplicate', icon: <DuplicateIcon />, onClick: () => addInspector(snapshotId, viewId, idx) },
+            { title: 'Remove', icon: <RemoveIcon />, onClick: () => removeInspector(idx) },
         ];
 
         return (
             <ViewerDisplayFrame buttons={buttons}>
-                {!vizSpec ? (
+                {!snapshot ? (
                     kLoadingSpinner
                 ) : (
                     <Viewer
-                        vizId={vizId}
-                        fetchVizModel={fetchVizModel}
-                        onViewerMouseOver={onViewerMouseOver}
-                        onViewerMouseOut={onViewerMouseOut}
+                        view={snapshot.view}
+                        viewId={viewId}
                     />
                 )}
             </ViewerDisplayFrame>
@@ -136,11 +123,11 @@ class Canvas extends React.Component<{
      * Renders the inspector canvas and all viewers managed by it.
      */
     render() {
-        const { classes, viewerModels } = this.props;
+        const { classes, layoutedSnapshots } = this.props;
 
-        // Only display minimal disambiguated paths, and collapse consecutive identical paths.
-        const fullPaths = viewerModels.map(
-            (viewerModel: ViewerModel) => viewerModel.vizSpec.filePath,
+        // Only render minimal disambiguated paths, and collapse consecutive identical paths.
+        const fullPaths = layoutedSnapshots.map(
+            (ls: LayoutedSnapshot) => ls.snapshot.filePath,
         );
         const fullToMinimal = getMinimalDisambiguatedPaths(fullPaths);
         let minimalPaths = [];
@@ -149,9 +136,9 @@ class Canvas extends React.Component<{
         }
 
         // Construct draggable viewers within frames.
-        const framedViewers = viewerModels.map((viewerModel: ViewerModel, idx: number) => {
+        const framedViewers = layoutedSnapshots.map((ls: LayoutedSnapshot, idx: number) => {
             return (
-                <Draggable key={viewerModel.vizId} draggableId={viewerModel.vizId} index={idx}>
+                <Draggable key={ls.snapshotId} draggableId={ls.snapshotId} index={idx}>
                     {(provided: DraggableProvided) => (
                         <div
                             ref={provided.innerRef}
@@ -160,14 +147,14 @@ class Canvas extends React.Component<{
                             {...provided.dragHandleProps}
                         >
                             <span>{minimalPaths[idx]}</span>
-                            {this.createFramedViewerComponent(viewerModel, idx)}
+                            {this.createFramedViewerComponent(ls, idx)}
                         </div>
                     )}
                 </Draggable>
             );
         });
 
-        console.debug(`Canvas -- rendering ${viewerModels.length} viewer models`, viewerModels);
+        console.debug(`Canvas -- rendering ${layoutedSnapshots.length} viewer models`, layoutedSnapshots);
 
         return (
             <div className={classNames(classes.canvasContainer)}>
@@ -205,29 +192,29 @@ const styles = (theme) => ({
 // To inject application state into component
 // ------------------------------------------
 
-type ViewerModel = {
-    // Unique VizId of top-level Viz.
-    vizId: DisplayId,
-
-    // Specification of top-level Viz.
-    vizSpec: DisplaySpec,
+export type LayoutedSnapshot = {
+    snapshotId: SnapshotId,
+    viewId?: ViewId,
+    snapshot: Snapshot,
 };
 
 /** Connects application state objects to component props. */
 function mapStateToProps() {
     return (state, props) => ({
-        viewerModels: createSelector(
+        layoutedSnapshots: createSelector(
             (state) => getCanvasLayout(state.canvas),
-            (state) => getDisplaySpecs(state.viztable),
-            (layout: Display[], vizTable: { [DisplayId]: DisplaySpec }): ViewerModel[] => {
-                return layout.map((vizId) => {
+            (state) => getSnapshots(state.snapshots),
+            (layout: SnapshotInspector[], snapshots: { [SnapshotId]: Snapshot }): LayoutedSnapshot[] => {
+                return layout.map((inspector: SnapshotInspector) => {
                     return {
-                        vizId,
-                        vizSpec: vizTable[vizId],
+                        snapshotId: inspector.snapshotId,
+                        viewId: inspector.viewId,
+                        snapshot: snapshots[inspector.snapshotId],
+
                     };
                 });
             },
-        )(state, props),
+        )(state, props),  // TODO: Should not recompute every time snapshots change.
     });
 }
 
@@ -235,9 +222,9 @@ function mapStateToProps() {
 function mapDispatchToProps(dispatch) {
     return bindActionCreators(
         {
-            showViewer: addDisplayAction,
-            hideViewer: removeDisplayAction,
-            reorderViewer: reorderDisplayAction,
+            addInspector: addInspectorAction,
+            removeInspector: removeInspectorAction,
+            reorderInspector: reorderInspectorAction,
         },
         dispatch,
     );

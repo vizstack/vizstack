@@ -1,7 +1,7 @@
 // @flow
 import Immutable from 'seamless-immutable';
 import type { ViewId } from '../../core/schema';
-import type { DisplayId } from '../displaytable';
+import type { SnapshotId } from '../snapshot-table';
 
 // =================================================================================================
 // State slice.
@@ -9,7 +9,7 @@ import type { DisplayId } from '../displaytable';
 /** Root reducer's state slice type. */
 export type CanvasState = {
     // In-order sequences of Displays to show in the Canvas.
-    layout: Display[],
+    layout: SnapshotInspector[],
 };
 
 /** Root reducer's initial state slice. */
@@ -20,10 +20,14 @@ const initialState: CanvasState = Immutable({
 // =================================================================================================
 // Definitions (public).
 
-/** A `Display` is a view of a symbol at a particular time in the program, sent over by the
- *  backend debugger.  */
-export type Display = {
-    displayId: DisplayId,
+/** A `SnapshotInspector` is an inspector in the Canvas of a `Snapshot`'s top-level or nested
+ *  Views.  */
+export type SnapshotInspector = {
+    /** ID of the `Snapshot` tied to this inspector. */
+    snapshotId: SnapshotId,
+
+    /** The nested View within a `Snapshot`'s `View` to inspector. If not specified, it is assumed
+     *  that the View to inspector is the root View. */
     viewId?: ViewId,
 };
 
@@ -32,20 +36,19 @@ export type Display = {
 
 /**
  * @param state
- * @returns In-order array of Displays backing the Canvas.
+ * @returns In-order array of Snapshots displayed in the Canvas.
  */
-export function getCanvasLayout(state: CanvasState): Display[] {
+export function getCanvasLayout(state: CanvasState): SnapshotInspector[] {
     return state.layout;
 }
 
 // =================================================================================================
 // Actions (public) and reducers.
 
-type CanvasAction = ClearAll | AddDisplay | RemoveDisplay | ReorderDisplay;
+type CanvasAction = ClearAllInspectors | AddInspector | RemoveInspector | ReorderInspector;
 
 /**
- * Root reducer for state related to the Canvas area for rendering Displays corresponding to
- * program symbols.
+ * Root reducer for state related to the Canvas area for rendering and exploring Snapshots.
  * @param state
  * @param action
  */
@@ -54,14 +57,14 @@ export default function rootReducer(
     action: CanvasAction = {},
 ): CanvasState {
     switch (action.type) {
-        case 'clear_all':
-            return clearAllReducer(state, action);
-        case 'add_display':
-            return addDisplayReducer(state, action);
-        case 'remove_display':
-            return removeDisplayReducer(state, action);
-        case 'reorder_display':
-            return reorderDisplayReducer(state, action);
+        case 'ClearAllInspectors':
+            return clearAllInspectorsReducer(state, action);
+        case 'AddInspector':
+            return addInspectorReducer(state, action);
+        case 'RemoveInspector':
+            return removeInspectorReducer(state, action);
+        case 'ReorderInspector':
+            return reorderInspectorReducer(state, action);
         default:
             return state; // No effect by default
     }
@@ -69,48 +72,51 @@ export default function rootReducer(
 
 // -------------------------------------------------------------------------------------------------
 
-type ClearAll = {| type: 'clear_all' |};
+type ClearAllInspectors = {| type: 'ClearAllInspectors' |};
 
 /**
- * Remove all Displays from the Canvas.
+ * Remove all `SnapshotInspector`s from the Canvas.
  * @param value
  * @returns An action object.
  */
-export function clearAllAction(): ClearAll {
+export function clearAllInspectorsAction(): ClearAllInspectors {
     return {
-        type: 'clear_all',
+        type: 'ClearAllInspectors',
     };
 }
 
-function clearAllReducer(state: CanvasState, action: ClearAll): CanvasState {
+function clearAllInspectorsReducer(state: CanvasState, action: ClearAllInspectors): CanvasState {
     return state.set('layout', []);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-type AddDisplay = {| type: 'add_display', display: Display, insertAfterIdx: number |};
+type AddInspector = {| type: 'AddInspector', inspector: SnapshotInspector, insertAfterIdx: number |};
 
 /**
- * Add a Display to the Canvas.
- * @param display
+ * Add a `SnapshotInspector` to the Canvas.
+ * @param inspector
  * @param insertAfterIdx
  *     Index in layout after which to add the new viewer. (Optional, default: -1 adds to end).
  * @returns An action object.
  */
-export function addDisplayAction(display: Display, insertAfterIdx?: number = -1): AddDisplay {
+export function addInspectorAction(snapshotId: SnapshotId, viewId?: ViewId, insertAfterIdx?: number = -1): AddInspector {
     return {
-        type: 'add_display',
-        display,
+        type: 'AddInspector',
+        inspector: {
+            snapshotId,
+            viewId,
+        },
         insertAfterIdx,
     };
 }
 
-function addDisplayReducer(state: CanvasState, action: AddDisplay): CanvasState {
-    const { display, insertAfterIdx } = action;
+function addInspectorReducer(state: CanvasState, action: AddInspector): CanvasState {
+    const { inspector, insertAfterIdx } = action;
     return state.update('layout', (prev) =>
         Immutable([]).concat(
             insertAfterIdx == -1 ? prev : prev.slice(0, insertAfterIdx + 1),
-            [display],
+            [inspector],
             insertAfterIdx == -1 ? [] : prev.slice(insertAfterIdx + 1),
         ),
     );
@@ -118,34 +124,22 @@ function addDisplayReducer(state: CanvasState, action: AddDisplay): CanvasState 
 
 // -------------------------------------------------------------------------------------------------
 
-type RemoveDisplay = {| type: 'remove_display', display: Display |};
+type RemoveInspector = {| type: 'RemoveInspector', removeIdx: number |};
 
 /**
- * Remove a Display from the Canvas.
- * @param display
+ * Remove a `SnapshotInspector` from the Canvas.
+ * @param inspector
  * @returns An action object.
  */
-export function removeDisplayAction(display: Display): RemoveDisplay {
+export function removeInspectorAction(removeIdx: number): RemoveInspector {
     return {
-        type: 'remove_display',
-        display,
+        type: 'RemoveInspector',
+        removeIdx,
     };
 }
 
-function removeDisplayReducer(state: CanvasState, action: RemoveDisplay): CanvasState {
-    const { display } = action;
-    const removeIdx = state.layout.findIndex(
-        ({ displayId, viewId }) => displayId === display.displayId && viewId === display.viewId,
-    );
-    if (removeIdx === -1) {
-        console.error(
-            'Could not hide viewer; no viewer with `displayId` ',
-            display.displayId,
-            ' and `viewId` ',
-            display.viewId,
-        );
-        return state;
-    }
+function removeInspectorReducer(state: CanvasState, action: RemoveInspector): CanvasState {
+    const { removeIdx } = action;
     return state.update('layout', (arr) =>
         arr.slice(0, removeIdx).concat(arr.slice(removeIdx + 1)),
     );
@@ -153,26 +147,26 @@ function removeDisplayReducer(state: CanvasState, action: RemoveDisplay): Canvas
 
 // -------------------------------------------------------------------------------------------------
 
-type ReorderDisplay = {| type: 'reorder_display', startIdx: number, endIdx: number |};
+type ReorderInspector = {| type: 'ReorderInspector', startIdx: number, endIdx: number |};
 
 /**
- * Move a Display from the original `startIdx` to the updated `endIdx`.
+ * Move a `SnapshotInspector` from the original `startIdx` to the updated `endIdx`.
  * @param startIdx
  * @param endIdx
  * @returns An action object.
  */
-export function reorderDisplayAction(startIdx: number, endIdx: number): ReorderDisplay {
+export function reorderInspectorAction(startIdx: number, endIdx: number): ReorderInspector {
     return {
-        type: 'reorder_display',
+        type: 'ReorderInspector',
         startIdx,
         endIdx,
     };
 }
 
-function reorderDisplayReducer(state: CanvasState, action: ReorderDisplay): CanvasState {
+function reorderInspectorReducer(state: CanvasState, action: ReorderInspector): CanvasState {
     const { startIdx, endIdx } = action;
-    return state.update('layout', (viewerPositions) => {
-        const arr = viewerPositions.asMutable();
+    return state.update('layout', (layout) => {
+        const arr = layout.asMutable();
         const [removed] = arr.splice(startIdx, 1);
         arr.splice(endIdx, 0, removed);
         return arr;

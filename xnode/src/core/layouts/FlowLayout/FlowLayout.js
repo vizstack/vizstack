@@ -4,8 +4,8 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Viewer from '../Viewer';
-import type { ViewerProps } from '../Viewer';
+import Viewer from '../../Viewer/Viewer';
+import type { ViewerProps } from '../../Viewer/Viewer';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.

@@ -13,9 +13,9 @@ import path from 'path';
 let RERUN_DELAY = 0;
 
 /**
- * This object is the top-level module required of an Atom package. It manages the lifecycle of the package when
- * activated by Atom, including the consumption of other utils, the creation/destruction of the views, and state
- * serialization.
+ * This object is the top-level module required of an Atom package. It manages the lifecycle of the
+ * package when activated by Atom, including the consumption of other utils, the
+ * creation/destruction of the views, and state serialization.
  */
 export default {
     // List of REPL objects that are active.
@@ -36,9 +36,11 @@ export default {
     settingsErrors: [],
 
     /**
-     * Run as package is starting up. Subscribe to Atom events: opening views, application/context menu commands.
+     * Run as package is starting up. Subscribe to Atom events: opening views, application/context
+     * menu commands.
      * @param state
-     *     Object holding serialized state from last session, created through `serialize()`, if defined.
+     *     Object holding serialized state from last session, created through `serialize()`,
+     *     if defined.
      */
     activate(state) {
         // Use CompositeDisposable to easily clean up subscriptions on shutdown
@@ -108,9 +110,9 @@ export default {
         console.debug('root -- Xnode package deactivated');
     },
 
-    // =================================================================================================================
+    // =============================================================================================
     // Xnode-specific commands
-    // =================================================================================================================
+    // =============================================================================================
 
     // onReplRename() {
     //     const minimalUniquePaths = getMinimalDisambiguatedPaths(

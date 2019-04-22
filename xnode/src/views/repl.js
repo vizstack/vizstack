@@ -24,14 +24,14 @@ import cuid from 'cuid';
 import SandboxSettings from '../components/SandboxSettings';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
-import type { DisplayId, DisplaySpec } from '../state/displaytable';
+import type { SnapshotId, Snapshot } from '../state/snapshot-table';
 import {
-    getDisplaySpec,
-    addDisplaySpecAction,
-    clearDisplayTableAction,
-} from '../state/displaytable';
-import { clearCanvasAction, showViewerInCanvasAction } from '../state/canvas';
-import type { ViewSpec } from '../core/schema';
+    getSnapshot,
+    addSnapshotAction,
+    clearAllSnapshotsAction,
+} from '../state/snapshot-table';
+import { clearAllInspectorsAction, addInspectorAction } from '../state/canvas';
+import type { View } from '../core/schema';
 import Progress from '../components/DOMProgress';
 
 /** Path to main Python module for `ExecutionEngine`. */
@@ -40,22 +40,24 @@ const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
 type DebuggerMessage = {
     filePath: string,
     lineNumber: number,
-    viewSpec: ViewSpec,
+    viewSpec: View,
     scriptStart: boolean,
     scriptEnd: boolean,
 };
 
 /**
- * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied to a single main script,
- * which is re-run when appropriate, e.g. when a piece of code it depends on is edited (aka. "read"). An spawned Python
- * process runs an `ExecutionEngine` which runs the script and generates the needed visualization schemas (aka "eval").
- * Watch statements are set by the user to determine what variables/data need visualization schemas to be
- * generated, so that they can be visualized in the `Canvas` (aka "print").
+ * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied
+ * to a single main script, which is re-run when appropriate, e.g. when a piece of code it
+ * depends on is edited (aka. "read"). An spawned Python process runs an `ExecutionEngine` which
+ * runs the script and generates the needed visualization schemas (aka "eval"). Watch statements
+ * are set by the user to determine what variables/data need visualization schemas to be
+ * generated, so that they can be visualized in the `Canvas` (aka "print")
  *
- * Together, the `REPL` + `Canvas` + `ExecutionEngine` is called a Sandbox (the term surfaced to a user). A Sandbox can
- * be thought of as an isolated environment for experimenting with a particular program script, along with any sandbox
+ * Together, the `REPL` + `Canvas` + `ExecutionEngine` is called a Sandbox (the term surfaced to
+ * a user). A Sandbox can be thought of as an isolated environment for experimenting with a
+ * particular program script, along with any sandbox.
  */
-export default class REPL {
+class REPL {
     id: number = -1;
     sandboxName: string = ''; // To be set once a sandbox has been selected
     isDestroyed: boolean = false; // TODO: why do we need this?
@@ -72,13 +74,13 @@ export default class REPL {
 
     /**
      * Constructor.
-     *
      * @param id
      *      A numerical identifier unique to this REPL among all active REPL instances.
      * @param onSandboxSelected
-     *      A function which should be executed whenever a new sandbox configuration is selected for this REPL. The
-     *      first argument is this REPL instance and the second is the name of the selected sandbox configuration. This
-     *      function should trigger a call to `this.createEngine()`.
+     *      A function which should be executed whenever a new sandbox configuration is selected for
+     *      this REPL. The first argument is this REPL instance and the second is the name of
+     *      the selected sandbox configuration. This function should trigger a call to
+     *      `this.createEngine()`.
      */
     constructor(id: number, onSandboxSelected: (repl: REPL, sandboxName: string) => void): void {
         this.id = id;
@@ -117,9 +119,6 @@ export default class REPL {
                             style={{
                                 flexGrow: 1,
                             }}
-                            fetchVizModel={(vizId, modelType) =>
-                                this.fetchVizModel(vizId, modelType)
-                            }
                             onViewerMouseOver={(vizId, filePath, lineNumber) => {
                                 atom.workspace.getTextEditors().forEach((editor) => {
                                     if (editor.getPath().toLowerCase() === filePath.toLowerCase()) {
@@ -175,9 +174,9 @@ export default class REPL {
         console.debug(`repl ${this.id} -- destroy()`);
     }
 
-    // =================================================================================================================
-    // Atom display methods
-    // =================================================================================================================
+    // =============================================================================================
+    // Atom inspector methods
+    // =============================================================================================
 
     /** Used by Atom to show title in a tab. */
     getTitle() {
@@ -204,16 +203,16 @@ export default class REPL {
         return this.element;
     }
 
-    // =================================================================================================================
+    // =============================================================================================
     // Interacting with ExecutionEngine
-    // ================================================================================================================
+    // =============================================================================================
 
     /**
      * Creates a new execution engine.
      *
-     * The engine is a spawned Python process that persists for the lifespan of the Sandbox. Changes to files and
-     * watch statements are relayed to the engine, which potentially runs some or all of `scriptPath` and relays any
-     * watched data to REPL, which stores that data.
+     * The engine is a spawned Python process that persists for the lifespan of the Sandbox. Changes
+     * to files and watch statements are relayed to the engine, which potentially runs some or
+     * all of `scriptPath` and relays any watched data to REPL, which stores that data.
      * @param {string} pythonPath
      *      The path to the Python executable that should be used to run the script.
      * @param {string} scriptPath
@@ -242,21 +241,21 @@ export default class REPL {
             const message: DebuggerMessage = JSON.parse(messageString);
             const { filePath, lineNumber, viewSpec, scriptStart, scriptEnd } = message;
             if (scriptStart) {
-                this.store.dispatch(clearCanvasAction());
-                this.store.dispatch(clearDisplayTableAction());
+                this.store.dispatch(clearAllInspectorsAction());
+                this.store.dispatch(clearAllSnapshotsAction());
             }
             if (viewSpec) {
                 const displayId = cuid();
                 this.store.dispatch(
-                    addDisplaySpecAction(displayId, { filePath, lineNumber, viewSpec }),
+                    addSnapshotAction(displayId, { filePath, lineNumber, viewSpec }),
                 );
-                this.store.dispatch(showViewerInCanvasAction({ displayId }));
+                this.store.dispatch(addInspectorAction({ displayId }));
             }
             if (scriptEnd) {
                 this.progressComponent.hide();
             }
-            // When the Canvas gets updated, the active text editor will lose focus. This line is required to restore
-            // focus so the user can keep typing.
+            // When the Canvas gets updated, the active text editor will lose focus. This line is
+            // required to restore focus so the user can keep typing.
             const activeEditor = atom.workspace.getActiveTextEditor();
             if (activeEditor) {
                 atom.views.getView(activeEditor).focus();
@@ -269,14 +268,16 @@ export default class REPL {
     /**
      * Fetches from the execution engine a model for a viz.
      *
-     * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will preserve the invariant
-     * for `DisplaySpec` (e.g. if "full" is the model name, both `fullModel` and `compactModel` will be filled).
+     * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will
+     * preserve the invariant for `Snapshot` (e.g. if "full" is the model name, both `fullModel`
+     * and `compactModel` will be filled).
      * @param vizId
      * @param modelType
-     *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both' (compact + full).
+     *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both'
+     *     (compact + full).
      */
-    fetchVizModel(vizId: DisplayId, modelType: 'compact' | 'full') {
-        const existingSpec = getDisplaySpec(this.store.getState().viztable, vizId);
+    fetchVizModel(vizId: SnapshotId, modelType: 'compact' | 'full') {
+        const existingSpec = getSnapshot(this.store.getState().viztable, vizId);
         if (
             (existingSpec.compactModel === null && modelType === 'compact') ||
             (existingSpec.fullModel === null && modelType === 'full')
@@ -287,15 +288,13 @@ export default class REPL {
     }
 
     /**
-     * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main script (or certain parts
+     * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main
+     * script (or certain parts
      * of it).
-     * @param  filePath
+     * @param filePath
      *     Absolute path of file that was changed.
-     * @param  changes
-     *     Indicates what parts of the file changed. TODO: define this format and use it
      */
-    onFileChanged(filePath: string, changes: {}) {
-        changes = ''; // TODO: Right now not sending specific changes.
+    onFileChanged(filePath: string) {
         console.debug(`repl ${this.id} -- change to ${filePath}`);
         if (this.executionEngine) {
             this.executionEngine.terminate();
@@ -308,21 +307,20 @@ export default class REPL {
     }
 
     /**
-     * Triggered immediately after a file is edited. Should not trigger the execution engine, since the change may not
-     * have finished; that behavior should be done in `onFileChanged()`.
-     * @param  filePath
+     * Triggered immediately after a file is edited. Should not trigger the execution engine, since
+     * the change may not have finished; that behavior should be done in `onFileChanged()`.
+     * @param filePath
      *     Absolute path of file that was edited.
-     * @param  changes
-     *     Indicates what parts of the file edited. TODO: define this format and use it
      */
-    onFileEdit(filePath: string, changes: {}) {
+    onFileEdit(filePath: string) {
         if (this.executionEngine) {
             this.progressComponent.showDeterminate();
         }
     }
 
     /**
-     * Triggered when there is a certain amount of time remaining before a change to a file will be submitted.
+     * Triggered when there is a certain amount of time remaining before a change to a file will be
+     * submitted.
      * @param remainingTime
      * @param maxTime
      */
@@ -330,3 +328,4 @@ export default class REPL {
         this.progressComponent.setProgress(((maxTime - remainingTime) / maxTime) * 100);
     }
 }
+export default REPL;
