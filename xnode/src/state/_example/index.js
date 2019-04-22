@@ -1,4 +1,4 @@
-export default from './_example';
+export { default } from './_example';
 export * from './_example';
 
 // TODO: If don't need to further break up state slice into hierarchy, just use the code above and

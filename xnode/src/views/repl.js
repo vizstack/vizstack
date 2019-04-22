@@ -266,28 +266,6 @@ class REPL {
     }
 
     /**
-     * Fetches from the execution engine a model for a viz.
-     *
-     * The `vizTableSlice` fetched (asynchronously) can be merged into the `vizTable`. It will
-     * preserve the invariant for `Snapshot` (e.g. if "full" is the model name, both `fullModel`
-     * and `compactModel` will be filled).
-     * @param vizId
-     * @param modelType
-     *     String to specify which model(s) to retrieve: 'compact' (compact only) or 'both'
-     *     (compact + full).
-     */
-    fetchVizModel(vizId: SnapshotId, modelType: 'compact' | 'full') {
-        const existingSpec = getSnapshot(this.store.getState().viztable, vizId);
-        if (
-            (existingSpec.compactModel === null && modelType === 'compact') ||
-            (existingSpec.fullModel === null && modelType === 'full')
-        ) {
-            console.debug(`repl ${this.id} -- fetching viz (${vizId})`);
-            this.executionEngine.send(`fetch:${vizId}?${modelType}`);
-        }
-    }
-
-    /**
      * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main
      * script (or certain parts
      * of it).
