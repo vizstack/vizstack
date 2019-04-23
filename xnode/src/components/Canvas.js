@@ -17,6 +17,8 @@ import type {
 // Xnode core
 import Viewer from '../core';
 import type { ViewId } from '../core';
+import type { InteractionState } from '../core'
+import { InteractionManager, initializeInteraction, InteractionContext } from '../core';
 
 import ViewerDisplayFrame from './ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
@@ -35,11 +37,7 @@ import { getMinimalDisambiguatedPaths } from '../utils/path-utils';
 /** Component to display when loading data */
 const kLoadingSpinner = <span className='loading loading-spinner-tiny inline-block' />;
 
-/**
- * This smart component serves as an interactive workspace for inspecting `Snapshot`s. It
- * displays a collection of `SnapshotInspector` objects that can be moved with drag-and-drop.
- */
-class Canvas extends React.Component<{
+type Props = {
     /** CSS-in-JS styling object. */
     classes: {},
 
@@ -68,11 +66,36 @@ class Canvas extends React.Component<{
      * @param endIdx
      */
     reorderInspector: (startIdx: number, endIdx: number) => void,
-}> {
+}
+
+type State = {
+    interactionState: InteractionState
+}
+
+/**
+ * This smart component serves as an interactive workspace for inspecting `Snapshot`s. It
+ * displays a collection of `SnapshotInspector` objects that can be moved with drag-and-drop.
+ */
+class Canvas extends React.Component<Props, State> {
     /** Constructor. */
     constructor(props) {
         super(props);
         this.onDragEnd = this.onDragEnd.bind(this);
+
+        let interactionManager = new InteractionManager();
+        const allComponents = interactionManager.getAllComponents();
+        //TODO: move these defaults to the library
+        allComponents.subscribe('mouseOver', (subscriber, publisher) => {
+            if (subscriber.guid === publisher.guid) {
+                subscriber.highlight();
+            }
+        });
+        allComponents.subscribe('mouseOut', (subscriber, publisher) => {
+            if (subscriber.guid === publisher.guid) {
+                subscriber.lowlight();
+            }
+        });
+        initializeInteraction(this, interactionManager);
     }
 
     // =================================================================================================================
@@ -124,6 +147,7 @@ class Canvas extends React.Component<{
      */
     render() {
         const { classes, layoutedSnapshots } = this.props;
+        const { interactionState } = this.state;
 
         // Only render minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = layoutedSnapshots.map(
@@ -157,18 +181,20 @@ class Canvas extends React.Component<{
         console.debug(`Canvas -- rendering ${layoutedSnapshots.length} viewer models`, layoutedSnapshots);
 
         return (
-            <div className={classNames(classes.canvasContainer)}>
-                <DragDropContext onDragEnd={this.onDragEnd}>
-                    <Droppable droppableId='canvas'>
-                        {(provided: DroppableProvided) => (
-                            <div ref={provided.innerRef} {...provided.droppableProps}>
-                                {framedViewers}
-                                {provided.placeholder}
-                            </div>
-                        )}
-                    </Droppable>
-                </DragDropContext>
-            </div>
+            <InteractionContext.Provider value={interactionState} >
+                <div className={classNames(classes.canvasContainer)}>
+                    <DragDropContext onDragEnd={this.onDragEnd}>
+                        <Droppable droppableId='canvas'>
+                            {(provided: DroppableProvided) => (
+                                <div ref={provided.innerRef} {...provided.droppableProps}>
+                                    {framedViewers}
+                                    {provided.placeholder}
+                                </div>
+                            )}
+                        </Droppable>
+                    </DragDropContext>
+                </div>
+            </InteractionContext.Provider>
         );
     }
 }
@@ -210,7 +236,6 @@ function mapStateToProps() {
                         snapshotId: inspector.snapshotId,
                         viewId: inspector.viewId,
                         snapshot: snapshots[inspector.snapshotId],
-
                     };
                 });
             },

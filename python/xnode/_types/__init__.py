@@ -30,5 +30,11 @@ class VizModel(_Dataclass):
 
 
 class View:
+    def __init__(self):
+        self._meta: Dict[str, JsonType] = {}
+
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         raise NotImplementedError
+
+    def meta(self, key: str, value: JsonType):
+        self._meta[key] = value

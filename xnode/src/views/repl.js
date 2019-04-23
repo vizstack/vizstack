@@ -33,6 +33,7 @@ import {
 import { clearAllInspectorsAction, addInspectorAction } from '../state/canvas';
 import type { View } from '../core/schema';
 import Progress from '../components/DOMProgress';
+import {InteractionManager} from "../core";
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
@@ -40,10 +41,13 @@ const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
 type DebuggerMessage = {
     filePath: string,
     lineNumber: number,
-    viewSpec: View,
+    view: View,
     scriptStart: boolean,
     scriptEnd: boolean,
 };
+
+// Tells Flow that `atom` is a variable that can be referenced anywhere in this file. TODO: define a type for `atom`
+declare var atom: any;
 
 /**
  * This class manages the read-eval-print-loop (REPL) for interactive coding. A `REPL` is tied
@@ -62,13 +66,13 @@ class REPL {
     sandboxName: string = ''; // To be set once a sandbox has been selected
     isDestroyed: boolean = false; // TODO: why do we need this?
     onSandboxSelected: (repl: REPL, sandboxName: string) => void = () => {};
-    executionEngine = undefined;
+    executionEngine: ?PythonShell = undefined;
     pythonPath: string = '';
     scriptPath: string = '';
     scriptArgs: Array<string> = [];
     marker = null;
     store = createStore(mainReducer, applyMiddleware(thunk)); // TODO: re-add devtools
-    progressComponent = undefined;
+    progressComponent: Progress;
     sandboxSelectComponent = undefined;
     element = document.createElement('div');
 
@@ -239,17 +243,17 @@ class REPL {
         executionEngine.on('message', (messageString: string) => {
             console.debug(`repl ${this.id} -- received message: `, JSON.parse(messageString));
             const message: DebuggerMessage = JSON.parse(messageString);
-            const { filePath, lineNumber, viewSpec, scriptStart, scriptEnd } = message;
+            const { filePath, lineNumber, view, scriptStart, scriptEnd } = message;
             if (scriptStart) {
                 this.store.dispatch(clearAllInspectorsAction());
                 this.store.dispatch(clearAllSnapshotsAction());
             }
-            if (viewSpec) {
-                const displayId = cuid();
+            if (view) {
+                const snapshotId = cuid();
                 this.store.dispatch(
-                    addSnapshotAction(displayId, { filePath, lineNumber, viewSpec }),
+                    addSnapshotAction(snapshotId, { filePath, lineNumber, view }),
                 );
-                this.store.dispatch(addInspectorAction({ displayId }));
+                this.store.dispatch(addInspectorAction(snapshotId));
             }
             if (scriptEnd) {
                 this.progressComponent.hide();
@@ -267,8 +271,7 @@ class REPL {
 
     /**
      * Determines whether the given `changes` to `file` warrant a re-run of this REPL's main
-     * script (or certain parts
-     * of it).
+     * script (or certain parts of it).
      * @param filePath
      *     Absolute path of file that was changed.
      */

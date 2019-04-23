@@ -25,7 +25,7 @@ def _send_message(filename: Optional[str], line_number: Optional[int], view_spec
     print(json.dumps({
         'filePath': filename,
         'lineNumber': line_number,
-        'viewSpec': json.loads(view_spec) if view_spec is not None else None,
+        'view': json.loads(view_spec) if view_spec is not None else None,
         'scriptStart': script_start,
         'scriptEnd': script_end,
     }), file=STDOUT)

@@ -1,4 +1,5 @@
 /** @babel */
+
 import { CompositeDisposable, Disposable } from 'atom';
 import SandboxSettingsView from './views/sandbox-settings';
 

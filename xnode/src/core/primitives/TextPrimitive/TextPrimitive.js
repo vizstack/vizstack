@@ -39,7 +39,7 @@ class TextPrimitive extends React.PureComponent<{
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, mouseProps } = this.props;
+        const { classes, text, color, variant, mouseProps, isHovered } = this.props;
 
         const split = text.split('\n');
         const lines = split.map((text, i) =>
@@ -69,6 +69,11 @@ class TextPrimitive extends React.PureComponent<{
             [classes.primaryToken]: variant === 'token' && color === 'primary',
             [classes.secondaryToken]: variant === 'token' && color === 'secondary',
             [classes.errorToken]: variant === 'token' && color === 'error',
+
+            [classes.defaultTokenHover]: variant === 'token' && color === 'default' && isHovered,
+            [classes.primaryTokenHover]: variant === 'token' && color === 'primary' && isHovered,
+            [classes.secondaryTokenHover]: variant === 'token' && color === 'secondary' && isHovered,
+            [classes.errorTokenHover]: variant === 'token' && color === 'error' && isHovered,
         });
         return variant === 'token' ? (
             <div className={names} {...mouseProps}>
@@ -127,31 +132,33 @@ const styles = (theme) => ({
     defaultToken: {
         backgroundColor: theme.palette.default.main,
         color: theme.palette.atom.text,
-        '&:hover': {
-            backgroundColor: theme.palette.default.light,
-        },
     },
     primaryToken: {
         backgroundColor: theme.palette.primary.main,
         color: theme.palette.primary.contrastText,
-        '&:hover': {
-            backgroundColor: theme.palette.primary.light,
-        },
     },
     secondaryToken: {
         backgroundColor: theme.palette.secondary.main,
         color: theme.palette.secondary.contrastText,
-        '&:hover': {
-            backgroundColor: theme.palette.secondary.light,
-        },
     },
     errorToken: {
         backgroundColor: theme.palette.error.main,
         color: theme.palette.error.contrastText,
-        '&:hover': {
-            backgroundColor: theme.palette.error.light,
-        },
     },
+
+    // Hovered monospace styles
+    defaultTokenHover: {
+        backgroundColor: theme.palette.default.light,
+    },
+    primaryTokenHover: {
+        backgroundColor: theme.palette.primary.light,
+    },
+    secondaryTokenHover: {
+        backgroundColor: theme.palette.secondary.light,
+    },
+    errorTokenHover: {
+        backgroundColor: theme.palette.error.light,
+    }
 });
 
 export default withStyles(styles)(TextPrimitive);

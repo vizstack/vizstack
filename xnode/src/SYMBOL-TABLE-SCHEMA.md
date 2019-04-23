@@ -3,7 +3,7 @@
  purposes.**
 
 ## VizContents
-A _viz contents_ object describes the properties of a single Viz -- either a Primitive or a Layout. VizContents can reference other VizSpecs by ID, creating a nested visualization. The format of VizContents depends on the Viz type:
+A _viz contents_ object describes the properties of a single View -- either a Primitive or a Layout. VizContents can reference other VizSpecs by ID, creating a nested visualization. The format of VizContents depends on the View type:
 
 ### TokenPrimitive
 A contiguous, inseparable block which might contain text.

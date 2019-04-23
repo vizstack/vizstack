@@ -214,7 +214,8 @@ class Text(View):
                 'text': self._text,
                 'color': self._color,
                 'variant': self._variant,
-            }
+            },
+            'meta': self._meta,
         }
 
 
@@ -237,7 +238,8 @@ class Image(View):
             'type': 'ImagePrimitive',
             'contents': {
                 'filePath': self._file_path,
-            }
+            },
+            'meta': self._meta,
         }
 
 
@@ -273,7 +275,8 @@ class Flow(View):
             'type': 'FlowLayout',
             'contents': {
                 'elements': self._elements,
-            }
+            },
+            'meta': self._meta,
         }
 
 
@@ -300,7 +303,8 @@ class DagLayout(View):
                                for alignment in self._alignments],
                 'flowDirection': self._flow_direction,
                 'alignChildren': self._align_children,
-            }
+            },
+            'meta': self._meta,
         }
 
     def create_node(self,
@@ -459,7 +463,8 @@ class Grid(View):
             'type': 'GridLayout',
             'contents': {
                 'elements': self._elements,
-            }
+            },
+            'meta': self._meta,
         }
 
 
@@ -482,7 +487,8 @@ class Switch(View):
             'type': 'SwitchLayout',
             'contents': {
                 'elements': self._elements,
-            }
+            },
+            'meta': self._meta,
         }
 
 
