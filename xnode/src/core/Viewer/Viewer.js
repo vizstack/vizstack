@@ -131,8 +131,11 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             view,
         };
 
-        const boundPublishEvent = (eventName, message) =>
-            publishEvent(eventName, message, this.getHandle());
+        const interactionProps = {
+            publishEvent: (eventName, msg) => publishEvent(eventName, msg, this.getHandle()),
+            lastEvent,
+        };
+
         // The `Viewer` is the component that knows how to dispatch on model type to render
         // different primitive and layout components.
         switch (model.type) {
@@ -143,8 +146,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 const { contents } = (model: TextPrimitiveModel);
                 return (
                     <TextPrimitive
-                        lastEvent={lastEvent}
-                        publishEvent={boundPublishEvent}
+                        {...interactionProps}
                         {...contents}
                     />
                 );
@@ -154,8 +156,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 const { contents } = (model: ImagePrimitiveModel);
                 return (
                     <ImagePrimitive
-                        lastEvent={lastEvent}
-                        publishEvent={boundPublishEvent}
+                        {...interactionProps}
                         {...contents}
                     />
                 );
@@ -169,8 +170,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 return (
                     <GridLayout
                         viewerToViewerProps={viewerToViewerProps}
-                        lastEvent={lastEvent}
-                        publishEvent={boundPublishEvent}
+                        {...interactionProps}
                         {...contents}
                     />
                 );
@@ -181,8 +181,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 return (
                     <FlowLayout
                         viewerToViewerProps={viewerToViewerProps}
-                        lastEvent={lastEvent}
-                        publishEvent={boundPublishEvent}
+                        {...interactionProps}
                         {...contents}
                     />
                 );
@@ -190,7 +189,10 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             case 'SwitchLayout': {
                 const { contents } = (model: SwitchLayoutModel);
-                return <SwitchLayout {...generalProps} {...contents} />;
+                return <SwitchLayout
+                    viewerToViewerProps={viewerToViewerProps}
+                    {...interactionProps}
+                    {...contents} />;
             }
 
             case 'DagLayout': {
@@ -198,8 +200,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 return (
                     <DagLayout
                         viewerToViewerProps={viewerToViewerProps}
-                        lastEvent={lastEvent}
-                        publishEvent={boundPublishEvent}
+                        {...interactionProps}
                         {...contents}
                     />
                 );

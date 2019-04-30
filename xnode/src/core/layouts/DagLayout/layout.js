@@ -422,7 +422,7 @@ export default function layout(
             10 /* unconstrained iters */,
             20 /* user constraints iters */,
             30 /* user + overlap constraints iters */,
-            0 /* grid snap" iters using nodes[0].width */,
+            0 /* container snap" iters using nodes[0].width */,
             false /* run async */,
             false /* center grpah on restart */,
         );

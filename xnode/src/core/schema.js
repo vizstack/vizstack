@@ -25,11 +25,11 @@ export type PrimitiveModel = TextPrimitiveModel | ImagePrimitiveModel;
  *  text (text in colored block). */
 export type TextPrimitiveModel = {
     type: 'TextPrimitive',
-    contents: {
+    contents: {|
         text: string,
         color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
         variant?: 'plain' | 'token',
-    },
+    |},
     meta: ViewMeta,
 };
 // TODO: Break into PlainTextPrimitive vs CodeTextPrimitive?
@@ -37,9 +37,9 @@ export type TextPrimitiveModel = {
 /** Image primitive is an web-compatible image. */
 export type ImagePrimitiveModel = {
     type: 'ImagePrimitive',
-    contents: {
+    contents: {|
         filePath: string,
-    },
+    |},
     meta: ViewMeta,
 };
 // TODO: Is this best? What about URL? Constructed plot/matrix?
@@ -50,11 +50,11 @@ export type ImagePrimitiveModel = {
 /** Any layout model. */
 export type LayoutModel = GridLayoutModel | FlowLayoutModel | SwitchLayoutModel | DagLayoutModel;
 
-/** Grid layout arranges its elements in a grid, with elements potentially spanning multiple
+/** Grid layout arranges its elements in a container, with elements potentially spanning multiple
  *  rows and/or columns. */
 export type GridLayoutModel = {
     type: 'GridLayout',
-    contents: {
+    contents: {|
         elements: {
             viewId: ViewId,
             col: number,
@@ -62,25 +62,25 @@ export type GridLayoutModel = {
             width: number,
             height: number,
         }[],
-    },
+    |},
     meta: ViewMeta,
 };
 
 /** Flow layout arranges its element one after another, like in a word-document. */
 export type FlowLayoutModel = {
     type: 'FlowLayout',
-    contents: {
+    contents: {|
         elements: ViewId[],
-    },
+    |},
     meta: ViewMeta,
 };
 
 /** Switch layout allows switching between each of its elements. */
 export type SwitchLayoutModel = {
     type: 'SwitchLayout',
-    contents: {
+    contents: {|
         elements: ViewId[],
-    },
+    |},
     meta: ViewMeta,
 };
 
@@ -110,7 +110,7 @@ export type DagEdgeModel = {
 };
 export type DagLayoutModel = {
     type: 'DagLayout',
-    contents: {
+    contents: {|
         nodes: {
             [DagNodeId]: DagNodeModel,
         },
@@ -121,6 +121,6 @@ export type DagLayoutModel = {
         flowDirection?: 'north' | 'south' | 'east' | 'west',
         flowSpacing?: number,
         alignChildren?: boolean,
-    },
+    |},
     meta: ViewMeta,
 };

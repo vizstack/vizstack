@@ -15,7 +15,7 @@ type GridLayoutProps = {
     classes: any,
 
     lastEvent?: Event,
-    publishEvent: (eventName: string, message: InteractionMessage) => void,
+    publishEvent: (eventName: string, msg: InteractionMessage) => void,
 
     viewerToViewerProps: ViewerToViewerProps,
 
@@ -34,10 +34,8 @@ type GridLayoutState = {
 };
 
 /**
- * This pure dumb component renders visualization for a 1D sequence of elements.
- * TODO: Allow multi-line wrapping elements.
+ * This pure dumb component renders visualization for a 2D grid of elements.
  * TODO: Allow element-type-specific background coloring.
- * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
     /** Prop default values. */
@@ -56,12 +54,12 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
             const { eventName } = lastEvent;
             if (eventName === 'hover') {
                 this.setState({
-                    isHovered: true,
+                    isHovered: true
                 });
             }
             if (eventName === 'unhover') {
                 this.setState({
-                    isHovered: false,
+                    isHovered: false
                 });
             }
         }
@@ -94,8 +92,8 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
         return (
             <div
                 className={classNames({
-                    [classes.grid]: true,
-                    [classes.hoveredGrid]: isHovered,
+                    [classes.container]: true,
+                    [classes.containerHovered]: isHovered,
                 })}
                 {...mouseProps}
             >
@@ -126,8 +124,8 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    grid: {
-        display: 'inline-grid',
+    container: {
+        display: 'inline-container',
         verticalAlign: 'middle',
         gridGap: `${theme.spacing.large}px`, // Need px.
         justifyContent: 'start',
@@ -142,7 +140,7 @@ const styles = (theme) => ({
     compactGrid: {
         gridGap: `${theme.spacing.large}px`, // Need px.
     },
-    hoveredGrid: {
+    containerHovered: {
         borderColor: theme.palette.primary.light,
     },
     cell: {

@@ -101,7 +101,7 @@ class SequenceViz extends Component {
         });
 
         return (
-            <table className={classes.grid}>
+            <table className={classes.container}>
                 <tbody>
                     {items.map((arr, i) => (
                         <tr key={i}>
@@ -132,7 +132,7 @@ class SequenceViz extends Component {
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    grid: {
+    container: {
         textAlign: 'center',
         verticalAlign: 'middle',
     },

@@ -5,7 +5,7 @@ import { withStyles } from '@material-ui/core/styles';
 /**
  * This dumb component creates a content container for a display frame that vertically lays out its children
  * components.
- * TODO: This component could be improved by incorporating more complex grid layout functionality (using flexbox grid)
+ * TODO: This component could be improved by incorporating more complex container layout functionality (using flexbox container)
  * in order to more closely resemble Java's JPanel.
  */
 class DisplayFrameContent extends React.PureComponent<{

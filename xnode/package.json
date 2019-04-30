@@ -71,7 +71,7 @@
   "scripts": {
     "start": "npm-watch",
     "all": "npm run test && npm run build",
-    "build": "babel src/ -d build/ --ignore 'src/main.js' --copy-files",
+    "build": "rm -rf build/ && babel src/ -d build/ --ignore 'src/main.js' --copy-files",
     "pytest": "cd src/ && python3 -m pytest",
     "jstest": "jest",
     "typecheck": "cd src/ && flow && mypy .",

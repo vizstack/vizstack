@@ -193,6 +193,12 @@ export class InteractionManager {
                 this.publish('unhover', { viewerId: subscriber.viewerId }, publisher);
             }
         });
+        allViewers.withType('SwitchLayout').subscribe('click', (msg, sub, pub) => {
+            console.log("Clicked!", sub, pub);
+            if (sub.viewerId === pub.viewerId) {
+                this.publish('advance', { viewerId: sub.viewerId }, pub);
+            }
+        })
     }
 
     registerViewer = (viewer: InteractiveViewerHandle) => {

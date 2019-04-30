@@ -61,7 +61,7 @@ class SequenceLayout extends React.PureComponent<{
         });
 
         return (
-            <table className={classes.grid}>
+            <table className={classes.container}>
                 <tbody>
                     <tr>
                         <td>
@@ -96,7 +96,7 @@ class SequenceLayout extends React.PureComponent<{
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    grid: {
+    container: {
         textAlign: 'center',
         verticalAlign: 'middle',
     },

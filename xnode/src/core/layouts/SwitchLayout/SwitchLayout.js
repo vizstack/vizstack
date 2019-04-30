@@ -4,72 +4,100 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Viewer from '../../Viewer/Viewer';
-import type { ViewerProps } from '../../Viewer/Viewer';
+import Viewer from '../../Viewer';
+import type { ViewerToViewerProps } from '../../Viewer';
 
-/**
- * This pure dumb component renders visualization for a 1D sequence of elements.
- * TODO: Allow multi-line wrapping elements.
- * TODO: Allow element-type-specific background coloring.
- * TODO: Merge with MatrixLayout to form generic RowColLayout
- */
-class SwitchLayout extends React.PureComponent<{
+import type { ViewId } from '../../schema';
+import type { Event, InteractionMessage } from '../../interaction';
+
+type SwitchLayoutProps = {
     /** CSS-in-JS styling object. */
-    classes: {},
+    classes: any,
 
-    /** Whether the Viz is currently being hovered over by the cursor. */
-    isHovered: boolean,
+    lastEvent?: Event,
+    publishEvent: (eventName: string, msg: InteractionMessage) => void,
 
-    /** Whether the Viz should lay out its contents spaciously. */
-    isFullyExpanded: boolean,
-
-    /** Event listeners which should be assigned to the Viz's outermost node. */
-    mouseProps: {
-        onClick: (e) => void,
-        onMouseOver: (e) => void,
-        onMouseOut: (e) => void,
-    },
+    viewerToViewerProps: ViewerToViewerProps,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: ViewerProps[],
-}> {
+    elements: ViewId[],
+};
+
+type SwitchLayoutState = {
+    isHovered: boolean,
+    currElementIdx: number,
+};
+
+/**
+ * This pure dumb component renders visualization for a stack of elements that can be switched
+ * between.
+ */
+class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutState> {
     /** Prop default values. */
     static defaultProps = {};
 
+    constructor(props: SwitchLayoutProps) {
+        super(props);
+        this.state = {
+            isHovered: false,
+            currElementIdx: 0,
+        };
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const { lastEvent, elements } = this.props;
+        const { currElementIdx } = this.state;
+        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
+            const { eventName } = lastEvent;
+            if (eventName === 'hover') {
+                this.setState({ isHovered: true });
+            }
+            if (eventName === 'unhover') {
+                this.setState({ isHovered: false });
+            }
+            if (eventName === 'advance') {
+                this.setState({ currElementIdx: (currElementIdx + 1) % elements.length });
+            }
+        }
+    }
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
      * have start/end motifs, which are large characters that can be used to indicate a type of
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, isFullyExpanded, isHovered, mouseProps } = this.props;
+        const { classes, elements, publishEvent, viewerToViewerProps } = this.props;
+        const { isHovered, currElementIdx } = this.state;
+
+        // TODO: don't repeat this in every view
+        const mouseProps = {
+            onClick: (e) => {
+                e.stopPropagation();
+                publishEvent('click', {});
+            },
+            onMouseOver: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOver', {});
+            },
+            onMouseOut: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOut', {});
+            },
+        };
+
+        const viewId = elements[currElementIdx];
 
         return (
             <div
                 className={classNames({
-                    [classes.grid]: true,
-                    [classes.compactGrid]: !isFullyExpanded,
-                    [classes.hoveredGrid]: isHovered,
+                    [classes.container]: true,
+                    [classes.containerHovered]: isHovered,
                 })}
                 {...mouseProps}
             >
-                {elements.map(({ viewerProps, col, row, width, height }) => {
-                    return (
-                        <div
-                            key={viewerProps.vizId}
-                            className={classNames({
-                                [classes.cell]: true,
-                                [classes.hoveredCell]: isHovered,
-                            })}
-                            style={{
-                                gridColumn: `${col + 1} / ${col + 1 + width}`,
-                                gridRow: `${row + 1} / ${row + 1 + height}`,
-                            }}
-                        >
-                            <Viewer {...viewerProps} />
-                        </div>
-                    );
-                })}
+                <div key={viewId}>
+                    <Viewer {...viewerToViewerProps} viewId={viewId} />
+                </div>
             </div>
         );
     }
@@ -80,18 +108,15 @@ class SwitchLayout extends React.PureComponent<{
 
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
-    grid: {
-        display: 'inline-grid',
-        verticalAlign: 'middle',
-        gridGap: `${theme.spacing.large}px`, // Need px.
-        justifyContent: 'start',
-        gridAutoColumns: 'max-content',
-        gridAutoRows: 'max-content',
+    container: {
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
         borderColor: theme.palette.atom.border,
         padding: theme.spacing.unit,
+    },
+    containerHovered: {
+        borderColor: theme.palette.primary.light,
     },
 });
 

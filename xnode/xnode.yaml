@@ -1,18 +1,22 @@
 # Define your sandbox configurations here.
 sandboxes:
   MySandbox1:
-    pythonPath: 'python'
+    pythonPath: 'python3'
     scriptPath: 'styles/with_args.py'
     scriptArgs: ['arg1', 'arg2']
   ComputationGraph:
-    pythonPath: 'python'
+    pythonPath: 'python3'
     scriptPath: 'styles/computation_graph.py'
     scriptArgs: []
   Pytest:
-    pythonPath: 'python'
+    pythonPath: 'python3'
     scriptPath: 'styles/xnpt.py'
     scriptArgs: ['test_nikhil.py']
   Simple:
-    pythonPath: 'python'
+    pythonPath: 'python3'
     scriptPath: 'styles/simple.py'
+    scriptArgs: []
+  NoGraph:
+    pythonPath: 'python3'
+    scriptPath: 'test/no_graph.py'
     scriptArgs: []
