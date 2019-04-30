@@ -480,12 +480,12 @@ class Switch(View):
     """
 
     def __init__(self,
-                 elements: List[View],
+                 elements: List[Any],
                  default_element: Optional[int] = None) -> None:
         """
         """
         super(Switch, self).__init__()
-        self._elements = elements
+        self._elements = [_get_view(elem) for elem in elements]
         if default_element is not None:
             self._elements = self._elements[
                 default_element:] + self._elements[:default_element]

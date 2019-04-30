@@ -1,10 +1,10 @@
 // @flow
-import type { ViewType, ViewContents, ViewMeta } from './schema';
+import type { ViewModel } from './schema';
 
 import * as React from 'react';
 
 /** A function which returns `true` iff `view` satisfies a particular constraint function. */
-export type Constraint = (view: ViewerHandle) => boolean;
+export type Constraint = (view: ReadOnlyViewerHandle) => boolean;
 
 /** The acceptable types in a JSON object. */
 type Json = string | number | { [string]: Json } | Array<Json>;
@@ -14,8 +14,8 @@ export type Subscription = {
     eventName: string,
     handler: (
         message: InteractionMessage,
-        subscriber: ViewerHandle,
-        publisher: ViewerHandle,
+        subscriber: ReadOnlyViewerHandle,
+        publisher: ReadOnlyViewerHandle,
     ) => void,
 };
 
@@ -23,36 +23,61 @@ export type InteractionMessage = {
     [string]: any,
 };
 
-/** Describes the event `subscriptions` that views satisfying `constraints` should have.
+/** Describes behaviors all Viewers matching a given set of constraints should perform whenever
+ * certain events occur.
  *
- * `InteractionSet` instances should be created only by a call to `InteractionManager.getAllComponents()`; otherwise,
- * they will not be used by the `InteractionManager` and thus will not affect the behaviors of any Viewer components.
+ * An `InteractionSet` is associated with an `InteractionManager`, and is instantiated with a call
+ * to `InteractionManager.getAllComponents()`. On initialization, the `InteractionSet` has no
+ * constraints, and thus any subscriptions
  *
- * A typical use pattern:
+ *
+ * A typical usage pattern:
  *
  * const manager = new InteractionManager();
- * const selectedComponents = manager.getAllComponents().withType("TextPrimitive")...;  // chain any constraints here
+ * const selectedComponents = manager
+ *                            .getAllComponents()
+ *                            .withType("TextPrimitive")...;  // chain any constraints here
  * selectedComponents.subscribe("mouseOver", (subscriber, publisher) => {...});
  * selectedComponents.subscribe("mouseOut", (subscriber, publisher) => {...});
  *
- * We have consciously decided that `subscribe()`, unlike the constraint methods, should not return the `InteractionSet`
- * instance, thus disallowing chaining of `subscribe()` calls. This prevents misleading chains from occurring. Consider
- * the following chain:
+ * Note that `InteractionSet` instances should be created only by a call to
+ * `InteractionManager.getAllComponents()`; otherwise, they will not be used by the
+ * `InteractionManager` and thus will not affect the behaviors of any Viewer components.
  *
- * manager.getAllComponents().subscribe("event1", ...).withType("TextPrimitive").subscribe("event2", ...);
+ * Whenever a new constraint is added, a new `InteractionSet` is returned; this allows the following
+ * pattern:
  *
- * In this chain, it is not clear which components are subscribed to each event. One reasonable interpretation is that
- * order matters, and that all components are therefore subscribed to "event1" but only TextPrimitives are subscribed to
- * "event2". Another reasonable interpretation is that order does not matter, and only TextPrimitivies are subscribed to
- * both events. Preventing `subscribe()` chains disallows this ambiguity.
+ * const textPrimitives = manager.getAllComponents().withType("TextPrimitive");
+ * const textPrimitivesWithTag = textPrimitives.withMeta("foo", "bar");
+ * textPrimitives.subscribe("mouseOver", handler1);
+ * textPrimitivesWithTag.subscribe("mouseOver", handler2);
+ *
+ * In this example, all `TextPrimitive` viewers trigger `handler1()` on "mouseOver", but only those
+ * with the specified metadata tag trigger `handler2()` on "mouseOver".
+ *
+ * Note that an `InteractionSet` does not pass any of its subscriptions to the new `InteractionSet`
+ * returned by a constraint function. This means that the previous example is equivalent to the
+ * following:
+ *
+ * const textPrimitives = manager.getAllComponents().withType("TextPrimitive");
+ * textPrimitives.subscribe("mouseOver", handler1);
+ * const textPrimitivesWithTag = textPrimitives.withMeta("foo", "bar");  // textPrimitivesWithTag currently has no subscriptions
+ * textPrimitivesWithTag.subscribe("mouseOver", handler2);
+ *
+ * If existing subscriptions were passed to the new `InteractionSet`, then `handler1()` would fire
+ * twice whenever a member of `textPrimitivesWithTag` had a "mouseOver" event, since both
+ * `textPrimitives` and `textPrimitivesWithTag` would have that subscription.
  * */
 class InteractionSet {
     constraints: Array<Constraint>;
-    subscriptions: Array<Subscription>;
+    subscriptions: Array<Subscription> = [];
+    manager: InteractionManager;
 
-    constructor(constraints: Array<Constraint> = [], subscriptions: Array<Subscription> = []) {
+    constructor(manager: InteractionManager,
+                constraints: Array<Constraint> = []) {
+        manager.interactionSets.push(this);
+        this.manager = manager;
         this.constraints = constraints;
-        this.subscriptions = subscriptions;
     }
 
     /**
@@ -60,13 +85,15 @@ class InteractionSet {
      * @param fn
      * @returns {InteractionSet}
      */
-    filter(fn: (ViewerHandle) => boolean): InteractionSet {
+    filter(fn: (ReadOnlyViewerHandle) => boolean): InteractionSet {
         this.constraints.push(fn);
-        return new InteractionSet(this.constraints.concat([fn]), this.subscriptions.slice());
+        return new InteractionSet(
+            this.manager,
+            this.constraints.concat([fn]));
     }
 
     withParentIn(interactionSet: InteractionSet): InteractionSet {
-        return this.filter((viewer: ViewerHandle) => {
+        return this.filter((viewer: ReadOnlyViewerHandle) => {
             return (
                 viewer.parent !== undefined &&
                 viewer.parent.satisfiesConstraints(interactionSet.constraints)
@@ -79,9 +106,11 @@ class InteractionSet {
      *
      * @param type
      */
-    withType(type: ViewType | Array<ViewType>): InteractionSet {
-        return this.filter((viewer: ViewerHandle) => {
-            return Array.isArray(type) ? type.includes(viewer.type) : type === viewer.type;
+    withType(type: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>): InteractionSet {
+        return this.filter((viewer: ReadOnlyViewerHandle) => {
+            return Array.isArray(type)
+                ? type.includes(viewer.viewModel.type)
+                : type === viewer.viewModel.type;
         });
     }
 
@@ -93,10 +122,10 @@ class InteractionSet {
      * @param value
      */
     withMeta(key: string, value: string | number | Array<string | number>): InteractionSet {
-        return this.filter((viewer: ViewerHandle) => {
+        return this.filter((viewer: ReadOnlyViewerHandle) => {
             return Array.isArray(value)
-                ? value.includes(viewer.meta[key])
-                : value === viewer.meta[key];
+                ? value.includes(viewer.viewModel.meta[key])
+                : value === viewer.viewModel.meta[key];
         });
     }
 
@@ -104,8 +133,8 @@ class InteractionSet {
         eventName: string,
         handler: (
             message: InteractionMessage,
-            subscriber: ViewerHandle,
-            publisher: ViewerHandle,
+            subscriber: ReadOnlyViewerHandle,
+            publisher: ReadOnlyViewerHandle,
         ) => void,
     ): void {
         this.subscriptions.push({
@@ -115,32 +144,33 @@ class InteractionSet {
     }
 }
 
-export type InteractionSpec = {
-    constraints: Array<Constraint>,
-    subscriptions: Array<Subscription>,
+type ViewerInfo = {
+    viewerId: string,
+    viewModel: ViewModel,
+    parent?: ReadOnlyViewerHandle,
+}
+
+export type ReadOnlyViewerHandle = {
+    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
+    ...$Exact<ViewerInfo>,
+    satisfiesConstraints: (Array<Constraint>) => boolean,
 };
 
-// TODO: separate into "interactive" and "non-interactive"
-export type ViewerHandle = {
-    viewerId: string,
-    // TODO: re-pack the view fields
-    type: ViewType,
-    meta: ViewMeta,
-    contents: ViewContents,
-    parent?: ViewerHandle,
-    satisfiesConstraints: (Array<Constraint>) => boolean,
+export type InteractiveViewerHandle = {
+    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
+    ...$Exact<ReadOnlyViewerHandle>,
     receiveEvent: (Event) => void,
-};
+}
 
 export type Event = {
     eventName: string,
     message: InteractionMessage,
-    publisher: ViewerHandle,
+    publisher: ReadOnlyViewerHandle,
 };
 
 export class InteractionManager {
     interactionSets: Array<InteractionSet> = [];
-    viewers: { [string]: ViewerHandle } = {};
+    viewers: { [string]: InteractiveViewerHandle } = {};
     viewerInteractionSets: { [string]: Array<InteractionSet> } = {};
 
     constructor() {
@@ -165,20 +195,20 @@ export class InteractionManager {
         });
     }
 
-    registerViewer: (viewer: ViewerHandle) => void = (viewer: ViewerHandle) => {
+    registerViewer = (viewer: InteractiveViewerHandle) => {
         this.viewers[viewer.viewerId] = viewer;
         this.viewerInteractionSets[viewer.viewerId] = this.interactionSets.filter(
             ({ constraints }) => viewer.satisfiesConstraints(constraints),
         );
     };
 
-    unregisterViewer: (viewer: ViewerHandle) => void = (viewer: ViewerHandle) => {
+    unregisterViewer = (viewer: InteractiveViewerHandle) => {
         delete this.viewers[viewer.viewerId];
         delete this.viewerInteractionSets[viewer.viewerId];
     };
 
     // TODO: cache viewer memberships
-    publish = (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => {
+    publish = (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => {
         Object.entries(this.viewerInteractionSets).forEach(([viewerId, interactionSets]) => {
             // interactionSets will always be an array of InteractionSets, but flow is too dumb to use the type hint for
             // this.viewerInteractionSets when calling Object.entries
@@ -206,12 +236,10 @@ export class InteractionManager {
     };
 
     getAllComponents(): InteractionSet {
-        const componentCollection = new InteractionSet();
-        this.interactionSets.push(componentCollection);
-        return componentCollection;
+        return new InteractionSet(this);
     }
 
-    getContext(): InteractionState {
+    getContext(): InteractionContextValue {
         const { registerViewer, unregisterViewer, publish } = this;
         return {
             registerViewer,
@@ -221,16 +249,16 @@ export class InteractionManager {
     }
 }
 
-export const InteractionContext = React.createContext<InteractionState>({
+export const InteractionContext = React.createContext<InteractionContextValue>({
     // interactions: [],
     registerViewer: (viewer) => {},
     unregisterViewer: (viewer) => {},
-    publishEvent: (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => {},
+    publishEvent: (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => {},
 });
 
-export type InteractionState = {
+export type InteractionContextValue = {
     // interactions: Array<InteractionSpec>,
-    registerViewer: (viewer: ViewerHandle) => void,
-    unregisterViewer: (viewer: ViewerHandle) => void,
-    publishEvent: (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => void,
+    registerViewer: (viewer: InteractiveViewerHandle) => void,
+    unregisterViewer: (viewer: InteractiveViewerHandle) => void,
+    publishEvent: (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => void,
 };

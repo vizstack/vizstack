@@ -1,4 +1,4 @@
-import xnode
+import xnode_old
 from typing import List
 
 
@@ -12,5 +12,5 @@ def largest_num(list: List[int]) -> int:
 
 if __name__ == "__main__":
     # Run tests
-    xnode.show(digits_to_number([1, 2, 3, 0]))
-    xnode.show(digits_to_number([0, 1, 2, 3]))
+    xnode_old.show(digits_to_number([1, 2, 3, 0]))
+    xnode_old.show(digits_to_number([0, 1, 2, 3]))

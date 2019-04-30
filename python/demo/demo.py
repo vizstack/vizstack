@@ -1,4 +1,4 @@
-import xnode as xn
+import xnode_old as xn
 from demo_classes import Company, import_employees, import_products
 
 if __name__ == '__main__':

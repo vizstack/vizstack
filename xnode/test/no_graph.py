@@ -1,5 +1,5 @@
-import xnode
-from xnode.viz import Flow, Text
+import xnode_old
+from xnode_old.viz import Flow, Text
 
 
 def my_fn(x, y, t=None, v=0):
@@ -27,7 +27,7 @@ class MyClass:
         )
 
 
-xnode.show(MyClass())
+xnode_old.show(MyClass())
 
 b = {}
 a = {'x': b, 'y': {'d': 'b'}}
@@ -35,7 +35,7 @@ b['y'] = a
 
 # xnode.view(xnode)
 
-xnode.show(my_fn)
+xnode_old.show(my_fn)
 
 l = [10, 2, 3, 2341, 2134, 2134, 213, 2134]
-xnode.show(l)
+xnode_old.show(l)

@@ -53,7 +53,7 @@ export type LayoutModel = GridLayoutModel | FlowLayoutModel | SwitchLayoutModel 
 /** Grid layout arranges its elements in a grid, with elements potentially spanning multiple
  *  rows and/or columns. */
 export type GridLayoutModel = {
-    type: 'SwitchLayout',
+    type: 'GridLayout',
     contents: {
         elements: {
             viewId: ViewId,

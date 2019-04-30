@@ -1,5 +1,5 @@
 import torch
-import xnode
+import xnode_old
 from xntorch.autograd import Variable
 import sys
 import os
@@ -10,21 +10,21 @@ from vgg import vgg16
 myInt = 86
 myInt2 = 87
 myFloat = 3.1415926535897
-xnode.show(myFloat)
+xnode_old.show(myFloat)
 myBool = True
 myString = "The quick brown fox jumps over the lazy dog"
-xnode.show(myString)
+xnode_old.show(myString)
 myNone = None
 
 myList = [1, 2.3, False, "hello", None, [10, 11, ["This", "is", "the", "end"]]]
-xnode.show(myList)
+xnode_old.show(myList)
 myList[0] = 100
 myDict = {"key1": "value1", "key2": "value2", 10: myList}
 myTensor1 = torch.rand(2, 3, 4, 5)
 myTensor2 = myTensor1[0, 0]
 myTensor3 = myTensor1[0, 0, 0]
 myFloat2 = myTensor1[0, 0, 0, 0]
-xnode.show(myTensor1)
+xnode_old.show(myTensor1)
 
 myClass = Variable
 myVGGInput = Variable(torch.ones(1, 3, 32, 32))
