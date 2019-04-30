@@ -17,7 +17,7 @@ import type {
 // Xnode core
 import Viewer from '../core';
 import type { ViewId } from '../core';
-import type { InteractionState } from '../core'
+import type { InteractionState } from '../core';
 import { InteractionManager, InteractionContext } from '../core';
 
 import ViewerDisplayFrame from './ViewerDisplayFrame';
@@ -66,10 +66,9 @@ type Props = {
      * @param endIdx
      */
     reorderInspector: (startIdx: number, endIdx: number) => void,
-}
+};
 
-type State = {
-}
+type State = {};
 
 /**
  * This smart component serves as an interactive workspace for inspecting `Snapshot`s. It
@@ -108,25 +107,22 @@ class Canvas extends React.Component<Props, State> {
      * @param idx
      */
     createFramedViewerComponent(ls: LayoutedSnapshot, idx: number) {
-        const { addInspector, removeInspector, } = this.props;
+        const { addInspector, removeInspector } = this.props;
         const { snapshotId, viewId, snapshot } = ls;
 
         const buttons = [
             // TODO: Duplicate should also replicate the existing state of a viewer
-            { title: 'Duplicate', icon: <DuplicateIcon />, onClick: () => addInspector(snapshotId, viewId, idx) },
+            {
+                title: 'Duplicate',
+                icon: <DuplicateIcon />,
+                onClick: () => addInspector(snapshotId, viewId, idx),
+            },
             { title: 'Remove', icon: <RemoveIcon />, onClick: () => removeInspector(idx) },
         ];
 
         return (
             <ViewerDisplayFrame buttons={buttons}>
-                {!snapshot ? (
-                    kLoadingSpinner
-                ) : (
-                    <Viewer
-                        view={snapshot.view}
-                        viewId={viewId}
-                    />
-                )}
+                {!snapshot ? kLoadingSpinner : <Viewer view={snapshot.view} viewId={viewId} />}
             </ViewerDisplayFrame>
         );
     }
@@ -138,9 +134,7 @@ class Canvas extends React.Component<Props, State> {
         const { classes, layoutedSnapshots } = this.props;
 
         // Only render minimal disambiguated paths, and collapse consecutive identical paths.
-        const fullPaths = layoutedSnapshots.map(
-            (ls: LayoutedSnapshot) => ls.snapshot.filePath,
-        );
+        const fullPaths = layoutedSnapshots.map((ls: LayoutedSnapshot) => ls.snapshot.filePath);
         const fullToMinimal = getMinimalDisambiguatedPaths(fullPaths);
         let minimalPaths = [];
         for (let i = 0; i < fullPaths.length; i++) {
@@ -166,10 +160,13 @@ class Canvas extends React.Component<Props, State> {
             );
         });
 
-        console.debug(`Canvas -- rendering ${layoutedSnapshots.length} viewer models`, layoutedSnapshots);
+        console.debug(
+            `Canvas -- rendering ${layoutedSnapshots.length} viewer models`,
+            layoutedSnapshots,
+        );
 
         return (
-            <InteractionContext.Provider value={this.interactionManager.getContext()} >
+            <InteractionContext.Provider value={this.interactionManager.getContext()}>
                 <div className={classNames(classes.canvasContainer)}>
                     <DragDropContext onDragEnd={this.onDragEnd}>
                         <Droppable droppableId='canvas'>
@@ -218,7 +215,10 @@ function mapStateToProps() {
         layoutedSnapshots: createSelector(
             (state) => getCanvasLayout(state.canvas),
             (state) => getSnapshots(state.snapshots),
-            (layout: SnapshotInspector[], snapshots: { [SnapshotId]: Snapshot }): LayoutedSnapshot[] => {
+            (
+                layout: SnapshotInspector[],
+                snapshots: { [SnapshotId]: Snapshot },
+            ): LayoutedSnapshot[] => {
                 return layout.map((inspector: SnapshotInspector) => {
                     return {
                         snapshotId: inspector.snapshotId,
@@ -227,7 +227,7 @@ function mapStateToProps() {
                     };
                 });
             },
-        )(state, props),  // TODO: Should not recompute every time snapshots change.
+        )(state, props), // TODO: Should not recompute every time snapshots change.
     });
 }
 

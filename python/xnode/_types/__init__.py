@@ -5,7 +5,6 @@ JsonType = Union[str, float, int, bool, None, list, Dict[str, Any]]
 
 
 class _Dataclass:
-
     def __str__(self):
         return str(self.__dict__)
 
@@ -21,11 +20,11 @@ VizContents = Dict[str, Any]
 
 
 class VizModel(_Dataclass):
-
     def __init__(self, type: str, contents: VizContents) -> None:
         self.type: str = type
         self.contents: VizContents = {
-            key: value for key, value in contents.items() if value is not None
+            key: value
+            for key, value in contents.items() if value is not None
         }
 
 

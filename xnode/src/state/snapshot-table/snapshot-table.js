@@ -95,7 +95,10 @@ export function clearAllSnapshotsAction(): ClearAllSnapshots {
     };
 }
 
-function clearAllSnapshotsReducer(state: SnapshotTableState, action: ClearAllSnapshots): SnapshotTableState {
+function clearAllSnapshotsReducer(
+    state: SnapshotTableState,
+    action: ClearAllSnapshots,
+): SnapshotTableState {
     return state.set('snapshots', {});
 }
 
@@ -109,10 +112,7 @@ type AddEntry = {| type: 'AddEntry', snapshotId: SnapshotId, snapshot: Snapshot 
  * @param snapshot
  * @returns An action object.
  */
-export function addSnapshotAction(
-    snapshotId: SnapshotId,
-    snapshot: Snapshot,
-): AddEntry {
+export function addSnapshotAction(snapshotId: SnapshotId, snapshot: Snapshot): AddEntry {
     return {
         type: 'AddEntry',
         snapshotId,
@@ -122,8 +122,5 @@ export function addSnapshotAction(
 
 function addSnapshotReducer(state: SnapshotTableState, action: AddEntry) {
     const { snapshotId, snapshot } = action;
-    return state.set(
-        'snapshots',
-        Immutable.merge(state.snapshots, { [snapshotId]: snapshot }),
-    );
+    return state.set('snapshots', Immutable.merge(state.snapshots, { [snapshotId]: snapshot }));
 }

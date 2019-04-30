@@ -25,15 +25,11 @@ import SandboxSettings from '../components/SandboxSettings';
 import Canvas from '../components/Canvas';
 import mainReducer from '../state';
 import type { SnapshotId, Snapshot } from '../state/snapshot-table';
-import {
-    getSnapshot,
-    addSnapshotAction,
-    clearAllSnapshotsAction,
-} from '../state/snapshot-table';
+import { getSnapshot, addSnapshotAction, clearAllSnapshotsAction } from '../state/snapshot-table';
 import { clearAllInspectorsAction, addInspectorAction } from '../state/canvas';
 import type { View } from '../core/schema';
 import Progress from '../components/DOMProgress';
-import {InteractionManager} from "../core";
+import { InteractionManager } from '../core';
 
 /** Path to main Python module for `ExecutionEngine`. */
 const EXECUTION_ENGINE_PATH = path.join(__dirname, '/../execute.py');
@@ -46,7 +42,8 @@ type DebuggerMessage = {
     scriptEnd: boolean,
 };
 
-// Tells Flow that `atom` is a variable that can be referenced anywhere in this file. TODO: define a type for `atom`
+// Tells Flow that `atom` is a variable that can be referenced anywhere in this file.
+// TODO: define a type for `atom`
 declare var atom: any;
 
 /**
@@ -250,9 +247,7 @@ class REPL {
             }
             if (view) {
                 const snapshotId = cuid();
-                this.store.dispatch(
-                    addSnapshotAction(snapshotId, { filePath, lineNumber, view }),
-                );
+                this.store.dispatch(addSnapshotAction(snapshotId, { filePath, lineNumber, view }));
                 this.store.dispatch(addInspectorAction(snapshotId));
             }
             if (scriptEnd) {

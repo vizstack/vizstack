@@ -91,7 +91,11 @@ function clearAllInspectorsReducer(state: CanvasState, action: ClearAllInspector
 
 // -------------------------------------------------------------------------------------------------
 
-type AddInspector = {| type: 'AddInspector', inspector: SnapshotInspector, insertAfterIdx: number |};
+type AddInspector = {|
+    type: 'AddInspector',
+    inspector: SnapshotInspector,
+    insertAfterIdx: number,
+|};
 
 /**
  * Add a `SnapshotInspector` to the Canvas.
@@ -100,7 +104,11 @@ type AddInspector = {| type: 'AddInspector', inspector: SnapshotInspector, inser
  *     Index in layout after which to add the new viewer. (Optional, default: -1 adds to end).
  * @returns An action object.
  */
-export function addInspectorAction(snapshotId: SnapshotId, viewId?: ViewId, insertAfterIdx?: number = -1): AddInspector {
+export function addInspectorAction(
+    snapshotId: SnapshotId,
+    viewId?: ViewId,
+    insertAfterIdx?: number = -1,
+): AddInspector {
     return {
         type: 'AddInspector',
         inspector: {

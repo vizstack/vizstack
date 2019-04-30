@@ -4,12 +4,11 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Viewer from '../../Viewer/Viewer';
-import type { ViewerToViewerProps } from '../../Viewer/Viewer';
-import ColorLightBlue from '@material-ui/core/colors/lightBlue';
+import Viewer from '../../Viewer';
+import type { ViewerToViewerProps } from '../../Viewer';
 
 import type { ViewId } from '../../schema';
-import type {Event, InteractionMessage} from "../../interaction";
+import type { Event, InteractionMessage } from '../../interaction';
 
 type GridLayoutProps = {
     /** CSS-in-JS styling object. */
@@ -22,17 +21,17 @@ type GridLayoutProps = {
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     elements: {
-       viewId: ViewId,
-       col: number,
-       row: number,
-       width: number,
-       height: number,
+        viewId: ViewId,
+        col: number,
+        row: number,
+        width: number,
+        height: number,
     }[],
-}
+};
 
 type GridLayoutState = {
     isHovered: boolean,
-}
+};
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -48,7 +47,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
         super(props);
         this.state = {
             isHovered: false,
-        }
+        };
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -58,12 +57,12 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
             if (eventName === 'hover') {
                 this.setState({
                     isHovered: true,
-                })
+                });
             }
             if (eventName === 'unhover') {
                 this.setState({
                     isHovered: false,
-                })
+                });
             }
         }
     }
@@ -100,7 +99,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                 })}
                 {...mouseProps}
             >
-                {elements.map(({viewId, col, row, width, height}) => {
+                {elements.map(({ viewId, col, row, width, height }) => {
                     return (
                         <div
                             key={viewId}

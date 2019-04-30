@@ -1,12 +1,11 @@
 declare module 'js-yaml' {
-
     declare type Kind = 'sequence' | 'scalar' | 'mapping';
 
     declare type DumpOptions = {|
         indent?: number,
         skipInvalid?: boolean,
         flowLevel?: number,
-        styles?: {[string]: any},
+        styles?: { [string]: any },
         schema?: Schema,
         sortKeys?: boolean | ((a: any, b: any) => number),
         lineWidth?: number,
@@ -34,12 +33,13 @@ declare module 'js-yaml' {
         construct?: (data: any) => any,
         instanceOf?: Object,
         predicate?: string,
-        represent?: ((data: Object) => any) | {[string]: (data: Object) => any},
+        represent?: ((data: Object) => any) | { [string]: (data: Object) => any },
         defaultStyle?: string,
-        styleAliases?: {[string]: any},
+        styleAliases?: { [string]: any },
     |};
 
-    declare class Schema {  // implements SchemaDefinition
+    declare class Schema {
+        // implements SchemaDefinition
         static DEFAULT: ?Schema;
 
         implicit: Array<Type>;
@@ -48,7 +48,7 @@ declare module 'js-yaml' {
 
         compiledImplicit: Array<Type>;
         compiledExplicit: Array<Type>;
-        compiledTypeMap: {[Kind | 'fallback']: {[string]: Type}};
+        compiledTypeMap: { [Kind | 'fallback']: { [string]: Type } };
 
         constructor(definition: SchemaDefinition): this;
 
@@ -61,9 +61,9 @@ declare module 'js-yaml' {
         kind: Kind;
         instanceOf: ?Object;
         predicate: ?string;
-        represent: ((data: Object) => any) | {[string]: (data: Object) => any} | null;
+        represent: ((data: Object) => any) | { [string]: (data: Object) => any } | null;
         defaultStyle: ?string;
-        styleAliases: {[string]: any};
+        styleAliases: { [string]: any };
 
         constructor(tag: string, opts?: TypeConstructorOptions): this;
 
@@ -93,8 +93,16 @@ declare module 'js-yaml' {
     declare function loadAll(input: string, output?: void | null, opts?: LoadOptions): Array<mixed>;
     declare function loadAll(input: string, output: (doc: mixed) => void, opts?: LoadOptions): void;
 
-    declare function safeLoadAll(input: string, output?: void | null, opts?: LoadOptions): Array<mixed>;
-    declare function safeLoadAll(input: string, output: (doc: mixed) => void, opts?: LoadOptions): void;
+    declare function safeLoadAll(
+        input: string,
+        output?: void | null,
+        opts?: LoadOptions,
+    ): Array<mixed>;
+    declare function safeLoadAll(
+        input: string,
+        output: (doc: mixed) => void,
+        opts?: LoadOptions,
+    ): void;
 
     declare function dump(input: mixed, opts?: DumpOptions): string;
 

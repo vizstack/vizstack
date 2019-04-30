@@ -7,7 +7,7 @@ import { createSelector } from 'reselect';
 import Viewer from '../../Viewer/Viewer';
 import type { ViewId } from '../../schema';
 import type { ViewerToViewerProps } from '../../Viewer/Viewer';
-import type {Event, InteractionMessage} from "../../interaction";
+import type { Event, InteractionMessage } from '../../interaction';
 
 type FlowLayoutProps = {
     /** CSS-in-JS styling object. */
@@ -20,10 +20,9 @@ type FlowLayoutProps = {
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     elements: Array<ViewId>,
-}
+};
 
-type FlowLayoutState = {
-}
+type FlowLayoutState = {};
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.

@@ -3,7 +3,7 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
-import type {Event, InteractionMessage} from "../../interaction";
+import type { Event, InteractionMessage } from '../../interaction';
 
 type ImagePrimitiveProps = {
     /** CSS-in-JS styling object. */
@@ -14,22 +14,21 @@ type ImagePrimitiveProps = {
 
     /** Path at which the image file is saved. */
     filePath: string,
-}
+};
 
 type ImagePrimitiveState = {
     isHovered: boolean,
-}
+};
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
 class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
-
     constructor(props: ImagePrimitiveProps) {
         super(props);
         this.state = {
             isHovered: false,
-        }
+        };
     }
 
     componentDidUpdate(prevProps: ImagePrimitiveProps, prevState: ImagePrimitiveState) {
@@ -39,12 +38,12 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
             if (eventName === 'hover') {
                 this.setState({
                     isHovered: true,
-                })
+                });
             }
             if (eventName === 'unhover') {
                 this.setState({
                     isHovered: false,
-                })
+                });
             }
         }
     }

@@ -13,14 +13,7 @@ export type ViewId = string;
 
 /** Assembled "building blocks" of a `View`. */
 export type ViewModel = PrimitiveModel | LayoutModel;
-
-export type ViewType = "DagLayout" | "GridLayout" | "FlowLayout" | "TextPrimitive" | "ImagePrimitive" | "SwitchLayout"
-
-export type ViewMeta = {
-    [string]: any,
-}
-
-export type ViewContents = PrimitiveContents | LayoutContents;
+export type ViewMeta = { [string]: any };
 
 // =================================================================================================
 // Primitives (aka "visual building blocks").
@@ -28,31 +21,25 @@ export type ViewContents = PrimitiveContents | LayoutContents;
 /** Any primitive model. */
 export type PrimitiveModel = TextPrimitiveModel | ImagePrimitiveModel;
 
-export type PrimitiveContents = TextPrimitiveContents | ImagePrimitiveContents;
-
 /** Text primitive is a block of plain text (colored text on transparent background) or code
  *  text (text in colored block). */
-export type TextPrimitiveContents = {
-    text: string,
-    color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
-    variant?: 'plain' | 'token',
-};
-
 export type TextPrimitiveModel = {
     type: 'TextPrimitive',
-    contents: TextPrimitiveContents,
+    contents: {
+        text: string,
+        color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
+        variant?: 'plain' | 'token',
+    },
     meta: ViewMeta,
 };
 // TODO: Break into PlainTextPrimitive vs CodeTextPrimitive?
 
 /** Image primitive is an web-compatible image. */
-export type ImagePrimitiveContents = {
-    filePath: string,
-};
-
 export type ImagePrimitiveModel = {
     type: 'ImagePrimitive',
-    contents: ImagePrimitiveContents,
+    contents: {
+        filePath: string,
+    },
     meta: ViewMeta,
 };
 // TODO: Is this best? What about URL? Constructed plot/matrix?
@@ -61,47 +48,39 @@ export type ImagePrimitiveModel = {
 // Layouts (aka "configurations of building blocks").
 
 /** Any layout model. */
-export type LayoutModel = GridLayoutModel | DagLayoutModel | FlowLayoutModel | SwitchLayoutModel;
-
-export type LayoutContents = GridLayoutContents | DagLayoutContents | FlowLayoutContents | SwitchLayoutContents;
+export type LayoutModel = GridLayoutModel | FlowLayoutModel | SwitchLayoutModel | DagLayoutModel;
 
 /** Grid layout arranges its elements in a grid, with elements potentially spanning multiple
  *  rows and/or columns. */
-export type GridLayoutContents = {
-    elements: {
-        viewId: ViewId,
-        col: number,
-        row: number,
-        width: number,
-        height: number,
-    }[],
-};
-
 export type GridLayoutModel = {
-    type: 'GridLayout',
-    contents: GridLayoutContents,
+    type: 'SwitchLayout',
+    contents: {
+        elements: {
+            viewId: ViewId,
+            col: number,
+            row: number,
+            width: number,
+            height: number,
+        }[],
+    },
     meta: ViewMeta,
 };
 
 /** Flow layout arranges its element one after another, like in a word-document. */
-export type FlowLayoutContents = {
-    elements: ViewId[],
-}
-
 export type FlowLayoutModel = {
     type: 'FlowLayout',
-    contents: FlowLayoutContents,
+    contents: {
+        elements: ViewId[],
+    },
     meta: ViewMeta,
 };
 
 /** Switch layout allows switching between each of its elements. */
-export type SwitchLayoutContents = {
-    elements: ViewId[],
-};
-
 export type SwitchLayoutModel = {
     type: 'SwitchLayout',
-    contents: SwitchLayoutContents,
+    contents: {
+        elements: ViewId[],
+    },
     meta: ViewMeta,
 };
 
@@ -129,22 +108,19 @@ export type DagEdgeModel = {
     startPort?: string,
     endPort?: string,
 };
-
-export type DagLayoutContents = {
-    nodes: {
-        [DagNodeId]: DagNodeModel,
-    },
-    edges: {
-        [DagEdgeId]: DagEdgeModel,
-    },
-    alignments?: Array<Array<DagNodeId>>,
-    flowDirection?: 'north' | 'south' | 'east' | 'west',
-    flowSpacing?: number,
-    alignChildren?: boolean,
-}
-
 export type DagLayoutModel = {
     type: 'DagLayout',
-    contents: DagLayoutContents,
+    contents: {
+        nodes: {
+            [DagNodeId]: DagNodeModel,
+        },
+        edges: {
+            [DagEdgeId]: DagEdgeModel,
+        },
+        alignments?: Array<Array<DagNodeId>>,
+        flowDirection?: 'north' | 'south' | 'east' | 'west',
+        flowSpacing?: number,
+        alignChildren?: boolean,
+    },
     meta: ViewMeta,
 };

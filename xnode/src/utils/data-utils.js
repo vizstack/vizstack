@@ -1,6 +1,8 @@
 /**
  * Utility functions to manipulate common data structures.
  */
+// TODO: Implement functions for `Map` (keys not limited to strings).
+// TODO: Annotate with better types (e.g. using generics, $ObjMap, etc).
 
 /**
  * Transform key-value pairs in an object into new key-value pairs, or `undefined` to omit.
@@ -51,4 +53,19 @@ export function pairs2obj(pairs: Array<[string, any]>): {} {
     }, {});
 }
 
-// TODO: Implement functions for `Map` (keys not limited to strings).
+/**
+ * @param start
+ * @param end
+ * @param step
+ * @returns
+ *     An array of numbers like Python's `range` function.
+ */
+export function range(start: number, end?: number, step?: number = 1): number[] {
+    if (end === undefined || end === null) {
+        start = 0;
+        end = start;
+    }
+    const result = [];
+    for (let i = start; i < end; i += step) result.push(i);
+    return result;
+}

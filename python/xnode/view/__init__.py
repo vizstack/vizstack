@@ -9,17 +9,14 @@ from xnode._types import View, JsonType
 import types
 import inspect
 
-
 # ======================================================================================================================
 # View function tools.
 # -------------------
 # Functions and classes which might be used by a developer writing a new viz function for their object.
 # ======================================================================================================================
 
-
 # The name of the method on an object which should return a `View` depicting that object.
 VIZ_FN = '__view__'
-
 
 # TODO: this is a bad way to stop cyclic generation of vizzes
 _CURRENT = []
@@ -38,7 +35,8 @@ def _get_view(o: Any) -> 'View':
         A View which describes how to render ``o``.
     """
     global _CURRENT
-    if o in _CURRENT and not (isinstance(o, (str, int, float, bool)) or o is None):
+    if o in _CURRENT and not (isinstance(o, (str, int, float, bool))
+                              or o is None):
         # TODO: deal with this better
         return Token('<cyclic ref>')
     _CURRENT.append(o)
@@ -95,11 +93,11 @@ def _get_view(o: Any) -> 'View':
                 end_motif='}',
                 summary='Kwargs',
                 expansion_mode='compact'),
-            ],
-           start_motif='Function[{}] ('.format(o.__name__),
-           end_motif=')',
-           orientation='vertical',
-           summary='Function[{}]'.format(o.__name__))
+        ],
+                             start_motif='Function[{}] ('.format(o.__name__),
+                             end_motif=')',
+                             orientation='vertical',
+                             summary='Function[{}]'.format(o.__name__))
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -224,8 +222,7 @@ class Image(View):
     A View which renders an image as read from a file.
     """
 
-    def __init__(self,
-                 file_path: str) -> None:
+    def __init__(self, file_path: str) -> None:
         """
         Args:
             file_path: The local path to the image file.
@@ -261,8 +258,7 @@ class Flow(View):
     A View which renders other Vizzes as a series of inline elements.
     """
 
-    def __init__(self,
-                 elements: List[Any]) -> None:
+    def __init__(self, elements: List[Any]) -> None:
         """
         Args:
             elements: A sequence of objects which should be visualized.
@@ -295,14 +291,18 @@ class DagLayout(View):
         return {
             'type': 'DagLayout',
             'contents': {
-                'nodes': {node.get_id(): node.to_dict()
-                          for node in self._nodes},
-                'edges': {edge.get_id(): edge.to_dict()
-                          for edge in self._edges},
+                'nodes':
+                {node.get_id(): node.to_dict()
+                 for node in self._nodes},
+                'edges':
+                {edge.get_id(): edge.to_dict()
+                 for edge in self._edges},
                 'alignments': [[item.get_id() for item in alignment]
                                for alignment in self._alignments],
-                'flowDirection': self._flow_direction,
-                'alignChildren': self._align_children,
+                'flowDirection':
+                self._flow_direction,
+                'alignChildren':
+                self._align_children,
             },
             'meta': self._meta,
         }
@@ -315,8 +315,8 @@ class DagLayout(View):
                     is_interactive: Optional[bool] = None,
                     is_visible: Optional[bool] = None) -> 'DagLayoutNode':
         node = DagLayoutNode(
-            str(len(self._nodes)), _get_view(o), flow_direction, align_children,
-            is_expanded, is_interactive, is_visible)
+            str(len(self._nodes)), _get_view(o), flow_direction,
+            align_children, is_expanded, is_interactive, is_visible)
         self._nodes.append(node)
         return node
 
@@ -335,9 +335,9 @@ class DagLayout(View):
 
 
 class DagLayoutNode:
-    def __init__(self, node_id: str, viz: 'View', flow_direction: Optional[str],
-                 align_children: Optional[bool], is_expanded: Optional[bool],
-                 is_interactive: Optional[bool],
+    def __init__(self, node_id: str, viz: 'View',
+                 flow_direction: Optional[str], align_children: Optional[bool],
+                 is_expanded: Optional[bool], is_interactive: Optional[bool],
                  is_visible: Optional[bool]) -> None:
         self.node_id = node_id
         self.viz = viz
@@ -366,7 +366,8 @@ class DagLayoutNode:
             'ports': self.ports,
         }
         return {
-            key: value for key, value in all_values.items() if value is not None
+            key: value
+            for key, value in all_values.items() if value is not None
         }
 
     # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
@@ -423,7 +424,8 @@ class DagLayoutEdge:
             'endPort': self.end_port,
         }
         return {
-            key: value for key, value in all_values.items() if value is not None
+            key: value
+            for key, value in all_values.items() if value is not None
         }
 
 
@@ -432,8 +434,7 @@ class Grid(View):
    A View which renders other Vizzes in a flexibly-sized grid.
    """
 
-    def __init__(self,
-                 elements: List[Tuple[Any, int, int, int, int]]) -> None:
+    def __init__(self, elements: List[Tuple[Any, int, int, int, int]]) -> None:
         """
         Args:
             elements: The contents of the grid as a list of tuples. Each tuple is of the form
@@ -486,7 +487,8 @@ class Switch(View):
         super(Switch, self).__init__()
         self._elements = elements
         if default_element is not None:
-            self._elements = self._elements[default_element:] + self._elements[:default_element]
+            self._elements = self._elements[
+                default_element:] + self._elements[:default_element]
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         return {
@@ -591,12 +593,14 @@ class SwitchSequence(Sequence):
                  orientation: str = 'horizontal',
                  summary: Optional[str] = None,
                  expansion_mode: Optional[str] = None):
-        super(SwitchSequence, self).__init__(elements, start_motif, end_motif, orientation)
+        super(SwitchSequence, self).__init__(elements, start_motif, end_motif,
+                                             orientation)
         self._summary = summary
         self._expansion_mode = expansion_mode
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return SwitchGrid(self._elements, self._summary, self._expansion_mode).assemble_dict()
+        return SwitchGrid(self._elements, self._summary,
+                          self._expansion_mode).assemble_dict()
 
 
 class SwitchKeyValues(KeyValues):
@@ -607,12 +611,14 @@ class SwitchKeyValues(KeyValues):
                  end_motif: Optional[str] = None,
                  summary: Optional[str] = None,
                  expansion_mode: Optional[str] = None):
-        super(SwitchKeyValues, self).__init__(key_value_mapping, item_separator, start_motif, end_motif)
+        super(SwitchKeyValues, self).__init__(
+            key_value_mapping, item_separator, start_motif, end_motif)
         self._summary = summary
         self._expansion_mode = expansion_mode
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return SwitchGrid(self._elements, self._summary, self._expansion_mode).assemble_dict()
+        return SwitchGrid(self._elements, self._summary,
+                          self._expansion_mode).assemble_dict()
 
 
 class SwitchGrid(Grid):
@@ -652,12 +658,13 @@ class SwitchGrid(Grid):
                  min(self.COMPACT_ROWS, self._num_rows) // 2, 1, 1))
         if extends_below:
             visible_elements.append(
-                (Text('. . .'),
-                 min(self.COMPACT_COLS, self._num_cols) // 2,
+                (Text('. . .'), min(self.COMPACT_COLS, self._num_cols) // 2,
                  self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
         compact_view = Grid(visible_elements)
         summary_view = Text(
-            'grid[{}, {}]'.format(self._num_cols, self._num_rows) if self._summary is None else self._summary
-        )
-        return Switch([full_view, compact_view, summary_view], self.MODE_INDICES[self._expansion_mode] if
-                      self._expansion_mode is not None else None).assemble_dict()
+            'grid[{}, {}]'.format(self._num_cols, self._num_rows)
+            if self._summary is None else self._summary)
+        return Switch(
+            [full_view, compact_view, summary_view],
+            self.MODE_INDICES[self._expansion_mode]
+            if self._expansion_mode is not None else None).assemble_dict()

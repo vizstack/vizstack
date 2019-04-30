@@ -3,7 +3,7 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-import type { Event, InteractionMessage } from '../../interaction'
+import type { Event, InteractionMessage } from '../../interaction';
 
 type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
@@ -18,11 +18,11 @@ type TextPrimitiveProps = {
     /** The color scheme of the token. */
     color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
     variant?: 'plain' | 'token',
-}
+};
 
 type TextPrimitiveState = {
     isHovered: boolean,
-}
+};
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
@@ -37,7 +37,7 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         super(props);
         this.state = {
             isHovered: false,
-        }
+        };
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -47,12 +47,12 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
             if (eventName === 'hover') {
                 this.setState({
                     isHovered: true,
-                })
+                });
             }
             if (eventName === 'unhover') {
                 this.setState({
                     isHovered: false,
-                })
+                });
             }
         }
     }
@@ -110,7 +110,8 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
 
             [classes.defaultTokenHover]: variant === 'token' && color === 'default' && isHovered,
             [classes.primaryTokenHover]: variant === 'token' && color === 'primary' && isHovered,
-            [classes.secondaryTokenHover]: variant === 'token' && color === 'secondary' && isHovered,
+            [classes.secondaryTokenHover]:
+                variant === 'token' && color === 'secondary' && isHovered,
             [classes.errorTokenHover]: variant === 'token' && color === 'error' && isHovered,
         });
         return variant === 'token' ? (
@@ -196,7 +197,7 @@ const styles = (theme) => ({
     },
     errorTokenHover: {
         backgroundColor: theme.palette.error.light,
-    }
+    },
 });
 
 export default withStyles(styles)(TextPrimitive);

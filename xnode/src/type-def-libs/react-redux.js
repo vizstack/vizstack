@@ -23,7 +23,7 @@
  EFO = Extra factory options (used only in connectAdvanced)
  */
 
-declare module "react-redux" {
+declare module 'react-redux' {
     // ------------------------------------------------------------
     // Typings for connect()
     // ------------------------------------------------------------
@@ -199,10 +199,7 @@ declare module "react-redux" {
         children?: React$Node,
     }> {}
 
-    declare export function createProvider(
-        storeKey?: string,
-        subKey?: string,
-    ): Class<Provider<*>>;
+    declare export function createProvider(storeKey?: string, subKey?: string): Class<Provider<*>>;
 
     // ------------------------------------------------------------
     // Typings for connectAdvanced()
@@ -240,22 +237,24 @@ declare module "react-redux" {
         S: Object,
         OP: Object,
         EFO: Object,
-        CP: Object> = (
+        CP: Object,
+    > = (
         dispatch: Dispatch,
         factoryOptions: SelectorFactoryOptions<Com> & EFO,
     ) => MapStateToPropsEx<S, OP, CP>;
 
     declare export function connectAdvanced<
-    Com: React$ComponentType<*>,
-    D,
-    S: Object,
-    OP: Object,
-    CP: Object,
-    EFO: Object,
-    ST: { [_: $Keys<Com>]: any }>(
+        Com: React$ComponentType<*>,
+        D,
+        S: Object,
+        OP: Object,
+        CP: Object,
+        EFO: Object,
+        ST: { [_: $Keys<Com>]: any },
+    >(
         selectorFactory: SelectorFactory<Com, D, S, OP, EFO, CP>,
         connectAdvancedOptions: ?(ConnectAdvancedOptions & EFO),
-): (component: Com) => React$ComponentType<OP> & $Shape<ST>;
+    ): (component: Com) => React$ComponentType<OP> & $Shape<ST>;
 
     declare export default {
         Provider: typeof Provider,
