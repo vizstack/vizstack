@@ -5,8 +5,34 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../../Viewer/Viewer';
-import type { ViewerProps } from '../../Viewer/Viewer';
+import type { ViewerToViewerProps } from '../../Viewer/Viewer';
 import ColorLightBlue from '@material-ui/core/colors/lightBlue';
+
+import type { ViewId } from '../../schema';
+import type {Event, InteractionMessage} from "../../interaction";
+
+type GridLayoutProps = {
+    /** CSS-in-JS styling object. */
+    classes: any,
+
+    lastEvent?: Event,
+    publishEvent: (eventName: string, message: InteractionMessage) => void,
+
+    viewerToViewerProps: ViewerToViewerProps,
+
+    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    elements: {
+       viewId: ViewId,
+       col: number,
+       row: number,
+       width: number,
+       height: number,
+    }[],
+}
+
+type GridLayoutState = {
+    isHovered: boolean,
+}
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -14,50 +40,70 @@ import ColorLightBlue from '@material-ui/core/colors/lightBlue';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-class GridLayout extends React.PureComponent<{
-    /** CSS-in-JS styling object. */
-    classes: {},
-
-    /** Whether the Viz is currently being hovered over by the cursor. */
-    isHovered: boolean,
-
-    /** Whether the Viz should lay out its contents spaciously. */
-    isFullyExpanded: boolean,
-
-    /** Event listeners which should be assigned to the Viz's outermost node. */
-    mouseProps: {
-        onClick: (e) => void,
-        onMouseOver: (e) => void,
-        onMouseOut: (e) => void,
-    },
-
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: Array<[ViewerProps, number, number, number, number]>,
-}> {
+class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
     /** Prop default values. */
     static defaultProps = {};
 
+    constructor(props: GridLayoutProps) {
+        super(props);
+        this.state = {
+            isHovered: false,
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const { lastEvent } = this.props;
+        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
+            const { eventName } = lastEvent;
+            if (eventName === 'hover') {
+                this.setState({
+                    isHovered: true,
+                })
+            }
+            if (eventName === 'unhover') {
+                this.setState({
+                    isHovered: false,
+                })
+            }
+        }
+    }
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
      * have start/end motifs, which are large characters that can be used to indicate a type of
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, isFullyExpanded, isHovered, mouseProps } = this.props;
+        const { classes, elements, publishEvent, viewerToViewerProps } = this.props;
+        const { isHovered } = this.state;
+
+        // TODO: don't repeat this in every view
+        const mouseProps = {
+            onClick: (e) => {
+                e.stopPropagation();
+                publishEvent('click', {});
+            },
+            onMouseOver: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOver', {});
+            },
+            onMouseOut: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOut', {});
+            },
+        };
 
         return (
             <div
                 className={classNames({
                     [classes.grid]: true,
-                    [classes.compactGrid]: !isFullyExpanded,
                     [classes.hoveredGrid]: isHovered,
                 })}
                 {...mouseProps}
             >
-                {elements.map(([viewerProps, col, row, width, height]) => {
+                {elements.map(({viewId, col, row, width, height}) => {
                     return (
                         <div
-                            key={viewerProps.vizId}
+                            key={viewId}
                             className={classNames({
                                 [classes.cell]: true,
                                 [classes.hoveredCell]: isHovered,
@@ -67,7 +113,7 @@ class GridLayout extends React.PureComponent<{
                                 gridRow: `${row + 1} / ${row + 1 + height}`,
                             }}
                         >
-                            <Viewer {...viewerProps} />
+                            <Viewer {...viewerToViewerProps} viewId={viewId} />
                         </div>
                     );
                 })}

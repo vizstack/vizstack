@@ -462,7 +462,13 @@ class Grid(View):
         return {
             'type': 'GridLayout',
             'contents': {
-                'elements': self._elements,
+                'elements': [{
+                    'viewId': view,
+                    'col': col,
+                    'row': row,
+                    'width': width,
+                    'height': height,
+                } for view, col, row, width, height in self._elements],
             },
             'meta': self._meta,
         }

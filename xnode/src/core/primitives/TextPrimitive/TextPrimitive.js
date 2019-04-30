@@ -3,25 +3,14 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-/**
- * This pure dumb component renders visualization for a text string that represents a token.
- */
-class TextPrimitive extends React.PureComponent<{
+import type { Event, InteractionMessage } from '../../interaction'
+
+type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
-    classes: {},
+    classes: any,
 
-    /** Whether the Viz is currently being hovered over by the cursor. */
-    isHovered: boolean,
-
-    /** Whether the Viz should lay out its contents spaciously. */
-    isFullyExpanded: boolean,
-
-    /** Event listeners which should be assigned to the Viz's outermost node. */
-    mouseProps: {
-        onClick: (e) => void,
-        onMouseOver: (e) => void,
-        onMouseOut: (e) => void,
-    },
+    lastEvent?: Event,
+    publishEvent: (eventName: string, message: InteractionMessage) => void,
 
     /** Text string displayed by token. */
     text: string,
@@ -29,17 +18,66 @@ class TextPrimitive extends React.PureComponent<{
     /** The color scheme of the token. */
     color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
     variant?: 'plain' | 'token',
-}> {
+}
+
+type TextPrimitiveState = {
+    isHovered: boolean,
+}
+
+/**
+ * This pure dumb component renders visualization for a text string that represents a token.
+ */
+class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
     static defaultProps = {
         color: 'default',
         variant: 'plain',
     };
 
+    constructor(props: TextPrimitiveProps) {
+        super(props);
+        this.state = {
+            isHovered: false,
+        }
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        const { lastEvent } = this.props;
+        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
+            const { eventName } = lastEvent;
+            if (eventName === 'hover') {
+                this.setState({
+                    isHovered: true,
+                })
+            }
+            if (eventName === 'unhover') {
+                this.setState({
+                    isHovered: false,
+                })
+            }
+        }
+    }
+
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, mouseProps, isHovered } = this.props;
+        const { classes, text, color, variant, publishEvent } = this.props;
+        const { isHovered } = this.state;
+
+        const mouseProps = {
+            onClick: (e) => {
+                e.stopPropagation();
+                publishEvent('click', {});
+            },
+            onMouseOver: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOver', {});
+            },
+            onMouseOut: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOut', {});
+            },
+        };
 
         const split = text.split('\n');
         const lines = split.map((text, i) =>

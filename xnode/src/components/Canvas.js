@@ -18,7 +18,7 @@ import type {
 import Viewer from '../core';
 import type { ViewId } from '../core';
 import type { InteractionState } from '../core'
-import { InteractionManager, initializeInteraction, InteractionContext } from '../core';
+import { InteractionManager, InteractionContext } from '../core';
 
 import ViewerDisplayFrame from './ViewerDisplayFrame';
 import DuplicateIcon from '@material-ui/icons/FileCopyOutlined';
@@ -69,7 +69,6 @@ type Props = {
 }
 
 type State = {
-    interactionState: InteractionState
 }
 
 /**
@@ -77,25 +76,15 @@ type State = {
  * displays a collection of `SnapshotInspector` objects that can be moved with drag-and-drop.
  */
 class Canvas extends React.Component<Props, State> {
+    interactionManager: InteractionManager;
+
     /** Constructor. */
     constructor(props) {
         super(props);
         this.onDragEnd = this.onDragEnd.bind(this);
 
         let interactionManager = new InteractionManager();
-        const allComponents = interactionManager.getAllComponents();
-        //TODO: move these defaults to the library
-        allComponents.subscribe('mouseOver', (subscriber, publisher) => {
-            if (subscriber.guid === publisher.guid) {
-                subscriber.highlight();
-            }
-        });
-        allComponents.subscribe('mouseOut', (subscriber, publisher) => {
-            if (subscriber.guid === publisher.guid) {
-                subscriber.lowlight();
-            }
-        });
-        initializeInteraction(this, interactionManager);
+        this.interactionManager = interactionManager;
     }
 
     // =================================================================================================================
@@ -147,7 +136,6 @@ class Canvas extends React.Component<Props, State> {
      */
     render() {
         const { classes, layoutedSnapshots } = this.props;
-        const { interactionState } = this.state;
 
         // Only render minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = layoutedSnapshots.map(
@@ -162,7 +150,7 @@ class Canvas extends React.Component<Props, State> {
         // Construct draggable viewers within frames.
         const framedViewers = layoutedSnapshots.map((ls: LayoutedSnapshot, idx: number) => {
             return (
-                <Draggable key={ls.snapshotId} draggableId={ls.snapshotId} index={idx}>
+                <Draggable key={ls.snapshotId + ls.viewId} draggableId={ls.snapshotId} index={idx}>
                     {(provided: DraggableProvided) => (
                         <div
                             ref={provided.innerRef}
@@ -181,7 +169,7 @@ class Canvas extends React.Component<Props, State> {
         console.debug(`Canvas -- rendering ${layoutedSnapshots.length} viewer models`, layoutedSnapshots);
 
         return (
-            <InteractionContext.Provider value={interactionState} >
+            <InteractionContext.Provider value={this.interactionManager.getContext()} >
                 <div className={classNames(classes.canvasContainer)}>
                     <DragDropContext onDragEnd={this.onDragEnd}>
                         <Droppable droppableId='canvas'>

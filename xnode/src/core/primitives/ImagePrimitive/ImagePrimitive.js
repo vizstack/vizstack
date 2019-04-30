@@ -3,41 +3,78 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
+import type {Event, InteractionMessage} from "../../interaction";
+
+type ImagePrimitiveProps = {
+    /** CSS-in-JS styling object. */
+    classes: any,
+
+    lastEvent?: Event,
+    publishEvent: (eventName: string, message: InteractionMessage) => void,
+
+    /** Path at which the image file is saved. */
+    filePath: string,
+}
+
+type ImagePrimitiveState = {
+    isHovered: boolean,
+}
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
-class ImagePrimitive extends React.PureComponent<{
-    /** CSS-in-JS styling object. */
-    classes: {},
+class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
 
-    /** Whether the Viz is currently being hovered over by the cursor. */
-    isHovered: boolean,
+    constructor(props: ImagePrimitiveProps) {
+        super(props);
+        this.state = {
+            isHovered: false,
+        }
+    }
 
-    /** Whether the Viz should lay out its contents spaciously. */
-    isFullyExpanded: boolean,
+    componentDidUpdate(prevProps: ImagePrimitiveProps, prevState: ImagePrimitiveState) {
+        const { lastEvent } = this.props;
+        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
+            const { eventName } = lastEvent;
+            if (eventName === 'hover') {
+                this.setState({
+                    isHovered: true,
+                })
+            }
+            if (eventName === 'unhover') {
+                this.setState({
+                    isHovered: false,
+                })
+            }
+        }
+    }
 
-    /** Event listeners which should be assigned to the Viz's outermost node. */
-    mouseProps: {
-        onClick: (e) => void,
-        onMouseOver: (e) => void,
-        onMouseOut: (e) => void,
-    },
-
-    /** Path at which the image file is saved. */
-    filePath: string,
-}> {
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, mouseProps, isFullyExpanded, isHovered } = this.props;
+        const { classes, filePath, publishEvent } = this.props;
+        const { isHovered } = this.state;
+
+        const mouseProps = {
+            onClick: (e) => {
+                e.stopPropagation();
+                publishEvent('click', {});
+            },
+            onMouseOver: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOver', {});
+            },
+            onMouseOut: (e) => {
+                e.stopPropagation();
+                publishEvent('mouseOut', {});
+            },
+        };
 
         return (
             <img
                 className={classNames({
                     [classes.image]: true,
-                    [classes.compactImage]: !isFullyExpanded,
                     [classes.hovered]: isHovered,
                 })}
                 src={filePath}

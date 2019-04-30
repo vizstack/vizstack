@@ -27,12 +27,15 @@ import DagLayout from '../layouts/DagLayout/index';
 import FlowLayout from '../layouts/FlowLayout/FlowLayout';
 
 // Interactions
-import type { Event, InteractionSpec, Constraint, Subscription, ReadOnlyView, InteractiveView, InteractionManager } from '../interaction';
+import type { Event, Constraint, ViewerHandle, InteractionMessage } from '../interaction';
 import { InteractionContext } from '../interaction';
 
-export type ViewerProps = {};
+export type ViewerToViewerProps = {
+    parent: ViewerHandle,
+    view: View,
+};
 
-type Props = {
+type ViewerProps = {
     /** Specification of View's root model and sub-models.*/
     view: View,
 
@@ -40,132 +43,78 @@ type Props = {
      *  level of nesting. If unspecified, the `rootId` from `viewSpec` is used. */
     viewId?: ViewId,
 
-    lastEvent?: Event,
-    interactions: Array<InteractionSpec>,
-    publishEvent: (eventName: string, publisher: InteractiveView) => void,
+    /** A function to be called when the viewer is mounted, which instructs an `InteractionManager` instance to begin
+     * handling events for this `Viewer`. */
+    register: (viewer: ViewerHandle) => void,
 
-    /** Mouse interactions. TODO: determine if these should be kept with the new interaction manager. */
-    onClick?: () => void,
-    onMouseOver?: () => void,
-    onMouseOut?: () => void,
+    /** A function to be called when the viewer is mounted, which instructs an `InteractionManager` instance to stop
+     * handling events for this `Viewer`. */
+    unregister: (viewer: ViewerHandle) => void,
+
+    /** A function which publishes an `Event` to the `InteractionManager` which was registered by the `register()`
+     * function. */
+    publishEvent: (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => void,
+
+    /** Information about the parent of this viewer, if one exists. */
+    parent?: ViewerHandle,
 }
 
-type State = {
-    /** Whether the current component is hovered. TODO: Clarify. */
-    isHovered: boolean,
+type ViewerState = {
+    lastEvent?: Event,
 }
 
 /**
  * This smart component parses a Snapshot and assembles a corresponding Viz rendering.
  */
-class Viewer extends React.Component<Props, State> {
-    interactionSpecs: Array<InteractionSpec> = [];
+class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
+    // interactionSpecs: Array<InteractionSpec> = [];
     guid: string = cuid();
 
     static defaultProps = {
-        interactions: [],
-        publishEvent: (eventName, publisher) => {},
+        register: () => {},
+        unregister: () => {},
+        publishEvent: () => {},
     };
 
-    /**
-     * Constructor.
-     * @param props
-     */
-    constructor(props: Props) {
+    constructor(props: ViewerProps) {
         super(props);
-        this.state = Immutable({
-            isHovered: false,
-        });
-        this.updateCollectionMemberships();
+        this.state = {};
     }
 
-    satisfiesSpec(constraints: Array<Constraint>) {
-        const { view, viewId } = this.props;
-        const currId: ViewId = viewId || view.rootId;
-        const model: ViewModel = view.models[currId];
-        return constraints.every((constraint: Constraint, i) => {
-            switch (constraint.type) {
-                case "type": {
-                    return constraint.includedTypes.includes(model.type);
-                }
-                case "meta": {
-                    return constraint.includedValues.includes(model.meta[constraint.key]);
-                }
-                case "filter": {
-                    return constraint.fn(this.getReadOnlyInterface());
-                }
-                default: {
-                    return true;
-                }
-            }
+    componentDidMount() {
+        this.props.register(this.getHandle());
+    }
+
+    componentWillUnmount() {
+        this.props.unregister(this.getHandle());
+    }
+
+    satisfiesConstraints(constraints: Array<Constraint>) {
+        return constraints.every((constraint: Constraint) => {
+            return constraint(this.getHandle());
         });
     }
 
-    updateCollectionMemberships() {
-        const { interactions } = this.props;
-        this.interactionSpecs = interactions.filter((interaction) => {
-            return this.satisfiesSpec(interaction.constraints);
-        });
-    }
-
-    getReadOnlyInterface(): ReadOnlyView {
-        const { view, viewId } = this.props;
+    getHandle(): ViewerHandle {
+        const { view, viewId, parent } = this.props;
         const currId: ViewId = viewId || view.rootId;
         const model: ViewModel = view.models[currId];
         const { type, meta, contents } = model;
         return {
-            guid: this.guid,
+            viewerId: this.guid,
             type,
             meta,
             contents,
+            parent,
+            satisfiesConstraints: (constraints) => this.satisfiesConstraints(constraints),
+            receiveEvent: (event) => this.setState({lastEvent: event}),
         };
     }
-
-    getInteractiveInterface(): InteractiveView {
-        const { view, viewId } = this.props;
-        const currId: ViewId = viewId || view.rootId;
-        const model: ViewModel = view.models[currId];
-        const { type, meta, contents } = model;
-        return {
-            guid: this.guid,
-            type,
-            meta,
-            contents,
-            highlight: () => this.setState({isHovered: true}),
-            lowlight: () => this.setState({isHovered: false}),
-        };
-    }
-
-    consumeEvent(event: Event): void {
-        console.debug(this.guid, 'consuming event', event);
-        this.interactionSpecs.forEach((interaction: InteractionSpec) => {
-            interaction.subscriptions.filter((subscription: Subscription) => {
-                return event.name === subscription.eventName;
-            })
-            .forEach((subscription: Subscription) => {
-                subscription.handler(this.getInteractiveInterface(), event.caller);
-            });
-        });
-    }
-
-    componentDidUpdate(prevProps: Props, prevState: State): void {
-        const { lastEvent, interactions } = this.props;
-        if (prevProps.interactions !== interactions && interactions !== undefined) {
-            this.updateCollectionMemberships();
-        }
-        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined) {
-            this.consumeEvent(lastEvent);
-        }
-    }
-
-    // TODO: add meta to backend
 
     /** Renderer. */
     render() {
-        const { view, viewId } = this.props;
-        const { onClick, onMouseOver, onMouseOut } = this.props;
-        const { publishEvent } = this.props;
-        const { isHovered } = this.state;
+        const { view, viewId, publishEvent } = this.props;
+        const { lastEvent } = this.state;
 
         // Explicitly specified model for current viewer, or root-level model by default.
         const currId: ViewId = viewId || view.rootId;
@@ -175,29 +124,13 @@ class Viewer extends React.Component<Props, State> {
             return null;
         }
 
-        const mouseProps = {
-            onClick: (e) => {
-                e.stopPropagation();
-                // if (onClick) onClick();
-                publishEvent('click', this.getInteractiveInterface());
-            },
-            onMouseOver: (e) => {
-                e.stopPropagation();
-                // this.setState((state) => Immutable(state).set('isHovered', true));
-                // if (onMouseOver) onMouseOver();
-                publishEvent('mouseOver', this.getInteractiveInterface());
-            },
-            onMouseOut: (e) => {
-                e.stopPropagation();
-                // this.setState((state) => Immutable(state).set('isHovered', false));
-                // if (onMouseOut) onMouseOut();
-                publishEvent('mouseOut', this.getInteractiveInterface());
-            },
+        const viewerToViewerProps: ViewerToViewerProps = {
+            parent: this.getHandle(),
+            view,
         };
-        const generalProps = {
-            mouseProps,
-            isHovered,
-        }; // The `Viewer` is the component that knows how to dispatch on model type to render
+
+        const boundPublishEvent = (eventName, message) => publishEvent(eventName, message, this.getHandle());
+        // The `Viewer` is the component that knows how to dispatch on model type to render
         // different primitive and layout components.
         switch (model.type) {
             // =====================================================================================
@@ -205,12 +138,16 @@ class Viewer extends React.Component<Props, State> {
 
             case 'TextPrimitive': {
                 const { contents } = (model: TextPrimitiveModel);
-                return <TextPrimitive {...generalProps} {...contents} />;
+                return <TextPrimitive lastEvent={lastEvent}
+                                      publishEvent={boundPublishEvent}
+                                      {...contents} />;
             }
 
             case 'ImagePrimitive': {
                 const { contents } = (model: ImagePrimitiveModel);
-                return <ImagePrimitive {...generalProps} {...contents} />;
+                return <ImagePrimitive lastEvent={lastEvent}
+                                       publishEvent={boundPublishEvent}
+                                       {...contents} />;
             }
 
             // =====================================================================================
@@ -218,12 +155,18 @@ class Viewer extends React.Component<Props, State> {
 
             case 'GridLayout': {
                 const { contents } = (model: GridLayoutModel);
-                return <GridLayout {...generalProps} {...contents} />;
+                return <GridLayout viewerToViewerProps={viewerToViewerProps}
+                                   lastEvent={lastEvent}
+                                   publishEvent={boundPublishEvent}
+                                   {...contents} />;
             }
 
             case 'FlowLayout': {
                 const { contents } = (model: FlowLayoutModel);
-                return <FlowLayout {...generalProps} {...contents} />;
+                return <FlowLayout viewerToViewerProps={viewerToViewerProps}
+                                   lastEvent={lastEvent}
+                                   publishEvent={boundPublishEvent}
+                                   {...contents} />;
             }
 
             // case 'SwitchLayout': {
@@ -235,7 +178,10 @@ class Viewer extends React.Component<Props, State> {
 
             case 'DagLayout': {
                 const { contents } = (model: DagLayoutModel);
-                return <DagLayout {...generalProps} {...contents} />;
+                return <DagLayout viewerToViewerProps={viewerToViewerProps}
+                                  lastEvent={lastEvent}
+                                  publishEvent={boundPublishEvent}
+                                  {...contents} />;
             }
 
             default: {
@@ -246,45 +192,14 @@ class Viewer extends React.Component<Props, State> {
     }
 }
 
-// class Fucker extends React.Component {
-//     render() {
-//         console.log('fucker render');
-//         return (
-//             <InteractionContext.Consumer>
-//                 {context => {
-//                     const { lastEvent, interactions, publishEvent } = context;
-//                     console.log(lastEvent);
-//                     return (
-//                         <Viewer {...this.props}
-//                                    lastEvent={lastEvent} interactions={interactions} publishEvent={publishEvent}/>
-//                     );
-//                 }}
-//             </InteractionContext.Consumer>
-//         )
-//     }
-// }
-
-
-
-// export default React.forwardRef((props, ref) => (
-//     <InteractionContext.Consumer>
-//         {({lastEvent, interactions, publishEvent}) => {
-//             console.log(lastEvent);
-//             return (
-//                 <Viewer {...props} ref={ref}
-//                            lastEvent={lastEvent} interactions={interactions} publishEvent={publishEvent}/>
-//             );
-//         }}
-//     </InteractionContext.Consumer>
-// ));
-
+// TODO: do we need these as props
 function consumeInteractions<Config>(Component: React.AbstractComponent<Config, Viewer>): React.AbstractComponent<Config, Viewer> {
     return React.forwardRef<Config, Viewer>((props, ref) => (
         <InteractionContext.Consumer>
-            {({lastEvent, interactions, publishEvent}) => {
+            {({registerViewer, unregisterViewer, publishEvent}) => {
                 return (
                     <Component {...props} ref={ref}
-                               lastEvent={lastEvent} interactions={interactions} publishEvent={publishEvent}/>
+                               register={registerViewer} unregister={unregisterViewer} publishEvent={publishEvent}/>
                 );
             }}
         </InteractionContext.Consumer>
@@ -292,6 +207,4 @@ function consumeInteractions<Config>(Component: React.AbstractComponent<Config, 
 }
 
 // https://github.com/facebook/react/issues/12397#issuecomment-375501574
-export default consumeInteractions<Props>(Viewer);
-// export default Fucker;
-// export default Fucker;
+export default consumeInteractions<ViewerProps>(Viewer);

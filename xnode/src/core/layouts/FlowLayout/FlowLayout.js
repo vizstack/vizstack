@@ -5,7 +5,25 @@ import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
 import Viewer from '../../Viewer/Viewer';
-import type { ViewerProps } from '../../Viewer/Viewer';
+import type { ViewId } from '../../schema';
+import type { ViewerToViewerProps } from '../../Viewer/Viewer';
+import type {Event, InteractionMessage} from "../../interaction";
+
+type FlowLayoutProps = {
+    /** CSS-in-JS styling object. */
+    classes: any,
+
+    lastEvent?: Event,
+    publishEvent: (eventName: string, message: InteractionMessage) => void,
+
+    viewerToViewerProps: ViewerToViewerProps,
+
+    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    elements: Array<ViewId>,
+}
+
+type FlowLayoutState = {
+}
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -13,26 +31,7 @@ import type { ViewerProps } from '../../Viewer/Viewer';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-class FlowLayout extends React.PureComponent<{
-    /** CSS-in-JS styling object. */
-    classes: {},
-
-    /** Whether the Viz is currently being hovered over by the cursor. */
-    isHovered: boolean,
-
-    /** Whether the Viz should lay out its contents spaciously. */
-    isFullyExpanded: boolean,
-
-    /** Event listeners which should be assigned to the Viz's outermost node. */
-    mouseProps: {
-        onClick: (e) => void,
-        onMouseOver: (e) => void,
-        onMouseOut: (e) => void,
-    },
-
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: Array<ViewerProps>,
-}> {
+class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
     /** Prop default values. */
     static defaultProps = {};
 
@@ -42,19 +41,16 @@ class FlowLayout extends React.PureComponent<{
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, isHovered, mouseProps } = this.props;
+        const { classes, elements, viewerToViewerProps } = this.props;
 
         return (
             <div
                 className={classNames({
                     [classes.root]: true,
-                    [classes.hovered]: isHovered,
-                    [classes.notHovered]: !isHovered,
                 })}
-                {...mouseProps}
             >
-                {elements.map((viewerProps, i) => {
-                    return <Viewer key={i} {...viewerProps} />;
+                {elements.map((viewId, i) => {
+                    return <Viewer key={i} {...viewerToViewerProps} viewId={viewId} />;
                 })}
             </div>
         );
@@ -70,12 +66,10 @@ const styles = (theme) => ({
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
+        borderColor: 'transparent',
     },
     hovered: {
         borderColor: theme.palette.primary.light,
-    },
-    notHovered: {
-        borderColor: 'transparent',
     },
 });
 

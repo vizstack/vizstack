@@ -3,34 +3,69 @@ import type { ViewType, ViewContents, ViewMeta } from './schema'
 
 import * as React from 'react';
 
-export type Constraint = ViewTypeConstraint | MetaConstraint | FilterConstraint;
+/** A function which returns `true` iff `view` satisfies a particular constraint function. */
+export type Constraint = (view: ViewerHandle) => boolean;
 
+/** The acceptable types in a JSON object. */
 type Json = string | number | {[string]: Json} | Array<Json>;
 
-type ViewTypeConstraint = {
-    type: "type",
-    includedTypes: Array<ViewType>,
-}
-
-type MetaConstraint = {
-    type: "meta",
-    key: string,
-    includedValues: Array<string | number>,
-}
-
-type FilterConstraint = {
-    type: "filter",
-    fn: (ReadOnlyView) => boolean,
-}
-
+/** Describes a function `handler()` which should be executed when an event with name `eventName` triggers. */
 export type Subscription = {
     eventName: string,
-    handler: (subscriber: InteractiveView, publisher: InteractiveView) => void,
+    handler: (message: InteractionMessage, subscriber: ViewerHandle, publisher: ViewerHandle) => void,
 }
 
+export type InteractionMessage = {
+    [string]: any,
+}
+
+/** Describes the event `subscriptions` that views satisfying `constraints` should have.
+ *
+ * `InteractionSet` instances should be created only by a call to `InteractionManager.getAllComponents()`; otherwise,
+ * they will not be used by the `InteractionManager` and thus will not affect the behaviors of any Viewer components.
+ *
+ * A typical use pattern:
+ *
+ * const manager = new InteractionManager();
+ * const selectedComponents = manager.getAllComponents().withType("TextPrimitive")...;  // chain any constraints here
+ * selectedComponents.subscribe("mouseOver", (subscriber, publisher) => {...});
+ * selectedComponents.subscribe("mouseOut", (subscriber, publisher) => {...});
+ *
+ * We have consciously decided that `subscribe()`, unlike the constraint methods, should not return the `InteractionSet`
+ * instance, thus disallowing chaining of `subscribe()` calls. This prevents misleading chains from occurring. Consider
+ * the following chain:
+ *
+ * manager.getAllComponents().subscribe("event1", ...).withType("TextPrimitive").subscribe("event2", ...);
+ *
+ * In this chain, it is not clear which components are subscribed to each event. One reasonable interpretation is that
+ * order matters, and that all components are therefore subscribed to "event1" but only TextPrimitives are subscribed to
+ * "event2". Another reasonable interpretation is that order does not matter, and only TextPrimitivies are subscribed to
+ * both events. Preventing `subscribe()` chains disallows this ambiguity.
+ * */
 class InteractionSet {
-    constraints: Array<Constraint> = [];
-    subscriptions: Array<Subscription> = [];
+    constraints: Array<Constraint>;
+    subscriptions: Array<Subscription>;
+
+    constructor(constraints: Array<Constraint> = [], subscriptions: Array<Subscription> = []) {
+        this.constraints = constraints;
+        this.subscriptions = subscriptions;
+    }
+
+    /**
+     * Returns a new `ComponentCollection` containing only members
+     * @param fn
+     * @returns {InteractionSet}
+     */
+    filter(fn: (ViewerHandle) => boolean): InteractionSet {
+        this.constraints.push(fn);
+        return new InteractionSet(this.constraints.concat([fn]), this.subscriptions.slice());
+    }
+
+    withParentIn(interactionSet: InteractionSet): InteractionSet {
+        return this.filter((viewer: ViewerHandle) => {
+            return viewer.parent !== undefined && viewer.parent.satisfiesConstraints(interactionSet.constraints);
+        });
+    }
 
     /**
      * Returns a new `ComponentCollection` containing only members of the specified type(s).
@@ -38,11 +73,9 @@ class InteractionSet {
      * @param type
      */
     withType(type: ViewType | Array<ViewType>): InteractionSet {
-        this.constraints.push({
-            type: "type",
-            includedTypes: Array.isArray(type) ? type : [type],
+        return this.filter((viewer: ViewerHandle) => {
+            return Array.isArray(type) ? type.includes(viewer.type) : type === viewer.type;
         });
-        return this;
     }
 
     /**
@@ -53,32 +86,19 @@ class InteractionSet {
      * @param value
      */
     withMeta(key: string, value: string | number | Array<string | number>): InteractionSet {
-        this.constraints.push({
-            type: "meta",
-            key,
-            includedValues: Array.isArray(value) ? value : [value],
+        return this.filter((viewer: ViewerHandle) => {
+            return Array.isArray(value) ? value.includes(viewer.meta[key]) : value === viewer.meta[key];
         });
-        return this;
     }
 
-    /**
-     * Returns a new `ComponentCollection` containing only members
-     * @param fn
-     * @returns {InteractionSet}
-     */
-    filter(fn: (ReadOnlyView) => boolean): InteractionSet {
-        this.constraints.push({
-            type: "filter",
-            fn,
-        });
-        return this;
-    }
-
-    subscribe(eventName: string, handler: (subscriber: InteractiveView, publisher: InteractiveView) => void): void {
+    subscribe(eventName: string,
+              handler: (message: InteractionMessage,
+                        subscriber: ViewerHandle,
+                        publisher: ViewerHandle) => void): void {
         this.subscriptions.push({
             eventName,
             handler,
-        })
+        });
     }
 }
 
@@ -87,90 +107,116 @@ export type InteractionSpec = {
     subscriptions: Array<Subscription>;
 }
 
-export type ReadOnlyView  = {
-    guid: string,
+// TODO: separate into "interactive" and "non-interactive"
+export type ViewerHandle  = {
+    viewerId: string,
+    // TODO: re-pack the view fields
     type: ViewType,
     meta: ViewMeta,
     contents: ViewContents,
-}
-
-export type InteractiveView = {
-    guid: string,
-    type: ViewType,
-    meta: ViewMeta,
-    contents: ViewContents,
-    highlight: () => void,
-    lowlight: () => void,
+    parent?: ViewerHandle,
+    satisfiesConstraints: (Array<Constraint>) => boolean,
+    receiveEvent: (Event) => void,
 }
 
 export type Event = {
-    name: string,
-    caller: InteractiveView,
+    eventName: string,
+    message: InteractionMessage,
+    publisher: ViewerHandle,
 }
 
 export class InteractionManager {
     interactionSets: Array<InteractionSet> = [];
-    // TODO: get correct types for this function
-    environmentUpdates: Array<((prevState: any, prevProps: any) => any) => void> = [];
+    viewers: {[string]: ViewerHandle} = {};
+    viewerInteractionSets: {[string]: Array<InteractionSet>} = {};
 
     constructor() {
         this.publish = this.publish.bind(this);
+        this.registerViewer = this.registerViewer.bind(this);
+        this.unregisterViewer = this.unregisterViewer.bind(this);
+
+        this._addDefaultInteractions();
     }
 
-    publish(eventName: string, eventCaller: InteractiveView) {
-        this.environmentUpdates.forEach((setState) => {
-            setState((prevState) => ({
-                ...prevState,
-                interactionState: {
-                    ...prevState.interactionState,
-                    interactions: this.interactionSets.map(({constraints, subscriptions}) => ({constraints, subscriptions})),
-                    lastEvent: {
-                        name: eventName,
-                        caller: eventCaller,
-                    },
-                }
-            }));
-        })
+    _addDefaultInteractions(): void {
+        const allViewers = this.getAllComponents();
+        allViewers.subscribe('mouseOver', (message, subscriber, publisher) => {
+            if (subscriber.viewerId === publisher.viewerId) {
+                this.publish('hover', {viewerId: subscriber.viewerId}, publisher);
+            }
+        });
+        allViewers.subscribe('mouseOut', (message, subscriber, publisher) => {
+            if (subscriber.viewerId === publisher.viewerId) {
+                this.publish('unhover', {viewerId: subscriber.viewerId}, publisher);
+            }
+        });
+    }
+
+    registerViewer: (viewer: ViewerHandle) => void = (viewer: ViewerHandle) => {
+        this.viewers[viewer.viewerId] = viewer;
+        this.viewerInteractionSets[viewer.viewerId] = this.interactionSets.filter(({constraints}) => viewer.satisfiesConstraints(constraints));
+    };
+
+    unregisterViewer: (viewer: ViewerHandle) => void = (viewer: ViewerHandle) => {
+        delete this.viewers[viewer.viewerId];
+        delete this.viewerInteractionSets[viewer.viewerId]
+    };
+
+    // TODO: cache viewer memberships
+    publish = (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => {
+        Object.entries(this.viewerInteractionSets).forEach(([viewerId, interactionSets]) => {
+            // interactionSets will always be an array of InteractionSets, but flow is too dumb to use the type hint for
+            // this.viewerInteractionSets when calling Object.entries
+            // (https://stackoverflow.com/questions/45621837/flowtype-errors-using-object-entries)
+            if (!Array.isArray(interactionSets)) throw new Error();
+            interactionSets
+                .forEach((interactionSet) => {
+                    if (!(interactionSet instanceof InteractionSet)) throw new Error();
+                    interactionSet.subscriptions
+                        .filter((subscription) => subscription.eventName === eventName)
+                        .forEach((subscription) => {
+                            if (subscription.eventName === eventName) {
+                                subscription.handler(message, this.viewers[viewerId], publisher);
+                            }
+                        })
+                });
+        });
+        // TODO: formalize this convention
+        if (message.viewerId !== undefined && message.viewerId in this.viewers) {
+            this.viewers[message.viewerId].receiveEvent({
+                eventName,
+                message,
+                publisher,
+            })
+        }
     };
 
     getAllComponents(): InteractionSet {
         const componentCollection = new InteractionSet();
         this.interactionSets.push(componentCollection);
-        this.environmentUpdates.forEach((setState) => {
-            setState((prevState) => ({
-                ...prevState,
-                interactionState: {
-                    ...prevState.interactionState,
-                    interactions: this.interactionSets.map(({constraints, subscriptions}) => ({constraints, subscriptions})),
-                }
-            }));
-        });
         return componentCollection;
     };
+
+    getContext(): InteractionState {
+        const { registerViewer, unregisterViewer, publish } = this;
+        return {
+            registerViewer,
+            unregisterViewer,
+            publishEvent: publish,
+        };
+    }
 }
 
 export const InteractionContext = React.createContext<InteractionState>({
-    interactions: [],
-    publishEvent: (eventName: string, eventCaller: InteractiveView) => {},
+    // interactions: [],
+    registerViewer: (viewer) => {},
+    unregisterViewer: (viewer) => {},
+    publishEvent: (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => {},
 });
 
 export type InteractionState = {
-    lastEvent?: Event,
-    interactions: Array<InteractionSpec>,
-    publishEvent: (eventName: string, eventCaller: InteractiveView) => void,
-}
-
-export function initializeInteraction<P, S: {interactionState: InteractionState}>(
-    component: React.Component<P, S>,
-    manager: InteractionManager) {
-    if (component.state === undefined) {
-        component.state = {};
-    }
-    component.state.interactionState = {
-        interactions: [],
-        publishEvent: manager.publish,
-    };
-    manager.environmentUpdates.push((updater: (S, P) => InteractionState) => {
-        component.setState(updater);
-    });
+    // interactions: Array<InteractionSpec>,
+    registerViewer: (viewer: ViewerHandle) => void,
+    unregisterViewer: (viewer: ViewerHandle) => void,
+    publishEvent: (eventName: string, message: InteractionMessage, publisher: ViewerHandle) => void,
 }
