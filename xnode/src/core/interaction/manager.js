@@ -1,26 +1,29 @@
 // @flow
-import type { ViewModel } from './schema';
-
 import * as React from 'react';
 
-/** A function which returns `true` iff `view` satisfies a particular constraint function. */
-export type Constraint = (view: ReadOnlyViewerHandle) => boolean;
+/** A function which returns `true` iff `viewer` satisfies a particular constraint function. */
+import type {
+    OnMouseOverEvent,
+    OnMouseOutEvent,
+    OnClickEvent,
+    HighlightEvent,
+    UnhighlightEvent,
+    IncrementEvent,
+    EventMessage,
+    Event,
+} from './events';
+import type { ViewModel } from '../schema';
 
-/** The acceptable types in a JSON object. */
-type Json = string | number | { [string]: Json } | Array<Json>;
+type SubscriptionHandler<Message: EventMessage> = (
+    message: Message,
+    subscriber: InteractiveViewerHandle,
+    state: InteractionState,
+) => void;
 
 /** Describes a function `handler()` which should be executed when an event with name `eventName` triggers. */
-export type Subscription = {
-    eventName: string,
-    handler: (
-        message: InteractionMessage,
-        subscriber: ReadOnlyViewerHandle,
-        publisher: ReadOnlyViewerHandle,
-    ) => void,
-};
-
-export type InteractionMessage = {
-    [string]: any,
+export type Subscription<E: Event = Event> = {
+    eventName: $PropertyType<E, 'eventName'>,
+    handler: SubscriptionHandler<$PropertyType<E, 'message'>>,
 };
 
 /** Describes behaviors all Viewers matching a given set of constraints should perform whenever
@@ -70,14 +73,14 @@ export type InteractionMessage = {
  * */
 class InteractionSet {
     constraints: Array<Constraint>;
-    subscriptions: Array<Subscription> = [];
+    subscriptions: Array<Subscription<>>;
     manager: InteractionManager;
 
-    constructor(manager: InteractionManager,
-                constraints: Array<Constraint> = []) {
+    constructor(manager: InteractionManager, constraints: Array<Constraint>) {
         manager.interactionSets.push(this);
         this.manager = manager;
         this.constraints = constraints;
+        this.subscriptions = [];
     }
 
     /**
@@ -86,10 +89,7 @@ class InteractionSet {
      * @returns {InteractionSet}
      */
     filter(fn: (ReadOnlyViewerHandle) => boolean): InteractionSet {
-        this.constraints.push(fn);
-        return new InteractionSet(
-            this.manager,
-            this.constraints.concat([fn]));
+        return new InteractionSet(this.manager, this.constraints.concat([fn]));
     }
 
     withParentIn(interactionSet: InteractionSet): InteractionSet {
@@ -106,7 +106,9 @@ class InteractionSet {
      *
      * @param type
      */
-    withType(type: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>): InteractionSet {
+    withType(
+        type: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>,
+    ): InteractionSet {
         return this.filter((viewer: ReadOnlyViewerHandle) => {
             return Array.isArray(type)
                 ? type.includes(viewer.viewModel.type)
@@ -129,13 +131,10 @@ class InteractionSet {
         });
     }
 
-    subscribe(
-        eventName: string,
-        handler: (
-            message: InteractionMessage,
-            subscriber: ReadOnlyViewerHandle,
-            publisher: ReadOnlyViewerHandle,
-        ) => void,
+    // TODO: figure out how to write this such that the handler message knows what its contents are given the event name
+    subscribe<E: Event>(
+        eventName: $PropertyType<E, 'eventName'>,
+        handler: SubscriptionHandler<$PropertyType<E, 'message'>>,
     ): void {
         this.subscriptions.push({
             eventName,
@@ -144,34 +143,15 @@ class InteractionSet {
     }
 }
 
-type ViewerInfo = {
-    viewerId: string,
-    viewModel: ViewModel,
-    parent?: ReadOnlyViewerHandle,
-}
-
-export type ReadOnlyViewerHandle = {
-    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
-    ...$Exact<ViewerInfo>,
-    satisfiesConstraints: (Array<Constraint>) => boolean,
-};
-
-export type InteractiveViewerHandle = {
-    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
-    ...$Exact<ReadOnlyViewerHandle>,
-    receiveEvent: (Event) => void,
-}
-
-export type Event = {
-    eventName: string,
-    message: InteractionMessage,
-    publisher: ReadOnlyViewerHandle,
+export type InteractionState = {
+    [string]: any,
 };
 
 export class InteractionManager {
     interactionSets: Array<InteractionSet> = [];
     viewers: { [string]: InteractiveViewerHandle } = {};
     viewerInteractionSets: { [string]: Array<InteractionSet> } = {};
+    state: InteractionState = {};
 
     constructor() {
         this.publish = this.publish.bind(this);
@@ -183,22 +163,32 @@ export class InteractionManager {
 
     _addDefaultInteractions(): void {
         const allViewers = this.getAllComponents();
-        allViewers.subscribe('mouseOver', (message, subscriber, publisher) => {
-            if (subscriber.viewerId === publisher.viewerId) {
-                this.publish('hover', { viewerId: subscriber.viewerId }, publisher);
+        allViewers.subscribe<OnMouseOverEvent>('onMouseOver', (message, subscriber) => {
+            if (subscriber.viewerId === message.publisher.viewerId) {
+                this.publish<HighlightEvent>({
+                    eventName: 'highlight',
+                    message: { viewerId: subscriber.viewerId },
+                });
             }
         });
-        allViewers.subscribe('mouseOut', (message, subscriber, publisher) => {
-            if (subscriber.viewerId === publisher.viewerId) {
-                this.publish('unhover', { viewerId: subscriber.viewerId }, publisher);
+        allViewers.subscribe<OnMouseOutEvent>('onMouseOut', (message, subscriber) => {
+            if (subscriber.viewerId === message.publisher.viewerId) {
+                this.publish<UnhighlightEvent>({
+                    eventName: 'unhighlight',
+                    message: { viewerId: subscriber.viewerId },
+                });
             }
         });
-        allViewers.withType('SwitchLayout').subscribe('click', (msg, sub, pub) => {
-            console.log("Clicked!", sub, pub);
-            if (sub.viewerId === pub.viewerId) {
-                this.publish('advance', { viewerId: sub.viewerId }, pub);
-            }
-        })
+        allViewers
+            .withType('SwitchLayout')
+            .subscribe<OnClickEvent>('onClick', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    this.publish<IncrementEvent>({
+                        eventName: 'increment',
+                        message: { viewerId: subscriber.viewerId },
+                    });
+                }
+            });
     }
 
     registerViewer = (viewer: InteractiveViewerHandle) => {
@@ -213,8 +203,7 @@ export class InteractionManager {
         delete this.viewerInteractionSets[viewer.viewerId];
     };
 
-    // TODO: cache viewer memberships
-    publish = (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => {
+    publish: <E: Event>(event: E) => void = <E: Event>(event: E) => {
         Object.entries(this.viewerInteractionSets).forEach(([viewerId, interactionSets]) => {
             // interactionSets will always be an array of InteractionSets, but flow is too dumb to use the type hint for
             // this.viewerInteractionSets when calling Object.entries
@@ -223,26 +212,21 @@ export class InteractionManager {
             interactionSets.forEach((interactionSet) => {
                 if (!(interactionSet instanceof InteractionSet)) throw new Error();
                 interactionSet.subscriptions
-                    .filter((subscription) => subscription.eventName === eventName)
+                    .filter((subscription) => subscription.eventName === event.eventName)
                     .forEach((subscription) => {
-                        if (subscription.eventName === eventName) {
-                            subscription.handler(message, this.viewers[viewerId], publisher);
+                        if (subscription.eventName === event.eventName) {
+                            subscription.handler(event.message, this.viewers[viewerId], this.state);
                         }
                     });
             });
         });
-        // TODO: formalize this convention
-        if (message.viewerId !== undefined && message.viewerId in this.viewers) {
-            this.viewers[message.viewerId].receiveEvent({
-                eventName,
-                message,
-                publisher,
-            });
+        if (event.message.viewerId !== undefined && event.message.viewerId in this.viewers) {
+            this.viewers[event.message.viewerId].receiveEvent(event);
         }
     };
 
     getAllComponents(): InteractionSet {
-        return new InteractionSet(this);
+        return new InteractionSet(this, []);
     }
 
     getContext(): InteractionContextValue {
@@ -259,12 +243,32 @@ export const InteractionContext = React.createContext<InteractionContextValue>({
     // interactions: [],
     registerViewer: (viewer) => {},
     unregisterViewer: (viewer) => {},
-    publishEvent: (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => {},
+    publishEvent: (event: Event) => {},
 });
 
 export type InteractionContextValue = {
     // interactions: Array<InteractionSpec>,
     registerViewer: (viewer: InteractiveViewerHandle) => void,
     unregisterViewer: (viewer: InteractiveViewerHandle) => void,
-    publishEvent: (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => void,
+    publishEvent: (event: Event) => void,
 };
+
+export type Constraint = (viewer: ReadOnlyViewerHandle) => boolean;
+
+type ViewerInfo = {|
+    viewerId: string,
+    viewModel: ViewModel,
+    parent?: ReadOnlyViewerHandle,
+|};
+
+export type ReadOnlyViewerHandle = {|
+    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
+    ...ViewerInfo,
+    satisfiesConstraints: (Array<Constraint>) => boolean,
+|};
+
+export type InteractiveViewerHandle = {|
+    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
+    ...ReadOnlyViewerHandle,
+    receiveEvent: (Event) => void,
+|};

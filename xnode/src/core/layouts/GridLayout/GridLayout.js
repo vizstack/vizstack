@@ -8,18 +8,42 @@ import Viewer from '../../Viewer';
 import type { ViewerToViewerProps } from '../../Viewer';
 
 import type { ViewId } from '../../schema';
-import type { Event, InteractionMessage } from '../../interaction';
+import type {
+    Event,
+    EventMessage,
+    MouseEventProps,
+    ReadOnlyViewerHandle,
+    OnMouseEvent,
+    OnChildMouseEvent,
+} from '../../interaction';
+import { useMouseInteractions } from '../../interaction';
 
 type GridLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    lastEvent?: Event,
-    publishEvent: (eventName: string, msg: InteractionMessage) => void,
+    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
+     * events when spread onto an HTML element. */
+    mouseProps: MouseEventProps,
 
+    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
+     * interaction messages. */
+    viewerHandle: ReadOnlyViewerHandle,
+
+    /** Events published to this view's `InteractionManager` which should be consumed by this
+     * view. The message of each event in this array includes a "viewerId" field which is equal to
+     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
+    lastEvents: Array<GridLayoutSub>,
+
+    /** A function which publishes an event with given name and message to this view's
+     * `InteractionManager`. */
+    publishEvent: (event: GridLayoutPub) => void,
+
+    /** Contains properties which should be spread onto any `Viewer` components rendered by this
+     * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    /** Elements which should be rendered as children of the `GridLayout`. */
     elements: {
         viewId: ViewId,
         col: number,
@@ -29,9 +53,12 @@ type GridLayoutProps = {
     }[],
 };
 
-type GridLayoutState = {
-    isHovered: boolean,
-};
+type GridLayoutDefaultProps = {};
+
+type GridLayoutState = {};
+
+type GridLayoutPub = OnMouseEvent | OnChildMouseEvent;
+type GridLayoutSub = {};
 
 /**
  * This pure dumb component renders visualization for a 2D grid of elements.
@@ -39,30 +66,18 @@ type GridLayoutState = {
  */
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
     /** Prop default values. */
-    static defaultProps = {};
+    static defaultProps: GridLayoutDefaultProps = {};
 
     constructor(props: GridLayoutProps) {
         super(props);
-        this.state = {
-            isHovered: false,
-        };
+        this.state = {};
     }
 
     componentDidUpdate(prevProps, prevState) {
-        const { lastEvent } = this.props;
-        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
-            const { eventName } = lastEvent;
-            if (eventName === 'hover') {
-                this.setState({
-                    isHovered: true
-                });
-            }
-            if (eventName === 'unhover') {
-                this.setState({
-                    isHovered: false
-                });
-            }
-        }
+        const { lastEvents } = this.props;
+        lastEvents.forEach((event: GridLayoutSub, i: number) => {
+            if (event === prevProps.lastEvents[i]) return;
+        });
     }
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
@@ -70,30 +85,44 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, publishEvent, viewerToViewerProps } = this.props;
-        const { isHovered } = this.state;
+        const {
+            classes,
+            elements,
+            viewerHandle,
+            mouseProps,
+            publishEvent,
+            viewerToViewerProps,
+        } = this.props;
 
-        // TODO: don't repeat this in every view
-        const mouseProps = {
-            onClick: (e) => {
-                e.stopPropagation();
-                publishEvent('click', {});
-            },
+        // TODO: how do we get mouseprops down to the child? or should we not even do this?
+        // Until this is resolved, unused.
+        const childMouseProps = (childPosition: string) => ({
             onMouseOver: (e) => {
                 e.stopPropagation();
-                publishEvent('mouseOver', {});
+                publishEvent({
+                    eventName: 'onChildMouseOver',
+                    message: {
+                        publisher: viewerHandle,
+                        childPosition,
+                    },
+                });
             },
             onMouseOut: (e) => {
                 e.stopPropagation();
-                publishEvent('mouseOut', {});
+                publishEvent({
+                    eventName: 'onChildMouseOut',
+                    message: {
+                        publisher: viewerHandle,
+                        childPosition,
+                    },
+                });
             },
-        };
+        });
 
         return (
             <div
                 className={classNames({
                     [classes.container]: true,
-                    [classes.containerHovered]: isHovered,
                 })}
                 {...mouseProps}
             >
@@ -103,7 +132,6 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                             key={viewId}
                             className={classNames({
                                 [classes.cell]: true,
-                                [classes.hoveredCell]: isHovered,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -125,7 +153,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     container: {
-        display: 'inline-container',
+        display: 'inline-grid',
         verticalAlign: 'middle',
         gridGap: `${theme.spacing.large}px`, // Need px.
         justifyContent: 'start',
@@ -135,7 +163,6 @@ const styles = (theme) => ({
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
         borderColor: theme.palette.atom.border,
-        padding: theme.spacing.unit,
     },
     compactGrid: {
         gridGap: `${theme.spacing.large}px`, // Need px.
@@ -146,7 +173,8 @@ const styles = (theme) => ({
     cell: {
         textAlign: 'left',
     },
-    hoveredCell: {},
 });
 
-export default withStyles(styles)(GridLayout);
+export default withStyles(styles)(
+    useMouseInteractions<React.Config<GridLayoutProps, GridLayoutDefaultProps>>(GridLayout),
+);

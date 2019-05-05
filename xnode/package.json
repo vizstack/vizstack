@@ -76,6 +76,6 @@
     "jstest": "jest",
     "typecheck": "cd src/ && flow && mypy .",
     "flow": "flow src/",
-    "format": "prettier --config ./.prettierrc --write 'src/**/*.js' && yapf -r -i -e 'venv/*,node_modules/*' ../python/xnode/**/*.py"
+    "format": "prettier --config ./.prettierrc --write \"src/**/*.js\" && yapf -r -i -e \"venv/*,node_modules/*\" ../python/xnode/**/*.py"
   }
 }

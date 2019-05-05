@@ -1,4 +1,3 @@
-// @flow
 /**
  * Layout engine for a directed acyclic graph (DAG).
  *

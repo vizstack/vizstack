@@ -3,78 +3,94 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
-import type { Event, InteractionMessage } from '../../interaction';
+import type {
+    Event,
+    EventMessage,
+    MouseEventProps,
+    OnMouseEvent,
+    OnResizeEvent,
+    ReadOnlyViewerHandle,
+    ResizeEvent,
+    PrimitiveSize,
+} from '../../interaction';
+import { useMouseInteractions } from '../../interaction';
 
 type ImagePrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    lastEvent?: Event,
-    publishEvent: (eventName: string, message: InteractionMessage) => void,
+    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
+     * events when spread onto an HTML element. */
+    mouseProps: MouseEventProps,
+
+    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
+     * interaction messages. */
+    viewerHandle: ReadOnlyViewerHandle,
+
+    /** Events published to this view's `InteractionManager` which should be consumed by this
+     * view. The message of each event in this array includes a "viewerId" field which is equal to
+     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
+    lastEvents: Array<ImagePrimitiveSub>,
+
+    /** A function which publishes an event with given name and message to this view's
+     * `InteractionManager`. */
+    publishEvent: (event: ImagePrimitivePub) => void,
 
     /** Path at which the image file is saved. */
     filePath: string,
 };
 
+type ImagePrimitiveDefaultProps = {};
+
 type ImagePrimitiveState = {
-    isHovered: boolean,
+    size: PrimitiveSize,
 };
+
+type ImagePrimitivePub = OnMouseEvent | OnResizeEvent;
+
+type ImagePrimitiveSub = ResizeEvent;
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
 class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
+    static defaultProps: ImagePrimitiveDefaultProps = {};
+
     constructor(props: ImagePrimitiveProps) {
         super(props);
         this.state = {
-            isHovered: false,
+            size: 'medium',
         };
     }
 
-    componentDidUpdate(prevProps: ImagePrimitiveProps, prevState: ImagePrimitiveState) {
-        const { lastEvent } = this.props;
-        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
-            const { eventName } = lastEvent;
-            if (eventName === 'hover') {
+    componentDidUpdate(
+        prevProps: $ReadOnly<ImagePrimitiveProps>,
+        prevState: $ReadOnly<ImagePrimitiveState>,
+    ) {
+        const { lastEvents } = this.props;
+        lastEvents.forEach((event: ImagePrimitiveSub, i: number) => {
+            if (event === prevProps.lastEvents[i]) return;
+            if (event.eventName === 'resize') {
                 this.setState({
-                    isHovered: true,
+                    size: event.message.newSize,
                 });
             }
-            if (eventName === 'unhover') {
-                this.setState({
-                    isHovered: false,
-                });
-            }
-        }
+        });
     }
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, publishEvent } = this.props;
-        const { isHovered } = this.state;
-
-        const mouseProps = {
-            onClick: (e) => {
-                e.stopPropagation();
-                publishEvent('click', {});
-            },
-            onMouseOver: (e) => {
-                e.stopPropagation();
-                publishEvent('mouseOver', {});
-            },
-            onMouseOut: (e) => {
-                e.stopPropagation();
-                publishEvent('mouseOut', {});
-            },
-        };
-
+        const { classes, filePath, mouseProps } = this.props;
+        const { size } = this.state;
         return (
             <img
                 className={classNames({
                     [classes.image]: true,
-                    [classes.hovered]: isHovered,
+                    [classes.small]: size === 'small',
+                    [classes.medium]: size === 'medium',
+                    [classes.large]: size === 'large',
                 })}
                 src={filePath}
                 onError={(e) => {
@@ -101,12 +117,25 @@ const styles = (theme) => ({
         borderWidth: theme.shape.border.width,
         borderColor: 'transparent',
     },
-    compactImage: {
+
+    // Image size; one for each value of `PrimitiveSize`.
+    small: {
         width: theme.shape.image.small.width,
     },
-    hovered: {
+    medium: {
+        width: theme.shape.image.medium.width,
+    },
+    large: {
+        width: theme.shape.image.large.width,
+    },
+
+    highlighted: {
         borderColor: theme.palette.primary.light,
     },
 });
 
-export default withStyles(styles)(ImagePrimitive);
+export default withStyles(styles)(
+    useMouseInteractions<React.Config<ImagePrimitiveProps, ImagePrimitiveDefaultProps>>(
+        ImagePrimitive,
+    ),
+);

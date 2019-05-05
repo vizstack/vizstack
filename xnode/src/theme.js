@@ -10,6 +10,7 @@ import ErrorColor from '@material-ui/core/colors/red';
 export default createMuiTheme({
     typography: {
         fontSize: {
+            emphasis: 15,
             primary: 11,
             secondary: 9,
             caption: 6,
@@ -30,6 +31,12 @@ export default createMuiTheme({
         image: {
             small: {
                 width: 75,
+            },
+            medium: {
+                width: 150,
+            },
+            large: {
+                width: 300,
             },
         },
     },

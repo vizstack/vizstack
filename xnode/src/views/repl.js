@@ -68,7 +68,7 @@ class REPL {
     scriptPath: string = '';
     scriptArgs: Array<string> = [];
     marker = null;
-    store = createStore(mainReducer, applyMiddleware(thunk)); // TODO: re-add devtools
+    store = createStore<any, any, any>(mainReducer, applyMiddleware(thunk)); // TODO: re-add devtools, add correct type annotations
     progressComponent: Progress;
     sandboxSelectComponent = undefined;
     element = document.createElement('div');

@@ -1,5 +1,5 @@
 // @flow
-import Immutable from 'seamless-immutable';
+import Immutable, { type Immutable as ImmutableType } from 'seamless-immutable';
 import type { ViewId } from '../../core/schema';
 import type { SnapshotId } from '../snapshot-table';
 
@@ -7,10 +7,10 @@ import type { SnapshotId } from '../snapshot-table';
 // State slice.
 
 /** Root reducer's state slice type. */
-export type CanvasState = {
+export type CanvasState = ImmutableType<{
     // In-order sequences of Displays to show in the Canvas.
     layout: SnapshotInspector[],
-};
+}>;
 
 /** Root reducer's initial state slice. */
 const initialState: CanvasState = Immutable({
@@ -45,7 +45,14 @@ export function getCanvasLayout(state: CanvasState): SnapshotInspector[] {
 // =================================================================================================
 // Actions (public) and reducers.
 
-type CanvasAction = ClearAllInspectors | AddInspector | RemoveInspector | ReorderInspector;
+type NoAction = {| type: 'NoAction' |};
+
+type CanvasAction =
+    | ClearAllInspectors
+    | AddInspector
+    | RemoveInspector
+    | ReorderInspector
+    | NoAction;
 
 /**
  * Root reducer for state related to the Canvas area for rendering and exploring Snapshots.
@@ -54,7 +61,7 @@ type CanvasAction = ClearAllInspectors | AddInspector | RemoveInspector | Reorde
  */
 export default function rootReducer(
     state: CanvasState = initialState,
-    action: CanvasAction = {},
+    action: CanvasAction = { type: 'NoAction' },
 ): CanvasState {
     switch (action.type) {
         case 'ClearAllInspectors':

@@ -2,6 +2,7 @@
 This file defines all functions and objects which can be used by developers to create visualizations for their objects.
 """
 
+import typing
 from typing import Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 import os
 
@@ -429,6 +430,7 @@ class DagLayoutEdge:
         }
 
 
+# TODO: ensure no overlap of elements
 class Grid(View):
     """
    A View which renders other Vizzes in a flexibly-sized grid.
@@ -516,6 +518,8 @@ class Sequence(Grid):
             orientation: How to arrange the elements of this View. Should be either "horizontal" or "vertical".
         """
         self._orientation = orientation
+        self._has_start_motif = start_motif is not None
+        self._has_end_motif = end_motif is not None
         if elements is None:
             elements = []
 
@@ -543,13 +547,20 @@ class Sequence(Grid):
                     orientation))
 
     def __add__(self, other: Any) -> 'Sequence':
+        # TODO: clean this up
+        if self._has_end_motif:
+            end_motif, _, _, _, _ = self._elements.pop()
         if self._orientation == 'horizontal':
-            self._elements.append((_get_view(other), len(self._elements), 0, 1,
+            self._elements.append((_get_view(other), len(self._elements) + (1 if not self._has_start_motif else 0), 0, 1,
                                    1))
+            if self._has_end_motif:
+                self._elements.append((end_motif, len(self._elements), 0, 1, 1))
             self._num_cols += 1
         elif self._orientation == 'vertical':
-            self._elements.append((_get_view(other), 0, len(self._elements), 1,
+            self._elements.append((_get_view(other), 0, len(self._elements) + (1 if not self._has_start_motif else 0), 1,
                                    1))
+            if self._has_end_motif:
+                self._elements.append((end_motif, 0, len(self._elements), 1, 1))
             self._num_rows += 1
         return self
 
@@ -572,11 +583,13 @@ class KeyValues(Grid):
                 mode.
             expansion_mode: An optional expansion mode which the ``KeyValues`` should adopt by default.
         """
-        keys = list(key_value_mapping.keys())
-        elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(keys)] + [
-            (Text(item_separator), 2, i + 1, 1, 1) for i in range(len(keys))
+        self._keys = list(key_value_mapping.keys())
+        self._has_end_motif = end_motif is not None
+        self._item_separator = item_separator
+        elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(self._keys)] + [
+            (Text(self._item_separator), 2, i + 1, 1, 1) for i in range(len(self._keys))
         ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
-             for i, key in enumerate(keys)]
+             for i, key in enumerate(self._keys)]
         if start_motif is not None:
             elements.append((Text(start_motif), 0, 0, 4, 1))
         if end_motif is not None:
@@ -585,86 +598,83 @@ class KeyValues(Grid):
         super(KeyValues, self).__init__(elements)
 
 
-class SwitchSequence(Sequence):
-    def __init__(self,
-                 elements: Optional[Iterable[Any]] = None,
-                 start_motif: Optional[str] = None,
-                 end_motif: Optional[str] = None,
-                 orientation: str = 'horizontal',
+_MODE_INDICES = {
+    'full': 0,
+    'compact': 1,
+    'summary': 2,
+}
+_COMPACT_COLS = 3
+_COMPACT_ROWS = 3
+
+
+# TODO: syntatic sugar for these? they surface a switch, so can't do operators
+
+def SwitchSequence(
+        elements: Optional[typing.Sequence[Any]] = None,
+         start_motif: Optional[str] = None,
+         end_motif: Optional[str] = None,
+         orientation: str = 'horizontal',
+         summary: Optional[str] = None,
+         expansion_mode: Optional[str] = None):
+    full_view = Sequence(elements, start_motif, end_motif, orientation)
+    compact_view = Sequence(elements[:_COMPACT_COLS], start_motif, end_motif, orientation)
+    compact_view += Text('...')
+    summary_view = summary if summary is not None else 'sequence[{}]'.format(len(elements))
+    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
+    if len(elements) <= _COMPACT_COLS:
+        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
+    return Switch([full_view, compact_view, summary_view])
+
+
+def SwitchKeyValues(
+        key_value_mapping: Dict[Any, Any],
+         item_separator: str = ':',
+         start_motif: Optional[str] = None,
+         end_motif: Optional[str] = None,
+         summary: Optional[str] = None,
+         expansion_mode: Optional[str] = None):
+    full_view = KeyValues(key_value_mapping, item_separator, start_motif, end_motif)
+    compact = dict()
+    for i, (key, value) in enumerate(key_value_mapping.items()):
+        if i >= _COMPACT_ROWS:
+            break
+        compact[key] = value
+    compact_view = KeyValues(compact, item_separator, start_motif, end_motif)
+    end_motif, _, _, _, _ = compact_view._elements.pop()
+    compact_view._elements.append((Text('...'), 2, _COMPACT_ROWS + 1, 1, 1))
+    compact_view._elements.append((end_motif, 0, _COMPACT_ROWS + 2, 4, 1))
+    summary_view = summary if summary is not None else 'dict[{}]'.format(len(key_value_mapping))
+    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
+    if len(key_value_mapping) <= _COMPACT_ROWS:
+        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
+    return Switch([full_view, compact_view, summary_view])
+
+
+def SwitchGrid(elements: List[Tuple[Any, int, int, int, int]],
                  summary: Optional[str] = None,
                  expansion_mode: Optional[str] = None):
-        super(SwitchSequence, self).__init__(elements, start_motif, end_motif,
-                                             orientation)
-        self._summary = summary
-        self._expansion_mode = expansion_mode
-
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return SwitchGrid(self._elements, self._summary,
-                          self._expansion_mode).assemble_dict()
-
-
-class SwitchKeyValues(KeyValues):
-    def __init__(self,
-                 key_value_mapping: Dict[Any, Any],
-                 item_separator: str = ':',
-                 start_motif: Optional[str] = None,
-                 end_motif: Optional[str] = None,
-                 summary: Optional[str] = None,
-                 expansion_mode: Optional[str] = None):
-        super(SwitchKeyValues, self).__init__(
-            key_value_mapping, item_separator, start_motif, end_motif)
-        self._summary = summary
-        self._expansion_mode = expansion_mode
-
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return SwitchGrid(self._elements, self._summary,
-                          self._expansion_mode).assemble_dict()
-
-
-class SwitchGrid(Grid):
-    COMPACT_COLS = 3
-    COMPACT_ROWS = 3
-    MODE_INDICES = {
-        'full': 0,
-        'compact': 1,
-        'summary': 2,
-    }
-
-    def __init__(self,
-                 elements: List[Tuple[Any, int, int, int, int]],
-                 summary: Optional[str] = None,
-                 expansion_mode: Optional[str] = None):
-        super(SwitchGrid, self).__init__(elements)
-        self._summary = summary
-        assert expansion_mode is None or expansion_mode in self.MODE_INDICES
-        self._expansion_mode = expansion_mode
-
-    def assemble_dict(self):
-        full_view = Grid(self._elements)
-
-        visible_elements = []
-        extends_right = self._num_cols > self.COMPACT_COLS
-        extends_below = self._num_rows > self.COMPACT_ROWS
-        for o, x, y, w, h in self._elements:
-            if (x < self.COMPACT_COLS - 1
-                    or not extends_right) and (y < self.COMPACT_ROWS - 1
-                                               or not extends_below):
-                visible_elements.append((o, x, y, min(w,
-                                                      self.COMPACT_COLS - x),
-                                         min(h, self.COMPACT_ROWS - y)))
-        if extends_right:
-            visible_elements.append(
-                (Text('. . .'), self.COMPACT_COLS,
-                 min(self.COMPACT_ROWS, self._num_rows) // 2, 1, 1))
-        if extends_below:
-            visible_elements.append(
-                (Text('. . .'), min(self.COMPACT_COLS, self._num_cols) // 2,
-                 self.COMPACT_ROWS, min(self.COMPACT_COLS, self._num_cols), 1))
-        compact_view = Grid(visible_elements)
-        summary_view = Text(
-            'grid[{}, {}]'.format(self._num_cols, self._num_rows)
-            if self._summary is None else self._summary)
-        return Switch(
-            [full_view, compact_view, summary_view],
-            self.MODE_INDICES[self._expansion_mode]
-            if self._expansion_mode is not None else None).assemble_dict()
+    full_view = Grid(elements)
+    visible_elements = []
+    extends_right = full_view._num_cols > _COMPACT_COLS
+    extends_below = full_view._num_rows > _COMPACT_ROWS
+    for o, x, y, w, h in full_view._elements:
+        if (x < _COMPACT_COLS - 1
+                or not extends_right) and (y < _COMPACT_ROWS - 1
+                                           or not extends_below):
+            visible_elements.append((o, x, y, min(w,
+                                                  _COMPACT_COLS - x),
+                                     min(h, _COMPACT_ROWS - y)))
+    if extends_right:
+        visible_elements.append(
+            (Text('. . .'), _COMPACT_COLS,
+             min(_COMPACT_ROWS, full_view._num_rows) // 2, 1, 1))
+    if extends_below:
+        visible_elements.append(
+            (Text('. . .'), min(_COMPACT_COLS, full_view._num_cols) // 2,
+             _COMPACT_ROWS, min(_COMPACT_COLS, full_view._num_cols), 1))
+    compact_view = Grid(visible_elements)
+    summary_view = summary if summary is not None else 'grid[{}, {}]'.format(full_view._num_cols, full_view._num_rows)
+    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
+    if len(elements) <= _COMPACT_COLS:
+        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
+    return Switch([full_view, compact_view, summary_view])

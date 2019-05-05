@@ -1,14 +1,14 @@
 // @flow
-import Immutable from 'seamless-immutable';
+import Immutable, { type Immutable as ImmutableType } from 'seamless-immutable';
 import type { View } from '../../core/schema';
 
 // =================================================================================================
 // State slice.
 
 /** Root reducer's state slice type. */
-export type SnapshotTableState = {
+export type SnapshotTableState = ImmutableType<{
     snapshots: { [SnapshotId]: Snapshot },
-};
+}>;
 
 /** Root reducer's initial state slice. */
 const initialState: SnapshotTableState = Immutable({
@@ -59,7 +59,9 @@ export function getSnapshot(
 // =================================================================================================
 // Actions (public) and reducers.
 
-type SnapshotTable = ClearAllSnapshots | AddEntry;
+type NoAction = {| type: 'NoAction' |};
+
+type SnapshotTableAction = ClearAllSnapshots | AddEntry | NoAction;
 
 /**
  * Root reducer for state related to all Snapshots of program symbols sent from the debugger
@@ -69,7 +71,7 @@ type SnapshotTable = ClearAllSnapshots | AddEntry;
  */
 export default function rootReducer(
     state: SnapshotTableState = initialState,
-    action: SnapshotTable = {},
+    action: SnapshotTableAction = { type: 'NoAction' },
 ) {
     switch (action.type) {
         case 'ClearAllSnapshots':
@@ -120,7 +122,12 @@ export function addSnapshotAction(snapshotId: SnapshotId, snapshot: Snapshot): A
     };
 }
 
-function addSnapshotReducer(state: SnapshotTableState, action: AddEntry) {
+function addSnapshotReducer(state: SnapshotTableState, action: AddEntry): SnapshotTableState {
     const { snapshotId, snapshot } = action;
-    return state.set('snapshots', Immutable.merge(state.snapshots, { [snapshotId]: snapshot }));
+    return state.set(
+        'snapshots',
+        Immutable.merge<$PropertyType<SnapshotTableState, 'snapshots'>>(state.snapshots, {
+            [snapshotId]: snapshot,
+        }),
+    );
 }

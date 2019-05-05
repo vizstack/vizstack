@@ -27,12 +27,23 @@ import FlowLayout from '../layouts/FlowLayout';
 import SwitchLayout from '../layouts/SwitchLayout';
 
 // Interactions
-import type { Event, Constraint, ReadOnlyViewerHandle, InteractiveViewerHandle, InteractionMessage } from '../interaction';
+import type {
+    Event,
+    Constraint,
+    ReadOnlyViewerHandle,
+    InteractiveViewerHandle,
+} from '../interaction';
 import { InteractionContext } from '../interaction';
 
 export type ViewerToViewerProps = {
     parent: ReadOnlyViewerHandle,
     view: View,
+};
+
+export type InteractionProps = {
+    lastEvents: Array<Event>,
+    publishEvent: (event: Event) => void,
+    viewerHandle: ReadOnlyViewerHandle,
 };
 
 type ViewerProps = {
@@ -53,14 +64,16 @@ type ViewerProps = {
 
     /** A function which publishes an `Event` to the `InteractionManager` which was registered by
      *  the `register()` function. */
-    publishEvent: (eventName: string, message: InteractionMessage, publisher: ReadOnlyViewerHandle) => void,
+    publishEvent: (event: Event) => void,
 
     /** Information about the parent of this viewer, if one exists. */
     parent?: ReadOnlyViewerHandle,
 };
 
 type ViewerState = {
-    lastEvent?: Event,
+    /** An array of all interaction events that this `Viewer` should consume which occurred since
+     * the `Viewer`'s last update. */
+    lastEvents: Array<Event>,
 };
 
 /**
@@ -77,24 +90,26 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     constructor(props: ViewerProps) {
         super(props);
-        this.state = {};
+        this.state = {
+            lastEvents: [],
+        };
     }
 
     componentDidMount() {
-        this.props.register(this.getHandle2());
+        this.props.register(this.getInteractiveHandle());
     }
 
     componentWillUnmount() {
-        this.props.unregister(this.getHandle2());
+        this.props.unregister(this.getInteractiveHandle());
     }
 
     satisfiesConstraints(constraints: Array<Constraint>) {
         return constraints.every((constraint: Constraint) => {
-            return constraint(this.getHandle());
+            return constraint(this.getReadOnlyHandle());
         });
     }
 
-    getHandle(): ReadOnlyViewerHandle {
+    getReadOnlyHandle(): ReadOnlyViewerHandle {
         const { view, viewId, parent } = this.props;
         const currId: ViewId = viewId || view.rootId;
         const model: ViewModel = view.models[currId];
@@ -106,17 +121,29 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         };
     }
 
-    getHandle2(): InteractiveViewerHandle {
+    getInteractiveHandle(): InteractiveViewerHandle {
         return {
-            ...this.getHandle(),
-            receiveEvent: (event) => this.setState({ lastEvent: event }),
+            ...this.getReadOnlyHandle(),
+            receiveEvent: (event) => {
+                this.setState((prevState) => ({
+                    lastEvents: prevState.lastEvents.concat([event]),
+                }));
+            },
         };
+    }
+
+    componentDidUpdate() {
+        if (this.state.lastEvents.length > 0) {
+            this.setState({
+                lastEvents: [],
+            });
+        }
     }
 
     /** Renderer. */
     render() {
         const { view, viewId, publishEvent } = this.props;
-        const { lastEvent } = this.state;
+        const { lastEvents } = this.state;
 
         // Explicitly specified model for current viewer, or root-level model by default.
         const currId: ViewId = viewId || view.rootId;
@@ -127,13 +154,14 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         }
 
         const viewerToViewerProps: ViewerToViewerProps = {
-            parent: this.getHandle(),
+            parent: this.getReadOnlyHandle(),
             view,
         };
 
-        const interactionProps = {
-            publishEvent: (eventName, msg) => publishEvent(eventName, msg, this.getHandle()),
-            lastEvent,
+        const interactionProps: InteractionProps = {
+            publishEvent: (event) => publishEvent(event),
+            lastEvents,
+            viewerHandle: this.getReadOnlyHandle(),
         };
 
         // The `Viewer` is the component that knows how to dispatch on model type to render
@@ -144,22 +172,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             case 'TextPrimitive': {
                 const { contents } = (model: TextPrimitiveModel);
-                return (
-                    <TextPrimitive
-                        {...interactionProps}
-                        {...contents}
-                    />
-                );
+                return <TextPrimitive {...interactionProps} {...contents} />;
             }
 
             case 'ImagePrimitive': {
                 const { contents } = (model: ImagePrimitiveModel);
-                return (
-                    <ImagePrimitive
-                        {...interactionProps}
-                        {...contents}
-                    />
-                );
+                return <ImagePrimitive {...interactionProps} {...contents} />;
             }
 
             // =====================================================================================
@@ -189,10 +207,13 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             case 'SwitchLayout': {
                 const { contents } = (model: SwitchLayoutModel);
-                return <SwitchLayout
-                    viewerToViewerProps={viewerToViewerProps}
-                    {...interactionProps}
-                    {...contents} />;
+                return (
+                    <SwitchLayout
+                        viewerToViewerProps={viewerToViewerProps}
+                        {...interactionProps}
+                        {...contents}
+                    />
+                );
             }
 
             case 'DagLayout': {

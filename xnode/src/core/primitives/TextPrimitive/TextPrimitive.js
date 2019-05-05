@@ -3,14 +3,38 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
-import type { Event, InteractionMessage } from '../../interaction';
+import type {
+    Event,
+    OnMouseEvent,
+    MouseEventProps,
+    ReadOnlyViewerHandle,
+    PrimitiveSize,
+    ResizeEvent,
+    OnResizeEvent,
+} from '../../interaction';
+import { useMouseInteractions } from '../../interaction';
+import type { InteractionProps } from '../../Viewer';
 
 type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    lastEvent?: Event,
-    publishEvent: (eventName: string, message: InteractionMessage) => void,
+    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
+     * events when spread onto an HTML element. */
+    mouseProps: MouseEventProps,
+
+    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
+     * interaction messages. */
+    viewerHandle: ReadOnlyViewerHandle,
+
+    /** Events published to this view's `InteractionManager` which should be consumed by this
+     * view. The message of each event in this array includes a "viewerId" field which is equal to
+     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
+    lastEvents: Array<TextPrimitiveSub>,
+
+    /** A function which publishes an event with given name and message to this view's
+     * `InteractionManager`. */
+    publishEvent: (event: TextPrimitivePub) => void,
 
     /** Text string displayed by token. */
     text: string,
@@ -20,15 +44,40 @@ type TextPrimitiveProps = {
     variant?: 'plain' | 'token',
 };
 
-type TextPrimitiveState = {
-    isHovered: boolean,
+type TextPrimitiveDefaultProps = {
+    color: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
+    variant: 'plain' | 'token',
 };
+
+type TextPrimitiveState = {
+    textSize: PrimitiveSize,
+    isHighlighted: boolean,
+};
+
+type TextPrimitivePub = OnMouseEvent | OnResizeEvent;
+
+type TextPrimitiveSub =
+    | {
+          // Changes the appearance of the text to be brighter
+          eventName: 'highlight',
+          message: {
+              viewerId: string,
+          },
+      }
+    | {
+          // Returns the appearance of the text to normal
+          eventName: 'unhighlight',
+          message: {
+              viewerId: string,
+          },
+      }
+    | ResizeEvent;
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
  */
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
-    static defaultProps = {
+    static defaultProps: TextPrimitiveDefaultProps = {
         color: 'default',
         variant: 'plain',
     };
@@ -36,48 +85,42 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
     constructor(props: TextPrimitiveProps) {
         super(props);
         this.state = {
-            isHovered: false,
+            textSize: 'medium',
+            isHighlighted: false,
         };
     }
 
-    componentDidUpdate(prevProps, prevState) {
-        const { lastEvent } = this.props;
-        if (prevProps.lastEvent !== lastEvent && lastEvent !== undefined && lastEvent !== null) {
-            const { eventName } = lastEvent;
-            if (eventName === 'hover') {
+    componentDidUpdate(
+        prevProps: $ReadOnly<TextPrimitiveProps>,
+        prevState: $ReadOnly<TextPrimitiveState>,
+    ): void {
+        const { lastEvents } = this.props;
+        lastEvents.forEach((event: TextPrimitiveSub, i: number) => {
+            if (event === prevProps.lastEvents[i]) return;
+            if (event.eventName === 'highlight') {
                 this.setState({
-                    isHovered: true,
+                    isHighlighted: true,
                 });
             }
-            if (eventName === 'unhover') {
+            if (event.eventName === 'unhighlight') {
                 this.setState({
-                    isHovered: false,
+                    isHighlighted: false,
                 });
             }
-        }
+            if (event.eventName === 'resize') {
+                this.setState({
+                    textSize: event.message.newSize,
+                });
+            }
+        });
     }
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, publishEvent } = this.props;
-        const { isHovered } = this.state;
-
-        const mouseProps = {
-            onClick: (e) => {
-                e.stopPropagation();
-                publishEvent('click', {});
-            },
-            onMouseOver: (e) => {
-                e.stopPropagation();
-                publishEvent('mouseOver', {});
-            },
-            onMouseOut: (e) => {
-                e.stopPropagation();
-                publishEvent('mouseOut', {});
-            },
-        };
+        const { classes, text, color, variant, mouseProps } = this.props;
+        const { isHighlighted, textSize } = this.state;
 
         const split = text.split('\n');
         const lines = split.map((text, i) =>
@@ -92,6 +135,10 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         );
         const names = classNames({
             [classes.text]: true,
+
+            [classes.small]: textSize === 'small',
+            [classes.medium]: textSize === 'medium',
+            [classes.large]: textSize === 'large',
 
             [classes.sansSerif]: variant === 'plain',
             [classes.monospace]: variant === 'token',
@@ -108,11 +155,14 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
             [classes.secondaryToken]: variant === 'token' && color === 'secondary',
             [classes.errorToken]: variant === 'token' && color === 'error',
 
-            [classes.defaultTokenHover]: variant === 'token' && color === 'default' && isHovered,
-            [classes.primaryTokenHover]: variant === 'token' && color === 'primary' && isHovered,
-            [classes.secondaryTokenHover]:
-                variant === 'token' && color === 'secondary' && isHovered,
-            [classes.errorTokenHover]: variant === 'token' && color === 'error' && isHovered,
+            [classes.defaultTokenHighlight]:
+                variant === 'token' && color === 'default' && isHighlighted,
+            [classes.primaryTokenHighlight]:
+                variant === 'token' && color === 'primary' && isHighlighted,
+            [classes.secondaryTokenHighlight]:
+                variant === 'token' && color === 'secondary' && isHighlighted,
+            [classes.errorTokenHighlight]:
+                variant === 'token' && color === 'error' && isHighlighted,
         });
         return variant === 'token' ? (
             <div className={names} {...mouseProps}>
@@ -135,8 +185,18 @@ const styles = (theme) => ({
         textAlign: 'left',
         overflow: 'hidden',
         width: 'fit-content',
-        fontSize: theme.typography.fontSize.primary,
         color: theme.palette.text.primary,
+    },
+
+    // Font sizes; one for each value in `PrimitiveSize`.
+    small: {
+        fontSize: theme.typography.fontSize.caption,
+    },
+    medium: {
+        fontSize: theme.typography.fontSize.primary,
+    },
+    large: {
+        fontSize: theme.typography.fontSize.emphasis,
     },
 
     // Font styles.
@@ -185,19 +245,23 @@ const styles = (theme) => ({
         color: theme.palette.error.contrastText,
     },
 
-    // Hovered monospace styles
-    defaultTokenHover: {
+    // Highlighted monospace styles
+    defaultTokenHighlight: {
         backgroundColor: theme.palette.default.light,
     },
-    primaryTokenHover: {
+    primaryTokenHighlight: {
         backgroundColor: theme.palette.primary.light,
     },
-    secondaryTokenHover: {
+    secondaryTokenHighlight: {
         backgroundColor: theme.palette.secondary.light,
     },
-    errorTokenHover: {
+    errorTokenHighlight: {
         backgroundColor: theme.palette.error.light,
     },
 });
 
-export default withStyles(styles)(TextPrimitive);
+export default withStyles(styles)(
+    useMouseInteractions<React.Config<TextPrimitiveProps, TextPrimitiveDefaultProps>>(
+        TextPrimitive,
+    ),
+);

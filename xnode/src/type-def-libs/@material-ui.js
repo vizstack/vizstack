@@ -8,6 +8,10 @@ declare module '@material-ui/core/styles' {
     declare module.exports: any;
 }
 
+declare module '@material-ui/core/styles/MuiThemeProvider' {
+    declare module.exports: any;
+}
+
 declare module '@material-ui/core/colors' {
     declare module.exports: any;
 }

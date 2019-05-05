@@ -4,25 +4,54 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 
-import Viewer from '../../Viewer/Viewer';
+import Viewer from '../../Viewer';
 import type { ViewId } from '../../schema';
-import type { ViewerToViewerProps } from '../../Viewer/Viewer';
-import type { Event, InteractionMessage } from '../../interaction';
+import type { ViewerToViewerProps } from '../../Viewer';
+import type {
+    Event,
+    EventMessage,
+    MouseEventProps,
+    OnChildMouseEvent,
+    OnMouseEvent,
+    ReadOnlyViewerHandle,
+} from '../../interaction';
+import { useMouseInteractions } from '../../interaction';
 
 type FlowLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    lastEvent?: Event,
-    publishEvent: (eventName: string, message: InteractionMessage) => void,
+    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
+     * events when spread onto an HTML element. */
+    mouseProps: MouseEventProps,
 
+    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
+     * interaction messages. */
+    viewerHandle: ReadOnlyViewerHandle,
+
+    /** Events published to this view's `InteractionManager` which should be consumed by this
+     * view. The message of each event in this array includes a "viewerId" field which is equal to
+     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
+    lastEvents: Array<FlowLayoutSub>,
+
+    /** A function which publishes an event with given name and message to this view's
+     * `InteractionManager`. */
+    publishEvent: (event: FlowLayoutPub) => void,
+
+    /** Contains properties which should be spread onto any `Viewer` components rendered by this
+     * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
     elements: Array<ViewId>,
 };
 
+type FlowLayoutDefaultProps = {};
+
 type FlowLayoutState = {};
+
+type FlowLayoutPub = OnMouseEvent | OnChildMouseEvent;
+type FlowLayoutSub = {};
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -32,7 +61,14 @@ type FlowLayoutState = {};
  */
 class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
     /** Prop default values. */
-    static defaultProps = {};
+    static defaultProps: FlowLayoutDefaultProps = {};
+
+    componentDidUpdate(prevProps, prevState) {
+        const { lastEvents } = this.props;
+        lastEvents.forEach((event: FlowLayoutSub, i: number) => {
+            if (event === prevProps.lastEvents[i]) return;
+        });
+    }
 
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
@@ -40,13 +76,16 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps } = this.props;
+        const { classes, elements, viewerToViewerProps, mouseProps } = this.props;
+
+        // TODO: deal with child mouse events; see GridLayout.
 
         return (
             <div
                 className={classNames({
                     [classes.root]: true,
                 })}
+                {...mouseProps}
             >
                 {elements.map((viewId, i) => {
                     return <Viewer key={i} {...viewerToViewerProps} viewId={viewId} />;
@@ -72,4 +111,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(FlowLayout);
+export default withStyles(styles)(
+    useMouseInteractions<React.Config<FlowLayoutProps, FlowLayoutDefaultProps>>(FlowLayout),
+);

@@ -1,14 +1,15 @@
 // @flow
-import Immutable from 'seamless-immutable';
+import type { Dispatch } from 'redux';
+import Immutable, { type Immutable as ImmutableType } from 'seamless-immutable';
 
 // =================================================================================================
 // State slice.
 
 /** Root reducer's state slice type. */
-export type ExampleState = {
+export type ExampleState = ImmutableType<{
     // Description of data member.
     data: number,
-};
+}>;
 
 /** Root reducer's initial state slice. */
 const initialState: ExampleState = Immutable({
@@ -36,7 +37,9 @@ export function getExampleData(state: ExampleState): number {
 // =================================================================================================
 // Actions (public) and reducers.
 
-type ExampleAction = Action1; // | Foo | Bar;
+type NoAction = {| type: 'NoAction' |};
+
+type ExampleAction = Action1 | NoAction; // | Foo | Bar;
 
 /**
  * Root reducer for state related to ____.
@@ -45,7 +48,7 @@ type ExampleAction = Action1; // | Foo | Bar;
  */
 export default function rootReducer(
     state: ExampleState = initialState,
-    action: ExampleAction = {},
+    action: ExampleAction = { type: 'NoAction' },
 ): ExampleState {
     switch (action.type) {
         case 'Action1':
@@ -67,7 +70,7 @@ type Action1 = {| type: 'Action1', value: number |};
 export function syncAction(value: number): Action1 {
     // Must take form of `[name]Action`
     return {
-        type: 'action1',
+        type: 'Action1',
         value,
     };
 }
@@ -84,8 +87,8 @@ function syncReducer(state: ExampleState, action: Action1): ExampleState {
  * @returns An action thunk.
  */
 export function asyncAction(value: number) {
-    return (dispatch, getState) => {
-        let noDispatchCondition = getState().value == 0;
+    return (dispatch: any, getState: () => ExampleState) => {
+        let noDispatchCondition = getState().data === 0;
         if (noDispatchCondition) {
             return Promise.resolve();
         }
