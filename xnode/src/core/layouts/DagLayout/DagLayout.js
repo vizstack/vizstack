@@ -1,3 +1,4 @@
+// @flow
 import * as React from 'react';
 import classNames from 'classnames';
 import Immutable from 'seamless-immutable';
@@ -8,12 +9,15 @@ import Measure from 'react-measure';
 
 import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, ViewId } from '../../schema';
 import Viewer from '../../Viewer';
-import type {ViewerProps, ViewerToViewerProps} from '../../Viewer';
+import type { ViewerToViewerProps} from '../../Viewer';
 
 import layout from './layout';
 import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../utils/data-utils';
-import type {Event, InteractionMessage} from "../../interaction";
+import type { Event } from "../../interaction";
+
+
+// =================================================================================================
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -98,6 +102,9 @@ class DagNode extends React.PureComponent<DagNodeProps> {
         );
     }
 }
+
+
+// =================================================================================================
 
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
@@ -212,6 +219,8 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
     }
 }
 
+// =================================================================================================
+
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
@@ -226,23 +235,15 @@ type DagLayoutProps = {
     publishEvent: (eventName: string, msg: InteractionMessage) => void,
     viewerToViewerProps: ViewerToViewerProps,
 
-    /** Node elements that are props to `Viewer` sub-components. */
     nodes: {|
         [DagNodeId]: DagNodeModel,
     |},
-
-    /** Edge specifications of which nodes to connect. */
     edges: {|
         [DagEdgeId]: DagEdgeModel,
     |},
-
-    /** Graph configuration object. */
-    config: {
-        alignments?: Array<Array<DagNodeId>>,
-        flowDirection?: 'north' | 'south' | 'east' | 'west',
-        flowSpacing?: number,
-        alignChildren?: boolean,
-    },
+    alignments?: Array<Array<DagNodeId>>,
+    flowDirection?: 'north' | 'south' | 'east' | 'west',
+    alignChildren?: boolean,
 };
 
 type DagLayoutState = {
@@ -308,26 +309,26 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         this.setState(
             Immutable({
                 shouldLayout: false, // False so no layout until sizes all populated.
-                nodes: obj2obj(this.props.nodes, (k, { spec }) => [
+                nodes: obj2obj(this.props.nodes, (k, model) => [
                     k,
                     {
                         id: k,
-                        children: spec.children,
-                        flowDirection: spec.flowDirection,
-                        alignChildren: spec.alignChildren,
-                        ports: spec.ports,
+                        children: model.children,
+                        flowDirection: model.flowDirection,
+                        alignChildren: model.alignChildren,
+                        ports: model.ports,
                         width: kNodeInitialWidth, // Allow space for `Viewer` to be rendered.
                         height: undefined, // Needs to be populated.
                     },
                 ]),
-                edges: obj2obj(this.props.edges, (k, spec) => [
+                edges: obj2obj(this.props.edges, (k, model) => [
                     k,
                     {
                         id: k,
-                        startId: spec.startId,
-                        endId: spec.endId,
-                        startPort: spec.startPort,
-                        endPort: spec.endPort,
+                        startId: model.startId,
+                        endId: model.endId,
+                        startPort: model.startPort,
+                        endPort: model.endPort,
                     },
                 ]),
                 ordering: [
@@ -401,7 +402,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
      */
     _layoutGraph() {
         const { nodes, edges } = this.state;
-        const { config } = this.props;
+        const { alignments, flowDirection, alignChildren } = this.props;
 
         layout(
             Object.values(nodes.asMutable({ deep: true })),
@@ -426,7 +427,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                     }),
                 );
             },
-            config,
+            { alignments, flowDirection, alignChildren },
         );
     }
 

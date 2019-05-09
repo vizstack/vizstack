@@ -119,7 +119,6 @@ export type DagLayoutModel = {
         },
         alignments?: Array<Array<DagNodeId>>,
         flowDirection?: 'north' | 'south' | 'east' | 'west',
-        flowSpacing?: number,
         alignChildren?: boolean,
     |},
     meta: ViewMeta,

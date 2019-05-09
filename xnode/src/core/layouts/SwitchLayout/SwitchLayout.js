@@ -88,14 +88,11 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
                 this.setState({ isHighlighted: false });
             }
             if (event.eventName === 'increment') {
-                this.setState((prevState) => {
-                    return {
-                        currElementIdx:
-                            prevState.currElementIdx + 1 < elements.length
-                                ? prevState.currElementIdx + 1
-                                : 0,
-                    };
-                });
+                this.setState((state) => ({
+                    currElementIdx: state.currElementIdx + 1 < elements.length
+                                    ? state.currElementIdx + 1
+                                    : 0,
+                }));
             }
         });
     }

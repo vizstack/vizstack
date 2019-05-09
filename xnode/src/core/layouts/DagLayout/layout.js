@@ -1,3 +1,4 @@
+// @flow
 /**
  * Layout engine for a directed acyclic graph (DAG).
  *
@@ -101,8 +102,8 @@ export default function layout(
     config: {
         alignments?: Array<Array<NodeId>>,
         flowDirection?: 'north' | 'south' | 'east' | 'west',
-        flowSpacing?: number,
         alignChildren?: boolean,
+        flowSpacing?: number,
         nodeMargin?: number,
         edgeMargin?: number,
     } = {},
