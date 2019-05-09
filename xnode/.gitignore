@@ -1,2 +1,5 @@
 # Babel-compiled files
 build/
+
+# Xnode config files
+xnode.yaml

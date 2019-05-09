@@ -15,6 +15,10 @@ import type {
 import { useMouseInteractions } from '../../interaction';
 import type { InteractionProps } from '../../Viewer';
 
+
+/**
+ * This pure dumb component renders visualization for a text string that represents a token.
+ */
 type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
@@ -56,8 +60,7 @@ type TextPrimitiveState = {
 
 type TextPrimitivePub = OnMouseEvent | OnResizeEvent;
 
-type TextPrimitiveSub =
-    | {
+type TextPrimitiveSub = {
           // Changes the appearance of the text to be brighter
           eventName: 'highlight',
           message: {
@@ -73,9 +76,6 @@ type TextPrimitiveSub =
       }
     | ResizeEvent;
 
-/**
- * This pure dumb component renders visualization for a text string that represents a token.
- */
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
     static defaultProps: TextPrimitiveDefaultProps = {
         color: 'default',

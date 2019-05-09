@@ -21,6 +21,11 @@ import type {
 } from '../../interaction';
 import { useMouseInteractions } from '../../interaction';
 
+
+/**
+ * This pure dumb component renders visualization for a stack of elements that can be switched
+ * between.
+ */
 type SwitchLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
@@ -60,10 +65,6 @@ type SwitchLayoutState = {
 type SwitchLayoutPub = OnMouseEvent | OnChildMouseEvent;
 type SwitchLayoutSub = HighlightEvent | UnhighlightEvent | IncrementEvent;
 
-/**
- * This pure dumb component renders visualization for a stack of elements that can be switched
- * between.
- */
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutState> {
     /** Prop default values. */
     static defaultProps: SwitchLayoutDefaultProps = {};

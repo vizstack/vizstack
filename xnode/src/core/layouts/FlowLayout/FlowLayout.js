@@ -17,6 +17,13 @@ import type {
 } from '../../interaction';
 import { useMouseInteractions } from '../../interaction';
 
+
+/**
+ * This pure dumb component renders visualization for a 1D sequence of elements.
+ * TODO: Allow multi-line wrapping elements.
+ * TODO: Allow element-type-specific background coloring.
+ * TODO: Merge with MatrixLayout to form generic RowColLayout
+ */
 type FlowLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
@@ -53,12 +60,6 @@ type FlowLayoutState = {};
 type FlowLayoutPub = OnMouseEvent | OnChildMouseEvent;
 type FlowLayoutSub = {};
 
-/**
- * This pure dumb component renders visualization for a 1D sequence of elements.
- * TODO: Allow multi-line wrapping elements.
- * TODO: Allow element-type-specific background coloring.
- * TODO: Merge with MatrixLayout to form generic RowColLayout
- */
 class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
     /** Prop default values. */
     static defaultProps: FlowLayoutDefaultProps = {};

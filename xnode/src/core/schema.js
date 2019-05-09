@@ -97,9 +97,9 @@ export type DagNodeModel = {
             order?: number,
         },
     },
-    isExpanded?: boolean,
-    isInteractive?: boolean,
-    isVisible?: boolean,
+    isExpanded?: boolean,  // Node container (group) is expanded or collapsed.
+    isInteractive?: boolean,  // TODO: Is this needed?
+    isVisible?: boolean,  // Node container (group) boundaries is visible.
 };
 export type DagEdgeId = string;
 export type DagEdgeModel = {

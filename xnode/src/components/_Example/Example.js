@@ -9,18 +9,19 @@ import { createSelector } from 'reselect';
 /**
  * This [pure dumb / stateful dumb / smart] component ___.
  */
-class Example extends React.Component<
-    {
-        /** CSS-in-JS styling object. */
-        classes: {},
+type ExampleProps = {
+    /** CSS-in-JS styling object. */
+    classes: {},
 
-        /** React components within opening & closing tags. */
-        children: React.Node,
-    },
-    {
-        // Optional
-    },
-> {
+    /** React components within opening & closing tags. */
+    children: React.Node,
+};
+
+type ExampleState = {
+    // Optional
+};
+
+class Example extends React.Component<ExampleProps, ExampleState> {
     /** Prop default values. */
     static defaultProps = {
         // key: value,

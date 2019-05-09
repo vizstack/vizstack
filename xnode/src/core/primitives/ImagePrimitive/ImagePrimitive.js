@@ -15,6 +15,9 @@ import type {
 } from '../../interaction';
 import { useMouseInteractions } from '../../interaction';
 
+/**
+ * This pure dumb component renders visualization for a text string that represents a token.
+ */
 type ImagePrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
@@ -50,9 +53,6 @@ type ImagePrimitivePub = OnMouseEvent | OnResizeEvent;
 
 type ImagePrimitiveSub = ResizeEvent;
 
-/**
- * This pure dumb component renders visualization for a text string that represents a token.
- */
 class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
     static defaultProps: ImagePrimitiveDefaultProps = {};
 

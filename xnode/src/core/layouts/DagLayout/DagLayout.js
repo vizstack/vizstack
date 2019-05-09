@@ -6,22 +6,24 @@ import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
-import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel } from '../../schema';
+import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, ViewId } from '../../schema';
 import Viewer from '../../Viewer';
-import type { ViewerProps } from '../../Viewer';
+import type {ViewerProps, ViewerToViewerProps} from '../../Viewer';
+
 import layout from './layout';
 import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../utils/data-utils';
+import type {Event, InteractionMessage} from "../../interaction";
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
  */
-class DagNode extends React.PureComponent<{
+type DagNodeProps = {
     /** CSS-in-JS styling object. */
-    classes: {},
+    classes: any,
 
-    /** Props to the `Viewer` sub-component. */
-    viewerProps: ViewerProps,
+    /** React components within opening & closing tags. */
+    children?: React.Node,
 
     /** Position and size properties. */
     x: number,
@@ -30,14 +32,21 @@ class DagNode extends React.PureComponent<{
     height: number,
 
     /** Expansion state. */
-    isExpanded: boolean,
-
-    /** */
-    isVisible: boolean,
+    isExpanded?: boolean,
+    isInteractive?: boolean,
+    isVisible?: boolean,
 
     /** Callback on component resize. */
     onResize: (number, number) => void,
-}> {
+};
+class DagNode extends React.PureComponent<DagNodeProps> {
+    /** Prop default values. */
+    static defaultProps = {
+        isExpanded: true,
+        isInteractive: true,
+        isVisible: true,
+    };
+
     render() {
         const {
             classes,
@@ -45,7 +54,7 @@ class DagNode extends React.PureComponent<{
             y,
             width,
             height,
-            viewerProps,
+            children,
             isVisible,
             isExpanded,
             onResize,
@@ -79,7 +88,7 @@ class DagNode extends React.PureComponent<{
                         >
                             {({ measureRef }) => (
                                 <div ref={measureRef} style={{ display: 'inline-block' }}>
-                                    <Viewer {...viewerProps} />
+                                    {children}
                                 </div>
                             )}
                         </Measure>
@@ -94,34 +103,38 @@ class DagNode extends React.PureComponent<{
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
  * based on prop values.
  */
-class DagEdge extends React.PureComponent<{
+type DagEdgeProps = {
     /** CSS-in-JS styling object. */
-    classes: {},
+    classes: any,
 
     /** Curve point coordinates. */
-    points: Array<[number, number]>,
+    points: { x: number, y: number }[],
 
     shape?: 'curve' | 'line',
 
     color?: 'primary' | 'secondary',
 
-    id: number,
-    baseColor: string,
-    selectedColor: string,
-    isCurved: boolean,
-    isBackground: boolean,
-    isHovered: boolean,
-    isSelected: boolean,
-    isOtherActive: boolean,
-    label: string,
-    onClick?: () => void,
-    onDoubleClick?: () => void,
-    onMouseEnter?: () => void,
-    onMouseLeave?: () => void,
-}> {
+    // id: number,
+    baseColor?: string,
+    selectedColor?: string,
+    // isCurved: boolean,
+    // isBackground: boolean,
+    // isHovered: boolean,
+    // isSelected: boolean,
+    // isOtherActive: boolean,
+    // label: string,
+    // onClick?: () => void,
+    // onDoubleClick?: () => void,
+    // onMouseEnter?: () => void,
+    // onMouseLeave?: () => void,
+};
+
+class DagEdge extends React.PureComponent<DagEdgeProps> {
     static defaultProps = {
         baseColor: '#FF0000',
         selectedColor: '#00FF00',
+        shape: 'curve',
+        color: 'primary'
     };
 
     render() {
@@ -129,19 +142,8 @@ class DagEdge extends React.PureComponent<{
             classes,
             points,
             shape,
-
-            id,
             baseColor,
             selectedColor,
-            isBackground,
-            isHovered,
-            isSelected,
-            isOtherActive,
-            label,
-            onClick,
-            onDoubleClick,
-            onMouseEnter,
-            onMouseLeave,
         } = this.props;
 
         if (!points || points.length === 0) {
@@ -151,7 +153,7 @@ class DagEdge extends React.PureComponent<{
         let path = null;
         switch (shape) {
             case 'curve':
-                path = line().curve(curveBasis)(points);
+                path = line().curve(curveBasis)(points.map((p) => [p.x, [p.y]]));
                 break;
             case 'line':
             default:
@@ -215,59 +217,60 @@ class DagEdge extends React.PureComponent<{
  */
 const kNodeInitialWidth = 100000;
 const kNodeResizeTolerance = 5;
-class DagLayout extends React.Component<
-    {
-        /** CSS-in-JS styling object. */
-        classes: {},
 
-        isHovered: boolean,
+type DagLayoutProps = {
+    /** CSS-in-JS styling object. */
+    classes: any,
 
-        /** Node elements that are props to `Viewer` sub-components. */
-        nodes: {
-            [DagNodeId]: {
-                viewerProps: ViewerProps,
-                spec: DagNodeModel,
-            },
-        },
+    lastEvent?: Event,
+    publishEvent: (eventName: string, msg: InteractionMessage) => void,
+    viewerToViewerProps: ViewerToViewerProps,
 
-        /** Edge specifications of which nodes to connect. */
-        edges: {
-            [DagEdgeId]: DagEdgeModel,
-        },
+    /** Node elements that are props to `Viewer` sub-components. */
+    nodes: {|
+        [DagNodeId]: DagNodeModel,
+    |},
 
-        /** Graph configuration object. */
-        config: {
-            alignments?: Array<Array<DagNodeId>>,
-            flowDirection?: 'north' | 'south' | 'east' | 'west',
-            flowSpacing?: number,
-            alignChildren?: boolean,
-        },
+    /** Edge specifications of which nodes to connect. */
+    edges: {|
+        [DagEdgeId]: DagEdgeModel,
+    |},
+
+    /** Graph configuration object. */
+    config: {
+        alignments?: Array<Array<DagNodeId>>,
+        flowDirection?: 'north' | 'south' | 'east' | 'west',
+        flowSpacing?: number,
+        alignChildren?: boolean,
     },
-    {
-        /** Whether the graph needs to be re-layout. */
-        shouldLayout: boolean,
+};
 
-        /** Graph element specifications, but now with size and position information. */
-        nodes: {
-            [DagNodeId]: NodeOut,
-        },
-        edges: {
-            [DagEdgeId]: EdgeOut,
-        },
+type DagLayoutState = {
+    /** Whether the graph needs to be re-layout. */
+    shouldLayout: boolean,
 
-        /** Arrangement of graph elements after layout, sorted in ascending z-order. */
-        ordering: Array<{
-            type: 'node' | 'edge',
-            id: DagNodeId | DagEdgeId,
-        }>,
+    /** Graph element specifications, but now with size and position information. */
+    nodes: {|
+        [DagNodeId]: NodeOut,
+    |},
+    edges: {|
+        [DagEdgeId]: EdgeOut,
+    |},
 
-        /** Size of the graph determined by layout engine. */
-        size: {
-            width: number,
-            height: number,
-        },
+    /** Arrangement of graph elements after layout, sorted in ascending z-order. */
+    ordering: Array<{
+        type: 'node' | 'edge',
+        id: DagNodeId | DagEdgeId,
+    }>,
+
+    /** Size of the graph determined by layout engine. */
+    size: {
+        width: number,
+        height: number,
     },
-> {
+};
+
+class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
     // The lifecycle of this component is as follows.
     //     constructor(): Initialize state to be empty.
     //     render(): Render nothing because state is empty.
@@ -379,8 +382,8 @@ class DagLayout extends React.Component<
         if (
             prevWidth !== undefined &&
             prevHeight !== undefined &&
-            -kNodeResizeTolerance < prevWidth - width < kNodeResizeTolerance &&
-            -kNodeResizeTolerance < prevHeight - height < kNodeResizeTolerance
+            Math.abs(prevWidth - width) < kNodeResizeTolerance &&
+            Math.abs(prevHeight - height) < kNodeResizeTolerance
         ) {
             return;
         }
@@ -403,7 +406,7 @@ class DagLayout extends React.Component<
         layout(
             Object.values(nodes.asMutable({ deep: true })),
             Object.values(edges.asMutable({ deep: true })),
-            (width: number, height: number, nodes: NodeOut[], edges: EdgeOut) => {
+            (width: number, height: number, nodes: NodeOut[], edges: EdgeOut[]) => {
                 console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
                 const elements = [...nodes, ...edges];
@@ -453,7 +456,7 @@ class DagLayout extends React.Component<
      * depending on expansion mode. Edges can have string labels.
      */
     render() {
-        const { classes } = this.props;
+        const { classes, viewerToViewerProps } = this.props;
         const { ordering, size } = this.state;
 
         console.log('DagLayout -- render(): ordering =', ordering, 'state =', this.state);
@@ -474,23 +477,25 @@ class DagLayout extends React.Component<
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const { viewerProps, spec } = this.props.nodes[id];
+                                    const { viewId, isExpanded, isInteractive, isVisible } = this.props.nodes[id];
                                     const { x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
                                             key={`n${id}`}
-                                            viewerProps={viewerProps}
                                             x={x}
                                             y={y}
                                             width={width}
                                             height={height}
-                                            isVisible={spec.isVisible}
-                                            isExpanded={spec.children.length !== 0}
+                                            isExpanded={isExpanded}
+                                            isInteractive={isInteractive}
+                                            isVisible={isVisible}
                                             classes={classes}
                                             onResize={(width, height) =>
                                                 this._onNodeResize(id, width, height)
                                             }
-                                        />
+                                        >
+                                            <Viewer {...viewerToViewerProps} viewId={viewId} />
+                                        </DagNode>
                                     );
                                 }
                                 case 'edge': {

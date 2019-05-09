@@ -18,6 +18,11 @@ import type {
 } from '../../interaction';
 import { useMouseInteractions } from '../../interaction';
 
+
+/**
+ * This pure dumb component renders visualization for a 2D grid of elements.
+ * TODO: Allow element-type-specific background coloring.
+ */
 type GridLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
@@ -60,10 +65,6 @@ type GridLayoutState = {};
 type GridLayoutPub = OnMouseEvent | OnChildMouseEvent;
 type GridLayoutSub = {};
 
-/**
- * This pure dumb component renders visualization for a 2D grid of elements.
- * TODO: Allow element-type-specific background coloring.
- */
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
     /** Prop default values. */
     static defaultProps: GridLayoutDefaultProps = {};

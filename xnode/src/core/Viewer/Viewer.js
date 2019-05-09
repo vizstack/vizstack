@@ -35,6 +35,7 @@ import type {
 } from '../interaction';
 import { InteractionContext } from '../interaction';
 
+
 export type ViewerToViewerProps = {
     parent: ReadOnlyViewerHandle,
     view: View,
@@ -46,6 +47,9 @@ export type InteractionProps = {
     viewerHandle: ReadOnlyViewerHandle,
 };
 
+/**
+ * This smart component parses a Snapshot and assembles a corresponding Viz rendering.
+ */
 type ViewerProps = {
     /** Specification of View's root model and sub-models.*/
     view: View,
@@ -76,9 +80,6 @@ type ViewerState = {
     lastEvents: Array<Event>,
 };
 
-/**
- * This smart component parses a Snapshot and assembles a corresponding Viz rendering.
- */
 class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     guid: string = cuid();
 
