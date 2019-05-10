@@ -357,7 +357,7 @@ class DagLayoutNode:
     def to_dict(self) -> Mapping[str, Any]:
         assert self.container is None or self in self.container.elements
         all_values = {
-            'vizId': self.viz,
+            'viewId': self.viz,
             'children': [item.get_id() for item in self.elements],
             'flowDirection': self.flow_direction,
             'isExpanded': self.is_expanded,

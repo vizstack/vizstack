@@ -572,7 +572,7 @@ export default function layout(
             const end: Dims = nodeDimsLookup[endId];
             return {
                 ...edge,
-                points: points[i].map((point) => [point.x - minX, point.y - minY]),
+                points: points[i].map((point) => ({x: point.x - minX, y: point.y - minY})),
                 // points: [
                 //     [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
                 //     [end.x - minX + end.width / 2, end.y - minY + end.height / 2],

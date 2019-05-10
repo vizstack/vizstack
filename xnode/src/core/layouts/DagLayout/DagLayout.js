@@ -14,7 +14,8 @@ import type { ViewerToViewerProps} from '../../Viewer';
 import layout from './layout';
 import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../../utils/data-utils';
-import type { Event } from "../../interaction";
+import type {Event, MouseEventProps, ReadOnlyViewerHandle } from "../../interaction";
+import { useMouseInteractions } from '../../interaction';
 
 
 // =================================================================================================
@@ -121,26 +122,26 @@ type DagEdgeProps = {
 
     color?: 'primary' | 'secondary',
 
-    // id: number,
+    id: number,
     baseColor?: string,
     selectedColor?: string,
-    // isCurved: boolean,
-    // isBackground: boolean,
-    // isHovered: boolean,
-    // isSelected: boolean,
-    // isOtherActive: boolean,
-    // label: string,
-    // onClick?: () => void,
-    // onDoubleClick?: () => void,
-    // onMouseEnter?: () => void,
-    // onMouseLeave?: () => void,
+    isCurved: boolean,
+    isBackground: boolean,
+    isHovered: boolean,
+    isSelected: boolean,
+    isOtherActive: boolean,
+    label: string,
+    onClick?: () => void,
+    onDoubleClick?: () => void,
+    onMouseEnter?: () => void,
+    onMouseLeave?: () => void,
 };
 
 class DagEdge extends React.PureComponent<DagEdgeProps> {
     static defaultProps = {
         baseColor: '#FF0000',
         selectedColor: '#00FF00',
-        shape: 'curve',
+        shape: 'line',
         color: 'primary'
     };
 
@@ -151,20 +152,31 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
             shape,
             baseColor,
             selectedColor,
+            onClick,
+            onDoubleClick,
+            onMouseEnter,
+            onMouseLeave,
+            id,
+            isSelected,
+            isBackground,
+            isOtherActive,
+            isHovered,
+            label,
         } = this.props;
 
         if (!points || points.length === 0) {
             return null;
         }
 
+
         let path = null;
         switch (shape) {
             case 'curve':
-                path = line().curve(curveBasis)(points.map((p) => [p.x, [p.y]]));
+                path = line().curve(curveBasis)(points.map((p) => [p.x, p.y]));
                 break;
             case 'line':
             default:
-                path = line().curve(curveLinear)(points);
+                path = line().curve(curveLinear)(points.map((p) => [p.x, p.y]));
                 break;
         }
 
@@ -231,8 +243,25 @@ type DagLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    lastEvent?: Event,
-    publishEvent: (eventName: string, msg: InteractionMessage) => void,
+    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
+     * events when spread onto an HTML element. */
+    mouseProps: MouseEventProps,
+
+    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
+     * interaction messages. */
+    viewerHandle: ReadOnlyViewerHandle,
+
+    /** Events published to this view's `InteractionManager` which should be consumed by this
+     * view. The message of each event in this array includes a "viewerId" field which is equal to
+     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
+    lastEvents: Array<DagLayoutSub>,
+
+    /** A function which publishes an event with given name and message to this view's
+     * `InteractionManager`. */
+    publishEvent: (event: DagLayoutPub) => void,
+
+    /** Contains properties which should be spread onto any `Viewer` components rendered by this
+     * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
     nodes: {|
@@ -271,6 +300,11 @@ type DagLayoutState = {
     },
 };
 
+type DagLayoutPub = {};
+type DagLayoutSub = {};
+
+type DagLayoutDefaultProps = {};
+
 class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
     // The lifecycle of this component is as follows.
     //     constructor(): Initialize state to be empty.
@@ -285,6 +319,8 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
     //     render(): Render the layouted elements.
     //     componentDidUpdate(): Do nothing, because `shouldLayout` set to false during layout.
     // TODO: Is there an extraneous rerender of not layouted elements?
+
+    static defaultProps: DagLayoutDefaultProps = {};
 
     /** Constructor. */
     constructor(props) {
@@ -374,7 +410,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
      * @private
      */
     _onNodeResize(nodeId: DagNodeId, width: number, height: number) {
-        console.log(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height})`);
+        console.warn(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height})`);
 
         // Do not react to resizes beyond some tolerance, e.g. due to platform instabilities or
         // trivial appearance changes.
@@ -478,7 +514,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const { viewId, isExpanded, isInteractive, isVisible } = this.props.nodes[id];
+                                    const { viewId, isExpanded, isInteractive, isVisible, children } = this.props.nodes[id];
                                     const { x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
@@ -487,7 +523,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                                             y={y}
                                             width={width}
                                             height={height}
-                                            isExpanded={isExpanded}
+                                            isExpanded={isExpanded !== false && children.length !== 0}
                                             isInteractive={isInteractive}
                                             isVisible={isVisible}
                                             classes={classes}
@@ -606,4 +642,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(DagLayout);
+export default withStyles(styles)(useMouseInteractions<React.Config<DagLayoutProps, DagLayoutDefaultProps>>(DagLayout));

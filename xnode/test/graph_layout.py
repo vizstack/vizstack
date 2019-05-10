@@ -1,14 +1,15 @@
 import xnode
-import xnode.viz as viz
+import xnode.view as view
+import visual_debugger
 
-def compile(x):
-    xnode.show(xnode.viz.get_viz(x).compile_full())
+# def compile(x):
+#     xnode.show(xnode.view.get_viz(x).compile_full())
 
 # =====================================
 # 1 group, 1 direction.
 
 def single_group(num=3, direction="south", links=False, container=True):
-    g = viz.DagLayout(flow_direction=direction)
+    g = view.DagLayout(flow_direction=direction)
     if container: cont = g.create_node("container", flow_direction=direction)
     if links:
         root = g.create_node("root")
@@ -19,10 +20,10 @@ def single_group(num=3, direction="south", links=False, container=True):
         if links: g.create_edge(root, node)
     print("num={}, direction={}, links={}, container={}".format(num, direction, links, container))
     # compile(g)
-    xnode.show(g)
+    visual_debugger.view(g)
 
 # When there are no edges, there is no flow.
-# single_group(direction="south")
+# single_group(direction="south", links=True)
 # single_group(direction="east")
 # single_group(direction="north")
 # single_group(direction="west")
@@ -40,7 +41,7 @@ def single_group(num=3, direction="south", links=False, container=True):
 # 1 group with children.
 
 def single_group_2_directions():
-    g = viz.DagLayout(flow_direction="east")
+    g = view.DagLayout(flow_direction="east")
 
     n0 = g.create_node("n0")
     n1 = g.create_node("n1")
@@ -62,14 +63,14 @@ def single_group_2_directions():
     g.create_edge(n3, n5)
     g.create_edge(n3, n7)
 
-    xnode.show(g)
+    visual_debugger.view(g)
 
-# single_group_2_directions()
+single_group_2_directions()
 
 # =====================
 
 def nested_groups():
-    g = viz.DagLayout(flow_direction="east")
+    g = view.DagLayout(flow_direction="east")
 
     n6 = g.create_node("n6", flow_direction="south")
     n0 = g.create_node("n0")
@@ -97,20 +98,20 @@ def nested_groups():
     g.create_edge(n6, n8)
     g.create_edge(n2, n3)
 
-    xnode.show(g)
+    visual_debugger.view(g)
 
-nested_groups()
+# nested_groups()
 
 # =====================
 
 def parent_to_descendant():
-    g = viz.DagLayout()
+    g = view.DagLayout()
 
     n0 = g.create_node("n0")
     n1 = g.create_node("n1")
     n1.add_child(n0)
     g.create_edge(n1, n0)
 
-    xnode.show(g)
+    visual_debugger.view(g)
 
 # parent_to_descendant()
