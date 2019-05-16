@@ -127,6 +127,7 @@ export default function layout(
     const kGroupMargin = 20; // Distance between adjacent group boundaries.
     const kNodeMargin = 20; // Distance between adjacent node boundaries.
     const kEdgeMargin = 5; // Distance between adjacent edges.
+    const kPortLength = 20;
 
     // =============================================================================================
     // Preliminary information gathering.
@@ -167,7 +168,6 @@ export default function layout(
     const graph = {
         vertices: [],
         links: [],
-        linksReal: [],
         constraints: [],
         groups: [],
     };
@@ -228,11 +228,11 @@ export default function layout(
         return null;
     }
 
-    const linkLookup: Set<string> = new Set();
-    function addLink(startIdx: VertexIdx | GroupIdx, endIdx: VertexIdx | GroupIdx): void {
+    const dummyLinkLookup: Set<string> = new Set();
+    function addDummyLink(startIdx: VertexIdx, endIdx: VertexIdx): void {
         const key = `${startIdx}->${endIdx}`;
-        if (linkLookup.has(key)) return;
-        linkLookup.add(key);
+        if (dummyLinkLookup.has(key)) return;
+        dummyLinkLookup.add(key);
         graph.links.push({ source: startIdx, target: endIdx });
     }
 
@@ -284,9 +284,9 @@ export default function layout(
         processed: { [NodeId]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } },
     ): { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } {
         if (processed[nodeId]) return processed[nodeId];
-        const node = nodes[nodeIdxLookup[nodeId]];
+        const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
 
-        // NodeIn has no children, so build a leaf `Vertex`.
+        // Node has no children, so build a leaf `Vertex`.
         if (node.children.length === 0) {
             const vertexIdx: VertexIdx = addVertex(nodeId, {
                 width: node.width || kDefaultNodeSize,
@@ -340,8 +340,8 @@ export default function layout(
         return leaves;
     }
 
-    function processEdge(startId: NodeId, endId: NodeId) {
-        // Add `Link` and `SeparationConstraint between *all pairs* leaf descendants of start and
+    function processEdge(edgeId: EdgeId, startId: NodeId, endId: NodeId) {
+        // Add `Link` and `SeparationConstraint between *all pairs* of leaf descendants of start and
         // leaf descendants of end to enforce flow in direction of least common ancestor. This is
         // needed since a `NodeIn` can translate to either a `Vertex` or a `Group`, but a
         // `SeparationConstraint` must be between two `Vertex`. Also, in practice, it seems that
@@ -373,22 +373,18 @@ export default function layout(
         //     addSeparationConstraint(dummyAIdx, endLeafIdx, lcaFlowDirection, {gap: kFlowSpacing/2});
         // }
 
-        // TODO: Make not hacky
-        graph.linksReal.push({
-            sourceId: startId,
-            targetId: endId,
-        });
+        // TODO: Can we try the inlining approach for Links with Vertex and Group?
 
         for (let startLeafId of findLeafDescendants(startId)) {
             const startLeafIdx: VertexIdx = vertexIdxLookup[startLeafId];
             for (let endLeafId of findLeafDescendants(endId)) {
                 const endLeafIdx: VertexIdx = vertexIdxLookup[endLeafId];
-                addLink(startLeafIdx, endLeafIdx);
+                addDummyLink(startLeafIdx, endLeafIdx);
                 addSeparationConstraint(startLeafIdx, endLeafIdx, lcaFlowDirection);
             }
         }
     }
-    edges.forEach((edge) => processEdge(edge.startId, edge.endId));
+    edges.forEach((edge) => processEdge(edge.id, edge.startId, edge.endId));
 
     // TODO: Alignment constraint for orthogonal edges (for single item edges)
     // TODO: BFS layer-wise alignment constraint (offset so start flow at same level)
@@ -424,16 +420,88 @@ export default function layout(
             30 /* user + overlap constraints iters */,
             0 /* container snap" iters using nodes[0].width */,
             false /* run async */,
-            false /* center grpah on restart */,
+            false /* center graph on restart */,
         );
 
     console.log('layout.js -- Done with preliminary layout.', graph);
 
     // Step 3: Retarget to ports.
     // --------------------------
-    // Add port dummy `Vertex`. Retarget edges to use these port `Vertex` and `Group`.
+    // Since the size of `Group` is determined by the layout process, only after the positions and
+    // sizes have been calculated can we add ports. This is suboptimal, because the placement of the
+    // ports may be important in layout. Add a dummy `Vertex` for each port, and retarget edges
+    // to point to them.
 
-    // TODO
+    let portLookup: { [NodeId]: { [string]: VertexIdx }} = {};
+
+    function addPortVertex(nodeId: NodeId, portName: string, x: number, y: number): VertexIdx {
+        let idx: VertexIdx = graph.vertices.length;
+        if(!(nodeId in portLookup)) {
+            portLookup[nodeId] = {};
+        }
+        portLookup[nodeId][portName] = idx;
+        graph.vertices.push({ width: 1, height: 1, x: x + 5.5, y: y + 0.5,
+            bounds: new cola.Rectangle(x + 5, x + 6, y, y + 1),
+            index: idx,
+        });
+        return idx;
+    }
+
+    function processPorts(nodeId: NodeId) {
+        const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
+        if(node.ports === undefined) return;
+        const portsBySide: { ['north' | 'south' | 'east' | 'west']: Array<string> } = {};
+        for (let portName in node.ports) {
+            const side = node.ports[portName].side;
+            if (!(side in portsBySide)) {
+                portsBySide[side] = [];
+            }
+            portsBySide[side].push(portName);
+        }
+        for (let side in portsBySide) {
+            portsBySide[side].sort((portName1: string, portName2: string) => {
+                if (node.ports[portName1].order === undefined || node.ports[portName2].order === undefined) {
+                    return 0;
+                }
+                return node.ports[portName2].order - node.ports[portName1].order;
+            });
+            portsBySide[side].forEach((portName, i) => {
+                const nodeVertex: VertexPopulated = graph.vertices[ vertexIdxLookup[ nodeId ] ];
+                const portSep = portsBySide[side].length + 1;
+                let pos;
+                switch (side) {
+                    case 'west':
+                        pos = {
+                            x: nodeVertex.bounds.x - kPortLength,
+                            y: nodeVertex.bounds.height() / portSep * (i + 1) + nodeVertex.bounds.y,
+                        };
+                        break;
+                    case 'east':
+                        pos = {
+                            x: nodeVertex.bounds.x + nodeVertex.bounds.width() + kPortLength,
+                            y: nodeVertex.bounds.height() / portSep * (i + 1) + nodeVertex.bounds.y,
+                        };
+                        break;
+                    case 'north':
+                        pos = {
+                            x: nodeVertex.bounds.width() / portSep * (i + 1) + nodeVertex.bounds.x,
+                            y: nodeVertex.bounds.y - kPortLength,
+                        };
+                        break;
+                    case 'south':
+                    default:
+                        pos = {
+                            x: nodeVertex.bounds.width() / portSep * (i + 1) + nodeVertex.bounds.x,
+                            y: nodeVertex.bounds.y + nodeVertex.bounds.height() + kPortLength,
+                        };
+                        break;
+                }
+                addPortVertex(nodeId, portName, pos.x, pos.y);
+            });
+        }
+    }
+    nodes.forEach((node) => processPorts(node.id));
+
 
     // Step 4: Route edges within gridified positions.
     // -----------------------------------------------
@@ -460,7 +528,7 @@ export default function layout(
         children?: number[],
     };
 
-    // Add margin around the vertices and groups, and perpare for routing.
+    // Add margin around the vertices and groups, and prepare for routing.
     ((graph.vertices: any[]): VertexPopulated[]).forEach((v) => {
         // v.bounds = v.bounds.inflate(-kNodeMargin);
     });
@@ -476,18 +544,23 @@ export default function layout(
         },
         kNodeMargin, // TODO: - kGroupMargin?
     );
-    graph.linksReal = graph.linksReal.map((e) => {
-        const sourceInfo = getNodeInfo(e.sourceId);
-        const targetInfo = getNodeInfo(e.targetId);
-        return {
-            source: sourceInfo.obj,
-            target: targetInfo.obj,
-        };
+
+    // Overwrite the dummy links with the real links.
+    graph.links = edges.map((edge) => {
+        let source: Vertex | Group = getNodeInfo(edge.startId).obj;
+        let target: Vertex | Group = getNodeInfo(edge.endId).obj;
+        if (edge.startPort) {
+            source = graph.vertices[portLookup[edge.startId][edge.startPort]];
+        }
+        if (edge.endPort) {
+            target = graph.vertices[portLookup[edge.endId][edge.endPort]];
+        }
+        return { source, target };
     });
 
-    console.log('B');
+    console.log('B', edges, graph.links, vertexIdxLookup);
     const routes = router.routeEdges(
-        graph.linksReal,
+        graph.links,
         kEdgeMargin,
         (e) => e.source.index,
         (e) => e.target.index,
@@ -507,7 +580,7 @@ export default function layout(
     };
 
     function getGroupDims(nodeId: NodeId): Dims {
-        const g: Group = graph.groups[groupIdxLookup[nodeId]];
+        const g: GroupPopulated = graph.groups[groupIdxLookup[nodeId]];
         return {
             x: g.bounds.x,
             y: g.bounds.y,
@@ -517,13 +590,13 @@ export default function layout(
         };
     }
     function getVertexDims(nodeId: NodeId): Dims {
-        const v: Vertex = graph.vertices[vertexIdxLookup[nodeId]];
+        const v: VertexPopulated = graph.vertices[vertexIdxLookup[nodeId]];
         return {
-            x: v.x - v.width / 2, // TODO: +pad?
-            y: v.y - v.height / 2,
+            x: v.bounds.x, // TODO: +pad?
+            y: v.bounds.y,
             z: 1, // TODO
-            width: v.width,
-            height: v.height,
+            width: v.bounds.width(),
+            height: v.bounds.height(),
         };
     }
 
@@ -545,6 +618,12 @@ export default function layout(
         maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
+    points.forEach((segment) => segment.forEach((point) => {
+        minX = Math.min(minX, point.x - kEdgeMargin);
+        minY = Math.min(minY, point.y - kEdgeMargin);
+        maxX = Math.max(maxX, point.x + kEdgeMargin);
+        maxY = Math.max(maxY, point.y + kEdgeMargin);
+    }))
 
     if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
         console.error('Cannot calculate one of minX, minY, maxX, maxY for graph.');
@@ -567,16 +646,30 @@ export default function layout(
             };
         }),
         edges.map((edge, i) => {
-            const { startId, endId } = edge;
+            const { startId, endId, startPort, endPort } = edge;
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
+            let p = points[i].map((point) => ({x: point.x - minX, y: point.y - minY}));
+            function getDelta(side) {
+                switch(side) {
+                    default:
+                    case "south": return { x: 0, y: -kPortLength };
+                    case "north": return { x: 0, y: kPortLength };
+                    case "east": return { x: -kPortLength, y: 0 };
+                    case "west": return { x: kPortLength, y: 0 };
+                }
+            }
+            if(startPort) {
+                const d = getDelta(nodes[nodeIdxLookup[startId]].ports[startPort].side);
+                p.unshift({x: p[0].x + d.x, y: p[0].y + d.y});
+            }
+            if(endPort) {
+                const d = getDelta(nodes[nodeIdxLookup[endId]].ports[endPort].side);
+                p.push({x: p[p.length-1].x + d.x, y: p[p.length-1].y + d.y});
+            }
             return {
                 ...edge,
-                points: points[i].map((point) => ({x: point.x - minX, y: point.y - minY})),
-                // points: [
-                //     [start.x - minX + start.width / 2, start.y - minY + start.height / 2],
-                //     [end.x - minX + end.width / 2, end.y - minY + end.height / 2],
-                // ],
+                points: p,
                 z: Math.max(start.z, end.z) + 0.5, // Edges appear above nodes.
             };
         }),

@@ -2,6 +2,9 @@ import xnode
 import xnode.view as view
 import visual_debugger
 
+# TODO: Does not work for just 2-3 nodes.
+# TODO: Make everything ports
+
 # def compile(x):
 #     xnode.show(xnode.view.get_viz(x).compile_full())
 
@@ -23,7 +26,7 @@ def single_group(num=3, direction="south", links=False, container=True):
     visual_debugger.view(g)
 
 # When there are no edges, there is no flow.
-# single_group(direction="south", links=True)
+# single_group(direction="south")
 # single_group(direction="east")
 # single_group(direction="north")
 # single_group(direction="west")
@@ -65,7 +68,7 @@ def single_group_2_directions():
 
     visual_debugger.view(g)
 
-single_group_2_directions()
+# single_group_2_directions()
 
 # =====================
 
@@ -115,3 +118,34 @@ def parent_to_descendant():
     visual_debugger.view(g)
 
 # parent_to_descendant()
+
+# =====================
+
+def ports1():
+    g = view.DagLayout()
+
+    n0 = g.create_node("n0")
+    n1 = g.create_node("n1")
+    n2 = g.create_node("n2")
+    n2.create_port('right', 'east')
+    g.create_edge(n0, n1)
+    g.create_edge(n0, n2)
+
+    visual_debugger.view(g)
+
+ports1()
+
+def ports2():
+    g = view.DagLayout()
+
+    n0 = g.create_node("n0")
+    n1 = g.create_node("n1")
+    n2 = g.create_node("n2")
+    n0.create_port('left', 'west')
+    n2.create_port('right', 'east')
+    g.create_edge(n0, n1)
+    g.create_edge(n0, n2, start_port='left', end_port='right')
+
+    visual_debugger.view(g)
+
+ports2()
