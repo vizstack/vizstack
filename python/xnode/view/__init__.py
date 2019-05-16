@@ -5,6 +5,7 @@ This file defines all functions and objects which can be used by developers to c
 import typing
 from typing import Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 import os
+from collections import defaultdict
 
 from xnode._types import View, JsonType
 import types
@@ -49,25 +50,25 @@ def _get_view(o: Any) -> 'View':
         viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
-        viz = SwitchSequence(
+        viz = _SwitchSequence(
             o,
             start_motif='List[{}] ['.format(len(o)),
             end_motif=']',
             summary='List[{}]'.format(len(o)))
     elif isinstance(o, set):
-        viz = SwitchSequence(
+        viz = _SwitchSequence(
             o,
             start_motif='Set[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Set[{}]'.format(len(o)))
     elif isinstance(o, tuple):
-        viz = SwitchSequence(
+        viz = _SwitchSequence(
             o,
             start_motif='Tuple[{}] ('.format(len(o)),
             end_motif=')',
             summary='Tuple[{}]'.format(len(o)))
     elif isinstance(o, dict):
-        viz = SwitchKeyValues(
+        viz = _SwitchKeyValues(
             o,
             start_motif='Dict[{}] {{'.format(len(o)),
             end_motif='}',
@@ -81,14 +82,14 @@ def _get_view(o: Any) -> 'View':
                 args.append(param_name)
             else:
                 kwargs[param_name] = param.default
-        viz = SwitchSequence([
-            SwitchSequence(
+        viz = _SwitchSequence([
+            _SwitchSequence(
                 args,
                 start_motif='Positional Args [',
                 end_motif=']',
                 summary='Args',
                 expansion_mode='compact'),
-            SwitchKeyValues(
+            _SwitchKeyValues(
                 kwargs,
                 start_motif='Keyword Args {',
                 end_motif='}',
@@ -112,7 +113,7 @@ def _get_view(o: Any) -> 'View':
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        viz = SwitchKeyValues(
+        viz = _SwitchKeyValues(
             attributes,
             start_motif='Module[{}] {{'.format(o.__name__),
             end_motif='}',
@@ -132,7 +133,7 @@ def _get_view(o: Any) -> 'View':
         contents = []
         if len(functions) > 0:
             contents.append(
-                SwitchKeyValues(
+                _SwitchKeyValues(
                     functions,
                     start_motif='Functions {',
                     end_motif='}',
@@ -140,13 +141,13 @@ def _get_view(o: Any) -> 'View':
                     expansion_mode='compact'))
         if len(staticfields) > 0:
             contents.append(
-                SwitchKeyValues(
+                _SwitchKeyValues(
                     staticfields,
                     start_motif='Fields {',
                     end_motif='}',
                     summary='Fields',
                     expansion_mode='compact'))
-        viz = SwitchSequence(
+        viz = _SwitchSequence(
             contents,
             start_motif='Class[{}] ('.format(o.__name__),
             end_motif=')',
@@ -169,7 +170,7 @@ def _get_view(o: Any) -> 'View':
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        viz = SwitchKeyValues(
+        viz = _SwitchKeyValues(
             contents,
             item_separator='=',
             start_motif='Instance[{}] {{'.format(type(o).__name__),
@@ -259,13 +260,16 @@ class Flow(View):
     A View which renders other Vizzes as a series of inline elements.
     """
 
-    def __init__(self, elements: List[Any]) -> None:
+    def __init__(self, items: List[Any]) -> None:
         """
         Args:
-            elements: A sequence of objects which should be visualized.
+            items: A sequence of objects which should be visualized.
         """
         super(Flow, self).__init__()
-        self._elements: List[View] = [_get_view(o) for o in elements]
+        self._elements: List[View] = [_get_view(o) for o in items]
+
+    def item(self, item: Any):
+        self._elements.append(_get_view(item))
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         return {
@@ -277,6 +281,7 @@ class Flow(View):
         }
 
 
+# TODO: add item kwarg
 class DagLayout(View):
     def __init__(self,
                  flow_direction: Optional[str] = None,
@@ -284,149 +289,77 @@ class DagLayout(View):
         super(DagLayout, self).__init__()
         self._flow_direction = flow_direction
         self._align_children = align_children
-        self._nodes: List['DagLayoutNode'] = []
-        self._edges: List['DagLayoutEdge'] = []
-        self._alignments: List[List['DagLayoutNode']] = []
+        self._nodes: Dict[str, dict] = defaultdict(dict)
+        self._items: Dict[str, View] = dict()
+        self._edges: List[dict] = []
+        self._alignments: List[List[str]] = []
+
+    def node(self, node_id: str,
+             flow_direction: Optional[str]=None, align_children: Optional[bool]=None,
+                 is_expanded: Optional[bool]=None, is_interactive: Optional[bool]=None,
+                 is_visible: Optional[bool]=None, parent: Optional[str]=None,
+             align_with: Optional[List[str]]=None):
+        self._nodes[node_id]['flowDirection'] = flow_direction
+        self._nodes[node_id]['isExpanded'] = is_expanded
+        self._nodes[node_id]['isInteractive'] = is_interactive
+        self._nodes[node_id]['isVisible'] = is_visible
+        self._nodes[node_id]['alignChildren'] = align_children
+        self._nodes[node_id]['children'] = []
+        if parent is not None:
+            if 'children' not in self._nodes[parent]:
+                self._nodes[parent]['children'] = []
+            self._nodes[parent]['children'].append(node_id)
+        if align_with is not None:
+            self._alignments.append([node_id] + align_with)
+
+    def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
+        assert node_id in self._nodes, 'No node with ID "{}" found.'.format(node_id)
+        if 'ports' not in self._nodes[node_id]:
+            self._nodes[node_id]['ports'][port_name] = {
+                'side': side,
+            }
+            if order is not None:
+                self._nodes[node_id]['ports'][port_name]['order'] = order
+
+    def edge(self, start_node_id: str, end_node_id: str,
+             start_port_name: Optional[str]=None, end_port_name: Optional[str]=None):
+        assert start_node_id in self._nodes, 'Start node "{}" not found.'.format(start_node_id)
+        assert end_node_id in self._nodes, 'End node "{}" not found.'.format(end_node_id)
+        assert start_port_name is None or start_port_name in self._nodes[start_node_id]['ports'], 'No port with name "{}" found on start node "{}".'.format(start_port_name, start_node_id)
+        assert end_port_name is None or end_port_name in self._nodes[end_node_id]['ports'], 'No port with name "{}" found on end node "{}".'.format(end_port_name, end_node_id)
+        edge = {
+            'startId': start_node_id,
+            'endId': end_node_id,
+        }
+        if start_port_name is not None:
+            edge['startPort'] = start_port_name
+        if end_port_name is not None:
+            edge['endPort'] = end_port_name
+        self._edges.append(edge)
+
+    def item(self, item: Any, node_id: str):
+        self._items[node_id] = _get_view(item)
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+        for node_id in self._nodes:
+            assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
         return {
             'type': 'DagLayout',
             'contents': {
                 'nodes':
-                {node.get_id(): node.to_dict()
-                 for node in self._nodes},
+                {node_id: {**{key: value for key, value in node.items() if value is not None},
+                           'viewId': self._items[node_id]}
+                 for node_id, node in self._nodes.items()},
                 'edges':
-                {edge.get_id(): edge.to_dict()
-                 for edge in self._edges},
-                'alignments': [[item.get_id() for item in alignment]
-                               for alignment in self._alignments],
+                {str(i): edge
+                 for i, edge in enumerate(self._edges)},
+                'alignments': self._alignments,
                 'flowDirection':
                 self._flow_direction,
                 'alignChildren':
                 self._align_children,
             },
             'meta': self._meta,
-        }
-
-    def create_node(self,
-                    o: Any,
-                    flow_direction: Optional[str] = None,
-                    align_children: Optional[bool] = None,
-                    is_expanded: Optional[bool] = None,
-                    is_interactive: Optional[bool] = None,
-                    is_visible: Optional[bool] = None) -> 'DagLayoutNode':
-        node = DagLayoutNode(
-            str(len(self._nodes)), _get_view(o), flow_direction,
-            align_children, is_expanded, is_interactive, is_visible)
-        self._nodes.append(node)
-        return node
-
-    def create_edge(self,
-                    start: 'DagLayoutNode',
-                    end: 'DagLayoutNode',
-                    start_port: Optional[str] = None,
-                    end_port: Optional[str] = None) -> 'DagLayoutEdge':
-        edge = DagLayoutEdge(
-            str(len(self._edges)), start, end, start_port, end_port)
-        self._edges.append(edge)
-        return edge
-
-    def align_elements(self, elements: List['DagLayoutNode']) -> None:
-        self._alignments.append(elements)
-
-
-class DagLayoutNode:
-    def __init__(self, node_id: str, viz: 'View',
-                 flow_direction: Optional[str], align_children: Optional[bool],
-                 is_expanded: Optional[bool], is_interactive: Optional[bool],
-                 is_visible: Optional[bool]) -> None:
-        self.node_id = node_id
-        self.viz = viz
-        self.flow_direction = flow_direction
-        self.is_expanded = is_expanded
-        self.is_interactive = is_interactive
-        self.is_visible = is_visible
-        self.align_children = align_children
-        self.elements: List['DagLayoutNode'] = []
-        self.ports: Dict[str, Mapping[str, Union[str, int]]] = {}
-        self.container: Optional['DagLayoutNode'] = None
-
-    def get_id(self) -> str:
-        return self.node_id
-
-    def to_dict(self) -> Mapping[str, Any]:
-        assert self.container is None or self in self.container.elements
-        all_values = {
-            'viewId': self.viz,
-            'children': [item.get_id() for item in self.elements],
-            'flowDirection': self.flow_direction,
-            'isExpanded': self.is_expanded,
-            'isInteractive': self.is_interactive,
-            'isVisible': self.is_visible,
-            'alignChildren': self.align_children,
-            'ports': self.ports,
-        }
-        return {
-            key: value
-            for key, value in all_values.items() if value is not None
-        }
-
-    # TODO: this interface is strange. make it clear what should be used by devs and what's for internal use
-    def create_port(self,
-                    port_name: str,
-                    side: str,
-                    order: Optional[int] = None):
-        assert port_name not in self.ports
-        self.ports[port_name] = {
-            'side': side,
-            'order': order,
-        }
-
-    def add_child(self, child: 'DagLayoutNode') -> None:
-        assert child.container is None
-        child.container = self
-        self.elements.append(child)
-
-    def remove_child(self, child: 'DagLayoutNode') -> None:
-        assert child in self.elements
-        assert child.container == self
-        child.container = None
-        self.elements.remove(child)
-
-    def is_ancestor(self, descendant: 'DagLayoutNode') -> bool:
-        if len(self.elements) == 0:
-            return False
-        if descendant in self.elements or descendant is self:
-            return True
-        return any([child.is_ancestor(descendant) for child in self.elements])
-
-    def get_container(self) -> Optional['DagLayoutNode']:
-        return self.container
-
-
-class DagLayoutEdge:
-    def __init__(self, edge_id: str, start: 'DagLayoutNode',
-                 end: 'DagLayoutNode', start_port: Optional[str],
-                 end_port: Optional[str]) -> None:
-        self.edge_id = edge_id
-        self.start = start
-        self.end = end
-        self.start_port = start_port
-        self.end_port = end_port
-
-    def get_id(self) -> str:
-        return self.edge_id
-
-    def to_dict(self) -> Mapping[str, Any]:
-        all_values = {
-            'startId': self.start.get_id(),
-            'endId': self.end.get_id(),
-            'startPort': self.start_port,
-            'endPort': self.end_port,
-        }
-        return {
-            key: value
-            for key, value in all_values.items() if value is not None
         }
 
 
@@ -436,7 +369,7 @@ class Grid(View):
    A View which renders other Vizzes in a flexibly-sized grid.
    """
 
-    def __init__(self, elements: List[Tuple[Any, int, int, int, int]]) -> None:
+    def __init__(self, cells: Optional[str]=None, items: Optional[Dict[str, Any]]=None) -> None:
         """
         Args:
             elements: The contents of the grid as a list of tuples. Each tuple is of the form
@@ -446,32 +379,61 @@ class Grid(View):
                 is the number of rows it should span.
         """
         super(Grid, self).__init__()
-        self._num_cols = max(
-            x + w for _, x, _, w, _ in elements) if len(elements) > 0 else 1
-        self._num_rows = max(
-            y + h for _, _, y, _, h in elements) if len(elements) > 0 else 1
-        self._elements: List[Tuple[View, int, int, int, int]] = [
-            (_get_view(o), x, y, w, h) for o, x, y, w, h in elements
-        ]
+        self._cells = dict()
+        if cells is not None:
+            cell_bounds = dict()
+            row_len = None
+            for y, row in enumerate(cells.splitlines()):
+                if row_len is None:
+                    row_len = len(row)
+                else:
+                    # TODO: meaningful error here
+                    assert len(row) == row_len
+                current_char = None
+                for x, c in enumerate(row):
+                    if c not in cell_bounds:
+                        cell_bounds[c] = {
+                            'x': x, 'y': y, 'X': -1, 'Y': -1
+                        }
+                    cell_bounds[c]['Y'] = y + 1
+                    if current_char is None:
+                        current_char = c
+                    elif current_char != c:
+                        cell_bounds[current_char]['X'] = x
+                        current_char = c
+                    cell_bounds[current_char]['X'] = row_len
+            for cell_name, cell_bound in cell_bounds.items():
+                self._cells[cell_name] = {
+                    'col': cell_bound['x'],
+                    'row': cell_bound['y'],
+                    'width': cell_bound['X'] - cell_bound['x'],
+                    'height': cell_bound['Y'] - cell_bound['y'],
+                }
+        # TODO: assert non-overlapping
+        if items is not None:
+            self._items = items
+        else:
+            self._items = dict()
 
-    def __add__(self, other: Tuple[Any, int, int, int, int]) -> 'Grid':
-        elem, x, y, w, h = other
-        self._elements.append((_get_view(elem), x, y, w, h))
-        self._num_cols = max(self._num_cols, x + w)
-        self._num_rows = max(self._num_rows, y + h)
-        return self
+    def cell(self, cell_name: str, col: int, row: int, width: int, height: int):
+        self._cells[cell_name] = {
+            'col': col,
+            'row': row,
+            'width': width,
+            'height': height,
+        }
+        # TODO: assert non-overlapping
+
+    def item(self, item: Any, cell_name: str):
+        self._items[cell_name] = _get_view(item)
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+        for cell_name in self._cells:
+            assert cell_name in self._items, 'No item was provided for cell "{}".'.format(cell_name)
         return {
             'type': 'GridLayout',
             'contents': {
-                'elements': [{
-                    'viewId': view,
-                    'col': col,
-                    'row': row,
-                    'width': width,
-                    'height': height,
-                } for view, col, row, width, height in self._elements],
+                'elements': [{**cell, 'viewId': self._items[cell_name]} for cell_name, cell in self._cells.items()],
             },
             'meta': self._meta,
         }
@@ -482,27 +444,42 @@ class Switch(View):
     """
 
     def __init__(self,
-                 elements: List[Any],
-                 default_element: Optional[int] = None) -> None:
+                 modes: Optional[List[str]]=None,
+                 items: Optional[Dict[str, Any]]=None) -> None:
         """
         """
         super(Switch, self).__init__()
-        self._elements = [_get_view(elem) for elem in elements]
-        if default_element is not None:
-            self._elements = self._elements[
-                default_element:] + self._elements[:default_element]
+        if modes is not None:
+            self._modes = modes
+        else:
+            self._modes = []
+        if items is not None:
+            self._items = {key: _get_view(value) for key, value in items.items()}
+        else:
+            self._items = dict()
+
+    def mode(self, mode_name: str, index: Optional[int]=None):
+        if index is not None:
+            self._modes.insert(index, mode_name)
+        else:
+            self._modes.append(mode_name)
+
+    def item(self, item: Any, mode_name: str):
+        self._items[mode_name] = item
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+        for mode_name in self._modes:
+            assert mode_name in self._items, 'No item was provided for mode "{}".'.format(mode_name)
         return {
             'type': 'SwitchLayout',
             'contents': {
-                'elements': self._elements,
+                'elements': [self._items[mode_name] for mode_name in self._modes],
             },
             'meta': self._meta,
         }
 
 
-class Sequence(Grid):
+class Sequence(View):
     """
     A View which renders other Vizzes as blocks arranged in a fixed order.
     """
@@ -517,61 +494,40 @@ class Sequence(Grid):
             elements: A sequence of objects which should be visualized.
             orientation: How to arrange the elements of this View. Should be either "horizontal" or "vertical".
         """
+        super(Sequence, self).__init__()
         self._orientation = orientation
-        self._has_start_motif = start_motif is not None
-        self._has_end_motif = end_motif is not None
-        if elements is None:
-            elements = []
+        self._start_motif = Text(start_motif) if start_motif is not None else None
+        self._end_motif = Text(end_motif) if end_motif is not None else None
+        self._elements = [_get_view(o) for o in elements] if elements is not None else []
 
-        if orientation == 'horizontal':
-            grid_elements = [(elem, i + 1, 0, 1, 1)
-                             for i, elem in enumerate(elements)]
-            if start_motif:
-                grid_elements.append((Text(start_motif), 0, 0, 1, 1))
-            if end_motif:
-                grid_elements.append((Text(end_motif), len(elements) + 1, 0, 1,
-                                      1))
-            super(Sequence, self).__init__(grid_elements)
-        elif orientation == 'vertical':
-            grid_elements = [(elem, 1, i + 1, 1, 1)
-                             for i, elem in enumerate(elements)]
-            if start_motif:
-                grid_elements.append((Text(start_motif), 0, 0, 2, 1))
-            if end_motif:
-                grid_elements.append((Text(end_motif), 0, len(elements) + 1, 2,
-                                      1))
-            super(Sequence, self).__init__(grid_elements)
-        else:
-            raise ValueError(
-                'Provided orientation "{}" not recognized.'.format(
-                    orientation))
+    def item(self, item: Any):
+        self._elements.append(_get_view(item))
 
-    def __add__(self, other: Any) -> 'Sequence':
-        # TODO: clean this up
-        if self._has_end_motif:
-            end_motif, _, _, _, _ = self._elements.pop()
-        if self._orientation == 'horizontal':
-            self._elements.append((_get_view(other), len(self._elements) + (1 if not self._has_start_motif else 0), 0, 1,
-                                   1))
-            if self._has_end_motif:
-                self._elements.append((end_motif, len(self._elements), 0, 1, 1))
-            self._num_cols += 1
-        elif self._orientation == 'vertical':
-            self._elements.append((_get_view(other), 0, len(self._elements) + (1 if not self._has_start_motif else 0), 1,
-                                   1))
-            if self._has_end_motif:
-                self._elements.append((end_motif, 0, len(self._elements), 1, 1))
-            self._num_rows += 1
-        return self
+    def assemble_dict(self):
+        grid = Grid()
+        update_index = 0 if self._orientation == 'horizontal' else 1
+        current_position = [0, 0]
+        if self._start_motif is not None:
+            grid.cell('start_motif', *current_position, 1, 1)
+            grid.item(self._start_motif, 'start_motif')
+            current_position[update_index] += 1
+        for i, item in enumerate(self._elements):
+            grid.cell('{}'.format(i), *current_position, 1, 1)
+            grid.item(item, '{}'.format(i))
+            current_position[update_index] += 1
+        if self._end_motif is not None:
+            grid.cell('end_motif', *current_position, 1, 1)
+            grid.item(self._end_motif, 'end_motif')
+        return grid.assemble_dict()
 
 
-class KeyValues(Grid):
+class KeyValues(View):
     """
     A View which renders other Vizzes as key-value pairs.
     """
 
     def __init__(self,
-                 key_value_mapping: Dict[Any, Any],
+                 key_value_mapping: Optional[Dict[Any, Any]] = None,
                  item_separator: str = ':',
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None) -> None:
@@ -583,33 +539,41 @@ class KeyValues(Grid):
                 mode.
             expansion_mode: An optional expansion mode which the ``KeyValues`` should adopt by default.
         """
+        super(KeyValues, self).__init__()
         self._keys = list(key_value_mapping.keys())
-        self._has_end_motif = end_motif is not None
+        self._start_motif = Text(start_motif) if start_motif is not None else None
+        self._end_motif = Text(end_motif) if end_motif is not None else None
         self._item_separator = item_separator
-        elements = [(key, 1, i + 1, 1, 1) for i, key in enumerate(self._keys)] + [
-            (Text(self._item_separator), 2, i + 1, 1, 1) for i in range(len(self._keys))
-        ] + [(key_value_mapping[key], 3, i + 1, 1, 1)
-             for i, key in enumerate(self._keys)]
-        if start_motif is not None:
-            elements.append((Text(start_motif), 0, 0, 4, 1))
-        if end_motif is not None:
-            elements.append((Text(end_motif), 0, len(key_value_mapping) + 1, 4,
-                             1))
-        super(KeyValues, self).__init__(elements)
+        self._elements = [] if key_value_mapping is None else [(_get_view(key), _get_view(value)) for key, value in key_value_mapping.items()]
+
+    def item(self, key: Any, value: Any):
+        self._elements.append((_get_view(key), _get_view(value)))
+
+    def assemble_dict(self):
+        grid = Grid()
+        current_row = 0
+        if self._start_motif is not None:
+            grid.cell('start_motif', 0, current_row, 3, 1)
+            grid.item(self._start_motif, 'start_motif')
+            current_row += 1
+        for i, (key, value) in enumerate(self._elements):
+            grid.cell('k{}'.format(i), 0, current_row, 1, 1)
+            grid.item(key, 'k{}'.format(i))
+            grid.cell('sep{}'.format(i), 1, current_row, 1, 1)
+            grid.item(_get_view(self._item_separator), 'sep{}'.format(i))
+            grid.cell('v{}'.format(i), 2, current_row, 1, 1)
+            grid.item(value, 'v{}'.format(i))
+            current_row += 1
+        if self._end_motif is not None:
+            grid.cell('end_motif', 0, current_row, 3, 1)
+            grid.item(self._end_motif, 'end_motif')
+        return grid.assemble_dict()
 
 
-_MODE_INDICES = {
-    'full': 0,
-    'compact': 1,
-    'summary': 2,
-}
-_COMPACT_COLS = 3
-_COMPACT_ROWS = 3
+_COMPACT_LEN = 3
 
 
-# TODO: syntatic sugar for these? they surface a switch, so can't do operators
-
-def SwitchSequence(
+def _SwitchSequence(
         elements: Optional[typing.Sequence[Any]] = None,
          start_motif: Optional[str] = None,
          end_motif: Optional[str] = None,
@@ -617,16 +581,19 @@ def SwitchSequence(
          summary: Optional[str] = None,
          expansion_mode: Optional[str] = None):
     full_view = Sequence(elements, start_motif, end_motif, orientation)
-    compact_view = Sequence(elements[:_COMPACT_COLS], start_motif, end_motif, orientation)
-    compact_view += Text('...')
+    compact_view = Sequence(elements[:_COMPACT_LEN], start_motif, end_motif, orientation)
+    compact_view.item('...')
     summary_view = summary if summary is not None else 'sequence[{}]'.format(len(elements))
-    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
-    if len(elements) <= _COMPACT_COLS:
-        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
-    return Switch([full_view, compact_view, summary_view])
+    if len(elements) <= _COMPACT_LEN:
+        modes = ['full', 'summary'] if expansion_mode != 'summary' else ['summary', 'full']
+        return Switch(modes, {'full': full_view, 'summary': summary_view})
+    modes = ['full', 'compact', 'summary']
+    if expansion_mode is not None:
+        modes = modes[:modes.index(expansion_mode)] + modes[modes.index(expansion_mode):]
+    return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})
 
 
-def SwitchKeyValues(
+def _SwitchKeyValues(
         key_value_mapping: Dict[Any, Any],
          item_separator: str = ':',
          start_motif: Optional[str] = None,
@@ -636,45 +603,15 @@ def SwitchKeyValues(
     full_view = KeyValues(key_value_mapping, item_separator, start_motif, end_motif)
     compact = dict()
     for i, (key, value) in enumerate(key_value_mapping.items()):
-        if i >= _COMPACT_ROWS:
+        if i >= _COMPACT_LEN:
             break
         compact[key] = value
-    compact_view = KeyValues(compact, item_separator, start_motif, end_motif)
-    end_motif, _, _, _, _ = compact_view._elements.pop()
-    compact_view._elements.append((Text('...'), 2, _COMPACT_ROWS + 1, 1, 1))
-    compact_view._elements.append((end_motif, 0, _COMPACT_ROWS + 2, 4, 1))
+    compact_view = KeyValues(compact, item_separator, start_motif, '...')
     summary_view = summary if summary is not None else 'dict[{}]'.format(len(key_value_mapping))
-    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
-    if len(key_value_mapping) <= _COMPACT_ROWS:
-        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
-    return Switch([full_view, compact_view, summary_view])
-
-
-def SwitchGrid(elements: List[Tuple[Any, int, int, int, int]],
-                 summary: Optional[str] = None,
-                 expansion_mode: Optional[str] = None):
-    full_view = Grid(elements)
-    visible_elements = []
-    extends_right = full_view._num_cols > _COMPACT_COLS
-    extends_below = full_view._num_rows > _COMPACT_ROWS
-    for o, x, y, w, h in full_view._elements:
-        if (x < _COMPACT_COLS - 1
-                or not extends_right) and (y < _COMPACT_ROWS - 1
-                                           or not extends_below):
-            visible_elements.append((o, x, y, min(w,
-                                                  _COMPACT_COLS - x),
-                                     min(h, _COMPACT_ROWS - y)))
-    if extends_right:
-        visible_elements.append(
-            (Text('. . .'), _COMPACT_COLS,
-             min(_COMPACT_ROWS, full_view._num_rows) // 2, 1, 1))
-    if extends_below:
-        visible_elements.append(
-            (Text('. . .'), min(_COMPACT_COLS, full_view._num_cols) // 2,
-             _COMPACT_ROWS, min(_COMPACT_COLS, full_view._num_cols), 1))
-    compact_view = Grid(visible_elements)
-    summary_view = summary if summary is not None else 'grid[{}, {}]'.format(full_view._num_cols, full_view._num_rows)
-    mode_index = _MODE_INDICES[expansion_mode] if expansion_mode is not None else None
-    if len(elements) <= _COMPACT_COLS:
-        return Switch([full_view, summary_view], mode_index if not mode_index == 1 else 0)
-    return Switch([full_view, compact_view, summary_view])
+    if len(key_value_mapping) <= _COMPACT_LEN:
+        modes = ['full', 'summary'] if expansion_mode != 'summary' else ['summary', 'full']
+        return Switch(modes, {'full': full_view, 'summary': summary_view})
+    modes = ['full', 'compact', 'summary']
+    if expansion_mode is not None:
+        modes = modes[:modes.index(expansion_mode)] + modes[modes.index(expansion_mode):]
+    return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})
