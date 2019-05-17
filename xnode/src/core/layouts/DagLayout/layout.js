@@ -127,7 +127,7 @@ export default function layout(
     const kGroupMargin = 20; // Distance between adjacent group boundaries.
     const kNodeMargin = 20; // Distance between adjacent node boundaries.
     const kEdgeMargin = 5; // Distance between adjacent edges.
-    const kPortLength = 20;
+    const kPortLength = 20; // Length of edge directly perpendicular to a port.
 
     // =============================================================================================
     // Preliminary information gathering.
@@ -156,7 +156,6 @@ export default function layout(
 
     const targetIdLookup: { [NodeId]: Array<NodeId> } = {};
     function traverseEdge(node) {}
-
     // TODO: Use topoligical sort finish_time to order nodes in terms of nesting. This allows
     // z-position calculations later?
 
@@ -165,7 +164,12 @@ export default function layout(
 
     // The "real" elements relate to actual user-defined elements.
     // The "fake" elements relate to elements inserted by this code for the sake of layout.
-    const graph = {
+    const graph: {
+        vertices: Vertex[],
+        links: Link[],
+        constraints: Constraint[],
+        groups: Group[],
+    } = {
         vertices: [],
         links: [],
         constraints: [],
@@ -565,7 +569,7 @@ export default function layout(
         (e) => e.source.index,
         (e) => e.target.index,
     );
-    const points = routes.map((route) => [route[0][0]].concat(...route.map((seg) => seg[1])));
+    const paths = routes.map((route) => [route[0][0]].concat(...route.map((seg) => seg[1])));
     console.log('C');
 
     // Step 5: Translate back to user format.
@@ -618,7 +622,7 @@ export default function layout(
         maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
-    points.forEach((segment) => segment.forEach((point) => {
+    paths.forEach((segment) => segment.forEach((point) => {
         minX = Math.min(minX, point.x - kEdgeMargin);
         minY = Math.min(minY, point.y - kEdgeMargin);
         maxX = Math.max(maxX, point.x + kEdgeMargin);
@@ -649,7 +653,7 @@ export default function layout(
             const { startId, endId, startPort, endPort } = edge;
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
-            let p = points[i].map((point) => ({x: point.x - minX, y: point.y - minY}));
+            let points = paths[i].map((point) => ({x: point.x - minX, y: point.y - minY}));
             function getDelta(side) {
                 switch(side) {
                     default:
@@ -661,15 +665,15 @@ export default function layout(
             }
             if(startPort) {
                 const d = getDelta(nodes[nodeIdxLookup[startId]].ports[startPort].side);
-                p.unshift({x: p[0].x + d.x, y: p[0].y + d.y});
+                points.unshift({x: points[0].x + d.x, y: points[0].y + d.y});
             }
             if(endPort) {
                 const d = getDelta(nodes[nodeIdxLookup[endId]].ports[endPort].side);
-                p.push({x: p[p.length-1].x + d.x, y: p[p.length-1].y + d.y});
+                points.push({x: points[points.length-1].x + d.x, y: points[points.length-1].y + d.y});
             }
             return {
                 ...edge,
-                points: p,
+                points: points,
                 z: Math.max(start.z, end.z) + 0.5, // Edges appear above nodes.
             };
         }),

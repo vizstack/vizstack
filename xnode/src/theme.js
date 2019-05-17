@@ -61,6 +61,52 @@ export default createMuiTheme({
             hint: 'rgba(255, 255, 255, 0.38)',
         },
     },
+    color: {
+        primary: {
+            darkest: '#194971',  // headings
+            dark: '#2368A2',     // text
+            base: '#3183C8',     // icons, buttons
+            light: '#AAD4F6',    // outlines
+            lightest: '#EFF8FF', // boxes
+        },
+        grey: {
+            darkest: '#212933',
+            darker: '#5F6B7A',
+            dark: '#8895A7',
+            base: '#B8C4CF',
+            light: '#CFD6DE',
+            lighter: '#E1E7EC',
+            lightest: '#F8F9FA',
+        },
+        teal: {
+            darkest: '#1B655E',
+            dark: '#2A9187',
+            base: '#3CAEA3',
+            light: '#A8EEEC',
+            lightest: '#E7FFFE',
+        },
+        red: {
+            darkest: '#881B1B',
+            dark: '#B82020',
+            base: '#DC3030',
+            light: '#F4AAAA',
+            lightest: '#FCE8E8',
+        },
+        yellow: {
+            darkest: '#8C6D1F',
+            dark: '#CAA53D',
+            base: '#F4CA64',
+            light: '#FDF3D7',
+            lightest: '#FFFCF4',
+        },
+        green: {
+            darkest: '#187741',
+            dark: '#249D57',
+            base: '#38C172',
+            light: '#A8EEC1',
+            lightest: '#E3FCEC',
+        },
+    },
     spacing: {
         smallest: 1,
         small: 2,

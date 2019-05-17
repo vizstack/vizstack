@@ -2,6 +2,7 @@
 import * as React from 'react';
 import classNames from 'classnames';
 import Immutable from 'seamless-immutable';
+import cuid from 'cuid';
 import { withStyles } from '@material-ui/core/styles';
 import { createSelector } from 'reselect';
 import { line, curveBasis, curveLinear } from 'd3';
@@ -44,7 +45,7 @@ type DagNodeProps = {
     /** Callback on component resize. */
     onResize: (number, number) => void,
 };
-class DagNode extends React.PureComponent<DagNodeProps> {
+class _DagNode extends React.PureComponent<DagNodeProps> {
     /** Prop default values. */
     static defaultProps = {
         isExpanded: true,
@@ -103,6 +104,34 @@ class DagNode extends React.PureComponent<DagNodeProps> {
         );
     }
 }
+const DagNode = withStyles((theme) => ({
+    node: {
+        // fillOpacity: 0.2,
+        // stroke: 'transparent', // TODO: Remove this?
+        // strokeWidth: 4,
+        // rx: 4,
+        // ry: 4,
+        // transition: [
+        //     theme.transitions.create(['width', 'height', 'x', 'y'], {
+        //         duration: theme.transitions.duration.short,
+        //     }),
+        //     theme.transitions.create(['fill-opacity'], {
+        //         duration: theme.transitions.duration.shortest,
+        //         delay: theme.transitions.duration.short,
+        //     }),
+        // ].join(', '),
+    },
+
+    nodeInvisible: {
+        fill: '#FFFFFF', // TODO: Change this.
+        fillOpacity: 0.1,
+    },
+
+    nodeExpanded: {
+        fill: '#000000', // TODO: Change this.
+        fillOpacity: 0.1,
+    },
+}))(_DagNode);
 
 
 // =================================================================================================
@@ -115,60 +144,60 @@ type DagEdgeProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** Curve point coordinates. */
+    /** Edge point coordinates. */
     points: { x: number, y: number }[],
 
+    /** Line style. */
     shape?: 'curve' | 'line',
 
-    color?: 'primary' | 'secondary',
+    /** Line color palette. */
+    color?: 'normal' | 'highlight' | 'lowlight' | 'selected',
 
-    id: number,
-    baseColor?: string,
-    selectedColor?: string,
-    isCurved: boolean,
-    isBackground: boolean,
-    isHovered: boolean,
-    isSelected: boolean,
-    isOtherActive: boolean,
-    label: string,
+    /** Text string to display on edge. */
+    label?: string,
+
+    /** Mouse interaction functions. */
     onClick?: () => void,
     onDoubleClick?: () => void,
     onMouseEnter?: () => void,
     onMouseLeave?: () => void,
 };
 
-class DagEdge extends React.PureComponent<DagEdgeProps> {
+type DagEdgeState = {
+    // Globally unique ID for `xlinkHref` of `textPath.
+    id: string,
+};
+
+class _DagEdge extends React.PureComponent<DagEdgeProps, DagEdgeState> {
     static defaultProps = {
-        baseColor: '#FF0000',
-        selectedColor: '#00FF00',
+        points: [],
         shape: 'line',
-        color: 'primary'
+        color: 'normal',
     };
+
+    constructor(props) {
+        super(props);
+        this.state = {
+            id: cuid(),
+        };
+    }
 
     render() {
         const {
             classes,
             points,
             shape,
-            baseColor,
-            selectedColor,
+            color,
+            label,
             onClick,
             onDoubleClick,
             onMouseEnter,
             onMouseLeave,
-            id,
-            isSelected,
-            isBackground,
-            isOtherActive,
-            isHovered,
-            label,
         } = this.props;
 
-        if (!points || points.length === 0) {
-            return null;
-        }
+        if (!points) return null;
 
-
+        // Create d3 path string
         let path = null;
         switch (shape) {
             case 'curve':
@@ -180,13 +209,14 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
                 break;
         }
 
-        // Edge id needs to be globally unique, not just within this svg component
+
         return (
             <g>
+                {/** Transparent hotspot captures mouse events in vicinity of the edge. */}
                 <path
                     d={path}
                     className={classNames({
-                        [classes.edgeHotspot]: true,
+                        [classes.hotspot]: true,
                     })}
                     onClick={onClick}
                     onDoubleClick={onDoubleClick}
@@ -194,21 +224,14 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
                     onMouseLeave={onMouseLeave}
                 />
                 <path
-                    id={id}
+                    id={this.state.id}
                     d={path}
                     pointerEvents='none'
-                    style={{
-                        stroke: isSelected ? selectedColor : baseColor,
-                        markerEnd: isSelected
-                            ? `url(#arrow-selected${id})`
-                            : `url(#arrow-base${id})`,
-                    }}
                     className={classNames({
                         [classes.edge]: true,
-                        [classes.edgeBackground]: isBackground,
-                        [classes.edgeIsOtherActive]: isOtherActive,
-                        [classes.edgeHovered]: isHovered,
-                        [classes.edgeSelected]: isSelected,
+                        [classes.edgeHighlight]: color === 'highlight',
+                        [classes.edgeLowlight]: color === 'lowlight',
+                        [classes.edgeSelected]: color === 'selected',
                     })}
                 />
                 <text
@@ -217,12 +240,12 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
                     pointerEvents='none'
                     className={classNames({
                         [classes.edgeLabel]: true,
-                        [classes.edgeIsOtherActive]: isOtherActive,
-                        [classes.edgeLabelHovered]: isHovered,
-                        [classes.edgeLabelSelected]: isSelected,
+                        [classes.edgeLabelHighlight]: color === 'highlight',
+                        [classes.edgeLabelLowlight]: color === 'lowlight',
+                        [classes.edgeLabelSelected]: color === 'selected',
                     })}
                 >
-                    <textPath xlinkHref={`#${id}`} startOffset='95%'>
+                    <textPath xlinkHref={`#${this.state.id}`} startOffset='95%'>
                         {label}
                     </textPath>
                 </text>
@@ -230,6 +253,53 @@ class DagEdge extends React.PureComponent<DagEdgeProps> {
         );
     }
 }
+const DagEdge = withStyles((theme) => ({
+    edge: {
+        fill: 'none',
+        stroke: theme.color.primary.base,
+        strokeWidth: 2.5,
+        opacity: 1,
+        markerEnd: 'url(#arrow-normal)',
+    },
+    hotspot: {
+        fill: 'none',
+        stroke: 'transparent',
+        strokeWidth: 12,
+    },
+    edgeHighlight: {
+        stroke: theme.color.primary.light,
+        strokeWidth: 3.5,
+        markerEnd: 'url(#arrow-highlight',
+        opacity: 1,
+    },
+    edgeLowlight: {
+        stroke: theme.color.grey.darker,
+        markerEnd: 'url(#arrow-lowlight)',
+        opacity: 0.5,
+    },
+    edgeSelected: {
+        stroke: theme.color.primary.light,
+        strokeWidth: 3.5,
+        markerEnd: 'url(#arrow-selected)',
+    },
+    edgeLabel: {
+        opacity: 1,
+        textAlign: 'right',
+        fontFamily: theme.typography.monospace.fontFamily,
+        fontWeight: theme.typography.fontWeightMedium,
+        fontSize: '7pt',
+        userSelect: 'none',
+    },
+    edgeLabelHighlight: {
+        opacity: 1,
+    },
+    edgeLabelLowlight: {
+        opacity: 0.5,
+    },
+    edgeLabelSelected: {
+        opacity: 1,
+    },
+}))(_DagEdge);
 
 // =================================================================================================
 
@@ -467,27 +537,6 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         );
     }
 
-    _buildArrowheadMarker(id, color) {
-        return (
-            <marker
-                key={id}
-                id={id}
-                viewBox='-5 -3 5 6'
-                refX='0'
-                refY='0'
-                markerUnits='strokeWidth'
-                markerWidth='4'
-                markerHeight='3'
-                orient='auto'
-            >
-                <path
-                    d='M 0 0 l 0 1 a 32 32 0 0 0 -5 2 l 1.5 -3 l -1.5 -3 a 32 32 0 0 0 5 2 l 0 1 z'
-                    fill={color}
-                />
-            </marker>
-        );
-    }
-
     /**
      * Renders a DAG with nodes and edges. Nodes can contain `Viewer` objects or other nodes,
      * depending on expansion mode. Edges can have string labels.
@@ -498,11 +547,37 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
 
         console.log('DagLayout -- render(): ordering =', ordering, 'state =', this.state);
 
+        function buildArrowMarker(id: string, className: string) {
+            return (
+                <marker
+                    key={id}
+                    id={id}
+                    viewBox='0 0 10 10'
+                    refX='6'
+                    refY='5'
+                    markerUnits='strokeWidth'
+                    markerWidth='4'
+                    markerHeight='4'
+                    orient='auto'
+                >
+                    <path
+                        d='M 0 0 L 10 5 L 0 10 L 4 5 z'
+                        className={className}
+                    />
+                </marker>
+            );
+        }
+
         return (
             <div className={classes.frame}>
                 <div className={classes.graph}>
                     <svg width={size.width} height={size.height}>
-                        <defs>{[this._buildArrowheadMarker('arrow-base', '#FF0000')]}</defs>
+                        <defs>{[
+                            buildArrowMarker('arrow-normal', classes.arrowNormal),
+                            buildArrowMarker('arrow-highlight', classes.arrowHighlight),
+                            buildArrowMarker('arrow-lowlight', classes.arrowLowlight),
+                            buildArrowMarker('arrow-selected', classes.arrowSelected),
+                        ]}</defs>
                         <rect
                             x={0}
                             y={0}
@@ -553,6 +628,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
     }
 }
 
+
 // To inject styles into component
 // -------------------------------
 
@@ -560,7 +636,6 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
 const styles = (theme) => ({
     frame: {
         flex: 1, // expand to fill frame vertical
-
         display: 'flex',
         flexDirection: 'row',
         justifyContent: 'center', // along main axis (horizontal)
@@ -572,73 +647,17 @@ const styles = (theme) => ({
         overflow: 'auto',
         textAlign: 'left', // so SVG doesn't move
     },
-
-    /** Edge styles. */
-    edge: {
-        fill: 'none',
-        strokeWidth: 2.5,
+    arrowNormal: {
+        fill: theme.color.primary.base,
     },
-    edgeHotspot: {
-        fill: 'none',
-        stroke: 'transparent',
-        strokeWidth: 12,
+    arrowHighlight: {
+        fill: theme.color.primary.light,
     },
-    edgeHovered: {
-        opacity: 1,
-        strokeWidth: 3.5,
+    arrowLowlight: {
+        fill: theme.color.grey.darker,
     },
-    edgeSelected: {
-        opacity: 1,
-        strokeWidth: 3.5,
-        markerEnd: 'url(#arrowheadBlue)',
-    },
-    edgeBackground: {
-        opacity: 0.5,
-    },
-    edgeIsOtherActive: {
-        opacity: 0.1,
-    },
-    edgeLabel: {
-        opacity: 0,
-        textAlign: 'right',
-        fontFamily: theme.typography.monospace.fontFamily,
-        fontSize: '7pt',
-        userSelect: 'none',
-    },
-    edgeLabelHovered: {
-        opacity: 1,
-        fontWeight: theme.typography.fontWeightMedium,
-    },
-    edgeLabelSelected: {
-        opacity: 1,
-    },
-
-    /** Node styles. */
-    node: {
-        // fillOpacity: 0.2,
-        // stroke: 'transparent', // TODO: Remove this?
-        // strokeWidth: 4,
-        // rx: 4,
-        // ry: 4,
-        // transition: [
-        //     theme.transitions.create(['width', 'height', 'x', 'y'], {
-        //         duration: theme.transitions.duration.short,
-        //     }),
-        //     theme.transitions.create(['fill-opacity'], {
-        //         duration: theme.transitions.duration.shortest,
-        //         delay: theme.transitions.duration.short,
-        //     }),
-        // ].join(', '),
-    },
-
-    nodeInvisible: {
-        fill: '#FFFFFF', // TODO: Change this.
-        fillOpacity: 0.1,
-    },
-
-    nodeExpanded: {
-        fill: '#000000', // TODO: Change this.
-        fillOpacity: 0.1,
+    arrowSelected: {
+        fill: theme.color.primary.light,
     },
 });
 
