@@ -5,14 +5,15 @@ import { withStyles } from '@material-ui/core/styles';
 
 import type {
     Event,
-    OnMouseEvent,
+    OnViewerMouseEvent,
     MouseEventProps,
     ReadOnlyViewerHandle,
     PrimitiveSize,
     ResizeEvent,
-    OnResizeEvent,
+    HighlightEvent,
+    UnhighlightEvent,
 } from '../../interaction';
-import { useMouseInteractions } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 import type { InteractionProps } from '../../Viewer';
 
 
@@ -22,10 +23,6 @@ import type { InteractionProps } from '../../Viewer';
 type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
-
-    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
-     * events when spread onto an HTML element. */
-    mouseProps: MouseEventProps,
 
     /** The handle to the `Viewer` component which is rendering this view. Used when publishing
      * interaction messages. */
@@ -58,22 +55,11 @@ type TextPrimitiveState = {
     isHighlighted: boolean,
 };
 
-type TextPrimitivePub = OnMouseEvent | OnResizeEvent;
+type TextPrimitivePub = OnViewerMouseEvent;
 
-type TextPrimitiveSub = {
-          // Changes the appearance of the text to be brighter
-          eventName: 'highlight',
-          message: {
-              viewerId: string,
-          },
-      }
-    | {
-          // Returns the appearance of the text to normal
-          eventName: 'unhighlight',
-          message: {
-              viewerId: string,
-          },
-      }
+type TextPrimitiveSub =
+    | HighlightEvent
+    | UnhighlightEvent
     | ResizeEvent;
 
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
@@ -119,7 +105,7 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, mouseProps } = this.props;
+        const { classes, text, color, variant, publishEvent, viewerHandle } = this.props;
         const { isHighlighted, textSize } = this.state;
 
         const split = text.split('\n');
@@ -165,11 +151,11 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
                 variant === 'token' && color === 'error' && isHighlighted,
         });
         return variant === 'token' ? (
-            <div className={names} {...mouseProps}>
+            <div className={names} {...getViewerMouseFunctions(publishEvent, viewerHandle)}>
                 {lines}
             </div>
         ) : (
-            <span className={names} {...mouseProps}>
+            <span className={names} {...getViewerMouseFunctions(publishEvent, viewerHandle)}>
                 {lines}
             </span>
         );
@@ -260,8 +246,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    useMouseInteractions<React.Config<TextPrimitiveProps, TextPrimitiveDefaultProps>>(
-        TextPrimitive,
-    ),
-);
+export default withStyles(styles)(TextPrimitive);

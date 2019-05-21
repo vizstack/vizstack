@@ -3,15 +3,18 @@ import * as React from 'react';
 
 /** A function which returns `true` iff `viewer` satisfies a particular constraint function. */
 import type {
-    OnMouseOverEvent,
-    OnMouseOutEvent,
-    OnClickEvent,
+    OnViewerMouseOverEvent,
+    OnViewerMouseOutEvent,
+    OnViewerClickEvent,
     HighlightEvent,
-    UnhighlightEvent,
-    IncrementEvent,
     EventMessage,
     Event,
 } from './events';
+
+import type { SwitchIncrementEvent } from '../layouts/SwitchLayout';
+import type { OnDagEdgeMouseEvent, DagEdgeHighlightEvent, OnDagNodeMouseEvent, DagNodeHighlightEvent, DagNodeCollapseEvent, DagNodeExpandEvent } from '../layouts/DagLayout';
+
+
 import type { ViewModel } from '../schema';
 
 type SubscriptionHandler<Message: EventMessage> = (
@@ -163,7 +166,7 @@ export class InteractionManager {
 
     _addDefaultInteractions(): void {
         const allViewers = this.getAllComponents();
-        allViewers.subscribe<OnMouseOverEvent>('onMouseOver', (message, subscriber) => {
+        allViewers.subscribe<OnViewerMouseOverEvent>('onViewerMouseOver', (message, subscriber) => {
             if (subscriber.viewerId === message.publisher.viewerId) {
                 this.publish<HighlightEvent>({
                     eventName: 'highlight',
@@ -171,9 +174,9 @@ export class InteractionManager {
                 });
             }
         });
-        allViewers.subscribe<OnMouseOutEvent>('onMouseOut', (message, subscriber) => {
+        allViewers.subscribe<OnViewerMouseOutEvent>('onViewerMouseOut', (message, subscriber) => {
             if (subscriber.viewerId === message.publisher.viewerId) {
-                this.publish<UnhighlightEvent>({
+                this.publish<HighlightEvent>({
                     eventName: 'unhighlight',
                     message: { viewerId: subscriber.viewerId },
                 });
@@ -181,12 +184,70 @@ export class InteractionManager {
         });
         allViewers
             .withType('SwitchLayout')
-            .subscribe<OnClickEvent>('onClick', (message, subscriber) => {
+            .subscribe<OnViewerClickEvent>('onViewerClick', (message, subscriber) => {
                 if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<IncrementEvent>({
-                        eventName: 'increment',
+                    this.publish<SwitchIncrementEvent>({
+                        eventName: 'switchIncrement',
                         message: { viewerId: subscriber.viewerId },
                     });
+                }
+            });
+        allViewers
+            .withType('DagLayout')
+            .subscribe<OnDagEdgeMouseEvent>('onDagEdgeMouseOver', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    this.publish<DagEdgeHighlightEvent>({
+                        eventName: 'dagEdgeHighlight',
+                        message: { viewerId: subscriber.viewerId, edgeId: message.edgeId },
+                    })
+                }
+            });
+        allViewers
+            .withType('DagLayout')
+            .subscribe<OnDagEdgeMouseEvent>('onDagEdgeMouseOut', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    this.publish<DagEdgeHighlightEvent>({
+                        eventName: 'dagEdgeUnhighlight',
+                        message: { viewerId: subscriber.viewerId, edgeId: message.edgeId },
+                    })
+                }
+            });
+        allViewers
+            .withType('DagLayout')
+            .subscribe<OnDagNodeMouseEvent>('onDagNodeMouseOver', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    this.publish<DagNodeHighlightEvent>({
+                        eventName: 'dagNodeHighlight',
+                        message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
+                    })
+                }
+            });
+        allViewers
+            .withType('DagLayout')
+            .subscribe<OnDagNodeMouseEvent>('onDagNodeMouseOut', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    this.publish<DagNodeHighlightEvent>({
+                        eventName: 'dagNodeUnhighlight',
+                        message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
+                    })
+                }
+            });
+        allViewers
+            .withType('DagLayout')
+            .subscribe<OnDagNodeMouseEvent>('onDagNodeClick', (message, subscriber) => {
+                if (subscriber.viewerId === message.publisher.viewerId) {
+                    if (message.nodeExpanded) {
+                        this.publish<DagNodeCollapseEvent>({
+                            eventName: 'dagNodeCollapse',
+                            message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
+                        });
+                    }
+                    else {
+                        this.publish<DagNodeExpandEvent>({
+                            eventName: 'dagNodeExpand',
+                            message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
+                        });
+                    }
                 }
             });
     }
@@ -241,9 +302,9 @@ export class InteractionManager {
 
 export const InteractionContext = React.createContext<InteractionContextValue>({
     // interactions: [],
-    registerViewer: (viewer) => {},
-    unregisterViewer: (viewer) => {},
-    publishEvent: (event: Event) => {},
+    registerViewer: () => {},
+    unregisterViewer: () => {},
+    publishEvent: () => {},
 });
 
 export type InteractionContextValue = {

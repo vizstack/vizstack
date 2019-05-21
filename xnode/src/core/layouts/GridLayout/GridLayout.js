@@ -13,10 +13,9 @@ import type {
     EventMessage,
     MouseEventProps,
     ReadOnlyViewerHandle,
-    OnMouseEvent,
-    OnChildMouseEvent,
+    OnViewerMouseEvent,
 } from '../../interaction';
-import { useMouseInteractions } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 
 
 /**
@@ -26,10 +25,6 @@ import { useMouseInteractions } from '../../interaction';
 type GridLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
-
-    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
-     * events when spread onto an HTML element. */
-    mouseProps: MouseEventProps,
 
     /** The handle to the `Viewer` component which is rendering this view. Used when publishing
      * interaction messages. */
@@ -62,7 +57,7 @@ type GridLayoutDefaultProps = {};
 
 type GridLayoutState = {};
 
-type GridLayoutPub = OnMouseEvent | OnChildMouseEvent;
+type GridLayoutPub = OnViewerMouseEvent;
 type GridLayoutSub = {};
 
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
@@ -90,42 +85,16 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
             classes,
             elements,
             viewerHandle,
-            mouseProps,
             publishEvent,
             viewerToViewerProps,
         } = this.props;
-
-        // TODO: how do we get mouseprops down to the child? or should we not even do this?
-        // Until this is resolved, unused.
-        const childMouseProps = (childPosition: string) => ({
-            onMouseOver: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onChildMouseOver',
-                    message: {
-                        publisher: viewerHandle,
-                        childPosition,
-                    },
-                });
-            },
-            onMouseOut: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onChildMouseOut',
-                    message: {
-                        publisher: viewerHandle,
-                        childPosition,
-                    },
-                });
-            },
-        });
 
         return (
             <div
                 className={classNames({
                     [classes.container]: true,
                 })}
-                {...mouseProps}
+                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
             >
                 {elements.map(({ viewId, col, row, width, height }) => {
                     return (
@@ -177,5 +146,5 @@ const styles = (theme) => ({
 });
 
 export default withStyles(styles)(
-    useMouseInteractions<React.Config<GridLayoutProps, GridLayoutDefaultProps>>(GridLayout),
+    GridLayout,
 );

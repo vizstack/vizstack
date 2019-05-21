@@ -10,7 +10,7 @@ import * as cola from 'webcola';
 import { arr2obj, obj2obj } from '../../../utils/data-utils';
 
 export type NodeId = string;
-export type NodeIn = {
+export type NodeIn = {|
     /** String ID unique among all nodes in a graph. */
     id: NodeId,
 
@@ -38,7 +38,7 @@ export type NodeIn = {
     /** Size dimensions of leaf nodes with fixed sizes; parent node dimensions will be populated. */
     width?: number,
     height?: number,
-};
+|};
 export type NodeOut = {
     ...NodeIn,
 

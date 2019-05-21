@@ -7,13 +7,13 @@ import type {
     Event,
     EventMessage,
     MouseEventProps,
-    OnMouseEvent,
+    OnViewerMouseEvent,
     OnResizeEvent,
     ReadOnlyViewerHandle,
     ResizeEvent,
     PrimitiveSize,
 } from '../../interaction';
-import { useMouseInteractions } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
@@ -21,10 +21,6 @@ import { useMouseInteractions } from '../../interaction';
 type ImagePrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
-
-    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
-     * events when spread onto an HTML element. */
-    mouseProps: MouseEventProps,
 
     /** The handle to the `Viewer` component which is rendering this view. Used when publishing
      * interaction messages. */
@@ -49,7 +45,7 @@ type ImagePrimitiveState = {
     size: PrimitiveSize,
 };
 
-type ImagePrimitivePub = OnMouseEvent | OnResizeEvent;
+type ImagePrimitivePub = OnViewerMouseEvent | OnResizeEvent;
 
 type ImagePrimitiveSub = ResizeEvent;
 
@@ -82,8 +78,9 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, mouseProps } = this.props;
+        const { classes, filePath, publishEvent, viewerHandle } = this.props;
         const { size } = this.state;
+
         return (
             <img
                 className={classNames({
@@ -99,7 +96,7 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
                         '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png'; // TODO: Remove this hack!
                 }}
                 title={filePath.replace('/Users/Nikhil/Desktop/xnode/python/demo/', '')}
-                {...mouseProps}
+                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
             />
         );
     }
@@ -134,8 +131,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    useMouseInteractions<React.Config<ImagePrimitiveProps, ImagePrimitiveDefaultProps>>(
-        ImagePrimitive,
-    ),
-);
+export default withStyles(styles)(ImagePrimitive);

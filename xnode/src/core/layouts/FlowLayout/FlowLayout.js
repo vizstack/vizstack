@@ -11,11 +11,10 @@ import type {
     Event,
     EventMessage,
     MouseEventProps,
-    OnChildMouseEvent,
-    OnMouseEvent,
+    OnViewerMouseEvent,
     ReadOnlyViewerHandle,
 } from '../../interaction';
-import { useMouseInteractions } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 
 
 /**
@@ -27,10 +26,6 @@ import { useMouseInteractions } from '../../interaction';
 type FlowLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
-
-    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
-     * events when spread onto an HTML element. */
-    mouseProps: MouseEventProps,
 
     /** The handle to the `Viewer` component which is rendering this view. Used when publishing
      * interaction messages. */
@@ -57,7 +52,7 @@ type FlowLayoutDefaultProps = {};
 
 type FlowLayoutState = {};
 
-type FlowLayoutPub = OnMouseEvent | OnChildMouseEvent;
+type FlowLayoutPub = OnViewerMouseEvent;
 type FlowLayoutSub = {};
 
 class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
@@ -77,7 +72,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps, mouseProps } = this.props;
+        const { classes, elements, viewerToViewerProps, publishEvent, viewerHandle } = this.props;
 
         // TODO: deal with child mouse events; see GridLayout.
 
@@ -86,7 +81,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                 className={classNames({
                     [classes.root]: true,
                 })}
-                {...mouseProps}
+                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
             >
                 {elements.map((viewId, i) => {
                     return <Viewer key={i} {...viewerToViewerProps} viewId={viewId} />;
@@ -112,6 +107,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    useMouseInteractions<React.Config<FlowLayoutProps, FlowLayoutDefaultProps>>(FlowLayout),
-);
+export default withStyles(styles)(FlowLayout);

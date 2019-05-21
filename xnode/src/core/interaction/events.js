@@ -17,67 +17,51 @@ export type Event = {
 // Published events.
 // -----------------
 
-export type OnMouseOverEvent = {|
+export type OnViewerMouseOverEvent = {|
     // When the mouse enters the viewer
-    eventName: 'onMouseOver',
-    message: {
+    eventName: 'onViewerMouseOver',
+    message: {|
         publisher: ReadOnlyViewerHandle,
-    },
+    |},
 |};
 
-export type OnClickEvent = {|
+export type OnViewerClickEvent = {|
     // When the viewer is clicked
-    eventName: 'onClick',
-    message: {
+    eventName: 'onViewerClick',
+    message: {|
         publisher: ReadOnlyViewerHandle,
-    },
+    |},
 |};
 
-export type OnDoubleClickEvent = {|
+export type OnViewerDoubleClickEvent = {|
     // When the viewer is double clicked
-    eventName: 'onDoubleClick',
-    message: {
+    eventName: 'onViewerDoubleClick',
+    message: {|
         publisher: ReadOnlyViewerHandle,
-    },
+    |},
 |};
 
-export type OnMouseOutEvent = {|
+export type OnViewerMouseOutEvent = {|
     // When the mouse leaves the viewer
-    eventName: 'onMouseOut',
-    message: {
+    eventName: 'onViewerMouseOut',
+    message: {|
         publisher: ReadOnlyViewerHandle,
-    },
+    |},
 |};
 
-export type OnMouseEvent = OnMouseOverEvent | OnClickEvent | OnDoubleClickEvent | OnMouseOutEvent;
-
-export type OnChildMouseOverEvent = {|
-    eventName: 'onChildMouseOver',
-    message: {
-        publisher: ReadOnlyViewerHandle,
-        childPosition: string,
-    },
-|};
-
-export type OnChildMouseOutEvent = {|
-    eventName: 'onChildMouseOut',
-    message: {
-        publisher: ReadOnlyViewerHandle,
-        childPosition: string,
-    },
-|};
-
-// TODO: determine position naming conventions
-// TODO: should we pass a handle to the child? if so, how?
-export type OnChildMouseEvent = OnChildMouseOverEvent | OnChildMouseOutEvent;
+export type OnViewerMouseEvent =
+    | OnViewerMouseOverEvent
+    | OnViewerClickEvent
+    | OnViewerDoubleClickEvent
+    | OnViewerMouseOutEvent;
 
 export type OnResizeEvent = {|
     eventName: 'onResize',
-    message: {
+    message: {|
         publisher: ReadOnlyViewerHandle,
         oldSize: PrimitiveSize,
         newSize: PrimitiveSize,
-    },
+    |},
 |};
 
 // =================================================================================================
@@ -86,32 +70,18 @@ export type OnResizeEvent = {|
 
 export type ResizeEvent = {|
     eventName: 'resize',
-    message: {
+    message: {|
         viewerId: string,
         newSize: PrimitiveSize,
-    },
+    |},
 |};
 
 // Subscription events
 export type HighlightEvent = {|
-    eventName: 'highlight',
-    message: {
+    eventName: 'highlight' | 'unhighlight',
+    message: {|
         viewerId: string,
-    },
-|};
-
-export type UnhighlightEvent = {|
-    eventName: 'unhighlight',
-    message: {
-        viewerId: string,
-    },
-|};
-
-export type IncrementEvent = {|
-    eventName: 'increment',
-    message: {
-        viewerId: string,
-    },
+    |},
 |};
 
 // =================================================================================================
@@ -128,49 +98,45 @@ export type MouseEventProps = {
 // TODO: move elsewhere and determine possible values
 export type PrimitiveSize = 'small' | 'medium' | 'large';
 
-export function useMouseInteractions<Config: {}>(
-    Component: React.ComponentType<Config>,
-): React.ComponentType<Config> {
-    return (props) => {
-        const { publishEvent, viewerHandle } = props;
-        const mouseProps: MouseEventProps = {
-            onClick: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onClick',
-                    message: {
-                        publisher: viewerHandle,
-                    },
-                });
-            },
-            onDoubleClick: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onDoubleClick',
-                    message: {
-                        publisher: viewerHandle,
-                    },
-                });
-            },
-            onMouseOver: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onMouseOver',
-                    message: {
-                        publisher: viewerHandle,
-                    },
-                });
-            },
-            onMouseOut: (e) => {
-                e.stopPropagation();
-                publishEvent({
-                    eventName: 'onMouseOut',
-                    message: {
-                        publisher: viewerHandle,
-                    },
-                });
-            },
-        };
-        return <Component {...props} mouseProps={mouseProps} />;
+export function getViewerMouseFunctions(
+    publishEvent: (OnViewerMouseEvent) => void,
+    viewerHandle: ReadOnlyViewerHandle) : MouseEventProps {
+    return {
+        onClick: (e) => {
+            e.stopPropagation();
+            publishEvent({
+                eventName: 'onViewerClick',
+                message: {
+                    publisher: viewerHandle,
+                },
+            });
+        },
+        onDoubleClick: (e) => {
+            e.stopPropagation();
+            publishEvent({
+                eventName: 'onViewerDoubleClick',
+                message: {
+                    publisher: viewerHandle,
+                },
+            });
+        },
+        onMouseOver: (e) => {
+            e.stopPropagation();
+            publishEvent({
+                eventName: 'onViewerMouseOver',
+                message: {
+                    publisher: viewerHandle,
+                },
+            });
+        },
+        onMouseOut: (e) => {
+            e.stopPropagation();
+            publishEvent({
+                eventName: 'onViewerMouseOut',
+                message: {
+                    publisher: viewerHandle,
+                },
+            });
+        },
     };
 }

@@ -281,6 +281,9 @@ class Flow(View):
         }
 
 
+_DEFAULT_ITEM = object()
+
+
 # TODO: add item kwarg
 class DagLayout(View):
     def __init__(self,
@@ -298,7 +301,8 @@ class DagLayout(View):
              flow_direction: Optional[str]=None, align_children: Optional[bool]=None,
                  is_expanded: Optional[bool]=None, is_interactive: Optional[bool]=None,
                  is_visible: Optional[bool]=None, parent: Optional[str]=None,
-             align_with: Optional[List[str]]=None):
+             align_with: Optional[List[str]]=None,
+             item: Any=_DEFAULT_ITEM):
         self._nodes[node_id]['flowDirection'] = flow_direction
         self._nodes[node_id]['isExpanded'] = is_expanded
         self._nodes[node_id]['isInteractive'] = is_interactive
@@ -311,6 +315,8 @@ class DagLayout(View):
             self._nodes[parent]['children'].append(node_id)
         if align_with is not None:
             self._alignments.append([node_id] + align_with)
+        if item is not _DEFAULT_ITEM:
+            self.item(item, node_id)
 
     def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
         assert node_id in self._nodes, 'No node with ID "{}" found.'.format(node_id)

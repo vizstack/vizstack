@@ -12,14 +12,11 @@ import type {
     Event,
     EventMessage,
     MouseEventProps,
-    OnChildMouseEvent,
-    OnMouseEvent,
+    OnViewerMouseEvent,
     ReadOnlyViewerHandle,
     HighlightEvent,
-    UnhighlightEvent,
-    IncrementEvent,
 } from '../../interaction';
-import { useMouseInteractions } from '../../interaction';
+import {getViewerMouseFunctions} from '../../interaction';
 
 
 /**
@@ -29,10 +26,6 @@ import { useMouseInteractions } from '../../interaction';
 type SwitchLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
-
-    /** Property inherited from the `useMouseInteractions()` HOC. Publish mouse interaction-related
-     * events when spread onto an HTML element. */
-    mouseProps: MouseEventProps,
 
     /** The handle to the `Viewer` component which is rendering this view. Used when publishing
      * interaction messages. */
@@ -62,8 +55,23 @@ type SwitchLayoutState = {
     currElementIdx: number,
 };
 
-type SwitchLayoutPub = OnMouseEvent | OnChildMouseEvent;
-type SwitchLayoutSub = HighlightEvent | UnhighlightEvent | IncrementEvent;
+export type OnSwitchIncrementEvent = {|
+    eventName: 'onSwitchIncrement',
+    message: {|
+        newModeIdx: number,
+    |}
+|};
+
+type SwitchLayoutPub = OnViewerMouseEvent | OnSwitchIncrementEvent;
+
+export type SwitchIncrementEvent = {|
+    eventName: 'switchIncrement',
+    message: {|
+        viewerId: string,
+    |},
+|};
+
+type SwitchLayoutSub = HighlightEvent | SwitchIncrementEvent;
 
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutState> {
     /** Prop default values. */
@@ -87,7 +95,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
             if (event.eventName === 'unhighlight') {
                 this.setState({ isHighlighted: false });
             }
-            if (event.eventName === 'increment') {
+            if (event.eventName === 'switchIncrement') {
                 this.setState((state) => ({
                     currElementIdx: state.currElementIdx + 1 < elements.length
                                     ? state.currElementIdx + 1
@@ -103,7 +111,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, mouseProps, viewerToViewerProps } = this.props;
+        const { classes, elements, publishEvent, viewerHandle, viewerToViewerProps } = this.props;
         const { isHighlighted, currElementIdx } = this.state;
 
         const viewId = elements[currElementIdx];
@@ -114,7 +122,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
                     [classes.container]: true,
                     [classes.containerHovered]: isHighlighted,
                 })}
-                {...mouseProps}
+                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
             >
                 <div key={viewId}>
                     <Viewer {...viewerToViewerProps} viewId={viewId} />
@@ -141,6 +149,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    useMouseInteractions<React.Config<SwitchLayoutProps, SwitchLayoutDefaultProps>>(SwitchLayout),
-);
+export default withStyles(styles)(SwitchLayout);
