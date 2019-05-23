@@ -332,19 +332,19 @@ class DagLayout(View):
         return self
 
     def edge(self, start_node_id: str, end_node_id: str,
-             start_port_name: Optional[str]=None, end_port_name: Optional[str]=None):
+             start_port: Optional[str]=None, end_port: Optional[str]=None):
         assert start_node_id in self._nodes, 'Start node "{}" not found.'.format(start_node_id)
         assert end_node_id in self._nodes, 'End node "{}" not found.'.format(end_node_id)
-        assert start_port_name is None or start_port_name in self._nodes[start_node_id]['ports'], 'No port with name "{}" found on start node "{}".'.format(start_port_name, start_node_id)
-        assert end_port_name is None or end_port_name in self._nodes[end_node_id]['ports'], 'No port with name "{}" found on end node "{}".'.format(end_port_name, end_node_id)
+        assert start_port is None or start_port in self._nodes[start_node_id]['ports'], 'No port with name "{}" found on start node "{}".'.format(start_port, start_node_id)
+        assert end_port is None or end_port in self._nodes[end_node_id]['ports'], 'No port with name "{}" found on end node "{}".'.format(end_port, end_node_id)
         edge = {
             'startId': start_node_id,
             'endId': end_node_id,
         }
-        if start_port_name is not None:
-            edge['startPort'] = start_port_name
-        if end_port_name is not None:
-            edge['endPort'] = end_port_name
+        if start_port is not None:
+            edge['startPort'] = start_port
+        if end_port is not None:
+            edge['endPort'] = end_port
         self._edges.append(edge)
         return self
 
