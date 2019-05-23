@@ -304,12 +304,17 @@ class DagLayout(View):
                  is_visible: Optional[bool]=None, parent: Optional[str]=None,
              align_with: Optional[List[str]]=None,
              item: Any=_DEFAULT_ITEM):
-        self._nodes[node_id]['flowDirection'] = flow_direction
-        self._nodes[node_id]['isExpanded'] = is_expanded
-        self._nodes[node_id]['isInteractive'] = is_interactive
-        self._nodes[node_id]['isVisible'] = is_visible
-        self._nodes[node_id]['alignChildren'] = align_children
-        self._nodes[node_id]['children'] = []
+        for key, var in {
+            'flowDirection': flow_direction,
+            'alignChildren': align_children,
+            'isExpanded': is_expanded,
+            'isInteractive': is_interactive,
+            'isVisible': is_visible,
+        }.items():
+            if var is not None or key not in self._nodes[node_id]:
+                self._nodes[node_id][key] = var
+        if 'children' not in self._nodes[node_id]:
+            self._nodes[node_id]['children'] = []
         if parent is not None:
             if 'children' not in self._nodes[parent]:
                 self._nodes[parent]['children'] = []
@@ -331,6 +336,7 @@ class DagLayout(View):
             self._nodes[node_id]['ports'][port_name]['order'] = order
         return self
 
+    # TODO: remove id and name everywhere
     def edge(self, start_node_id: str, end_node_id: str,
              start_port: Optional[str]=None, end_port: Optional[str]=None):
         assert start_node_id in self._nodes, 'Start node "{}" not found.'.format(start_node_id)
