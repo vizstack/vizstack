@@ -323,11 +323,12 @@ class DagLayout(View):
     def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
         assert node_id in self._nodes, 'No node with ID "{}" found.'.format(node_id)
         if 'ports' not in self._nodes[node_id]:
-            self._nodes[node_id]['ports'][port_name] = {
-                'side': side,
-            }
-            if order is not None:
-                self._nodes[node_id]['ports'][port_name]['order'] = order
+            self._nodes[node_id]['ports'] = {}
+        self._nodes[node_id]['ports'][port_name] = {
+            'side': side,
+        }
+        if order is not None:
+            self._nodes[node_id]['ports'][port_name]['order'] = order
         return self
 
     def edge(self, start_node_id: str, end_node_id: str,
