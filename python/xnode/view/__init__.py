@@ -270,6 +270,7 @@ class Flow(View):
 
     def item(self, item: Any):
         self._elements.append(_get_view(item))
+        return self
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         return {
@@ -317,6 +318,7 @@ class DagLayout(View):
             self._alignments.append([node_id] + align_with)
         if item is not _DEFAULT_ITEM:
             self.item(item, node_id)
+        return self
 
     def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
         assert node_id in self._nodes, 'No node with ID "{}" found.'.format(node_id)
@@ -326,6 +328,7 @@ class DagLayout(View):
             }
             if order is not None:
                 self._nodes[node_id]['ports'][port_name]['order'] = order
+        return self
 
     def edge(self, start_node_id: str, end_node_id: str,
              start_port_name: Optional[str]=None, end_port_name: Optional[str]=None):
@@ -342,9 +345,11 @@ class DagLayout(View):
         if end_port_name is not None:
             edge['endPort'] = end_port_name
         self._edges.append(edge)
+        return self
 
     def item(self, item: Any, node_id: str):
         self._items[node_id] = _get_view(item)
+        return self
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         for node_id in self._nodes:
@@ -429,9 +434,11 @@ class Grid(View):
             'height': height,
         }
         # TODO: assert non-overlapping
+        return self
 
     def item(self, item: Any, cell_name: str):
         self._items[cell_name] = _get_view(item)
+        return self
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         for cell_name in self._cells:
@@ -469,9 +476,11 @@ class Switch(View):
             self._modes.insert(index, mode_name)
         else:
             self._modes.append(mode_name)
+        return self
 
     def item(self, item: Any, mode_name: str):
         self._items[mode_name] = item
+        return self
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         for mode_name in self._modes:
@@ -508,6 +517,7 @@ class Sequence(View):
 
     def item(self, item: Any):
         self._elements.append(_get_view(item))
+        return self
 
     def assemble_dict(self):
         grid = Grid()
@@ -554,6 +564,7 @@ class KeyValues(View):
 
     def item(self, key: Any, value: Any):
         self._elements.append((_get_view(key), _get_view(value)))
+        return self
 
     def assemble_dict(self):
         grid = Grid()
