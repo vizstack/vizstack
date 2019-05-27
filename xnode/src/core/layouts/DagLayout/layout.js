@@ -470,7 +470,7 @@ export default function layout(
                 return node.ports[portName2].order - node.ports[portName1].order;
             });
             portsBySide[side].forEach((portName, i) => {
-                const nodeVertex: VertexPopulated = graph.vertices[ vertexIdxLookup[ nodeId ] ];
+                const nodeVertex: VertexPopulated = nodeId in vertexIdxLookup ? graph.vertices[ vertexIdxLookup[ nodeId ] ] : graph.groups[groupIdxLookup[nodeId]];
                 const portSep = portsBySide[side].length + 1;
                 let pos;
                 switch (side) {
