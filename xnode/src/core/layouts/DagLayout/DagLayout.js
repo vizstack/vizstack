@@ -77,6 +77,10 @@ class _DagNode extends React.PureComponent<DagNodeProps> {
             onResize,
         } = this.props;
 
+        if (isVisible === false) {
+            return null;
+        }
+
         // If the node is expanded, render an interactive rectangle
         if (isExpanded) {
             return (

@@ -283,6 +283,7 @@ class Flow(View):
 
 
 _DEFAULT_ITEM = object()
+_DEFAULT_PARENT = object()
 
 
 class DagLayout(View):
@@ -300,7 +301,7 @@ class DagLayout(View):
     def node(self, node_id: str,
              flow_direction: Optional[str]=None, align_children: Optional[bool]=None,
                  is_expanded: Optional[bool]=None, is_interactive: Optional[bool]=None,
-                 is_visible: Optional[bool]=None, parent: Optional[str]=None,
+                 is_visible: Optional[bool]=None, parent=_DEFAULT_PARENT,
              align_with: Optional[List[str]]=None,
              item: Any=_DEFAULT_ITEM, ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]]=None):
         for key, var in {
@@ -309,10 +310,13 @@ class DagLayout(View):
             'isExpanded': is_expanded,
             'isInteractive': is_interactive,
             'isVisible': is_visible,
-            'parent': parent,
         }.items():
             if var is not None or key not in self._nodes[node_id]:
                 self._nodes[node_id][key] = var
+        if parent is not _DEFAULT_PARENT:
+            self._nodes[node_id]['parent'] = parent
+        elif 'parent' not in self._nodes[node_id]:
+            self._nodes[node_id]['parent'] = None
 
         self._nodes[node_id]['children'] = []
         if align_with is not None:
@@ -357,7 +361,7 @@ class DagLayout(View):
             # All nodes must have an item
             assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
             # All node parents must exist
-            assert self._nodes[node_id]['parent'] is None or self._nodes[node_id]['parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(node_id, self._nodes[node_id]['parent'])
+            assert self._nodes[node_id]['parent'] is None or self._nodes[node_id]['parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(self._nodes[node_id]['parent'], node_id)
         for edge in self._edges:
             # All edges must connect real nodes
             assert edge['startId'] in self._nodes, 'An edge starts at non-existent node "{}".'.format(edge['startId'])
@@ -591,7 +595,7 @@ class KeyValues(View):
             grid.cell('k{}'.format(i), 0, current_row, 1, 1)
             grid.item(key, 'k{}'.format(i))
             grid.cell('sep{}'.format(i), 1, current_row, 1, 1)
-            grid.item(_get_view(self._item_separator), 'sep{}'.format(i))
+            grid.item(Text(self._item_separator), 'sep{}'.format(i))
             grid.cell('v{}'.format(i), 2, current_row, 1, 1)
             grid.item(value, 'v{}'.format(i))
             current_row += 1
