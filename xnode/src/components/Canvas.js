@@ -1,3 +1,5 @@
+// @flow
+
 import * as React from 'react';
 import { connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -37,22 +39,19 @@ import { getMinimalDisambiguatedPaths } from '../utils/path-utils';
 /** Component to display when loading data */
 const kLoadingSpinner = <span className='loading loading-spinner-tiny inline-block' />;
 
-type Props = {
+type CanvasProps = {
     /** CSS-in-JS styling object. */
-    classes: {},
+    classes: any,
 
     /** `LayoutedSnapshot` objects for rendering. */
     layoutedSnapshots: LayoutedSnapshot[],
-
-    onViewerMouseOver: (vizId: SnapshotId, filePath: string, lineNumber: number) => void,
-    onViewerMouseOut: (vizId: SnapshotId, filePath: string, lineNumber: number) => void,
 
     /**
      * See `state/canvas`.
      * @param snapshotId
      * @param insertAfterIdx?
      */
-    addInspector: (snapshotId: SnapshotId, insertAfterIdx?: number) => void,
+    addInspector: (snapshotId: SnapshotId, viewId?: ViewId, insertAfterIdx?: number) => void,
 
     /**
      * See `state/canvas`.
@@ -66,24 +65,67 @@ type Props = {
      * @param endIdx
      */
     reorderInspector: (startIdx: number, endIdx: number) => void,
+
+    /** The HTML DOM element which represents the "document" on which the Canvas is rendered. This
+     * is passed to the `InteractionManager` so that keyboard presses can be registered. */
+    documentElement?: HTMLElement,
 };
 
-type State = {};
+type CanvasState = {};
 
 /**
  * This smart component serves as an interactive workspace for inspecting `Snapshot`s. It
  * displays a collection of `SnapshotInspector` objects that can be moved with drag-and-drop.
  */
-class Canvas extends React.Component<Props, State> {
+class Canvas extends React.Component<CanvasProps, CanvasState> {
     interactionManager: InteractionManager;
+    viewerRefs = [];  // Refs to each top-level viewer, used to get viewer IDs for interaction
+
+    static defaultProps = {
+        documentElement: document,
+    };
 
     /** Constructor. */
     constructor(props) {
         super(props);
         this.onDragEnd = this.onDragEnd.bind(this);
 
-        let interactionManager = new InteractionManager();
-        this.interactionManager = interactionManager;
+        const { documentElement } = props;
+
+        this.interactionManager = new InteractionManager({documentElement});
+        // Whenever "Tab" is pressed, cycle between top-level viewers
+        this.interactionManager.getAllComponents()
+            .subscribe('onKeyDown', (message, subscriber, state) => {
+                if (message.key === 'Tab') {
+                    const viewerIds = this.viewerRefs.map((ref) => ref.current.viewerId);
+                    // TODO: right now, every viewer will fire this if there's nothing selected
+                    let nextIdx = -1;
+                    if (state.selected === subscriber.viewerId) {
+                        // Find the top-level viewer the selected viewer is a descendant of
+                        let currViewer = subscriber;
+                        while (nextIdx === -1 && currViewer) {
+                            nextIdx = viewerIds.indexOf(currViewer.viewerId);
+                            currViewer = subscriber.parent;
+                        }
+                        // Increment one to select the next top-level viewer
+                        nextIdx += 1;
+                        this.interactionManager.publish({
+                            eventName: 'unhighlight',
+                            message: { viewerId: subscriber.viewerId, },
+                        });
+                    }
+                    if (!state.selected || state.selected === subscriber.viewerId) {
+                        if (nextIdx === -1 || nextIdx === viewerIds.length) {
+                            nextIdx = 0;
+                        }
+                        state.selected = viewerIds[nextIdx];
+                        this.interactionManager.publish({
+                            eventName: 'highlight',
+                            message: { viewerId: state.selected, },
+                        });
+                    }
+                }
+            });
     }
 
     // =================================================================================================================
@@ -95,11 +137,11 @@ class Canvas extends React.Component<Props, State> {
      * @param result
      * @param provided
      */
-    onDragEnd(result: DropResult, provided: HookProvided) {
+    onDragEnd = (result: DropResult, provided: HookProvided) => {
         const { reorderInspector } = this.props;
         if (!result.destination) return;
         reorderInspector(result.source.index, result.destination.index);
-    }
+    };
 
     /**
      * Returns a viewer of the correct type. (See `ViewerType` in `state/canvas/constants`).
@@ -120,9 +162,12 @@ class Canvas extends React.Component<Props, State> {
             { title: 'Remove', icon: <RemoveIcon />, onClick: () => removeInspector(idx) },
         ];
 
+        const ref = React.createRef();
+        this.viewerRefs.push(ref);
+
         return (
             <ViewerDisplayFrame buttons={buttons}>
-                {!snapshot ? kLoadingSpinner : <Viewer view={snapshot.view} viewId={viewId} />}
+                {!snapshot ? kLoadingSpinner : <Viewer view={snapshot.view} viewId={viewId} ref={ref} />}
             </ViewerDisplayFrame>
         );
     }
@@ -132,6 +177,9 @@ class Canvas extends React.Component<Props, State> {
      */
     render() {
         const { classes, layoutedSnapshots } = this.props;
+
+        // Reset the collection of Viewer refs
+        this.viewerRefs = [];
 
         // Only render minimal disambiguated paths, and collapse consecutive identical paths.
         const fullPaths = layoutedSnapshots.map((ls: LayoutedSnapshot) => ls.snapshot.filePath);

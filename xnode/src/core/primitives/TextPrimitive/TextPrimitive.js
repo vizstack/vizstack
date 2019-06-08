@@ -11,9 +11,8 @@ import type {
     PrimitiveSize,
     ResizeEvent,
     HighlightEvent,
-    UnhighlightEvent,
 } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
+import { getViewerMouseFunctions, consumeEvents } from '../../interaction';
 import type { InteractionProps } from '../../Viewer';
 
 
@@ -28,10 +27,7 @@ type TextPrimitiveProps = {
      * interaction messages. */
     viewerHandle: ReadOnlyViewerHandle,
 
-    /** Events published to this view's `InteractionManager` which should be consumed by this
-     * view. The message of each event in this array includes a "viewerId" field which is equal to
-     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
-    lastEvents: Array<TextPrimitiveSub>,
+    eventHandler: (TextPrimitive) => void,
 
     /** A function which publishes an event with given name and message to this view's
      * `InteractionManager`. */
@@ -80,26 +76,9 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         prevProps: $ReadOnly<TextPrimitiveProps>,
         prevState: $ReadOnly<TextPrimitiveState>,
     ): void {
-        const { lastEvents } = this.props;
-        lastEvents.forEach((event: TextPrimitiveSub, i: number) => {
-            if (event === prevProps.lastEvents[i]) return;
-            if (event.eventName === 'highlight') {
-                this.setState({
-                    isHighlighted: true,
-                });
-            }
-            if (event.eventName === 'unhighlight') {
-                this.setState({
-                    isHighlighted: false,
-                });
-            }
-            if (event.eventName === 'resize') {
-                this.setState({
-                    textSize: event.message.newSize,
-                });
-            }
-        });
+        this.props.eventHandler(this);
     }
+
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
@@ -246,4 +225,9 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(TextPrimitive);
+export default withStyles(styles)(
+    consumeEvents({
+        'highlight': (primitive) => primitive.setState({ isHighlighted: true }),
+        'unhighlight': (primitive) => primitive.setState({ isHighlighted: false }),
+        'resize': (primitive, message) => primitive.setState({ textSize: message.newSize }),
+    }, TextPrimitive));

@@ -81,7 +81,7 @@ type ViewerState = {
 };
 
 class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
-    guid: string = cuid();
+    viewerId: string;
 
     static defaultProps = {
         register: () => {},
@@ -91,6 +91,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     constructor(props: ViewerProps) {
         super(props);
+        this.viewerId = cuid();
         this.state = {
             lastEvents: [],
         };
@@ -115,7 +116,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         const currId: ViewId = viewId || view.rootId;
         const model: ViewModel = view.models[currId];
         return {
-            viewerId: this.guid,
+            viewerId: this.viewerId,
             viewModel: model,
             parent,
             satisfiesConstraints: (constraints) => this.satisfiesConstraints(constraints),
@@ -131,14 +132,6 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 }));
             },
         };
-    }
-
-    componentDidUpdate() {
-        if (this.state.lastEvents.length > 0) {
-            this.setState({
-                lastEvents: [],
-            });
-        }
     }
 
     /** Renderer. */
@@ -162,6 +155,9 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         const interactionProps: InteractionProps = {
             publishEvent: (event) => publishEvent(event),
             lastEvents,
+            consumeEvent: (event) => this.setState((state) => ({
+                lastEvents: state.lastEvents.filter((e) => e !== event),
+            })),
             viewerHandle: this.getReadOnlyHandle(),
         };
 

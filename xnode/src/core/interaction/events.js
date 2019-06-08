@@ -64,6 +64,28 @@ export type OnResizeEvent = {|
     |},
 |};
 
+export type OnKeyDownEvent = {|
+    eventName: 'onKeyDown',
+    message: {|
+        key: string,
+    |}
+|};
+
+export type OnKeyUpEvent = {|
+    eventName: 'onKeyUp',
+    message: {|
+        key: string,
+    |}
+|};
+
+export type OnFocusSelectedEvent = {|
+    eventName: 'onFocusSelected',
+    message: {|
+        parentViewerId: string,
+        childViewerId: string,
+    |},
+|}
+
 // =================================================================================================
 // Subscribed events.
 // ------------------
@@ -84,6 +106,13 @@ export type HighlightEvent = {|
     |},
 |};
 
+export type FocusSelectedEvent = {|
+    eventName: 'focusSelected',
+    message: {|
+        viewerId: string,
+    |}
+|}
+
 // =================================================================================================
 // ???
 // ---
@@ -94,6 +123,29 @@ export type MouseEventProps = {
     onMouseOver: (e: SyntheticEvent<>) => void,
     onMouseOut: (e: SyntheticEvent<>) => void,
 };
+
+/**
+ * HOC that allows a component to consume the events to which it subscribes.
+ *
+ * @param handlers
+ * @param Component
+ */
+export function consumeEvents(handlers: {[string]: (component: any, message: any) => void}, Component) {
+    return class extends React.Component {
+        render() {
+            const { lastEvents, consumeEvent } = this.props;
+            const eventHandler = (component) => {
+                lastEvents.forEach((event) => {
+                    if (event.eventName in handlers) {
+                        handlers[event.eventName](component, event.message);
+                    }
+                    consumeEvent(event);
+                });
+            };
+            return <Component eventHandler={eventHandler} {...this.props} />
+        }
+    }
+}
 
 // TODO: move elsewhere and determine possible values
 export type PrimitiveSize = 'small' | 'medium' | 'large';

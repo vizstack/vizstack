@@ -14,8 +14,12 @@ import type {
     MouseEventProps,
     ReadOnlyViewerHandle,
     OnViewerMouseEvent,
+    HighlightEvent,
+    FocusSelectedEvent,
+    OnFocusSelectedEvent,
 } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
+import { getViewerMouseFunctions,
+    consumeEvents } from '../../interaction';
 
 
 /**
@@ -30,10 +34,7 @@ type GridLayoutProps = {
      * interaction messages. */
     viewerHandle: ReadOnlyViewerHandle,
 
-    /** Events published to this view's `InteractionManager` which should be consumed by this
-     * view. The message of each event in this array includes a "viewerId" field which is equal to
-     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
-    lastEvents: Array<GridLayoutSub>,
+    eventHandler: (GridLayout) => void,
 
     /** A function which publishes an event with given name and message to this view's
      * `InteractionManager`. */
@@ -55,25 +56,42 @@ type GridLayoutProps = {
 
 type GridLayoutDefaultProps = {};
 
-type GridLayoutState = {};
+type GridLayoutState = {
+    isHighlighted: boolean,
+    selectedElementIdx: number,
+};
 
-type GridLayoutPub = OnViewerMouseEvent;
-type GridLayoutSub = {};
+type GridLayoutPub = OnViewerMouseEvent | OnFocusSelectedEvent;
+
+export type GridSelectCellEvent = {|
+    eventName: 'gridSelectCell',
+    message: {|
+        viewerId: string,
+        elementIdx: number,
+    |} | {|
+        viewerId: string,
+        moveCursor: 'up' | 'down' | 'left' | 'right',
+    |},
+|}
+
+type GridLayoutSub = HighlightEvent | GridSelectCellEvent | FocusSelectedEvent;
 
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
+    childRefs = [];
+
     /** Prop default values. */
     static defaultProps: GridLayoutDefaultProps = {};
 
     constructor(props: GridLayoutProps) {
         super(props);
-        this.state = {};
+        this.state = {
+            isHighlighted: false,
+            selectedElementIdx: 0,
+        };
     }
 
     componentDidUpdate(prevProps, prevState) {
-        const { lastEvents } = this.props;
-        lastEvents.forEach((event: GridLayoutSub, i: number) => {
-            if (event === prevProps.lastEvents[i]) return;
-        });
+        this.props.eventHandler(this);
     }
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
@@ -89,6 +107,13 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
             viewerToViewerProps,
         } = this.props;
 
+        const {
+            isHighlighted,
+            selectedElementIdx,
+        } = this.state;
+
+        this.childRefs = [];
+
         return (
             <div
                 className={classNames({
@@ -96,19 +121,22 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                 })}
                 {...getViewerMouseFunctions(publishEvent, viewerHandle)}
             >
-                {elements.map(({ viewId, col, row, width, height }) => {
+                {elements.map(({ viewId, col, row, width, height }, i) => {
+                    const ref = React.createRef();
+                    this.childRefs.push(ref);
                     return (
                         <div
                             key={viewId}
                             className={classNames({
                                 [classes.cell]: true,
+                                [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
                                 gridRow: `${row + 1} / ${row + 1 + height}`,
                             }}
                         >
-                            <Viewer {...viewerToViewerProps} viewId={viewId} />
+                            <Viewer {...viewerToViewerProps} viewId={viewId} ref={ref}/>
                         </div>
                     );
                 })}
@@ -142,9 +170,93 @@ const styles = (theme) => ({
     },
     cell: {
         textAlign: 'left',
+        borderStyle: theme.shape.border.style,
+        borderWidth: theme.shape.border.width,
+        borderRadius: theme.shape.border.radius,
+        borderColor: "rgba(255, 0, 0, 0)",
     },
+    cellSelected: {
+        borderColor: theme.palette.primary.light,
+    }
 });
 
 export default withStyles(styles)(
-    GridLayout,
+    consumeEvents(
+        {
+            'highlight': (layout) => {
+                layout.setState((state) => ({
+                    isHighlighted: true,
+                }));
+            },
+            'unhighlight': (layout) => {
+                layout.setState((state) => ({
+                    isHighlighted: false,
+                }));
+            },
+            'focusSelected': (layout) => {
+                const { childRefs } = layout;
+                const { selectedElementIdx } = layout.state;
+                const { publishEvent, viewerHandle } = layout.props;
+                publishEvent({
+                    eventName: 'onFocusSelected',
+                    message: {
+                        parentViewerId: viewerHandle.viewerId,
+                        childViewerId: childRefs[selectedElementIdx].current.viewerId,
+                    }
+                })
+            },
+            'gridSelectCell': (layout, message) => {
+                layout.setState((state) => {
+                    if (message.elementIdx !== undefined) {
+                        return { selectedElementIdx: message.elementIdx };
+                    }
+                    const { elements } = layout.props;
+                    let main, off, increase;
+                    switch (message.moveCursor) {
+                        case 'down':
+                            main = 'row'; off = 'col'; increase = true;
+                            break;
+                        case 'right':
+                            main = 'col'; off = 'row'; increase = true;
+                            break;
+                        case 'up':
+                            main = 'row'; off = 'col'; increase = false;
+                            break;
+                        case 'left':
+                            main = 'col'; off = 'row'; increase = false;
+                            break;
+                    }
+                    let closest = -1;
+                    elements.forEach((elem, i) => {
+                        if ((increase && elem[main] < elements[state.selectedElementIdx][main]) || (!increase && elem[main] >= elements[state.selectedElementIdx][main])) {
+                            return;
+                        }
+                        if (closest === -1 ||
+                            (increase ? elem[main] < elements[closest][main] : elem[main] > elements[closest][main]) ||
+                            (
+                                elem[main] === elements[closest][main] && (
+                                    (
+                                        elements[closest][off] >= elements[state.selectedElementIdx][off] &&
+                                        elem[off] >= elements[state.selectedElementIdx][off] &&
+                                        elem[off] - elements[state.selectedElementIdx][off] < elements[closest][off] - elements[state.selectedElementIdx][off]
+                                    ) || (
+                                        elements[closest][off] < elements[state.selectedElementIdx][off] &&
+                                        elem[off] > elements[closest][off]
+                                    )
+                                )
+                            )) {
+                            closest = i;
+                        }
+                    });
+                    if (closest >= 0) {
+                        return { selectedElementIdx: closest };
+                    }
+                    else {
+                        return {};
+                    }
+                })
+            }
+        },
+        GridLayout
+    ),
 );

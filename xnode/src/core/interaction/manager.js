@@ -9,9 +9,12 @@ import type {
     HighlightEvent,
     EventMessage,
     Event,
+    OnKeyDownEvent,
+    OnKeyUpEvent,
 } from './events';
 
-import type { SwitchIncrementEvent } from '../layouts/SwitchLayout';
+import type { SwitchChangeModeEvent } from '../layouts/SwitchLayout';
+import type { GridSelectCellEvent } from '../layouts/GridLayout';
 import type { OnDagEdgeMouseEvent, DagEdgeHighlightEvent, OnDagNodeMouseEvent, DagNodeHighlightEvent, DagNodeCollapseEvent, DagNodeExpandEvent } from '../layouts/DagLayout';
 
 
@@ -155,40 +158,190 @@ export class InteractionManager {
     viewers: { [string]: InteractiveViewerHandle } = {};
     viewerInteractionSets: { [string]: Array<InteractionSet> } = {};
     state: InteractionState = {};
+    publishedEvents: Array<Event> = [];  // Events which have been published but not yet processed.
+    processingEvent: boolean = false;  // Whether or not the manager is currently processing an event. If it is, newly-published events will be enqueued instead of immediately processed.
 
-    constructor() {
+    constructor(options: {
+        useMouseDefaults?: boolean,
+        useKeyboardDefaults?: boolean,
+        documentElement?: HTMLElement,
+    }) {
+        let { useMouseDefaults=true, useKeyboardDefaults=true, documentElement=document } = options;
+
         this.publish = this.publish.bind(this);
         this.registerViewer = this.registerViewer.bind(this);
         this.unregisterViewer = this.unregisterViewer.bind(this);
 
-        this._addDefaultInteractions();
+        documentElement.addEventListener('keydown', (event: KeyboardEventHandler) => {
+            this.publish<OnKeyDownEvent>({
+                eventName: 'onKeyDown',
+                message: {
+                    key: event.key,
+                },
+            });
+        });
+
+        documentElement.addEventListener('keyup', (event: KeyboardEventHandler) => {
+            this.publish<OnKeyUpEvent>({
+                eventName: 'onKeyUp',
+                message: {
+                    key: event.key,
+                },
+            });
+        });
+
+        if (useMouseDefaults) {
+            this._addMouseDefaults();
+        }
+        if (useKeyboardDefaults) {
+            this._addKeyboardDefaults();
+        }
     }
 
-    _addDefaultInteractions(): void {
+    _addKeyboardDefaults(): void {
+        // Right and left arrow keys change a Switch's current mode if that Switch is selected
+        this.getAllComponents()
+            .withType('SwitchLayout')
+            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
+                if (state.selected === subscriber.viewerId) {
+                    if (message.key === 'ArrowRight') {
+                        this.publish<SwitchChangeModeEvent>({
+                            eventName: 'switchChangeMode',
+                            message: {
+                                viewerId: subscriber.viewerId,
+                                idxDelta: 1,
+                            },
+                        });
+                    }
+                    else if (message.key === 'ArrowLeft') {
+                        this.publish<SwitchChangeModeEvent>({
+                            eventName: 'switchChangeMode',
+                            message: {
+                                viewerId: subscriber.viewerId,
+                                idxDelta: -1,
+                            },
+                        });
+                    }
+                }
+            });
+
+        // Arrow keys navigate the cells of a Grid if that Grid is selected
+        this.getAllComponents()
+            .withType('GridLayout')
+            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
+                if (state.selected === subscriber.viewerId) {
+                    const directions = {
+                        'ArrowRight': 'right',
+                        'ArrowLeft': 'left',
+                        'ArrowUp': 'up',
+                        'ArrowDown': 'down',
+                    };
+                    if (message.key in directions) {
+                        this.publish<GridSelectCellEvent>({
+                            eventName: 'gridSelectCell',
+                            message: {
+                                viewerId: subscriber.viewerId,
+                                moveCursor: directions[message.key],
+                            }
+                        });
+                    }
+                }
+            });
+
+        // Enter drills down, Escape zooms out
+        this.getAllComponents()
+            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
+                if (state.selected === subscriber.viewerId) {
+                    if (message.key === 'Enter') {
+                        this.publish({
+                            eventName: 'focusSelected',
+                            message: {
+                                viewerId: subscriber.viewerId,
+                            }
+                        });
+                    }
+                    if (message.key === 'Escape') {
+                        console.log('yeet', subscriber);
+                        if (subscriber.parent) {
+                            console.log('lessgo');
+                            state.selected = subscriber.parent.viewerId;
+                            this.publish({
+                                eventName: 'unhighlight',
+                                message: { viewerId: subscriber.viewerId },
+                            });
+                            this.publish({
+                                eventName: 'highlight',
+                                message: { viewerId: subscriber.parent.viewerId },
+                            })
+                        }
+                    }
+                }
+            });
+
+        // Whenever a layout registers a zoom in or a drill down, unhighlight it and highlight the
+        // newly selected viewer
+        this.getAllComponents()
+            .subscribe('onFocusSelected', (message, subscriber, state) => {
+                if (state.selected === subscriber.viewerId) {
+                    this.publish({
+                        eventName: 'unhighlight',
+                        message: {
+                            viewerId: state.selected,
+                        }
+                    });
+                }
+                if (message.childViewerId === subscriber.viewerId) {
+                    state.selected = message.childViewerId;
+                    this.publish({
+                        eventName: 'highlight',
+                        message: {
+                            viewerId: message.childViewerId,
+                        }
+                    });
+                }
+            })
+
+        // TODO: flow layout
+    }
+
+    _addMouseDefaults(): void {
         const allViewers = this.getAllComponents();
-        allViewers.subscribe<OnViewerMouseOverEvent>('onViewerMouseOver', (message, subscriber) => {
+        allViewers.subscribe<OnViewerMouseOverEvent>('onViewerMouseOver', (message, subscriber, state) => {
             if (subscriber.viewerId === message.publisher.viewerId) {
                 this.publish<HighlightEvent>({
                     eventName: 'highlight',
                     message: { viewerId: subscriber.viewerId },
                 });
+                if (state.selected) {
+                    this.publish({
+                        eventName: 'unhighlight',
+                        message: { viewerId: state.selected },
+                    });
+                }
+                state.selected = subscriber.viewerId;
             }
         });
-        allViewers.subscribe<OnViewerMouseOutEvent>('onViewerMouseOut', (message, subscriber) => {
+        allViewers.subscribe<OnViewerMouseOutEvent>('onViewerMouseOut', (message, subscriber, state) => {
             if (subscriber.viewerId === message.publisher.viewerId) {
                 this.publish<HighlightEvent>({
                     eventName: 'unhighlight',
                     message: { viewerId: subscriber.viewerId },
                 });
+                if (state.selected === subscriber.viewerId) {
+                    state.selected = undefined;
+                }
             }
         });
         allViewers
             .withType('SwitchLayout')
             .subscribe<OnViewerClickEvent>('onViewerClick', (message, subscriber) => {
                 if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<SwitchIncrementEvent>({
-                        eventName: 'switchIncrement',
-                        message: { viewerId: subscriber.viewerId },
+                    this.publish<SwitchChangeModeEvent>({
+                        eventName: 'switchChangeMode',
+                        message: {
+                            viewerId: subscriber.viewerId,
+                            idxDelta: 1,
+                        },
                     });
                 }
             });
@@ -265,10 +418,20 @@ export class InteractionManager {
     };
 
     publish: <E: Event>(event: E) => void = <E: Event>(event: E) => {
+        this.publishedEvents.push(event);
+        if (!this.processingEvent) {
+            this.processEvent(this.publishedEvents.pop());
+        }
+    };
+
+    processEvent = (event) => {
+        this.processingEvent = true;
+        const newStates = [];
         Object.entries(this.viewerInteractionSets).forEach(([viewerId, interactionSets]) => {
             // interactionSets will always be an array of InteractionSets, but flow is too dumb to use the type hint for
             // this.viewerInteractionSets when calling Object.entries
             // (https://stackoverflow.com/questions/45621837/flowtype-errors-using-object-entries)
+            if (this.viewers[viewerId] === undefined) return;  // TODO: figure out why this is possible
             if (!Array.isArray(interactionSets)) throw new Error();
             interactionSets.forEach((interactionSet) => {
                 if (!(interactionSet instanceof InteractionSet)) throw new Error();
@@ -276,13 +439,28 @@ export class InteractionManager {
                     .filter((subscription) => subscription.eventName === event.eventName)
                     .forEach((subscription) => {
                         if (subscription.eventName === event.eventName) {
-                            subscription.handler(event.message, this.viewers[viewerId], this.state);
+                            const newState = {...this.state};
+                            subscription.handler(event.message, this.viewers[viewerId], newState);
+                            newStates.push(newState);
                         }
                     });
             });
         });
         if (event.message.viewerId !== undefined && event.message.viewerId in this.viewers) {
             this.viewers[event.message.viewerId].receiveEvent(event);
+        }
+        // TODO: is this the most sensible way to handle state? maybe do it react-style?
+        const oldState = {...this.state};
+        newStates.forEach((newState) => {
+            Object.entries(newState).forEach(([key, value]) => {
+                if (value !== oldState[key]) {
+                    this.state[key] = value;
+                }
+            })
+        });
+        this.processingEvent = false;
+        if (this.publishedEvents.length > 0) {
+            this.processEvent(this.publishedEvents.pop());
         }
     };
 
