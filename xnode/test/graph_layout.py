@@ -40,35 +40,47 @@ def single_group(num=3, direction="south", links=False, container=True):
 # single_group(direction="south", links=True, container=False)
 # single_group(direction="east", links=True, container=False)
 
+def crash():
+    g = view.DagLayout()
+    g.node("container", item="container")
+    g.node('n1', item='n1', parent='container')
+    g.node('root', item='root')
+    g.node('n2', item='n2', parent='container')
+    g.edge('root', 'n1')
+    visual_debugger.view(g)
+
+# crash()
+
 # =====================
 # 1 group with children.
 
 def single_group_2_directions():
-    g = view.DagLayout(flow_direction="east")
+    g = (
+    view.DagLayout(flow_direction="east")
+        .node("n0", item="n0")
+        .node("n1", item="n1")
+        .node("n2", item="n2")
+        .edge("n0", "n2")
+        .edge("n1", "n2")
+        .node("n6", item="n6", flow_direction="south")
+        .port("n6", "herro", "east")
+        .node("n0", parent="n6")
+        .node("n1", parent="n6")
+        .node("n2", parent="n6")
+        .node("n3", item="n3")
+        .node("n4", item="n4")
+        .node("n5", item="n5")
+        .node("n7", item="n7")
+        .edge("n6", "n3")
+        .edge("n3", "n4")
+        .edge("n3", "n5")
+        .edge("n3", "n7")
 
-    n0 = g.create_node("n0")
-    n1 = g.create_node("n1")
-    n2 = g.create_node("n2")
-    g.create_edge(n0, n2)
-    g.create_edge(n1, n2)
-
-    n6 = g.create_node("n6", flow_direction="south")
-    n6.add_child(n0)
-    n6.add_child(n1)
-    n6.add_child(n2)
-
-    n3 = g.create_node("n3")
-    n4 = g.create_node("n4")
-    n5 = g.create_node("n5")
-    n7 = g.create_node("n7")
-    g.create_edge(n6, n3)
-    g.create_edge(n3, n4)
-    g.create_edge(n3, n5)
-    g.create_edge(n3, n7)
+    )
 
     visual_debugger.view(g)
 
-# single_group_2_directions()
+single_group_2_directions()
 
 # =====================
 
@@ -122,30 +134,29 @@ def parent_to_descendant():
 # =====================
 
 def ports1():
-    g = view.DagLayout()
-
-    n0 = g.create_node("n0")
-    n1 = g.create_node("n1")
-    n2 = g.create_node("n2")
-    n2.create_port('right', 'east')
-    g.create_edge(n0, n1)
-    g.create_edge(n0, n2)
-
+    g = (
+    view.DagLayout()
+        .node("n0", item="n0")
+        .node("n1", item="n1")
+        .node("n2", item="n2")
+        .edge("n0", "n1")
+        .edge("n0", "n2")
+    )
     visual_debugger.view(g)
 
 ports1()
 
 def ports2():
-    g = view.DagLayout()
-
-    n0 = g.create_node("n0")
-    n1 = g.create_node("n1")
-    n2 = g.create_node("n2")
-    n0.create_port('left', 'west')
-    n2.create_port('right', 'east')
-    g.create_edge(n0, n1)
-    g.create_edge(n0, n2, start_port='left', end_port='right')
-
+    g = (
+    view.DagLayout()
+        .node("n0", item="n0")
+        .node("n1", item="n1")
+        .node("n2", item="n2")
+        .port("n0", 'left', 'west')
+        .port("n2", 'right', 'east')
+        .edge("n0", "n1")
+        .edge("n0", "n2", start_port='left', end_port='right')
+    )
     visual_debugger.view(g)
 
 ports2()

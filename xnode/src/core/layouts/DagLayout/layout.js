@@ -124,10 +124,9 @@ export default function layout(
 
     const kDefaultNodeSize = 0; // Default node width/height if not specified.
     const kGroupPadding = 10; // Interior padding between group boundary and contents.
-    const kGroupMargin = 20; // Distance between adjacent group boundaries.
-    const kNodeMargin = 20; // Distance between adjacent node boundaries.
-    const kEdgeMargin = 5; // Distance between adjacent edges.
-    const kPortLength = 20; // Length of edge directly perpendicular to a port.
+    const kNodeMargin = 10; // Distance between node and incoming/outgoing edges.
+    const kEdgeMargin = 10; // Distance between adjacent edges.
+    const kPortLength = 10; // Length of edge directly perpendicular to a port.
 
     // =============================================================================================
     // Preliminary information gathering.
@@ -164,16 +163,18 @@ export default function layout(
 
     // The "real" elements relate to actual user-defined elements.
     // The "fake" elements relate to elements inserted by this code for the sake of layout.
-    const graph: {
+    let graph: {
         vertices: Vertex[],
         links: Link[],
         constraints: Constraint[],
         groups: Group[],
+        ports: Vertex[],
     } = {
         vertices: [],
         links: [],
         constraints: [],
         groups: [],
+        ports: [],
     };
 
     type VertexIdx = number;
@@ -429,91 +430,12 @@ export default function layout(
 
     console.log('layout.js -- Done with preliminary layout.', graph);
 
-    // Step 3: Retarget to ports.
-    // --------------------------
-    // Since the size of `Group` is determined by the layout process, only after the positions and
-    // sizes have been calculated can we add ports. This is suboptimal, because the placement of the
-    // ports may be important in layout. Add a dummy `Vertex` for each port, and retarget edges
-    // to point to them.
-
-    let portLookup: { [NodeId]: { [string]: VertexIdx }} = {};
-
-    function addPortVertex(nodeId: NodeId, portName: string, x: number, y: number): VertexIdx {
-        let idx: VertexIdx = graph.vertices.length;
-        if(!(nodeId in portLookup)) {
-            portLookup[nodeId] = {};
-        }
-        portLookup[nodeId][portName] = idx;
-        graph.vertices.push({ width: 1, height: 1, x: x + 5.5, y: y + 0.5,
-            bounds: new cola.Rectangle(x + 5, x + 6, y, y + 1),
-            index: idx,
-        });
-        return idx;
-    }
-
-    function processPorts(nodeId: NodeId) {
-        const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
-        if(node.ports === undefined) return;
-        const portsBySide: { ['north' | 'south' | 'east' | 'west']: Array<string> } = {};
-        for (let portName in node.ports) {
-            const side = node.ports[portName].side;
-            if (!(side in portsBySide)) {
-                portsBySide[side] = [];
-            }
-            portsBySide[side].push(portName);
-        }
-        for (let side in portsBySide) {
-            portsBySide[side].sort((portName1: string, portName2: string) => {
-                if (node.ports[portName1].order === undefined || node.ports[portName2].order === undefined) {
-                    return 0;
-                }
-                return node.ports[portName2].order - node.ports[portName1].order;
-            });
-            portsBySide[side].forEach((portName, i) => {
-                const nodeVertex: VertexPopulated = graph.vertices[ vertexIdxLookup[ nodeId ] ];
-                const portSep = portsBySide[side].length + 1;
-                let pos;
-                switch (side) {
-                    case 'west':
-                        pos = {
-                            x: nodeVertex.bounds.x - kPortLength,
-                            y: nodeVertex.bounds.height() / portSep * (i + 1) + nodeVertex.bounds.y,
-                        };
-                        break;
-                    case 'east':
-                        pos = {
-                            x: nodeVertex.bounds.x + nodeVertex.bounds.width() + kPortLength,
-                            y: nodeVertex.bounds.height() / portSep * (i + 1) + nodeVertex.bounds.y,
-                        };
-                        break;
-                    case 'north':
-                        pos = {
-                            x: nodeVertex.bounds.width() / portSep * (i + 1) + nodeVertex.bounds.x,
-                            y: nodeVertex.bounds.y - kPortLength,
-                        };
-                        break;
-                    case 'south':
-                    default:
-                        pos = {
-                            x: nodeVertex.bounds.width() / portSep * (i + 1) + nodeVertex.bounds.x,
-                            y: nodeVertex.bounds.y + nodeVertex.bounds.height() + kPortLength,
-                        };
-                        break;
-                }
-                addPortVertex(nodeId, portName, pos.x, pos.y);
-            });
-        }
-    }
-    nodes.forEach((node) => processPorts(node.id));
-
-
-    // Step 4: Route edges within gridified positions.
-    // -----------------------------------------------
-
     // After layout, there are several changes in the `Vertex` and `Group`  objects.
     type Bounds = {
         x: number,
         y: number,
+        X: number,
+        Y: number,
         width: () => number,
         height: () => number,
         inflate: (number) => Bounds,
@@ -532,48 +454,133 @@ export default function layout(
         children?: number[],
     };
 
-    // Add margin around the vertices and groups, and prepare for routing.
-    ((graph.vertices: any[]): VertexPopulated[]).forEach((v) => {
-        // v.bounds = v.bounds.inflate(-kNodeMargin);
-    });
-    ((graph.groups: any[]): GroupPopulated[]).forEach((g) => {
-        // g.bounds = g.bounds.inflate(-kGroupMargin);
-        g.children = g.groups.map((sg) => sg.index).concat(g.leaves.map((l) => l.index));
-    });
-    const router = new cola.GridRouter(
-        graph.vertices.concat(graph.groups),
-        {
-            getChildren: (v) => v.children,
-            getBounds: (v) => v.bounds,
-        },
-        kNodeMargin, // TODO: - kGroupMargin?
-    );
+
+    // Step 2: Retarget to ports.
+    // --------------------------
+    // Since the size of `Group` is determined by the layout process, only after the positions and
+    // sizes have been calculated can we add ports. This is suboptimal, because the placement of the
+    // ports may be important in layout. Add a dummy `Vertex` for each port, and retarget edges
+    // to point to them.
+
+    type PortIdx = number;
+    let portLookup: { [NodeId]: { [string]: PortIdx }} = {};
+
+    function addPortVertex(nodeId: NodeId, portName: string, x: number, y: number): PortIdx {
+        let idx: PortIdx = graph.ports.length;
+        if(!(nodeId in portLookup)) {
+            portLookup[nodeId] = {};
+        }
+        portLookup[nodeId][portName] = idx;
+        // Need non-zero size for cola to work.
+        graph.ports.push({ width: 1, height: 1, x: x, y: y,
+            bounds: new cola.Rectangle(x - 0.5, x + 0.5, y - 0.5, y + 0.5),
+            // Ports will be appended to end: vertices + groups + ports.
+            index: idx + graph.vertices.length + graph.groups.length,
+        });
+        return idx;
+    }
+
+    function processPorts(nodeId: NodeId) {
+        const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
+        if(node.ports === undefined) return;
+        const portsBySide: { ['north' | 'south' | 'east' | 'west']: string[] } = {
+            north: [],
+            south: [],
+            east: [],
+            west: [],
+        };
+        for (let portName in node.ports) {
+            const side = node.ports[portName].side;
+            portsBySide[side].push(portName);
+        }
+        for (let side of ['north', 'south', 'east', 'west']) {
+            // Sort all ports on the side.
+            portsBySide[side].sort((portName1: string, portName2: string) => {
+                if (node.ports[portName1].order === undefined || node.ports[portName2].order === undefined) {
+                    return 0;
+                }
+                return node.ports[portName2].order - node.ports[portName1].order;
+            });
+            // Create a dummy Vertex for each of the ports on the side.
+            portsBySide[side].forEach((portName, i) => {
+                const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId).obj;
+                const sep = portsBySide[side].length + 1;  // Num parts for port separation.
+                let pos;
+                switch (side) {
+                    case 'west':
+                        pos = {
+                            x: obj.bounds.x - kPortLength,
+                            y: obj.bounds.y + obj.bounds.height() / sep * (i + 1),
+                        };
+                        break;
+                    case 'east':
+                        pos = {
+                            x: obj.bounds.X + kPortLength,
+                            y: obj.bounds.y + obj.bounds.height() / sep * (i + 1),
+                        };
+                        break;
+                    case 'north':
+                        pos = {
+                            x: obj.bounds.x + obj.bounds.width() / sep * (i + 1),
+                            y: obj.bounds.y - kPortLength,
+                        };
+                        break;
+                    case 'south':
+                    default:
+                        pos = {
+                            x: obj.bounds.x + obj.bounds.width() / sep * (i + 1),
+                            y: obj.bounds.Y + kPortLength,
+                        };
+                        break;
+                }
+                addPortVertex(nodeId, portName, pos.x, pos.y);
+            });
+        }
+    }
+    nodes.forEach((node) => processPorts(node.id));
 
     // Overwrite the dummy links with the real links.
     graph.links = edges.map((edge) => {
         let source: Vertex | Group = getNodeInfo(edge.startId).obj;
         let target: Vertex | Group = getNodeInfo(edge.endId).obj;
         if (edge.startPort) {
-            source = graph.vertices[portLookup[edge.startId][edge.startPort]];
+            source = graph.ports[portLookup[edge.startId][edge.startPort]];
         }
         if (edge.endPort) {
-            target = graph.vertices[portLookup[edge.endId][edge.endPort]];
+            target = graph.ports[portLookup[edge.endId][edge.endPort]];
         }
         return { source, target };
     });
 
-    console.log('B', edges, graph.links, vertexIdxLookup);
+
+    // Step 3: Route edges within gridified positions.
+    // -----------------------------------------------
+
+    // Add margin around the vertices and groups, and prepare for routing.
+    ((graph.vertices: any[]): VertexPopulated[]).forEach((v) => {
+        // v.bounds.inflate(kNodeMargin);
+    });
+    ((graph.groups: any[]): GroupPopulated[]).forEach((g) => {
+        // g.bounds.inflate(kGroupMargin);
+        g.children = g.groups.map((subg) => subg.index).concat(g.leaves.map((l) => l.index));
+    });
+    const router = new cola.GridRouter(
+        [...graph.vertices, ...graph.groups, ...graph.ports],
+        { getChildren: (v) => v.children, getBounds: (v) => v.bounds },
+        kPortLength,
+    );
+
     const routes = router.routeEdges(
         graph.links,
         kEdgeMargin,
         (e) => e.source.index,
         (e) => e.target.index,
     );
+    // TODO: What is this doing?
     const paths = routes.map((route) => [route[0][0]].concat(...route.map((seg) => seg[1])));
-    console.log('C');
 
-    // Step 5: Translate back to user format.
-    // --------------------------------------
+    // Step 4: Translate back to input format.
+    // ---------------------------------------
 
     type Dims = {
         x: number,
