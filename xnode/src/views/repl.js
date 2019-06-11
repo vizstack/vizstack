@@ -144,6 +144,7 @@ class REPL {
                                     this.marker = null;
                                 }
                             }}
+                            documentElement={atom.views.getView(atom.workspace)}
                         />
                     </div>
                 </MuiThemeProvider>

@@ -260,7 +260,7 @@ class Flow(View):
     A View which renders other Vizzes as a series of inline elements.
     """
 
-    def __init__(self, items: List[Any]) -> None:
+    def __init__(self, items: Iterable[Any]) -> None:
         """
         Args:
             items: A sequence of objects which should be visualized.
@@ -283,9 +283,9 @@ class Flow(View):
 
 
 _DEFAULT_ITEM = object()
+_DEFAULT_PARENT = object()
 
 
-# TODO: add item kwarg
 class DagLayout(View):
     def __init__(self,
                  flow_direction: Optional[str] = None,
@@ -301,9 +301,9 @@ class DagLayout(View):
     def node(self, node_id: str,
              flow_direction: Optional[str]=None, align_children: Optional[bool]=None,
                  is_expanded: Optional[bool]=None, is_interactive: Optional[bool]=None,
-                 is_visible: Optional[bool]=None, parent: Optional[str]=None,
+                 is_visible: Optional[bool]=None, parent=_DEFAULT_PARENT,
              align_with: Optional[List[str]]=None,
-             item: Any=_DEFAULT_ITEM):
+             item: Any=_DEFAULT_ITEM, ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]]=None):
         for key, var in {
             'flowDirection': flow_direction,
             'alignChildren': align_children,
@@ -313,20 +313,22 @@ class DagLayout(View):
         }.items():
             if var is not None or key not in self._nodes[node_id]:
                 self._nodes[node_id][key] = var
-        if 'children' not in self._nodes[node_id]:
-            self._nodes[node_id]['children'] = []
-        if parent is not None:
-            if 'children' not in self._nodes[parent]:
-                self._nodes[parent]['children'] = []
-            self._nodes[parent]['children'].append(node_id)
+        if parent is not _DEFAULT_PARENT:
+            self._nodes[node_id]['parent'] = parent
+        elif 'parent' not in self._nodes[node_id]:
+            self._nodes[node_id]['parent'] = None
+
+        self._nodes[node_id]['children'] = []
         if align_with is not None:
             self._alignments.append([node_id] + align_with)
         if item is not _DEFAULT_ITEM:
             self.item(item, node_id)
+        if ports is not None:
+            for port in ports:
+                self.port(*port)
         return self
 
     def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
-        assert node_id in self._nodes, 'No node with ID "{}" found.'.format(node_id)
         if 'ports' not in self._nodes[node_id]:
             self._nodes[node_id]['ports'] = {}
         self._nodes[node_id]['ports'][port_name] = {
@@ -339,10 +341,6 @@ class DagLayout(View):
     # TODO: remove id and name everywhere
     def edge(self, start_node_id: str, end_node_id: str,
              start_port: Optional[str]=None, end_port: Optional[str]=None):
-        assert start_node_id in self._nodes, 'Start node "{}" not found.'.format(start_node_id)
-        assert end_node_id in self._nodes, 'End node "{}" not found.'.format(end_node_id)
-        assert start_port is None or start_port in self._nodes[start_node_id]['ports'], 'No port with name "{}" found on start node "{}".'.format(start_port, start_node_id)
-        assert end_port is None or end_port in self._nodes[end_node_id]['ports'], 'No port with name "{}" found on end node "{}".'.format(end_port, end_node_id)
         edge = {
             'startId': start_node_id,
             'endId': end_node_id,
@@ -360,13 +358,26 @@ class DagLayout(View):
 
     def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
         for node_id in self._nodes:
+            # All nodes must have an item
             assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
+            # All node parents must exist
+            assert self._nodes[node_id]['parent'] is None or self._nodes[node_id]['parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(self._nodes[node_id]['parent'], node_id)
+        for edge in self._edges:
+            # All edges must connect real nodes
+            assert edge['startId'] in self._nodes, 'An edge starts at non-existent node "{}".'.format(edge['startId'])
+            assert edge['endId'] in self._nodes, 'An edge ends at non-existent node "{}".'.format(edge['endId'])
+            # All edge ports must exist
+            if 'startPort' in edge:
+                assert edge['startPort'] in self._nodes[edge['startId']]['ports'], 'An edge starts at non-existent port "{}" on node "{}".'.format(edge['startPort'], edge['startId'])
+            if 'endPort' in edge:
+                assert edge['endPort'] in self._nodes[edge['endId']]['ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(edge['endPort'], edge['endId'])
         return {
             'type': 'DagLayout',
             'contents': {
                 'nodes':
-                {node_id: {**{key: value for key, value in node.items() if value is not None},
-                           'viewId': self._items[node_id]}
+                {node_id: {**{key: value for key, value in node.items() if value is not None and key is not 'parent'},
+                           'viewId': self._items[node_id],
+                           'children': [_node_id for _node_id in self._nodes if self._nodes[_node_id]['parent'] == node_id]}
                  for node_id, node in self._nodes.items()},
                 'edges':
                 {str(i): edge
@@ -584,7 +595,7 @@ class KeyValues(View):
             grid.cell('k{}'.format(i), 0, current_row, 1, 1)
             grid.item(key, 'k{}'.format(i))
             grid.cell('sep{}'.format(i), 1, current_row, 1, 1)
-            grid.item(_get_view(self._item_separator), 'sep{}'.format(i))
+            grid.item(Text(self._item_separator), 'sep{}'.format(i))
             grid.cell('v{}'.format(i), 2, current_row, 1, 1)
             grid.item(value, 'v{}'.format(i))
             current_row += 1

@@ -505,6 +505,7 @@ export default function layout(
             portsBySide[side].forEach((portName, i) => {
                 const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId).obj;
                 const sep = portsBySide[side].length + 1;  // Num parts for port separation.
+
                 let pos;
                 switch (side) {
                     case 'west':
