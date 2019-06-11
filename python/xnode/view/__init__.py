@@ -260,7 +260,7 @@ class Flow(View):
     A View which renders other Vizzes as a series of inline elements.
     """
 
-    def __init__(self, items: List[Any]) -> None:
+    def __init__(self, items: Iterable[Any]) -> None:
         """
         Args:
             items: A sequence of objects which should be visualized.
