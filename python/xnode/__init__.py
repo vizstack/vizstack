@@ -1,7 +1,7 @@
 from typing import Any, NewType, Optional, List, MutableSet, Dict, Union, Tuple, overload
 import json
 from xnode.view import _get_view
-from xnode._types import ViewId, JsonType, View
+from xnode._types import ViewId, JsonType, View, ViewPlaceholder
 import uuid
 
 # Required for PyPI packaging.
@@ -19,6 +19,10 @@ def _get_view_id(obj: 'View', view_ids: Dict[View, ViewId]) -> ViewId:
 def _replace_view_with_id(o: 'View', view_ids: Dict[View, ViewId], referenced_views) -> ViewId:
     ...
 
+
+@overload
+def _replace_view_with_id(o: 'ViewPlaceholder', view_ids: Dict[View, ViewId], referenced_views) -> ViewId:
+    ...
 
 @overload
 def _replace_view_with_id(o: Dict[str, Union['View', JsonType]], view_ids: Dict[View, ViewId], referenced_views) -> Dict[str, JsonType]:
@@ -45,6 +49,8 @@ def _replace_view_with_id(o, view_ids: Dict[View, ViewId], referenced_views: Lis
     elif isinstance(o, View):
         referenced_views.append(o)
         return _get_view_id(o, view_ids)
+    elif isinstance(o, ViewPlaceholder):
+        return _replace_view_with_id(o.view, view_ids, referenced_views)
     else:
         return o
 

@@ -37,3 +37,8 @@ class View:
 
     def meta(self, key: str, value: JsonType):
         self._meta[key] = value
+
+
+class ViewPlaceholder:
+    def __init__(self):
+        self.view = None

@@ -7,7 +7,7 @@ from typing import Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 import os
 from collections import defaultdict
 
-from xnode._types import View, JsonType
+from xnode._types import View, JsonType, ViewPlaceholder
 import types
 import inspect
 
@@ -20,11 +20,10 @@ import inspect
 # The name of the method on an object which should return a `View` depicting that object.
 VIZ_FN = '__view__'
 
-# TODO: this is a bad way to stop cyclic generation of vizzes
-_CURRENT = []
+_CURRENT_PLACEHOLDERS = dict()
 
 
-def _get_view(o: Any) -> 'View':
+def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
     """Gets the View associated with ``o``.
 
     If ``o`` is already a View, it is returned unchanged. If ``o`` has an ``xn()`` method, its value is returned.
@@ -36,39 +35,37 @@ def _get_view(o: Any) -> 'View':
     Returns:
         A View which describes how to render ``o``.
     """
-    global _CURRENT
-    if o in _CURRENT and not (isinstance(o, (str, int, float, bool))
-                              or o is None):
-        # TODO: deal with this better
-        return Token('<cyclic ref>')
-    _CURRENT.append(o)
-    if isinstance(o, View):
-        viz = o
+    global _CURRENT_PLACEHOLDERS
+    if id(o) in _CURRENT_PLACEHOLDERS:
+        return _CURRENT_PLACEHOLDERS[id(o)]
+    _CURRENT_PLACEHOLDERS[id(o)] = ViewPlaceholder()
+    if isinstance(o, (View, ViewPlaceholder)):
+        view = o
     elif hasattr(o, VIZ_FN):
-        viz = getattr(o, VIZ_FN)()
+        view = getattr(o, VIZ_FN)()
     elif isinstance(o, (str, int, float, bool)) or o is None:
-        viz = Token(o if not isinstance(o, str) else '"{}"'.format(o))
+        view = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     # TODO: come up with a better method for dispatching default vizzes, like stubs
     elif isinstance(o, list):
-        viz = _SwitchSequence(
+        view = _SwitchSequence(
             o,
             start_motif='List[{}] ['.format(len(o)),
             end_motif=']',
             summary='List[{}]'.format(len(o)))
     elif isinstance(o, set):
-        viz = _SwitchSequence(
+        view = _SwitchSequence(
             o,
             start_motif='Set[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Set[{}]'.format(len(o)))
     elif isinstance(o, tuple):
-        viz = _SwitchSequence(
+        view = _SwitchSequence(
             o,
             start_motif='Tuple[{}] ('.format(len(o)),
             end_motif=')',
             summary='Tuple[{}]'.format(len(o)))
     elif isinstance(o, dict):
-        viz = _SwitchKeyValues(
+        view = _SwitchKeyValues(
             o,
             start_motif='Dict[{}] {{'.format(len(o)),
             end_motif='}',
@@ -82,7 +79,7 @@ def _get_view(o: Any) -> 'View':
                 args.append(param_name)
             else:
                 kwargs[param_name] = param.default
-        viz = _SwitchSequence([
+        view = _SwitchSequence([
             _SwitchSequence(
                 args,
                 start_motif='Positional Args [',
@@ -113,7 +110,7 @@ def _get_view(o: Any) -> 'View':
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        viz = _SwitchKeyValues(
+        view = _SwitchKeyValues(
             attributes,
             start_motif='Module[{}] {{'.format(o.__name__),
             end_motif='}',
@@ -147,7 +144,7 @@ def _get_view(o: Any) -> 'View':
                     end_motif='}',
                     summary='Fields',
                     expansion_mode='compact'))
-        viz = _SwitchSequence(
+        view = _SwitchSequence(
             contents,
             start_motif='Class[{}] ('.format(o.__name__),
             end_motif=')',
@@ -170,14 +167,18 @@ def _get_view(o: Any) -> 'View':
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        viz = _SwitchKeyValues(
+        view = _SwitchKeyValues(
             contents,
             item_separator='=',
             start_motif='Instance[{}] {{'.format(type(o).__name__),
             end_motif='}',
             summary='Instance[{}]'.format(type(o).__name__))
-    _CURRENT.pop()
-    return viz
+    if isinstance(view, Switch) and (view._modes[0] == 'full' or view._modes[0] == 'compact'):
+        _CURRENT_PLACEHOLDERS[id(o)].view = Switch(view._modes[-1:] + view._modes[:-1], view._items)
+    else:
+        _CURRENT_PLACEHOLDERS[id(o)].view = view
+    del _CURRENT_PLACEHOLDERS[id(o)]
+    return view
 
 
 # ======================================================================================================================
@@ -574,7 +575,6 @@ class KeyValues(View):
             expansion_mode: An optional expansion mode which the ``KeyValues`` should adopt by default.
         """
         super(KeyValues, self).__init__()
-        self._keys = list(key_value_mapping.keys())
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
         self._item_separator = item_separator
