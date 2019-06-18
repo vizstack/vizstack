@@ -7,6 +7,7 @@ import json
 from typing import Optional, Any, Iterable, Tuple
 from inspect import currentframe, getframeinfo
 from types import FrameType
+import time
 
 
 class LogLevel(enum.Enum):
@@ -64,10 +65,11 @@ class Logger:
         if level.value < self._log_level.value:
             return
         self._socket.sendall(json.dumps({
-            'filename': filename,
+            'filepath': filename,
             'lineno': lineno,
-            'level': level.name,
-            'view': xnode.assemble(Flow(*objects))
+            'level': level.name.lower(),
+            'view': xnode.assemble(Flow(*objects)),
+            'timestamp': time.time(),
         }))
 
 

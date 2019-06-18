@@ -39,6 +39,7 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
     if id(o) in _CURRENT_PLACEHOLDERS:
         return _CURRENT_PLACEHOLDERS[id(o)]
     _CURRENT_PLACEHOLDERS[id(o)] = ViewPlaceholder()
+    should_replace = False
     if isinstance(o, (View, ViewPlaceholder)):
         view = o
     elif hasattr(o, VIZ_FN):
@@ -52,24 +53,28 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='List[{}] ['.format(len(o)),
             end_motif=']',
             summary='List[{}]'.format(len(o)))
+        should_replace = True
     elif isinstance(o, set):
         view = _SwitchSequence(
             o,
             start_motif='Set[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Set[{}]'.format(len(o)))
+        should_replace = True
     elif isinstance(o, tuple):
         view = _SwitchSequence(
             o,
             start_motif='Tuple[{}] ('.format(len(o)),
             end_motif=')',
             summary='Tuple[{}]'.format(len(o)))
+        should_replace = True
     elif isinstance(o, dict):
         view = _SwitchKeyValues(
             o,
             start_motif='Dict[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Dict[{}]'.format(len(o)))
+        should_replace = True
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
         args = []
@@ -97,6 +102,7 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
                              end_motif=')',
                              orientation='vertical',
                              summary='Function[{}]'.format(o.__name__))
+        should_replace = True
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -115,6 +121,7 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='Module[{}] {{'.format(o.__name__),
             end_motif='}',
             summary='Module[{}]'.format(o.__name__))
+        should_replace = True
     elif inspect.isclass(o):
         functions = dict()
         staticfields = dict()
@@ -150,6 +157,7 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             end_motif=')',
             summary='Class[{}]'.format(o.__name__),
             orientation='vertical')
+        should_replace = True
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -173,7 +181,8 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='Instance[{}] {{'.format(type(o).__name__),
             end_motif='}',
             summary='Instance[{}]'.format(type(o).__name__))
-    if isinstance(view, Switch) and (view._modes[0] == 'full' or view._modes[0] == 'compact'):
+        should_replace = True
+    if should_replace:
         _CURRENT_PLACEHOLDERS[id(o)].view = Switch(view._modes[-1:] + view._modes[:-1], view._items)
     else:
         _CURRENT_PLACEHOLDERS[id(o)].view = view
