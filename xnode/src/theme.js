@@ -70,12 +70,12 @@ export default createMuiTheme({
             lightest: '#EFF8FF', // boxes
         },
         grey: {
-            darkest: '#212933',
-            darker: '#5F6B7A',
-            dark: '#8895A7',
-            base: '#B8C4CF',
-            light: '#CFD6DE',
-            lighter: '#E1E7EC',
+            darkest: '#5F6B7A',
+            darker: '#8895A7',
+            dark: '#B8C4CF',
+            base: '#DEE2E6',
+            light: '#E9ECEE',
+            lighter: '#F1F3F5',
             lightest: '#F8F9FA',
         },
         teal: {
