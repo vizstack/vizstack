@@ -37,9 +37,8 @@ export function getExampleData(state: ExampleState): number {
 // =================================================================================================
 // Actions (public) and reducers.
 
-type NoAction = {| type: 'NoAction' |};
-
-type ExampleAction = Action1 | NoAction; // | Foo | Bar;
+type NoOp = {| type: '' |};
+type ExampleAction = Action1 | NoOp;
 
 /**
  * Root reducer for state related to ____.
@@ -48,7 +47,7 @@ type ExampleAction = Action1 | NoAction; // | Foo | Bar;
  */
 export default function rootReducer(
     state: ExampleState = initialState,
-    action: ExampleAction = { type: 'NoAction' },
+    action: ExampleAction = { type: '' },
 ): ExampleState {
     switch (action.type) {
         case 'Action1':
