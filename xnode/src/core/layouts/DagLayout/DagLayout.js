@@ -686,7 +686,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
             const childModel = this.props.nodes[childId];
             nodes[childId] = {
                 id: childId,
-                children: childModel.children,
+                children: childId === nodeId || nodeExpansionStates[childId] ? childModel.children : [],
                 flowDirection: childModel.flowDirection,
                 alignChildren: childModel.alignChildren,
                 ports: childModel.ports,

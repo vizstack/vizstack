@@ -248,6 +248,23 @@ export class InteractionManager {
                 }
             });
 
+        this.getAllComponents()
+            .withType('FlowLayout')
+            .subscribe('onKeyDown', (message, subscriber, state) => {
+                if (state.selected === subscriber.viewerId) {
+                    if (message.key in directions) {
+                        this.publish({
+                            eventName: 'flowSelectElement',
+                            message: {
+                                viewerId: subscriber.viewerId,
+                                idxDelta: message.key === 'ArrowRight' ? 1 : -1,
+                            }
+                        })
+                    }
+                }
+            });
+
+
         // Enter drills down, Escape zooms out
         this.getAllComponents()
             .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
@@ -263,7 +280,6 @@ export class InteractionManager {
                     if (message.key === 'Escape') {
                         console.log('yeet', subscriber);
                         if (subscriber.parent) {
-                            console.log('lessgo');
                             state.selected = subscriber.parent.viewerId;
                             this.publish({
                                 eventName: 'unhighlight',
@@ -299,9 +315,7 @@ export class InteractionManager {
                         }
                     });
                 }
-            })
-
-        // TODO: flow layout
+            });
     }
 
     _addMouseDefaults(): void {

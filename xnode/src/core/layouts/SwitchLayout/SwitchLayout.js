@@ -159,10 +159,10 @@ export default withStyles(styles)(
             const { elements } = layout.props;
             layout.setState((state) => {
                 let newIdx = message.idxDelta === undefined ? message.modeIdx : state.currElementIdx + message.idxDelta;
-                if (newIdx < 0) {
+                while (newIdx < 0) {
                     newIdx += elements.length;
                 }
-                if (newIdx >= elements.length) {
+                while (newIdx >= elements.length) {
                     newIdx -= elements.length;
                 }
                 return { currElementIdx: newIdx };
