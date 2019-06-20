@@ -1,15 +1,9 @@
-import json
 import pdb
-import re
-import sys
 import os
 import argparse
 from os.path import normpath, normcase
 from types import FrameType
 from typing import Callable, Mapping, Union, Any, Optional, List, Tuple
-
-# Removing this "unused" import will cause a fatal error if the user's script does not import `visual_debugger`
-import visual_debugger
 
 
 # Taken from atom-python-debugger
@@ -37,6 +31,8 @@ class _ScriptExecutor(pdb.Pdb):  # type: ignore
             script_path: The absolute path to the user-written script to be executed.
             script_args: Arguments that should be passed to the executed script.
         """
+        # We have to re-import `sys` here, since it has not yet been imported in this scope
+        import sys
         normalized_path = _ScriptExecutor._normalize_path(script_path)
         sys.argv = [normalized_path] + script_args
         sys.path.append(os.path.dirname(normalized_path))
@@ -99,21 +95,32 @@ class _PrintOverwriter:
         self._unprinted_text: str = ''
 
     def write(self, text: str) -> None:
-        # These all need to be re-imported for some reason
+        # These all need to be imported directly into this scope
         import xnode
         import visual_debugger
+        import sys
+        import json
         from inspect import currentframe, getframeinfo
-        self._unprinted_text += text
-        if self._unprinted_text.endswith('\n') and self._unprinted_text != '\n':
-            # If we just call visual_debugger.view(), the stack has one too many frames and the View won't appear to
-            # have come from the correct file
-            view_spec: str = xnode.assemble(self._unprinted_text.rstrip())
-            frame: Optional[FrameType] = currentframe()
-            assert frame is not None
-            frame_info = getframeinfo(frame.f_back)
-            filename, line_number = frame_info.filename, frame_info.lineno
-            visual_debugger._send_message(filename, line_number, view_spec, False, False)
-            self._unprinted_text = ''
+        try:
+            message = json.loads(text.strip())
+            assert 'filePath' in message
+            assert 'lineNumber' in message
+            assert 'view' in message
+            assert 'scriptStart' in message
+            assert 'scriptEnd' in message
+            print(text, file=sys.__stdout__)
+        except (json.decoder.JSONDecodeError, AssertionError):
+            self._unprinted_text += text
+            if self._unprinted_text.endswith('\n') and self._unprinted_text != '\n':
+                # If we just call visual_debugger.view(), the stack has one too many frames and the View won't appear to
+                # have come from the correct file
+                view_spec: str = xnode.assemble(self._unprinted_text.strip())
+                frame: Optional[FrameType] = currentframe()
+                assert frame is not None
+                frame_info = getframeinfo(frame.f_back)
+                filename, line_number = frame_info.filename, frame_info.lineno
+                visual_debugger._send_message(filename, line_number, view_spec, False, False, sys.__stdout__)
+                self._unprinted_text = ''
 
     def flush(self) -> None:
         pass
@@ -159,8 +166,11 @@ def _main() -> None:
     # Wait for the parent process to tell this process to start
     input()
 
+    # For some reason, these have to be imported in this scope, not in the global scope. TODO figure out why
+    import sys
+    import visual_debugger
+
     # Replace stdout with an object that queues all statements printed by the user script as messages
-    # TODO: overwrite normal print statements
     sys.stdout = _PrintOverwriter()  # type: ignore
 
     executor: _ScriptExecutor = _ScriptExecutor()
@@ -173,16 +183,12 @@ def _main() -> None:
     assert script_path is not None
 
     try:
-        # I really don't know why we need this import here, but removing it causes a fatal error
-        import visual_debugger
-        visual_debugger._send_message(None, None, None, True, False)
+        visual_debugger._send_message(None, None, None, True, False, sys.__stdout__)
         executor.execute(script_path, script_args)
-        # We have to re-import visual_debugger, since executor.execute() will have removed it
-        import visual_debugger
         # Indicate to the client that the script has finished executing
-        visual_debugger._send_message(None, None, None, False, True)
+        visual_debugger._send_message(None, None, None, False, True, sys.__stdout__)
     except:
-        # We have to re-import all of these modules, since executor.execute() will have removed them
+        # Import all of these, since they might have been removed when running the user's script
         import traceback
         import visual_debugger
         import xnode
@@ -203,13 +209,13 @@ def _main() -> None:
             assert result is not None
             visual_debugger._send_message(result.group(1), int(result.group(2)), xnode.assemble(
                 Text(clean_error_msg, 'error', 'token')
-            ), False, True)
+            ), False, True, sys.__stdout__)
         except:
             try:
                 # if something goes wrong in parsing the traceback, write it directly
                 visual_debugger._send_message('engine.py', 0, xnode.assemble(
                     Text(raw_error_msg, 'error', 'token')
-                ), False, True)
+                ), False, True, sys.__stdout__)
             except:
                 # if something goes terribly wrong, just print it and hope for the best
                 print(raw_error_msg)
