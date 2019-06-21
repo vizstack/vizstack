@@ -52,6 +52,5 @@ python/build
 python/dist
 python/*.egg-info
 
-# Xnode
-*xnode.yaml
-core/build*
+# Javascript build
+*build/

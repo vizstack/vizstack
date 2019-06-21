@@ -1,0 +1,6 @@
+# Define your sandbox configurations here.
+sandboxes:
+  DemoCanvas:
+    pythonPath: 'python3.6'
+    scriptPath: 'demo.py'
+    scriptArgs: []
