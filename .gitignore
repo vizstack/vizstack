@@ -19,8 +19,7 @@ coverage.xml
 .hypothesis/
 
 # Sphinx documentation
-docs/_build/
-python/docs/_build
+bindings/python/docs/_build*
 
 # dotenv
 .env
@@ -55,3 +54,4 @@ python/*.egg-info
 
 # Xnode
 *xnode.yaml
+core/build*

@@ -1,0 +1,31 @@
+{
+  "name": "vizstack-core",
+  "version": "0.1.0",
+  "description": "Components which render VizStack schemas.",
+  "main": "build/index.js",
+  "files": [
+    "build"
+  ],
+  "scripts": {
+    "build": "rm -rf \"build/\" && babel src/ -d build/"
+  },
+  "author": "Nikhil Bhattasali and Ryan Holmdahl",
+  "dependencies": {
+    "@material-ui/core": "^1.5.1",
+    "classnames": "^2.2.6",
+    "cuid": "^2.1.6",
+    "d3": "^5.9.2",
+    "react": "^16.8.6",
+    "react-measure": "^2.3.0",
+    "seamless-immutable": "^7.1.4",
+    "webcola": "^3.4.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.4.4",
+    "@babel/core": "^7.4.5",
+    "@babel/plugin-proposal-class-properties": "^7.4.4",
+    "@babel/preset-env": "^7.4.5",
+    "@babel/preset-flow": "^7.0.0",
+    "@babel/preset-react": "^7.0.0"
+  }
+}
