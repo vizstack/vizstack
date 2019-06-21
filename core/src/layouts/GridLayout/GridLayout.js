@@ -209,7 +209,9 @@ export default withStyles(styles)(
                     if (message.elementIdx !== undefined) {
                         return { selectedElementIdx: message.elementIdx };
                     }
+
                     const { elements } = layout.props;
+                    const currentElem = elements[state.selectedElementIdx];
                     let mainAxis, offAxis, increaseMainAxis;
                     switch (message.moveCursor) {
                         case 'down':
@@ -230,7 +232,7 @@ export default withStyles(styles)(
                         if (i === state.selectedElementIdx) {
                             return;
                         }
-                        if ((increaseMainAxis && elem[mainAxis] <= elements[state.selectedElementIdx][mainAxis]) || (!increaseMainAxis && elem[mainAxis] >= elements[state.selectedElementIdx][mainAxis])) {
+                        if ((increaseMainAxis && elem[mainAxis] <= currentElem[mainAxis]) || (!increaseMainAxis && elem[mainAxis] >= currentElem[mainAxis])) {
                             return;
                         }
                         if (closest === -1 ||
@@ -238,11 +240,11 @@ export default withStyles(styles)(
                             (
                                 elem[mainAxis] === elements[closest][mainAxis] && (
                                     (
-                                        elements[closest][offAxis] >= elements[state.selectedElementIdx][offAxis] &&
-                                        elem[offAxis] >= elements[state.selectedElementIdx][offAxis] &&
-                                        elem[offAxis] - elements[state.selectedElementIdx][offAxis] < elements[closest][offAxis] - elements[state.selectedElementIdx][offAxis]
+                                        elements[closest][offAxis] >= currentElem[offAxis] &&
+                                        elem[offAxis] >= currentElem[offAxis] &&
+                                        elem[offAxis] - currentElem[offAxis] < elements[closest][offAxis] - currentElem[offAxis]
                                     ) || (
-                                        elements[closest][offAxis] < elements[state.selectedElementIdx][offAxis] &&
+                                        elements[closest][offAxis] < currentElem[offAxis] &&
                                         elem[offAxis] > elements[closest][offAxis]
                                     )
                                 )

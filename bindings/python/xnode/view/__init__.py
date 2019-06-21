@@ -450,7 +450,7 @@ class Grid(View):
                 }
         # TODO: assert non-overlapping
         if items is not None:
-            self._items = items
+            self._items = {key: _get_view(value) for key, value in items.items()}
         else:
             self._items = dict()
 
