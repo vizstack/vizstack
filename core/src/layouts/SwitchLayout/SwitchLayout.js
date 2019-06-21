@@ -133,6 +133,7 @@ const styles = (theme) => ({
         borderRadius: theme.shape.border.radius,
         borderColor: theme.palette.atom.border,
         padding: theme.spacing.unit,
+        display: 'inline-block',  // Wraps the switch to its contents, allowing it to fit in flow layouts
     },
     containerHovered: {
         borderColor: theme.palette.primary.light,

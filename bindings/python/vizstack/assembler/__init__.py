@@ -1,11 +1,8 @@
-from typing import Any, NewType, Optional, List, MutableSet, Dict, Union, Tuple, overload
+from typing import Any, Optional, List, MutableSet, Dict, Union, Tuple, overload
 import json
-from xnode.view import _get_view
-from xnode._types import ViewId, JsonType, View, ViewPlaceholder
+from vizstack.view import _get_view
+from vizstack._types import ViewId, JsonType, View, ViewPlaceholder
 import uuid
-
-# Required for PyPI packaging.
-name = 'xnode'
 
 
 def _get_view_id(obj: 'View', view_ids: Dict[View, ViewId]) -> ViewId:
