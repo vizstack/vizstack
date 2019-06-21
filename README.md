@@ -1,6 +1,6 @@
-# Xnode
-Xnode facilitates quick and painless prototyping, experimenting, and sharing through a platform built by researchers,
- for researchers.
+# Vizstack
+> Declaratively assemble data-driven software visualizations.
+This is a work in progress. Come back soon for the public release!
  
  ## Requirements
   - Sandboxes must be run with Python 3.6+, as our code uses type hinting.
