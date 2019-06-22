@@ -1,78 +1,87 @@
-from typing import Any, Optional, List, MutableSet, Dict, Union, Tuple, overload
 import json
-from vizstack.view import _get_view
-from vizstack._types import ViewId, JsonType, View, ViewPlaceholder
-import uuid
+from typing import Any, Optional, List, MutableSet, Dict, Union, overload
 
-
-def _get_view_id(obj: 'View', view_ids: Dict[View, ViewId]) -> ViewId:
-    """Gets the VizId for a particular View object at a particular snapshot."""
-    if obj not in view_ids:
-        view_ids[obj] = ViewId('@id:{}'.format(str(uuid.uuid4())))
-    return view_ids[obj]
+from vizstack.types import ViewId, JsonType, View, ViewPlaceholder, ViewDict
+from vizstack.view import get_view
 
 
 @overload
-def _replace_view_with_id(o: 'View', view_ids: Dict[View, ViewId], referenced_views) -> ViewId:
+def _replace_view_with_id(o: View, referenced_views) -> ViewId:
     ...
 
 
 @overload
-def _replace_view_with_id(o: 'ViewPlaceholder', view_ids: Dict[View, ViewId], referenced_views) -> ViewId:
-    ...
-
-@overload
-def _replace_view_with_id(o: Dict[str, Union['View', JsonType]], view_ids: Dict[View, ViewId], referenced_views) -> Dict[str, JsonType]:
+def _replace_view_with_id(o: ViewPlaceholder, referenced_views) -> ViewId:
     ...
 
 
 @overload
-def _replace_view_with_id(o: List[Union['View', JsonType]], view_ids: Dict[View, ViewId], referenced_views) -> List[JsonType]:
+def _replace_view_with_id(o: Dict[str, Union[View, JsonType]], referenced_views) -> Dict[str, Union[ViewId, JsonType]]:
     ...
 
 
-def _replace_view_with_id(o, view_ids: Dict[View, ViewId], referenced_views: List['View']):
+@overload
+def _replace_view_with_id(o: List[Union[View, JsonType]], referenced_views) -> List[Union[ViewId, JsonType]]:
+    ...
+
+
+def _replace_view_with_id(o, referenced_views: List[View]) -> JsonType:
+    """Replaces any `View` instance at any depth in `o` with that `View`'s corresponding `ViewId`.
+
+    Args:
+        o: A dict, list, `View`, `ViewPlaceholder`, or primitive.
+        referenced_views: A list to which any `View` found in `o` should be added.
+
+    Returns:
+        A version of `o` with all `View` and `ViewPlaceholder` instances replaced with `ViewId`s.
+    """
     if isinstance(o, dict):
         return {
             key: _replace_view_with_id(
-                value, view_ids, referenced_views)
+                value, referenced_views)
             for key, value in o.items()
         }
     elif isinstance(o, list) or isinstance(o, tuple):
         return [
             _replace_view_with_id(
-                elem, view_ids, referenced_views) for elem in o
+                elem, referenced_views) for elem in o
         ]
     elif isinstance(o, View):
         referenced_views.append(o)
-        return _get_view_id(o, view_ids)
+        return o.id
     elif isinstance(o, ViewPlaceholder):
-        return _replace_view_with_id(o.view, view_ids, referenced_views)
+        return _replace_view_with_id(o.view, referenced_views)
     else:
         return o
 
 
 def assemble(obj: Any) -> str:
-    obj_view_id: Optional[ViewId] = None
-    models: Dict[ViewId, Dict[str, JsonType]] = dict()
-    view_ids: Dict[View, ViewId] = dict()
-    to_add: List[View] = [_get_view(obj)]
+    """Returns a string which contains all of the information needed to render a visualization of `obj`.
+
+    Args:
+        obj: An object to be visualized.
+
+    Returns:
+        A JSON-valid string which encodes the visualization for `obj`.
+    """
+    return_dict: Dict[str, Union[Optional[str], Dict[str, JsonType]]] = {
+        'rootId': None,
+        'models': dict(),
+    }
+    to_add: List[View] = [get_view(obj)]
     added: MutableSet[ViewId] = set()
     while len(to_add) > 0:
+        # Get the `ViewDict` for the next view, add it to the output, then enqueue all `View` instances that it
+        # references.
         view_obj: View = to_add.pop()
-        view_id: ViewId = _get_view_id(view_obj, view_ids)
-        if obj_view_id is None:
-            obj_view_id = view_id
+        view_id: ViewId = view_obj.id
+        if return_dict['rootId'] is None:
+            return_dict['rootId'] = view_id
         if view_id in added:
             continue
         added.add(view_id)
-        view_dict: Dict[str, Union[View, JsonType]] = view_obj.assemble_dict()
+        view_dict: ViewDict = view_obj.assemble_dict()
         referenced_views: List[View] = []
-        view_json: Dict[str, JsonType] = _replace_view_with_id(view_dict, view_ids, referenced_views)
-        models[view_id] = view_json
+        return_dict['models'][view_id] = _replace_view_with_id(view_dict, referenced_views)
         to_add += referenced_views
-    assert obj_view_id is not None
-    return json.dumps({
-        'rootId': obj_view_id,
-        'models': models,
-    })
+    return json.dumps(return_dict)
