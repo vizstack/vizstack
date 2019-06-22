@@ -1,8 +1,8 @@
 import json
 from typing import Any, Optional, List, MutableSet, Dict, Union, overload
 
-from vizstack.core.types import ViewId, JsonType, View, ViewPlaceholder, ViewDict
-from vizstack.core.view import get_view
+from vizstack.types import ViewId, JsonType, View, ViewPlaceholder, ViewDict
+from vizstack.view import get_view
 
 
 __all__ = ['assemble']
