@@ -2,14 +2,16 @@
 This file defines all functions and objects which can be used by developers to create visualizations for their objects.
 """
 
-import typing
-from typing import Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
-import os
-from collections import defaultdict
-
-from vizstack.core._types import View, JsonType, ViewPlaceholder
-import types
 import inspect
+import os
+import types
+import typing
+from collections import defaultdict
+from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
+
+from vizstack.core.types import View, ViewPlaceholder, ViewDict
+
+__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout']
 
 # ======================================================================================================================
 # View function tools.
@@ -23,7 +25,7 @@ VIZ_FN = '__view__'
 _CURRENT_PLACEHOLDERS = dict()
 
 
-def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
+def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
     """Gets the View associated with ``o``.
 
     If ``o`` is already a View, it is returned unchanged. If ``o`` has an ``xn()`` method, its value is returned.
@@ -98,10 +100,10 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
                 summary='Kwargs',
                 expansion_mode='compact'),
         ],
-                             start_motif='Function[{}] ('.format(o.__name__),
-                             end_motif=')',
-                             orientation='vertical',
-                             summary='Function[{}]'.format(o.__name__))
+            start_motif='Function[{}] ('.format(o.__name__),
+            end_motif=')',
+            orientation='vertical',
+            summary='Function[{}]'.format(o.__name__))
         should_replace = True
     elif inspect.ismodule(o):
         attributes = dict()
@@ -167,9 +169,9 @@ def _get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             try:
                 if not isinstance(
                         value,
-                    (types.FunctionType, types.MethodType, type(all.__call__)
-                     )) and (attr not in instance_class_attrs
-                             or getattr(instance_class, attr, None) != value):
+                        (types.FunctionType, types.MethodType, type(all.__call__)
+                         )) and (attr not in instance_class_attrs
+                                 or getattr(instance_class, attr, None) != value):
                     contents[attr] = value
             except Exception:
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
@@ -217,8 +219,8 @@ class Text(View):
         self._color: str = color
         self._variant: str = variant
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return {
+    def assemble_dict(self) -> ViewDict:
+        return ViewDict({
             'type': 'TextPrimitive',
             'contents': {
                 'text': self._text,
@@ -226,7 +228,7 @@ class Text(View):
                 'variant': self._variant,
             },
             'meta': self._meta,
-        }
+        })
 
 
 class Image(View):
@@ -242,14 +244,14 @@ class Image(View):
         super(Image, self).__init__()
         self._file_path: str = os.path.abspath(file_path)
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return {
+    def assemble_dict(self) -> ViewDict:
+        return ViewDict({
             'type': 'ImagePrimitive',
             'contents': {
                 'filePath': self._file_path,
             },
             'meta': self._meta,
-        }
+        })
 
 
 class Token(Text):
@@ -276,20 +278,20 @@ class Flow(View):
             items: A sequence of objects which should be visualized.
         """
         super(Flow, self).__init__()
-        self._elements: List[View] = [_get_view(o) for o in items]
+        self._elements: List[View] = [get_view(o) for o in items]
 
     def item(self, item: Any):
-        self._elements.append(_get_view(item))
+        self._elements.append(get_view(item))
         return self
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
-        return {
+    def assemble_dict(self) -> ViewDict:
+        return ViewDict({
             'type': 'FlowLayout',
             'contents': {
                 'elements': self._elements,
             },
             'meta': self._meta,
-        }
+        })
 
 
 _DEFAULT_ITEM = object()
@@ -309,11 +311,12 @@ class DagLayout(View):
         self._alignments: List[List[str]] = []
 
     def node(self, node_id: str,
-             flow_direction: Optional[str]=None, align_children: Optional[bool]=None,
-                 is_expanded: Optional[bool]=None, is_interactive: Optional[bool]=None,
-                 is_visible: Optional[bool]=None, parent=_DEFAULT_PARENT,
-             align_with: Optional[List[str]]=None,
-             item: Any=_DEFAULT_ITEM, ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]]=None):
+             flow_direction: Optional[str] = None, align_children: Optional[bool] = None,
+             is_expanded: Optional[bool] = None, is_interactive: Optional[bool] = None,
+             is_visible: Optional[bool] = None, parent=_DEFAULT_PARENT,
+             align_with: Optional[List[str]] = None,
+             item: Any = _DEFAULT_ITEM,
+             ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]] = None):
         for key, var in {
             'flowDirection': flow_direction,
             'alignChildren': align_children,
@@ -338,7 +341,7 @@ class DagLayout(View):
                 self.port(*port)
         return self
 
-    def port(self, node_id: str, port_name: str, side: str, order: Optional[int]=None):
+    def port(self, node_id: str, port_name: str, side: str, order: Optional[int] = None):
         if 'ports' not in self._nodes[node_id]:
             self._nodes[node_id]['ports'] = {}
         self._nodes[node_id]['ports'][port_name] = {
@@ -350,7 +353,7 @@ class DagLayout(View):
 
     # TODO: remove id and name everywhere
     def edge(self, start_node_id: str, end_node_id: str,
-             start_port: Optional[str]=None, end_port: Optional[str]=None):
+             start_port: Optional[str] = None, end_port: Optional[str] = None):
         edge = {
             'startId': start_node_id,
             'endId': end_node_id,
@@ -363,43 +366,50 @@ class DagLayout(View):
         return self
 
     def item(self, item: Any, node_id: str):
-        self._items[node_id] = _get_view(item)
+        self._items[node_id] = get_view(item)
         return self
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+    def assemble_dict(self) -> ViewDict:
         for node_id in self._nodes:
             # All nodes must have an item
             assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
             # All node parents must exist
-            assert self._nodes[node_id]['parent'] is None or self._nodes[node_id]['parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(self._nodes[node_id]['parent'], node_id)
+            assert self._nodes[node_id]['parent'] is None or self._nodes[node_id][
+                'parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(
+                self._nodes[node_id]['parent'], node_id)
         for edge in self._edges:
             # All edges must connect real nodes
             assert edge['startId'] in self._nodes, 'An edge starts at non-existent node "{}".'.format(edge['startId'])
             assert edge['endId'] in self._nodes, 'An edge ends at non-existent node "{}".'.format(edge['endId'])
             # All edge ports must exist
             if 'startPort' in edge:
-                assert edge['startPort'] in self._nodes[edge['startId']]['ports'], 'An edge starts at non-existent port "{}" on node "{}".'.format(edge['startPort'], edge['startId'])
+                assert edge['startPort'] in self._nodes[edge['startId']][
+                    'ports'], 'An edge starts at non-existent port "{}" on node "{}".'.format(edge['startPort'],
+                                                                                              edge['startId'])
             if 'endPort' in edge:
-                assert edge['endPort'] in self._nodes[edge['endId']]['ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(edge['endPort'], edge['endId'])
-        return {
+                assert edge['endPort'] in self._nodes[edge['endId']][
+                    'ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(edge['endPort'],
+                                                                                            edge['endId'])
+        return ViewDict({
             'type': 'DagLayout',
             'contents': {
                 'nodes':
-                {node_id: {**{key: value for key, value in node.items() if value is not None and key is not 'parent'},
-                           'viewId': self._items[node_id],
-                           'children': [_node_id for _node_id in self._nodes if self._nodes[_node_id]['parent'] == node_id]}
-                 for node_id, node in self._nodes.items()},
+                    {node_id: {
+                    **{key: value for key, value in node.items() if value is not None and key is not 'parent'},
+                    'viewId': self._items[node_id],
+                    'children': [_node_id for _node_id in self._nodes if self._nodes[_node_id]['parent'] == node_id]}
+                     for node_id, node in self._nodes.items()},
                 'edges':
-                {str(i): edge
-                 for i, edge in enumerate(self._edges)},
+                    {str(i): edge
+                     for i, edge in enumerate(self._edges)},
                 'alignments': self._alignments,
                 'flowDirection':
-                self._flow_direction,
+                    self._flow_direction,
                 'alignChildren':
-                self._align_children,
+                    self._align_children,
             },
             'meta': self._meta,
-        }
+        })
 
 
 # TODO: ensure no overlap of elements
@@ -408,7 +418,7 @@ class Grid(View):
    A View which renders other Vizzes in a flexibly-sized grid.
    """
 
-    def __init__(self, cells: Optional[str]=None, items: Optional[Dict[str, Any]]=None) -> None:
+    def __init__(self, cells: Optional[str] = None, items: Optional[Dict[str, Any]] = None) -> None:
         """
         Args:
             elements: The contents of the grid as a list of tuples. Each tuple is of the form
@@ -450,7 +460,7 @@ class Grid(View):
                 }
         # TODO: assert non-overlapping
         if items is not None:
-            self._items = {key: _get_view(value) for key, value in items.items()}
+            self._items = {key: get_view(value) for key, value in items.items()}
         else:
             self._items = dict()
 
@@ -465,19 +475,19 @@ class Grid(View):
         return self
 
     def item(self, item: Any, cell_name: str):
-        self._items[cell_name] = _get_view(item)
+        self._items[cell_name] = get_view(item)
         return self
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+    def assemble_dict(self) -> ViewDict:
         for cell_name in self._cells:
             assert cell_name in self._items, 'No item was provided for cell "{}".'.format(cell_name)
-        return {
+        return ViewDict({
             'type': 'GridLayout',
             'contents': {
                 'elements': [{**cell, 'viewId': self._items[cell_name]} for cell_name, cell in self._cells.items()],
             },
             'meta': self._meta,
-        }
+        })
 
 
 class Switch(View):
@@ -485,8 +495,8 @@ class Switch(View):
     """
 
     def __init__(self,
-                 modes: Optional[List[str]]=None,
-                 items: Optional[Dict[str, Any]]=None) -> None:
+                 modes: Optional[List[str]] = None,
+                 items: Optional[Dict[str, Any]] = None) -> None:
         """
         """
         super(Switch, self).__init__()
@@ -495,11 +505,11 @@ class Switch(View):
         else:
             self._modes = []
         if items is not None:
-            self._items = {key: _get_view(value) for key, value in items.items()}
+            self._items = {key: get_view(value) for key, value in items.items()}
         else:
             self._items = dict()
 
-    def mode(self, mode_name: str, index: Optional[int]=None):
+    def mode(self, mode_name: str, index: Optional[int] = None):
         if index is not None:
             self._modes.insert(index, mode_name)
         else:
@@ -510,16 +520,16 @@ class Switch(View):
         self._items[mode_name] = item
         return self
 
-    def assemble_dict(self) -> Dict[str, Union['View', JsonType]]:
+    def assemble_dict(self) -> ViewDict:
         for mode_name in self._modes:
             assert mode_name in self._items, 'No item was provided for mode "{}".'.format(mode_name)
-        return {
+        return ViewDict({
             'type': 'SwitchLayout',
             'contents': {
                 'elements': [self._items[mode_name] for mode_name in self._modes],
             },
             'meta': self._meta,
-        }
+        })
 
 
 class Sequence(View):
@@ -541,10 +551,10 @@ class Sequence(View):
         self._orientation = orientation
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
-        self._elements = [_get_view(o) for o in elements] if elements is not None else []
+        self._elements = [get_view(o) for o in elements] if elements is not None else []
 
     def item(self, item: Any):
-        self._elements.append(_get_view(item))
+        self._elements.append(get_view(item))
         return self
 
     def assemble_dict(self):
@@ -587,10 +597,11 @@ class KeyValues(View):
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
         self._item_separator = item_separator
-        self._elements = [] if key_value_mapping is None else [(_get_view(key), _get_view(value)) for key, value in key_value_mapping.items()]
+        self._elements = [] if key_value_mapping is None else [(get_view(key), get_view(value)) for key, value in
+                                                               key_value_mapping.items()]
 
     def item(self, key: Any, value: Any):
-        self._elements.append((_get_view(key), _get_view(value)))
+        self._elements.append((get_view(key), get_view(value)))
         return self
 
     def assemble_dict(self):
@@ -619,11 +630,11 @@ _COMPACT_LEN = 3
 
 def _SwitchSequence(
         elements: Optional[typing.Sequence[Any]] = None,
-         start_motif: Optional[str] = None,
-         end_motif: Optional[str] = None,
-         orientation: str = 'horizontal',
-         summary: Optional[str] = None,
-         expansion_mode: Optional[str] = None):
+        start_motif: Optional[str] = None,
+        end_motif: Optional[str] = None,
+        orientation: str = 'horizontal',
+        summary: Optional[str] = None,
+        expansion_mode: Optional[str] = None):
     full_view = Sequence(elements, start_motif, end_motif, orientation)
     compact_view = Sequence(elements[:_COMPACT_LEN], start_motif, end_motif, orientation)
     compact_view.item('...')
@@ -639,11 +650,11 @@ def _SwitchSequence(
 
 def _SwitchKeyValues(
         key_value_mapping: Dict[Any, Any],
-         item_separator: str = ':',
-         start_motif: Optional[str] = None,
-         end_motif: Optional[str] = None,
-         summary: Optional[str] = None,
-         expansion_mode: Optional[str] = None):
+        item_separator: str = ':',
+        start_motif: Optional[str] = None,
+        end_motif: Optional[str] = None,
+        summary: Optional[str] = None,
+        expansion_mode: Optional[str] = None):
     full_view = KeyValues(key_value_mapping, item_separator, start_motif, end_motif)
     compact = dict()
     for i, (key, value) in enumerate(key_value_mapping.items()):
