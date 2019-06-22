@@ -53,7 +53,7 @@ def _replace_view_with_id(o, referenced_views: List[View]) -> JsonType:
         referenced_views.append(o)
         return o.id
     elif isinstance(o, ViewPlaceholder):
-        return _replace_view_with_id(o.view, referenced_views)
+        return o.id
     else:
         return o
 

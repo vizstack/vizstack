@@ -4,7 +4,8 @@ import uuid
 ViewId = NewType('ViewId', str)
 JsonType = Union[str, float, int, bool, None, List['JsonType'], Dict[str, 'JsonType']]
 
-_ViewOrJsonType = Union['View', str, float, int, bool, None, List['_ViewOrJsonType'], Dict[str, '_ViewOrJsonType']]
+_ViewOrJsonType = Union['View', 'ViewPlaceholder', str, float, int, bool, None,
+                        List['_ViewOrJsonType'], Dict[str, '_ViewOrJsonType']]
 ViewDict = NewType('ViewDict', Dict[str, _ViewOrJsonType])
 
 
@@ -22,4 +23,4 @@ class View:
 
 class ViewPlaceholder:
     def __init__(self):
-        self.view = None
+        self.id = None

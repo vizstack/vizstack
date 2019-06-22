@@ -22,13 +22,41 @@ __all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 
 # The name of the method on an object which should return a `View` depicting that object.
 VIZ_FN = '__view__'
 
+# A naive implementation of `get_view()` loops infinitely when an object references itself, e.g.,
+# ```
+#   a = {}
+#   a['key'] = a
+#   v = get_view(a)
+#   assemble(v)
+# ```
+# `get_view(a)` would start to create the `View` for `a`. While doing so, it would need to create the `View` for each
+# element in `a`, one of which is `a`; this calls `get_view(a)` again, and the loop progresses infinitely.
+#
+# We address this issue with _placeholders_. Intuitively, when we call `get_view(a)` during another call to
+# `get_view(a)`, instead of trying to build the `View` for `a` again, we want to leave a placeholder that says "once
+# you've finished building the `View` for `a`, put it here."
+#
+# At the start of the first call to `get_view(a)`, we create a `ViewPlaceholder` instance and set
+# `_CURRENT_PLACEHOLDERS[id(a)] = ViewPlaceholder()`. The placeholder is an empty object at this point. The process
+# then continues as in the naive implementation, and eventually `get_view(a)` is called for the second time. When
+# this happens, `id(a)` will already by in `_CURRENT_PLACEHOLDERS`, so instead of trying to generate a `View` for
+# `a`, we immediately return `_CURRENT_PLACEHOLDERS[id(a)]`. This breaks the infinite loop, and the first call to
+# `get_view(a)` is able to finish creating the `View` object for `a`. Before the function returns, the `id` field
+# on `_CURRENT_PLACEHOLDERS[id(a)]` is set to the id of the new `View` object, and is then removed from
+# `_CURRENT_PLACEHOLDERS`. By the end of any top-level call to `get_view()`, `_CURRENT_PLACEHOLDERS` will be empty.
+#
+# During `assemble(v)`, when each `View` in the `ViewDict` of `v` is being replaced with its `ViewId`, the assembler
+# will encounter the `ViewPlaceholder`. It will replace this entry in the `ViewDict` with the `ViewId` of the
+# placeholder's `view` field; in this example, it will replace it with the `ViewId` of `v`. This produces a correct
+# model for `a`.
+
 _CURRENT_PLACEHOLDERS = dict()
 
 
 def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
     """Gets the View associated with ``o``.
 
-    If ``o`` is already a View, it is returned unchanged. If ``o`` has an ``xn()`` method, its value is returned.
+    If ``o`` is already a View, it is returned unchanged. If ``o`` has a ``__view__()`` method, its value is returned.
     Otherwise, a default visualization for ``o``, depending on its type, is returned.
 
     Args:
@@ -185,9 +213,9 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             summary='Instance[{}]'.format(type(o).__name__))
         should_replace = True
     if should_replace:
-        _CURRENT_PLACEHOLDERS[id(o)].view = Switch(view._modes[-1:] + view._modes[:-1], view._items)
+        _CURRENT_PLACEHOLDERS[id(o)].id = Switch(view._modes[-1:] + view._modes[:-1], view._items).id
     else:
-        _CURRENT_PLACEHOLDERS[id(o)].view = view
+        _CURRENT_PLACEHOLDERS[id(o)].id = view.id
     del _CURRENT_PLACEHOLDERS[id(o)]
     return view
 
