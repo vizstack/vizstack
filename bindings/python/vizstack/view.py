@@ -9,7 +9,7 @@ import typing
 from collections import defaultdict
 from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
 
-from vizstack.core.types import View, ViewPlaceholder, ViewDict
+from vizstack.types import View, ViewPlaceholder, ViewDict
 
 __all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout']
 
