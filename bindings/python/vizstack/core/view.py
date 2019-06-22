@@ -7,7 +7,7 @@ from typing import Any, Mapping, Iterable, Optional, List, Tuple, Union, Dict
 import os
 from collections import defaultdict
 
-from vizstack._types import View, JsonType, ViewPlaceholder
+from vizstack.core._types import View, JsonType, ViewPlaceholder
 import types
 import inspect
 

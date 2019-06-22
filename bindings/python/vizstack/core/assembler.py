@@ -1,7 +1,7 @@
 from typing import Any, Optional, List, MutableSet, Dict, Union, Tuple, overload
 import json
-from vizstack.view import _get_view
-from vizstack._types import ViewId, JsonType, View, ViewPlaceholder
+from vizstack.core.view import _get_view
+from vizstack.core._types import ViewId, JsonType, View, ViewPlaceholder
 import uuid
 
 
