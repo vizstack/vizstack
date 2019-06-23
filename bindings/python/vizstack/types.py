@@ -1,26 +1,21 @@
-from typing import NewType, Union, Dict, List
-import uuid
+from typing import NewType, Union, Dict, List, Tuple
+import cuid
 
-ViewId = NewType('ViewId', str)
 JsonType = Union[str, float, int, bool, None, List['JsonType'], Dict[str, 'JsonType']]
-
-_ViewOrJsonType = Union['View', 'ViewPlaceholder', str, float, int, bool, None,
-                        List['_ViewOrJsonType'], Dict[str, '_ViewOrJsonType']]
-ViewDict = NewType('ViewDict', Dict[str, _ViewOrJsonType])
 
 
 class View:
     def __init__(self):
-        self.id = '@id:{}'.format(str(uuid.uuid4()))
+        self.id = '@id:{}'.format(cuid.cuid())
         self._meta: Dict[str, JsonType] = {}
 
-    def assemble_dict(self) -> ViewDict:
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List['View']]:
         raise NotImplementedError
 
     def meta(self, key: str, value: JsonType) -> None:
         self._meta[key] = value
 
-
-class ViewPlaceholder:
-    def __init__(self):
-        self.id = None
+    def __mutate__(self, view: 'View'):
+        self.id = view.id
+        self._meta = view._meta
+        self.assemble_dict = view.assemble_dict

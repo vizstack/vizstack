@@ -9,18 +9,15 @@ import typing
 from collections import defaultdict
 from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
 
-from vizstack.types import View, ViewPlaceholder, ViewDict
+from vizstack.types import View, JsonType
 
-__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout']
+__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout', 'get_view']
 
 # ======================================================================================================================
 # View function tools.
 # -------------------
 # Functions and classes which might be used by a developer writing a new viz function for their object.
 # ======================================================================================================================
-
-# The name of the method on an object which should return a `View` depicting that object.
-VIZ_FN = '__view__'
 
 # A naive implementation of `get_view()` loops infinitely when an object references itself, e.g.,
 # ```
@@ -36,24 +33,20 @@ VIZ_FN = '__view__'
 # `get_view(a)`, instead of trying to build the `View` for `a` again, we want to leave a placeholder that says "once
 # you've finished building the `View` for `a`, put it here."
 #
-# At the start of the first call to `get_view(a)`, we create a `ViewPlaceholder` instance and set
-# `_CURRENT_PLACEHOLDERS[id(a)] = ViewPlaceholder()`. The placeholder is an empty object at this point. The process
+# At the start of the first call to `get_view(a)`, we create an empty generic `View` instance and set
+# `_CURRENT_PLACEHOLDERS[id(a)] = View()`. The placeholder is an empty object at this point. The process
 # then continues as in the naive implementation, and eventually `get_view(a)` is called for the second time. When
-# this happens, `id(a)` will already by in `_CURRENT_PLACEHOLDERS`, so instead of trying to generate a `View` for
-# `a`, we immediately return `_CURRENT_PLACEHOLDERS[id(a)]`. This breaks the infinite loop, and the first call to
-# `get_view(a)` is able to finish creating the `View` object for `a`. Before the function returns, the `id` field
-# on `_CURRENT_PLACEHOLDERS[id(a)]` is set to the id of the new `View` object, and is then removed from
-# `_CURRENT_PLACEHOLDERS`. By the end of any top-level call to `get_view()`, `_CURRENT_PLACEHOLDERS` will be empty.
-#
-# During `assemble(v)`, when each `View` in the `ViewDict` of `v` is being replaced with its `ViewId`, the assembler
-# will encounter the `ViewPlaceholder`. It will replace this entry in the `ViewDict` with the `ViewId` of the
-# placeholder's `view` field; in this example, it will replace it with the `ViewId` of `v`. This produces a correct
-# model for `a`.
+# this happens, `id(a)` will already by in `_CURRENT_PLACEHOLDERS`, so instead of trying to generate a new `View` for
+# `a` again, we immediately return `_CURRENT_PLACEHOLDERS[id(a)]`. This breaks the infinite loop, and the first call to
+# `get_view(a)` is able to finish creating the `View` object for `a`. Before the function returns, the generic `View`
+# at `_CURRENT_PLACEHOLDERS[id(a)]` will be mutated to be identical to the `View` that was generated for `a`,
+# and is then removed from `_CURRENT_PLACEHOLDERS`. By the end of any top-level call to `get_view()`,
+# `_CURRENT_PLACEHOLDERS` will be empty.
 
 _CURRENT_PLACEHOLDERS = dict()
 
 
-def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
+def get_view(o: Any) -> Union['View']:
     """Gets the View associated with ``o``.
 
     If ``o`` is already a View, it is returned unchanged. If ``o`` has a ``__view__()`` method, its value is returned.
@@ -68,12 +61,14 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
     global _CURRENT_PLACEHOLDERS
     if id(o) in _CURRENT_PLACEHOLDERS:
         return _CURRENT_PLACEHOLDERS[id(o)]
-    _CURRENT_PLACEHOLDERS[id(o)] = ViewPlaceholder()
-    should_replace = False
-    if isinstance(o, (View, ViewPlaceholder)):
+    _CURRENT_PLACEHOLDERS[id(o)] = View()
+
+    is_switch = False
+
+    if isinstance(o, View):
         view = o
-    elif hasattr(o, VIZ_FN):
-        view = getattr(o, VIZ_FN)()
+    elif hasattr(o, '__view__'):
+        view = getattr(o, '__view__')()
     elif isinstance(o, (str, int, float, bool)) or o is None:
         view = Token(o if not isinstance(o, str) else '"{}"'.format(o))
     # TODO: come up with a better method for dispatching default vizzes, like stubs
@@ -83,37 +78,36 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='List[{}] ['.format(len(o)),
             end_motif=']',
             summary='List[{}]'.format(len(o)))
-        should_replace = True
+        is_switch = True
     elif isinstance(o, set):
         view = _SwitchSequence(
-            o,
+            list(o),
             start_motif='Set[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Set[{}]'.format(len(o)))
-        should_replace = True
+        is_switch = True
     elif isinstance(o, tuple):
         view = _SwitchSequence(
-            o,
+            list(o),
             start_motif='Tuple[{}] ('.format(len(o)),
             end_motif=')',
             summary='Tuple[{}]'.format(len(o)))
-        should_replace = True
+        is_switch = True
     elif isinstance(o, dict):
         view = _SwitchKeyValues(
             o,
             start_motif='Dict[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Dict[{}]'.format(len(o)))
-        should_replace = True
+        is_switch = True
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
-        args = []
-        kwargs = dict()
-        for param_name, param in inspect.signature(o).parameters.items():
-            if param.default is inspect._empty:
-                args.append(param_name)
-            else:
-                kwargs[param_name] = param.default
+        parameters = inspect.signature(o).parameters.items()
+        args = [param_name for param_name, param in parameters if param.default is inspect._empty]
+        kwargs = {
+            param_name: param.default for param_name, param in parameters if param.default is not inspect._empty
+        }
+
         view = _SwitchSequence([
             _SwitchSequence(
                 args,
@@ -132,7 +126,7 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             end_motif=')',
             orientation='vertical',
             summary='Function[{}]'.format(o.__name__))
-        should_replace = True
+        is_switch = True
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -151,7 +145,7 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='Module[{}] {{'.format(o.__name__),
             end_motif='}',
             summary='Module[{}]'.format(o.__name__))
-        should_replace = True
+        is_switch = True
     elif inspect.isclass(o):
         functions = dict()
         staticfields = dict()
@@ -187,7 +181,7 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             end_motif=')',
             summary='Class[{}]'.format(o.__name__),
             orientation='vertical')
-        should_replace = True
+        is_switch = True
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -211,11 +205,11 @@ def get_view(o: Any) -> Union['View', 'ViewPlaceholder']:
             start_motif='Instance[{}] {{'.format(type(o).__name__),
             end_motif='}',
             summary='Instance[{}]'.format(type(o).__name__))
-        should_replace = True
-    if should_replace:
-        _CURRENT_PLACEHOLDERS[id(o)].id = Switch(view._modes[-1:] + view._modes[:-1], view._items).id
+        is_switch = True
+    if is_switch:
+        _CURRENT_PLACEHOLDERS[id(o)].__mutate__(Switch(view._modes[-1:] + view._modes[:-1], view._items))
     else:
-        _CURRENT_PLACEHOLDERS[id(o)].id = view.id
+        _CURRENT_PLACEHOLDERS[id(o)].__mutate__(view)
     del _CURRENT_PLACEHOLDERS[id(o)]
     return view
 
@@ -247,8 +241,8 @@ class Text(View):
         self._color: str = color
         self._variant: str = variant
 
-    def assemble_dict(self) -> ViewDict:
-        return ViewDict({
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+        return {
             'type': 'TextPrimitive',
             'contents': {
                 'text': self._text,
@@ -256,7 +250,7 @@ class Text(View):
                 'variant': self._variant,
             },
             'meta': self._meta,
-        })
+        }, []
 
 
 class Image(View):
@@ -272,14 +266,14 @@ class Image(View):
         super(Image, self).__init__()
         self._file_path: str = os.path.abspath(file_path)
 
-    def assemble_dict(self) -> ViewDict:
-        return ViewDict({
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+        return {
             'type': 'ImagePrimitive',
             'contents': {
                 'filePath': self._file_path,
             },
             'meta': self._meta,
-        })
+        }, []
 
 
 class Token(Text):
@@ -312,14 +306,14 @@ class Flow(View):
         self._elements.append(get_view(item))
         return self
 
-    def assemble_dict(self) -> ViewDict:
-        return ViewDict({
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+        return {
             'type': 'FlowLayout',
             'contents': {
-                'elements': self._elements,
+                'elements': [view.id for view in self._elements],
             },
             'meta': self._meta,
-        })
+        }, self._elements
 
 
 _DEFAULT_ITEM = object()
@@ -397,7 +391,7 @@ class DagLayout(View):
         self._items[node_id] = get_view(item)
         return self
 
-    def assemble_dict(self) -> ViewDict:
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for node_id in self._nodes:
             # All nodes must have an item
             assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
@@ -418,13 +412,13 @@ class DagLayout(View):
                 assert edge['endPort'] in self._nodes[edge['endId']][
                     'ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(edge['endPort'],
                                                                                             edge['endId'])
-        return ViewDict({
+        return {
             'type': 'DagLayout',
             'contents': {
                 'nodes':
                     {node_id: {
                     **{key: value for key, value in node.items() if value is not None and key is not 'parent'},
-                    'viewId': self._items[node_id],
+                    'viewId': self._items[node_id].id,
                     'children': [_node_id for _node_id in self._nodes if self._nodes[_node_id]['parent'] == node_id]}
                      for node_id, node in self._nodes.items()},
                 'edges':
@@ -437,7 +431,7 @@ class DagLayout(View):
                     self._align_children,
             },
             'meta': self._meta,
-        })
+        }, list(self._items.values())
 
 
 # TODO: ensure no overlap of elements
@@ -506,16 +500,16 @@ class Grid(View):
         self._items[cell_name] = get_view(item)
         return self
 
-    def assemble_dict(self) -> ViewDict:
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for cell_name in self._cells:
             assert cell_name in self._items, 'No item was provided for cell "{}".'.format(cell_name)
-        return ViewDict({
+        return {
             'type': 'GridLayout',
             'contents': {
-                'elements': [{**cell, 'viewId': self._items[cell_name]} for cell_name, cell in self._cells.items()],
+                'elements': [{**cell, 'viewId': self._items[cell_name].id} for cell_name, cell in self._cells.items()],
             },
             'meta': self._meta,
-        })
+        }, list(self._items.values())
 
 
 class Switch(View):
@@ -548,16 +542,16 @@ class Switch(View):
         self._items[mode_name] = item
         return self
 
-    def assemble_dict(self) -> ViewDict:
+    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for mode_name in self._modes:
             assert mode_name in self._items, 'No item was provided for mode "{}".'.format(mode_name)
-        return ViewDict({
+        return {
             'type': 'SwitchLayout',
             'contents': {
-                'elements': [self._items[mode_name] for mode_name in self._modes],
+                'elements': [self._items[mode_name].id for mode_name in self._modes],
             },
             'meta': self._meta,
-        })
+        }, list(self._items.values())
 
 
 class Sequence(View):
@@ -657,7 +651,7 @@ _COMPACT_LEN = 3
 
 
 def _SwitchSequence(
-        elements: Optional[typing.Sequence[Any]] = None,
+        elements: Optional[List[Any]] = None,
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         orientation: str = 'horizontal',
