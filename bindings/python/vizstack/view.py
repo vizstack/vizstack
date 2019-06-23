@@ -5,7 +5,6 @@ This file defines all functions and objects which can be used by developers to c
 import inspect
 import os
 import types
-import typing
 from collections import defaultdict
 from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
 
@@ -114,13 +113,13 @@ def get_view(o: Any) -> Union['View']:
                 start_motif='Positional Args [',
                 end_motif=']',
                 summary='Args',
-                expansion_mode='compact'),
+                initial_expansion_mode='compact'),
             _SwitchKeyValues(
                 kwargs,
                 start_motif='Keyword Args {',
                 end_motif='}',
                 summary='Kwargs',
-                expansion_mode='compact'),
+                initial_expansion_mode='compact'),
         ],
             start_motif='Function[{}] ('.format(o.__name__),
             end_motif=')',
@@ -166,7 +165,7 @@ def get_view(o: Any) -> Union['View']:
                     start_motif='Functions {',
                     end_motif='}',
                     summary='Functions',
-                    expansion_mode='compact'))
+                    initial_expansion_mode='compact'))
         if len(staticfields) > 0:
             contents.append(
                 _SwitchKeyValues(
@@ -174,7 +173,7 @@ def get_view(o: Any) -> Union['View']:
                     start_motif='Fields {',
                     end_motif='}',
                     summary='Fields',
-                    expansion_mode='compact'))
+                    initial_expansion_mode='compact'))
         view = _SwitchSequence(
             contents,
             start_motif='Class[{}] ('.format(o.__name__),
@@ -217,7 +216,12 @@ def get_view(o: Any) -> Union['View']:
 # ======================================================================================================================
 # View classes.
 # -----------------
-# These objects subclass View and will be instantiated directly by developers writing visualizations for their objects.
+# These objects subclass `View` and will be instantiated directly by developers writing visualizations for their
+# objects.
+#
+# Subtle stuff:
+#  - Every "slot" (e.g., a `Switch` mode or a `DagLayout` cell) must have an item attached to it, but not every item
+#    needs an existing mode; such items will not be included in the assembled `View`.
 # ======================================================================================================================
 
 
@@ -233,7 +237,7 @@ class Text(View):
         """
         Args:
             text: The text which should be rendered.
-            color: The color of the text.
+            color: The color of the text; one of ('default' | 'primary' | 'secondary' | 'error' | 'invisible')
             variant: The variant of the text; one of either "plain" or "token".
         """
         super(Text, self).__init__()
@@ -241,7 +245,7 @@ class Text(View):
         self._color: str = color
         self._variant: str = variant
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         return {
             'type': 'TextPrimitive',
             'contents': {
@@ -266,7 +270,7 @@ class Image(View):
         super(Image, self).__init__()
         self._file_path: str = os.path.abspath(file_path)
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         return {
             'type': 'ImagePrimitive',
             'contents': {
@@ -291,7 +295,7 @@ class Token(Text):
 
 class Flow(View):
     """
-    A View which renders other Vizzes as a series of inline elements.
+    A View which renders other Views as a series of inline elements.
     """
 
     def __init__(self, items: Iterable[Any]) -> None:
@@ -303,10 +307,18 @@ class Flow(View):
         self._elements: List[View] = [get_view(o) for o in items]
 
     def item(self, item: Any):
+        """Add an item to the end of the flow.
+
+        Args:
+            item: The new item to be added.
+
+        Returns:
+            This `Flow` instance.
+        """
         self._elements.append(get_view(item))
         return self
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         return {
             'type': 'FlowLayout',
             'contents': {
@@ -316,7 +328,14 @@ class Flow(View):
         }, self._elements
 
 
+# When calling `DagLayout.node()`, the user can specify an optional `item` argument, which populates that node with
+# that item. We need a sentinel value to indicate that the user has not specified an `item` argument; we cannot use
+# `None`, since that is a possible item. Instead, we instantiate an object to be the default value of `item`.
 _DEFAULT_ITEM = object()
+# `DagLayout.node()` also takes a `parent` argument. Recall that `node()` can be called any number of times,
+# and will update only those parameters specified in each call. We need to distinguish between `parent=None`,
+# which indicates that the node should have no parent, and `parent=_DEFAULT_PARENT`, indicating that the user did not
+# specify a parent in this call to `node()`.
 _DEFAULT_PARENT = object()
 
 
@@ -324,6 +343,12 @@ class DagLayout(View):
     def __init__(self,
                  flow_direction: Optional[str] = None,
                  align_children: Optional[bool] = None) -> None:
+        """
+
+        Args:
+            flow_direction: The direction of the top-level flow; one of ('north' | 'south' | 'east' | 'west').
+            align_children: Whether the top-level nodes should be aligned on the flow axis.
+        """
         super(DagLayout, self).__init__()
         self._flow_direction = flow_direction
         self._align_children = align_children
@@ -373,7 +398,7 @@ class DagLayout(View):
             self._nodes[node_id]['ports'][port_name]['order'] = order
         return self
 
-    # TODO: remove id and name everywhere
+    # TODO: remove "id" and "name" everywhere
     def edge(self, start_node_id: str, end_node_id: str,
              start_port: Optional[str] = None, end_port: Optional[str] = None):
         edge = {
@@ -391,7 +416,7 @@ class DagLayout(View):
         self._items[node_id] = get_view(item)
         return self
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for node_id in self._nodes:
             # All nodes must have an item
             assert node_id in self._items, 'No item was provided for node "{}".'.format(node_id)
@@ -437,18 +462,18 @@ class DagLayout(View):
 # TODO: ensure no overlap of elements
 class Grid(View):
     """
-   A View which renders other Vizzes in a flexibly-sized grid.
+
    """
 
     def __init__(self, cells: Optional[str] = None, items: Optional[Dict[str, Any]] = None) -> None:
         """
+        
         Args:
-            elements: The contents of the grid as a list of tuples. Each tuple is of the form
-                ``(obj, col, row, width, height)``,
-                where ``obj`` is the object to be visualized, ``col`` is its horizontal position in the grid,
-                ``row`` is its vertical position, ``width`` is the number of columns it should span, and ``height``
-                is the number of rows it should span.
-        """
+            cells: A string like "ABB\nACC\nACC", which specifies initial cell sizes and positions. The given example 
+                creates a cell "A" at (0,0) with dimensions 1x3, cell "B" at (1,0) with dimensions 2x1, and a cell 
+                "C" at position (1,1) with dimensions 2x2.
+            items: An optional mapping of cell names to items.
+        """""
         super(Grid, self).__init__()
         self._cells = dict()
         if cells is not None:
@@ -500,7 +525,7 @@ class Grid(View):
         self._items[cell_name] = get_view(item)
         return self
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for cell_name in self._cells:
             assert cell_name in self._items, 'No item was provided for cell "{}".'.format(cell_name)
         return {
@@ -514,12 +539,18 @@ class Grid(View):
 
 class Switch(View):
     """
+
     """
 
     def __init__(self,
                  modes: Optional[List[str]] = None,
                  items: Optional[Dict[str, Any]] = None) -> None:
         """
+
+        Args:
+            modes: An optional list of mode names. The order of the names is the order through which they will be
+                cycled.
+            items: An optional mapping of mode names to items.
         """
         super(Switch, self).__init__()
         if modes is not None:
@@ -532,6 +563,15 @@ class Switch(View):
             self._items = dict()
 
     def mode(self, mode_name: str, index: Optional[int] = None):
+        """Adds a new mode to the list of modes.
+
+        Args:
+            mode_name: The name of the new mode.
+            index: An optional index at which to insert the new mode; if `None`, the mode is inserted at the end.
+
+        Returns:
+
+        """
         if index is not None:
             self._modes.insert(index, mode_name)
         else:
@@ -542,7 +582,7 @@ class Switch(View):
         self._items[mode_name] = item
         return self
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List[View]]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
         for mode_name in self._modes:
             assert mode_name in self._items, 'No item was provided for mode "{}".'.format(mode_name)
         return {
@@ -564,11 +604,7 @@ class Sequence(View):
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None,
                  orientation: str = 'horizontal') -> None:
-        """
-        Args:
-            elements: A sequence of objects which should be visualized.
-            orientation: How to arrange the elements of this View. Should be either "horizontal" or "vertical".
-        """
+        """"""
         super(Sequence, self).__init__()
         self._orientation = orientation
         self._start_motif = Text(start_motif) if start_motif is not None else None
@@ -579,7 +615,7 @@ class Sequence(View):
         self._elements.append(get_view(item))
         return self
 
-    def assemble_dict(self):
+    def assemble(self):
         grid = Grid()
         update_index = 0 if self._orientation == 'horizontal' else 1
         current_position = [0, 0]
@@ -594,12 +630,12 @@ class Sequence(View):
         if self._end_motif is not None:
             grid.cell('end_motif', *current_position, 1, 1)
             grid.item(self._end_motif, 'end_motif')
-        return grid.assemble_dict()
+        return grid.assemble()
 
 
 class KeyValues(View):
     """
-    A View which renders other Vizzes as key-value pairs.
+
     """
 
     def __init__(self,
@@ -607,14 +643,7 @@ class KeyValues(View):
                  item_separator: str = ':',
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None) -> None:
-        """Constructor.
-
-        Args:
-            key_value_mapping: A mapping of objects which should be visualized as key-value pairs
-            summary: An optional string which will be shown when the ``KeyValues`` is in its summary expansion
-                mode.
-            expansion_mode: An optional expansion mode which the ``KeyValues`` should adopt by default.
-        """
+        """"""
         super(KeyValues, self).__init__()
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
@@ -626,7 +655,7 @@ class KeyValues(View):
         self._elements.append((get_view(key), get_view(value)))
         return self
 
-    def assemble_dict(self):
+    def assemble(self):
         grid = Grid()
         current_row = 0
         if self._start_motif is not None:
@@ -644,7 +673,7 @@ class KeyValues(View):
         if self._end_motif is not None:
             grid.cell('end_motif', 0, current_row, 3, 1)
             grid.item(self._end_motif, 'end_motif')
-        return grid.assemble_dict()
+        return grid.assemble()
 
 
 _COMPACT_LEN = 3
@@ -656,17 +685,32 @@ def _SwitchSequence(
         end_motif: Optional[str] = None,
         orientation: str = 'horizontal',
         summary: Optional[str] = None,
-        expansion_mode: Optional[str] = None):
+        initial_expansion_mode: Optional[str] = None):
+    """Returns a `Switch` which cycles through full, compact, and summary modes of a `Sequence` with the given elements.
+
+    Args:
+        elements:
+        start_motif:
+        end_motif:
+        orientation:
+        summary:
+        initial_expansion_mode:
+
+    Returns:
+
+    """
     full_view = Sequence(elements, start_motif, end_motif, orientation)
     compact_view = Sequence(elements[:_COMPACT_LEN], start_motif, end_motif, orientation)
     compact_view.item('...')
     summary_view = summary if summary is not None else 'sequence[{}]'.format(len(elements))
+    # If the compact and full modes would be the same, exclude the compact mode
     if len(elements) <= _COMPACT_LEN:
-        modes = ['full', 'summary'] if expansion_mode != 'summary' else ['summary', 'full']
+        modes = ['full', 'summary'] if initial_expansion_mode != 'summary' else ['summary', 'full']
         return Switch(modes, {'full': full_view, 'summary': summary_view})
     modes = ['full', 'compact', 'summary']
-    if expansion_mode is not None:
-        modes = modes[:modes.index(expansion_mode)] + modes[modes.index(expansion_mode):]
+    # If an initial expansion mode is given, move it to the start of the list of modes
+    if initial_expansion_mode is not None:
+        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes.index(initial_expansion_mode):]
     return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})
 
 
@@ -676,7 +720,20 @@ def _SwitchKeyValues(
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         summary: Optional[str] = None,
-        expansion_mode: Optional[str] = None):
+        initial_expansion_mode: Optional[str] = None):
+    """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValues` with given items.
+
+    Args:
+        key_value_mapping:
+        item_separator:
+        start_motif:
+        end_motif:
+        summary:
+        initial_expansion_mode:
+
+    Returns:
+
+    """
     full_view = KeyValues(key_value_mapping, item_separator, start_motif, end_motif)
     compact = dict()
     for i, (key, value) in enumerate(key_value_mapping.items()):
@@ -685,10 +742,12 @@ def _SwitchKeyValues(
         compact[key] = value
     compact_view = KeyValues(compact, item_separator, start_motif, '...')
     summary_view = summary if summary is not None else 'dict[{}]'.format(len(key_value_mapping))
+    # If the compact and full modes would be the same, exclude the compact mode
     if len(key_value_mapping) <= _COMPACT_LEN:
-        modes = ['full', 'summary'] if expansion_mode != 'summary' else ['summary', 'full']
+        modes = ['full', 'summary'] if initial_expansion_mode != 'summary' else ['summary', 'full']
         return Switch(modes, {'full': full_view, 'summary': summary_view})
     modes = ['full', 'compact', 'summary']
-    if expansion_mode is not None:
-        modes = modes[:modes.index(expansion_mode)] + modes[modes.index(expansion_mode):]
+    # If an initial expansion mode is given, move it to the start of the list of modes
+    if initial_expansion_mode is not None:
+        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes.index(initial_expansion_mode):]
     return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})

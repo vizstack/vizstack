@@ -9,7 +9,7 @@ class View:
         self.id = '@id:{}'.format(cuid.cuid())
         self._meta: Dict[str, JsonType] = {}
 
-    def assemble_dict(self) -> Tuple[Dict[str, JsonType], List['View']]:
+    def assemble(self) -> Tuple[Dict[str, JsonType], List['View']]:
         raise NotImplementedError
 
     def meta(self, key: str, value: JsonType) -> None:
@@ -18,4 +18,4 @@ class View:
     def __mutate__(self, view: 'View'):
         self.id = view.id
         self._meta = view._meta
-        self.assemble_dict = view.assemble_dict
+        self.assemble = view.assemble

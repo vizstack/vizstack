@@ -31,6 +31,6 @@ def assemble(obj: Any) -> str:
         if view_id in added:
             continue
         added.add(view_id)
-        return_dict['models'][view_id], referenced_views = view_obj.assemble_dict()
+        return_dict['models'][view_id], referenced_views = view_obj.assemble()
         to_add += referenced_views
     return json.dumps(return_dict)
