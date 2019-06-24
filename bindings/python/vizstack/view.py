@@ -8,15 +8,10 @@ import types
 from collections import defaultdict
 from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
 
-from vizstack.types import View, JsonType
+import cuid
+from vizstack.types import JsonType
 
-__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout', 'get_view']
-
-# ======================================================================================================================
-# View function tools.
-# -------------------
-# Functions and classes which might be used by a developer writing a new viz function for their object.
-# ======================================================================================================================
+__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout', 'get_view', 'View']
 
 # A naive implementation of `get_view()` loops infinitely when an object references itself, e.g.,
 # ```
@@ -41,7 +36,6 @@ __all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 
 # at `_CURRENT_PLACEHOLDERS[id(a)]` will be mutated to be identical to the `View` that was generated for `a`,
 # and is then removed from `_CURRENT_PLACEHOLDERS`. By the end of any top-level call to `get_view()`,
 # `_CURRENT_PLACEHOLDERS` will be empty.
-
 _CURRENT_PLACEHOLDERS = dict()
 
 
@@ -223,6 +217,43 @@ def get_view(o: Any) -> Union['View']:
 #  - Every "slot" (e.g., a `Switch` mode or a `DagLayout` cell) must have an item attached to it, but not every item
 #    needs an existing mode; such items will not be included in the assembled `View`.
 # ======================================================================================================================
+
+class View:
+    def __init__(self):
+        self.id: str = '@id:{}'.format(cuid.cuid())
+        self._meta: Dict[str, JsonType] = {}
+
+    def assemble(self) -> Tuple[Dict[str, JsonType], List['View']]:
+        raise NotImplementedError
+
+    def meta(self, key: str, value: JsonType) -> None:
+        """Adds a new piece of metadata to this `View`'s metadata dict.
+
+        The metadata dict is sent alongside the `View`'s "type" and "contents", and can store arbitrary information
+        that applications might use.
+
+        Args:
+            key:
+            value:
+
+        Returns:
+
+        """
+        self._meta[key] = value
+
+    def __mutate__(self, view: 'View') -> None:
+        """Mutates this `View` into a copy of another `View`.
+
+        When creating the `View` for a given object, cyclic references -- for example, when d['key'] = d -- might be
+        encountered. When this happens, an `View` is used to denote the cyclic reference, then that `View` is mutated
+        into a copy of the object's "true" `View`. See `view.py` for more.
+
+        Args:
+            view: A `View` that this instance should become a functional copy of.
+        """
+        self.id = view.id
+        self._meta = view._meta
+        self.assemble = view.assemble
 
 
 class Text(View):
