@@ -28,7 +28,11 @@ function _replaceViewWithId(obj, viewIds, referencedViews) {
     }
 }
 
-export function assemble(obj: any): string {
+// TODO: typing here
+export function assemble(obj: any): {
+    rootId: string,
+    models: any,
+} {
     let objViewId: string | undefined;
     const models: { [string]: {} } = {};
     const viewIds: Map = new Map();
@@ -49,8 +53,8 @@ export function assemble(obj: any): string {
         models[viewId] = _replaceViewWithId(viewDict, viewIds, referencedViews);
         toAdd.push(...referencedViews);
     }
-    return JSON.stringify({
+    return {
         rootId: objViewId,
         models,
-    });
+    };
 }

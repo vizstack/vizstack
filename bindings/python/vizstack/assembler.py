@@ -8,14 +8,17 @@ from vizstack.view import get_view, View
 __all__ = ['assemble']
 
 
-def assemble(obj: Any) -> str:
+def assemble(obj: Any) -> Dict[str, Union[str, Dict[str, Dict[str, JsonType]]]]:
     """Returns a string which contains all of the information needed to render a visualization of `obj`.
 
     Args:
         obj: An object to be visualized.
 
     Returns:
-        A JSON-valid string which encodes the visualization for `obj`.
+        {
+            'models': Maps a View ID to its ViewModel.
+            'rootId': the View ID of the top-level View in 'models'.
+        }
     """
     return_dict: Dict[str, Union[Optional[str], Dict[str, JsonType]]] = {
         'rootId': None,
@@ -33,4 +36,4 @@ def assemble(obj: Any) -> str:
         added.add(view_id)
         return_dict['models'][view_id], referenced_views = view_obj.assemble()
         to_add += referenced_views
-    return json.dumps(return_dict)
+    return return_dict
