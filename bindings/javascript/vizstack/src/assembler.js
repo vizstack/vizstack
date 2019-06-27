@@ -4,7 +4,7 @@ import { View, ViewPlaceholder, _getView } from './view';
 
 function _getViewId(obj, viewIds) {
     if (!(obj in viewIds)) {
-        viewIds.set(obj, '@id:{}'.format(cuid()));
+        viewIds.set(obj, `@id:${cuid()}`);
     }
     return viewIds.get(obj);
 }

@@ -16,6 +16,8 @@ import type {
     DagLayoutModel,
 } from '../schema';
 
+import { View as ViewObject, assemble } from 'vizstack';
+
 // Primitives components
 import TextPrimitive from '../primitives/TextPrimitive';
 import ImagePrimitive from '../primitives/ImagePrimitive';
@@ -52,7 +54,7 @@ export type InteractionProps = {|
  */
 export type ViewerProps = {
     /** Specification of View's root model and sub-models. */
-    view: View,
+    view: View | ViewObject,
 
     /** Unique `ViewId` for the `ViewModel` to be rendered by this `Viewer` at the current
      *  level of nesting. If unspecified, the `view.rootId` is used. */
@@ -92,20 +94,24 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     }
 
     componentDidMount() {
-        this.props.register(this.viewerId, () => this.getHandle());
+        this.props.register(this.viewerId, () => this._getHandle());
     }
 
     componentWillUnmount() {
-        this.props.unregister(this.viewerId, () => this.getHandle());
+        this.props.unregister(this.viewerId, () => this._getHandle());
     }
 
-    getHandle(): ViewerHandle {
-        const { view, viewId, parent } = this.props;
+    _getModel() {
+        const { view, viewId } = this.props;
         const currId: ViewId = viewId || view.rootId;
-        const model: ViewModel = view.models[currId];
+        return view.models[currId];
+    }
+
+    _getHandle(): ViewerHandle {
+        const { parent } = this.props;
         return {
             id: this.viewerId,
-            model,
+            model: this._getModel(),
             parent,
             ...this.componentHandle,
         };
@@ -116,15 +122,14 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         const { view, viewId, emitEvent } = this.props;
 
         // Explicitly specified model for current viewer, or root-level model by default.
-        const currId: ViewId = viewId || view.rootId;
-        const model: ViewModel = view.models[currId];
+        const model: ViewModel = this._getModel();
         if (!model) {
-            console.error('Invalid ViewId within View: ', currId, view);
+            console.error('Invalid ViewId within View: ', viewId, view);
             return null;
         }
 
         const viewerToViewerProps: ViewerToViewerProps = {
-            parent: this.getHandle(),
+            parent: this._getHandle(),
             view,
         };
 
@@ -230,7 +235,19 @@ function consumeInteractions<Config>(
     ));
 }
 
+function assembleView(
+    Component
+) {
+    return React.forwardRef((props, ref) => (
+        <Component
+            {...props}
+            ref={ref}
+            view={props.view instanceof ViewObject ? assemble(props.view) : props.view}
+        />
+    ));
+}
+
 // https://github.com/facebook/react/issues/12397#issuecomment-375501574
-const InteractiveViewer = consumeInteractions<ViewerProps>(Viewer);
+const InteractiveViewer = consumeInteractions<ViewerProps>(assembleView(Viewer));
 
 export { InteractiveViewer as Viewer };
