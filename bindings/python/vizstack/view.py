@@ -562,7 +562,7 @@ class Grid(View):
         return {
             'type': 'GridLayout',
             'contents': {
-                'elements': [{**cell, 'viewId': self._items[cell_name].id} for cell_name, cell in self._cells.items()],
+                'cells': [{**cell, 'viewId': self._items[cell_name].id} for cell_name, cell in self._cells.items()],
             },
             'meta': self._meta,
         }, list(self._items.values())
@@ -619,7 +619,7 @@ class Switch(View):
         return {
             'type': 'SwitchLayout',
             'contents': {
-                'elements': [self._items[mode_name].id for mode_name in self._modes],
+                'modes': [self._items[mode_name].id for mode_name in self._modes],
             },
             'meta': self._meta,
         }, list(self._items.values())

@@ -1,526 +1,314 @@
 // @flow
-import * as React from 'react';
+import type {ViewModel} from '../schema';
+import type {ViewerDidMouseOverEvent, Event, ViewerDidMouseOutEvent, ViewerDidClickEvent } from './events';
+import type {TextPrimitiveHandle} from '../primitives/TextPrimitive';
+import * as React from "react";
+import type {ImagePrimitiveHandle} from "../primitives/ImagePrimitive";
+import type {SwitchLayoutHandle} from "../layouts/SwitchLayout";
+import type {GridLayoutHandle} from "../layouts/GridLayout";
+import type {FlowLayoutHandle} from "../layouts/FlowLayout";
 
-/** A function which returns `true` iff `viewer` satisfies a particular constraint function. */
-import type {
-    OnViewerMouseOverEvent,
-    OnViewerMouseOutEvent,
-    OnViewerClickEvent,
-    HighlightEvent,
-    EventMessage,
-    Event,
-    OnKeyDownEvent,
-    OnKeyUpEvent,
-} from './events';
+export type ViewerId = string;
 
-import type { SwitchChangeModeEvent } from '../layouts/SwitchLayout';
-import type { GridSelectCellEvent } from '../layouts/GridLayout';
-import type { OnDagEdgeMouseEvent, DagEdgeHighlightEvent, OnDagNodeMouseEvent, DagNodeHighlightEvent, DagNodeCollapseEvent, DagNodeExpandEvent } from '../layouts/DagLayout';
+/** Information which is present in all `ViewerHandle` subtypes.*/
+type ViewerInfo = {|
+    id: ViewerId,
+    parent?: ViewerHandle,
+|};
 
+/** Fields in a `ViewerHandle` which are dependent upon the type of `ViewModel` being rendered by the `Viewer`. */
+export type ComponentHandle = TextPrimitiveHandle | ImagePrimitiveHandle | SwitchLayoutHandle | GridLayoutHandle | FlowLayoutHandle;
 
-import type { ViewModel } from '../schema';
+/** Provides information about a `Viewer`, as well as methods which alter its state. */
+export type ViewerHandle = {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'TextPrimitive',
+    },
+    ...TextPrimitiveHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'ImagePrimitive',
+    },
+    ...ImagePrimitiveHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'SwitchLayout',
+    },
+    ...SwitchLayoutHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'GridLayout',
+    },
+    ...GridLayoutHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'FlowLayout',
+    },
+    ...FlowLayoutHandle,
+|};
 
-type SubscriptionHandler<Message: EventMessage> = (
-    message: Message,
-    subscriber: InteractiveViewerHandle,
-    state: InteractionState,
-) => void;
-
-/** Describes a function `handler()` which should be executed when an event with name `eventName` triggers. */
-export type Subscription<E: Event = Event> = {
-    eventName: $PropertyType<E, 'eventName'>,
-    handler: SubscriptionHandler<$PropertyType<E, 'message'>>,
-};
-
-/** Describes behaviors all Viewers matching a given set of constraints should perform whenever
- * certain events occur.
- *
- * An `InteractionSet` is associated with an `InteractionManager`, and is instantiated with a call
- * to `InteractionManager.getAllComponents()`. On initialization, the `InteractionSet` has no
- * constraints, and thus any subscriptions
- *
- *
- * A typical usage pattern:
- *
- * const manager = new InteractionManager();
- * const selectedComponents = manager
- *                            .getAllComponents()
- *                            .withType("TextPrimitive")...;  // chain any constraints here
- * selectedComponents.subscribe("mouseOver", (subscriber, publisher) => {...});
- * selectedComponents.subscribe("mouseOut", (subscriber, publisher) => {...});
- *
- * Note that `InteractionSet` instances should be created only by a call to
- * `InteractionManager.getAllComponents()`; otherwise, they will not be used by the
- * `InteractionManager` and thus will not affect the behaviors of any Viewer components.
- *
- * Whenever a new constraint is added, a new `InteractionSet` is returned; this allows the following
- * pattern:
- *
- * const textPrimitives = manager.getAllComponents().withType("TextPrimitive");
- * const textPrimitivesWithTag = textPrimitives.withMeta("foo", "bar");
- * textPrimitives.subscribe("mouseOver", handler1);
- * textPrimitivesWithTag.subscribe("mouseOver", handler2);
- *
- * In this example, all `TextPrimitive` viewers trigger `handler1()` on "mouseOver", but only those
- * with the specified metadata tag trigger `handler2()` on "mouseOver".
- *
- * Note that an `InteractionSet` does not pass any of its subscriptions to the new `InteractionSet`
- * returned by a constraint function. This means that the previous example is equivalent to the
- * following:
- *
- * const textPrimitives = manager.getAllComponents().withType("TextPrimitive");
- * textPrimitives.subscribe("mouseOver", handler1);
- * const textPrimitivesWithTag = textPrimitives.withMeta("foo", "bar");  // textPrimitivesWithTag currently has no subscriptions
- * textPrimitivesWithTag.subscribe("mouseOver", handler2);
- *
- * If existing subscriptions were passed to the new `InteractionSet`, then `handler1()` would fire
- * twice whenever a member of `textPrimitivesWithTag` had a "mouseOver" event, since both
- * `textPrimitives` and `textPrimitivesWithTag` would have that subscription.
- * */
+/** A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
+ * wrappers around common filters, such as `id()` and `type()`. */
 class InteractionSet {
-    constraints: Array<Constraint>;
-    subscriptions: Array<Subscription<>>;
-    manager: InteractionManager;
+    viewers: Array<ViewerHandle>;
 
-    constructor(manager: InteractionManager, constraints: Array<Constraint>) {
-        manager.interactionSets.push(this);
-        this.manager = manager;
-        this.constraints = constraints;
-        this.subscriptions = [];
+    constructor(viewers: Array<ViewerHandle>) {
+        this.viewers = viewers;
     }
 
-    /**
-     * Returns a new `ComponentCollection` containing only members
-     * @param fn
-     * @returns {InteractionSet}
-     */
-    filter(fn: (ReadOnlyViewerHandle) => boolean): InteractionSet {
-        return new InteractionSet(this.manager, this.constraints.concat([fn]));
+    id(ids: ViewerId | Array<ViewerId>): InteractionSet {
+        if (Array.isArray(ids)) {
+            return this.filter((viewer) => ids.includes(viewer.id));
+        }
+        else {
+            return this.filter((viewer) => viewer.id === ids);
+        }
     }
 
-    withParentIn(interactionSet: InteractionSet): InteractionSet {
-        return this.filter((viewer: ReadOnlyViewerHandle) => {
-            return (
-                viewer.parent !== undefined &&
-                viewer.parent.satisfiesConstraints(interactionSet.constraints)
-            );
-        });
+    type(types: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>) {
+        if (Array.isArray(types)) {
+            return this.filter((viewer) => types.includes(viewer.model.type));
+        }
+        else {
+            return this.filter((viewer) => viewer.model.type === types);
+        }
     }
 
-    /**
-     * Returns a new `ComponentCollection` containing only members of the specified type(s).
-     *
-     * @param type
-     */
-    withType(
-        type: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>,
-    ): InteractionSet {
-        return this.filter((viewer: ReadOnlyViewerHandle) => {
-            return Array.isArray(type)
-                ? type.includes(viewer.viewModel.type)
-                : type === viewer.viewModel.type;
-        });
+    filter(fn: (viewer: ViewerHandle) => boolean): InteractionSet {
+        return new InteractionSet(this.viewers.filter((viewer) => fn(viewer)));
     }
 
-    /**
-     * Returns a new `ComponentCollection` containing only members whose value for the given metadata key falls in the
-     * given value(s).
-     *
-     * @param key
-     * @param value
-     */
-    withMeta(key: string, value: string | number | Array<string | number>): InteractionSet {
-        return this.filter((viewer: ReadOnlyViewerHandle) => {
-            return Array.isArray(value)
-                ? value.includes(viewer.viewModel.meta[key])
-                : value === viewer.viewModel.meta[key];
-        });
-    }
-
-    // TODO: figure out how to write this such that the handler message knows what its contents are given the event name
-    subscribe<E: Event>(
-        eventName: $PropertyType<E, 'eventName'>,
-        handler: SubscriptionHandler<$PropertyType<E, 'message'>>,
-    ): void {
-        this.subscriptions.push({
-            eventName,
-            handler,
-        });
+    forEach(fn: (viewer: ViewerHandle) => void): void {
+        this.viewers.forEach((viewer) => fn(viewer));
     }
 }
 
-export type InteractionState = {
-    [string]: any,
-};
+/** The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
+type EventHandler<Message> = (all: InteractionSet, message: Message, global: any) => void
 
 export class InteractionManager {
-    interactionSets: Array<InteractionSet> = [];
-    viewers: { [string]: InteractiveViewerHandle } = {};
-    viewerInteractionSets: { [string]: Array<InteractionSet> } = {};
-    state: InteractionState = {};
-    publishedEvents: Array<Event> = [];  // Events which have been published but not yet processed.
-    processingEvent: boolean = false;  // Whether or not the manager is currently processing an event. If it is, newly-published events will be enqueued instead of immediately processed.
+    // Maps an event topic to the handler function(s) that should fire when that event is emitted.
+    handlers: { [$PropertyType<Event, 'topic'>]: Array<EventHandler<{}>> } = {};
+    // Maps a `ViewerId` to a function which returns the current `ViewerHandle` of that `Viewer`.
+    viewers: { ViewerId: () => ViewerHandle } = {};
+    // The global state which is accessed by `EventHandler` functions.
+    global: any = {};
+    // The queue of `Event`s which have been emitted but whose handlers have not yet been executed.
+    eventQueue: Array<Event> = [];
+    // Whether the `InteractionManager` is currently executing the handlers for an event.
+    processingEvent: boolean = false;
 
+    /**
+     *
+     * @param options: `documentElement` is needed, since `document` might not be correct in all
+     *                  applications (such as "vizstack-atom").
+     */
     constructor(options: {
-        useMouseDefaults?: boolean,
-        useKeyboardDefaults?: boolean,
-        documentElement?: HTMLElement,
-    }) {
-        let { useMouseDefaults=true, useKeyboardDefaults=true, documentElement=document } = options;
-
-        this.publish = this.publish.bind(this);
+        useMouseDefaults: boolean,
+        useKeyboardDefaults: boolean,
+        documentElement: Document | HTMLElement,
+    } = {}) {
+        this.emit = this.emit.bind(this);
         this.registerViewer = this.registerViewer.bind(this);
         this.unregisterViewer = this.unregisterViewer.bind(this);
 
-        documentElement.addEventListener('keydown', (event: KeyboardEventHandler) => {
-            this.publish<OnKeyDownEvent>({
-                eventName: 'onKeyDown',
-                message: {
-                    key: event.key,
-                },
-            });
-        });
-
-        documentElement.addEventListener('keyup', (event: KeyboardEventHandler) => {
-            this.publish<OnKeyUpEvent>({
-                eventName: 'onKeyUp',
-                message: {
-                    key: event.key,
-                },
-            });
-        });
+        const { useMouseDefaults=true, useKeyboardDefaults=true, documentElement=document} = options;
 
         if (useMouseDefaults) {
-            this._addMouseDefaults();
+            this._useMouseDefaults();
         }
         if (useKeyboardDefaults) {
-            this._addKeyboardDefaults();
+            this._useKeyboardDefaults(documentElement);
         }
     }
 
-    _addKeyboardDefaults(): void {
-        // Right and left arrow keys change a Switch's current mode if that Switch is selected
-        this.getAllComponents()
-            .withType('SwitchLayout')
-            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
-                if (state.selected === subscriber.viewerId) {
-                    if (message.key === 'ArrowRight') {
-                        this.publish<SwitchChangeModeEvent>({
-                            eventName: 'switchChangeMode',
-                            message: {
-                                viewerId: subscriber.viewerId,
-                                idxDelta: 1,
-                            },
-                        });
+    _useMouseDefaults() {
+        this.on<ViewerDidMouseOverEvent>('Viewer.DidMouseOver',
+            (all, message, global) => {
+                all.id(global.selected).forEach((viewer) => {
+                    viewer.doUnhighlight();
+                });
+                global.selected = message.viewerId;
+                all.id(global.selected).forEach((viewer) => {
+                    viewer.doHighlight();
+                });
+            }
+        );
+        this.on<ViewerDidMouseOutEvent>('Viewer.DidMouseOut',
+            (all, message) => {
+                all.id(message.viewerId).forEach((viewer) => {
+                    viewer.doUnhighlight();
+                });
+            }
+        );
+        this.on<ViewerDidClickEvent>('Viewer.DidClick',
+            (all, message) => {
+                all.id(message.viewerId).forEach((viewer) => {
+                    if (viewer.model.type === 'SwitchLayout') {
+                        viewer.doIncrementMode();
                     }
-                    else if (message.key === 'ArrowLeft') {
-                        this.publish<SwitchChangeModeEvent>({
-                            eventName: 'switchChangeMode',
-                            message: {
-                                viewerId: subscriber.viewerId,
-                                idxDelta: -1,
-                            },
-                        });
-                    }
-                }
-            });
+                });
+            }
+        );
+    }
 
-        // Arrow keys navigate the cells of a Grid if that Grid is selected
-        this.getAllComponents()
-            .withType('GridLayout')
-            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
-                if (state.selected === subscriber.viewerId) {
-                    const directions = {
-                        'ArrowRight': 'right',
-                        'ArrowLeft': 'left',
-                        'ArrowUp': 'up',
-                        'ArrowDown': 'down',
-                    };
-                    if (message.key in directions) {
-                        this.publish<GridSelectCellEvent>({
-                            eventName: 'gridSelectCell',
-                            message: {
-                                viewerId: subscriber.viewerId,
-                                moveCursor: directions[message.key],
-                            }
-                        });
-                    }
-                }
-            });
+    _useKeyboardDefaults(documentElement: Document | HTMLElement) {
+        documentElement.addEventListener('keydown', (event: KeyboardEvent) => {
+            this.emit<{|topic: 'KeyDown', message: {|key: string|}|}>('KeyDown', { key: event.key, });
+        });
 
-        this.getAllComponents()
-            .withType('FlowLayout')
-            .subscribe('onKeyDown', (message, subscriber, state) => {
-                if (state.selected === subscriber.viewerId) {
-                    if (message.key in directions) {
-                        this.publish({
-                            eventName: 'flowSelectElement',
-                            message: {
-                                viewerId: subscriber.viewerId,
-                                idxDelta: message.key === 'ArrowRight' ? 1 : -1,
-                            }
-                        })
-                    }
-                }
-            });
+        documentElement.addEventListener('keyup', (event: KeyboardEvent) => {
+            this.emit<{|topic: 'KeyUp', message: {|key: string|}|}>('KeyUp', { key: event.key, });
+        });
 
-
-        // Enter drills down, Escape zooms out
-        this.getAllComponents()
-            .subscribe<OnKeyDownEvent>('onKeyDown', (message, subscriber, state) => {
-                if (state.selected === subscriber.viewerId) {
+        this.on<{|topic: 'KeyDown', message: {|key: string|}|}>('KeyDown',
+            (all, message, global) => {
+                all.id(global.selected).forEach((viewer) => {
                     if (message.key === 'Enter') {
-                        this.publish({
-                            eventName: 'focusSelected',
-                            message: {
-                                viewerId: subscriber.viewerId,
-                            }
-                        });
+                        console.log('processed');
+                        if (viewer.selectedViewerId) {
+                            global.selected = viewer.selectedViewerId;
+                            viewer.doUnhighlight();
+                            all.id(global.selected).forEach((viewer) => viewer.doHighlight());
+                        }
                     }
                     if (message.key === 'Escape') {
-                        if (subscriber.parent) {
-                            state.selected = subscriber.parent.viewerId;
-                            this.publish({
-                                eventName: 'unhighlight',
-                                message: { viewerId: subscriber.viewerId },
-                            });
-                            this.publish({
-                                eventName: 'highlight',
-                                message: { viewerId: subscriber.parent.viewerId },
-                            })
+                        if (viewer.parent) {
+                            global.selected = viewer.parent.id;
+                            viewer.doUnhighlight();
+                            all.id(global.selected).forEach((viewer) => viewer.doHighlight());
                         }
                     }
-                }
-            });
-
-        // Whenever a layout registers a zoom in or a drill down, unhighlight it and highlight the
-        // newly selected viewer
-        this.getAllComponents()
-            .subscribe('onFocusSelected', (message, subscriber, state) => {
-                if (state.selected === subscriber.viewerId) {
-                    this.publish({
-                        eventName: 'unhighlight',
-                        message: {
-                            viewerId: state.selected,
-                        }
-                    });
-                }
-                if (message.childViewerId === subscriber.viewerId) {
-                    state.selected = message.childViewerId;
-                    this.publish({
-                        eventName: 'highlight',
-                        message: {
-                            viewerId: message.childViewerId,
-                        }
-                    });
-                }
-            });
-    }
-
-    _addMouseDefaults(): void {
-        const allViewers = this.getAllComponents();
-        allViewers.subscribe<OnViewerMouseOverEvent>('onViewerMouseOver', (message, subscriber, state) => {
-            if (subscriber.viewerId === message.publisher.viewerId) {
-                this.publish<HighlightEvent>({
-                    eventName: 'highlight',
-                    message: { viewerId: subscriber.viewerId },
+                    switch(viewer.model.type) {
+                        case 'SwitchLayout':
+                            if (message.key === 'ArrowRight') {
+                                viewer.doIncrementMode();
+                            }
+                            if (message.key === 'ArrowLeft') {
+                                viewer.doIncrementMode(-1);
+                            }
+                            break;
+                        case 'FlowLayout':
+                            if (message.key === 'ArrowRight') {
+                                viewer.doIncrementElement();
+                            }
+                            if (message.key === 'ArrowLeft') {
+                                viewer.doIncrementElement(-1);
+                            }
+                            break;
+                        case 'GridLayout':
+                            const directions = {
+                                'ArrowRight': 'east',
+                                'ArrowLeft': 'west',
+                                'ArrowUp': 'north',
+                                'ArrowDown': 'south',
+                            };
+                            if (message.key in directions) {
+                                viewer.doSelectNeighborCell(directions[message.key]);
+                            }
+                            break;
+                    }
                 });
-                if (state.selected) {
-                    this.publish({
-                        eventName: 'unhighlight',
-                        message: { viewerId: state.selected },
-                    });
-                }
-                state.selected = subscriber.viewerId;
             }
-        });
-        allViewers.subscribe<OnViewerMouseOutEvent>('onViewerMouseOut', (message, subscriber, state) => {
-            if (subscriber.viewerId === message.publisher.viewerId) {
-                this.publish<HighlightEvent>({
-                    eventName: 'unhighlight',
-                    message: { viewerId: subscriber.viewerId },
-                });
-                if (state.selected === subscriber.viewerId) {
-                    state.selected = undefined;
-                }
-            }
-        });
-        allViewers
-            .withType('SwitchLayout')
-            .subscribe<OnViewerClickEvent>('onViewerClick', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<SwitchChangeModeEvent>({
-                        eventName: 'switchChangeMode',
-                        message: {
-                            viewerId: subscriber.viewerId,
-                            idxDelta: 1,
-                        },
-                    });
-                }
-            });
-        allViewers
-            .withType('DagLayout')
-            .subscribe<OnDagEdgeMouseEvent>('onDagEdgeMouseOver', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<DagEdgeHighlightEvent>({
-                        eventName: 'dagEdgeHighlight',
-                        message: { viewerId: subscriber.viewerId, edgeId: message.edgeId },
-                    })
-                }
-            });
-        allViewers
-            .withType('DagLayout')
-            .subscribe<OnDagEdgeMouseEvent>('onDagEdgeMouseOut', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<DagEdgeHighlightEvent>({
-                        eventName: 'dagEdgeUnhighlight',
-                        message: { viewerId: subscriber.viewerId, edgeId: message.edgeId },
-                    })
-                }
-            });
-        allViewers
-            .withType('DagLayout')
-            .subscribe<OnDagNodeMouseEvent>('onDagNodeMouseOver', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<DagNodeHighlightEvent>({
-                        eventName: 'dagNodeHighlight',
-                        message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
-                    })
-                }
-            });
-        allViewers
-            .withType('DagLayout')
-            .subscribe<OnDagNodeMouseEvent>('onDagNodeMouseOut', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    this.publish<DagNodeHighlightEvent>({
-                        eventName: 'dagNodeUnhighlight',
-                        message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
-                    })
-                }
-            });
-        allViewers
-            .withType('DagLayout')
-            .subscribe<OnDagNodeMouseEvent>('onDagNodeClick', (message, subscriber) => {
-                if (subscriber.viewerId === message.publisher.viewerId) {
-                    if (message.nodeExpanded) {
-                        this.publish<DagNodeCollapseEvent>({
-                            eventName: 'dagNodeCollapse',
-                            message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
-                        });
-                    }
-                    else {
-                        this.publish<DagNodeExpandEvent>({
-                            eventName: 'dagNodeExpand',
-                            message: { viewerId: subscriber.viewerId, nodeId: message.nodeId },
-                        });
-                    }
-                }
-            });
-    }
-
-    registerViewer = (viewer: InteractiveViewerHandle) => {
-        this.viewers[viewer.viewerId] = viewer;
-        this.viewerInteractionSets[viewer.viewerId] = this.interactionSets.filter(
-            ({ constraints }) => viewer.satisfiesConstraints(constraints),
         );
-    };
-
-    unregisterViewer = (viewer: InteractiveViewerHandle) => {
-        delete this.viewers[viewer.viewerId];
-        delete this.viewerInteractionSets[viewer.viewerId];
-    };
-
-    publish: <E: Event>(event: E) => void = <E: Event>(event: E) => {
-        this.publishedEvents.push(event);
-        if (!this.processingEvent) {
-            this.processEvent(this.publishedEvents.pop());
-        }
-    };
-
-    processEvent = (event) => {
-        this.processingEvent = true;
-        const newStates = [];
-        Object.entries(this.viewerInteractionSets).forEach(([viewerId, interactionSets]) => {
-            // interactionSets will always be an array of InteractionSets, but flow is too dumb to use the type hint for
-            // this.viewerInteractionSets when calling Object.entries
-            // (https://stackoverflow.com/questions/45621837/flowtype-errors-using-object-entries)
-            if (this.viewers[viewerId] === undefined) return;  // TODO: figure out why this is possible
-            if (!Array.isArray(interactionSets)) throw new Error();
-            interactionSets.forEach((interactionSet) => {
-                if (!(interactionSet instanceof InteractionSet)) throw new Error();
-                interactionSet.subscriptions
-                    .filter((subscription) => subscription.eventName === event.eventName)
-                    .forEach((subscription) => {
-                        if (subscription.eventName === event.eventName) {
-                            const newState = {...this.state};
-                            subscription.handler(event.message, this.viewers[viewerId], newState);
-                            newStates.push(newState);
-                        }
-                    });
-            });
-        });
-        if (event.message.viewerId !== undefined && event.message.viewerId in this.viewers) {
-            this.viewers[event.message.viewerId].receiveEvent(event);
-        }
-        // TODO: is this the most sensible way to handle state? maybe do it react-style?
-        const oldState = {...this.state};
-        newStates.forEach((newState) => {
-            Object.entries(newState).forEach(([key, value]) => {
-                if (value !== oldState[key]) {
-                    this.state[key] = value;
-                }
-            })
-        });
-        this.processingEvent = false;
-        if (this.publishedEvents.length > 0) {
-            this.processEvent(this.publishedEvents.pop());
-        }
-    };
-
-    getAllComponents(): InteractionSet {
-        return new InteractionSet(this, []);
     }
 
-    getContext(): InteractionContextValue {
-        const { registerViewer, unregisterViewer, publish } = this;
+    /** Adds a new `Viewer` to the `InteractionSet` passed to handler functions. */
+    registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
+        this.viewers[id] = handleFactory;
+    };
+
+    /** Removes a `Viewer` from the `InteractionSet` passed to handler functions. */
+    unregisterViewer = (id: ViewerId) => {
+        delete this.viewers[id];
+    };
+
+    /**
+     * Adds a new handler for a given topic.
+     *
+     * @param topic
+     * @param handler
+     */
+    on<E: Event>(topic: $PropertyType<E, 'topic'>,
+                 handler: EventHandler<$PropertyType<E, 'message'>>) {
+        if (!(topic in this.handlers)) {
+            this.handlers[topic] = [];
+        }
+        this.handlers[topic].push(handler);
+    }
+
+    /**
+     * Enqueues a new `Event` to be processed. If no `Event` is currently being processed, then that
+     * `Event` is processed immediately.
+     *
+     * @param topic
+     * @param message
+     */
+    emit: <E: Event>(topic: $PropertyType<E, 'topic'>,
+                     message: $PropertyType<E, 'message'>) => void =
+        <E>(topic, message) => {
+        this.eventQueue.push({
+            topic, message,
+        });
+        if (!this.processingEvent) {
+            this._processNextEvent();
+        }
+    };
+
+    /** Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that
+     * `Event`. */
+    _processNextEvent() {
+        this.processingEvent = true;
+        const { topic, message } = this.eventQueue.shift();
+        if (topic in this.handlers) {
+            this.handlers[topic].forEach(
+                (handler) => handler(
+                    // Flow doesn't know how to handle `Object.values()`, so we have to cast it to
+                    // `any` then cast the `handleFactory` to its proper type
+                    new InteractionSet((Object.values(this.viewers): any).map((handleFactory: () => ViewerHandle) => handleFactory())),
+                    message,
+                    this.global,
+                )
+            );
+        }
+        this.processingEvent = false;
+        if (this.eventQueue.length > 0) {
+            this._processNextEvent();
+        }
+    }
+
+    /** Returns an object which can be passed to the `value` prop of an
+     * `InteractionContext.Provider` to make this `InteractionManager` available to all `Viewer`s
+     * within that context. */
+    getContextValue(): InteractionContextValue {
+        const { registerViewer, unregisterViewer, emit } = this;
         return {
             registerViewer,
             unregisterViewer,
-            publishEvent: publish,
+            emitEvent: emit,
         };
     }
 }
 
+/** A React context which allows all `Viewer`s nested within it to emit and respond to events. */
 export const InteractionContext = React.createContext<InteractionContextValue>({
-    // interactions: [],
     registerViewer: () => {},
     unregisterViewer: () => {},
-    publishEvent: () => {},
+    emitEvent: () => {},
 });
 
 export type InteractionContextValue = {
-    // interactions: Array<InteractionSpec>,
-    registerViewer: (viewer: InteractiveViewerHandle) => void,
-    unregisterViewer: (viewer: InteractiveViewerHandle) => void,
-    publishEvent: (event: Event) => void,
+    registerViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
+    unregisterViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
+    emitEvent: <E: Event>(topic: $PropertyType<E, 'topic'>, message: $PropertyType<E, 'message'>) => void,
 };
-
-export type Constraint = (viewer: ReadOnlyViewerHandle) => boolean;
-
-type ViewerInfo = {|
-    viewerId: string,
-    viewModel: ViewModel,
-    parent?: ReadOnlyViewerHandle,
-|};
-
-export type ReadOnlyViewerHandle = {|
-    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
-    ...ViewerInfo,
-    satisfiesConstraints: (Array<Constraint>) => boolean,
-|};
-
-export type InteractiveViewerHandle = {|
-    // See https://github.com/facebook/flow/issues/3534 for why we need to use $Exact<>
-    ...ReadOnlyViewerHandle,
-    receiveEvent: (Event) => void,
-|};

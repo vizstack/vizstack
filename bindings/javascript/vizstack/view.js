@@ -217,7 +217,7 @@ export class Grid extends View {
         return {
             type: 'GridLayout',
             contents: {
-                elements: Object.entries(this._cells).map(([cellName, cell]) => ({
+                cells: Object.entries(this._cells).map(([cellName, cell]) => ({
                     ...cell,
                     viewId: this._items[cellName],
                 }))
@@ -260,7 +260,7 @@ class Switch extends View {
         return {
             type: 'SwitchLayout',
             contents: {
-                elements: this._modes.map((mode) => this._items[mode]),
+                modes: this._modes.map((mode) => this._items[mode]),
             },
             meta: this._meta,
         }

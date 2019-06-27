@@ -3,16 +3,10 @@ import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 import type {
-    Event,
-    EventMessage,
-    MouseEventProps,
-    OnViewerMouseEvent,
-    OnResizeEvent,
-    ReadOnlyViewerHandle,
-    ResizeEvent,
-    PrimitiveSize,
+    ViewerDidMouseEvent, ViewerId, ViewerDidHighlightEvent
 } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
+import type {TextDidResizeEvent, TextPrimitiveHandle} from "../TextPrimitive";
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
@@ -21,72 +15,92 @@ type ImagePrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
-     * interaction messages. */
-    viewerHandle: ReadOnlyViewerHandle,
+    /** The `ViewerId` of the `Viewer` rendering this component. */
+    viewerId: ViewerId,
 
-    /** Events published to this view's `InteractionManager` which should be consumed by this
-     * view. The message of each event in this array includes a "viewerId" field which is equal to
-     * `props.viewerHandle.viewerId`. Each event in the array should be consumed only once. */
-    lastEvents: Array<ImagePrimitiveSub>,
+    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
+     * state. Should be called whenever this component updates. */
+    updateHandle: (ImagePrimitiveHandle) => void,
 
-    /** A function which publishes an event with given name and message to this view's
-     * `InteractionManager`. */
-    publishEvent: (event: ImagePrimitivePub) => void,
+    /** Publishes an event to this component's `InteractionManager`. */
+    emitEvent: <E: ImagePrimitivePub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
     /** Path at which the image file is saved. */
     filePath: string,
 };
 
-type ImagePrimitiveDefaultProps = {};
+type ImagePrimitiveDefaultProps = {|
+    updateHandle: (TextPrimitiveHandle) => void,
+|};
 
-type ImagePrimitiveState = {
-    size: PrimitiveSize,
-};
+type ImagePrimitiveState = {|
+    isHighlighted: boolean,
+|};
 
-type ImagePrimitivePub = OnViewerMouseEvent | OnResizeEvent;
+export type ImagePrimitiveHandle = {|
+    isHighlighted: boolean,
+    doHighlight: () => void,
+    doUnhighlight: () => void,
+|};
 
-type ImagePrimitiveSub = ResizeEvent;
+type ImagePrimitivePub = ViewerDidMouseEvent | ViewerDidHighlightEvent;
 
 class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
-    static defaultProps: ImagePrimitiveDefaultProps = {};
+    static defaultProps: ImagePrimitiveDefaultProps = {
+        updateHandle: () => {},
+    };
 
     constructor(props: ImagePrimitiveProps) {
         super(props);
         this.state = {
-            size: 'medium',
+            isHighlighted: false,
         };
     }
 
-    componentDidUpdate(
-        prevProps: $ReadOnly<ImagePrimitiveProps>,
-        prevState: $ReadOnly<ImagePrimitiveState>,
-    ) {
-        const { lastEvents } = this.props;
-        lastEvents.forEach((event: ImagePrimitiveSub, i: number) => {
-            if (event === prevProps.lastEvents[i]) return;
-            if (event.eventName === 'resize') {
-                this.setState({
-                    size: event.message.newSize,
-                });
-            }
+    _updateHandle() {
+        const { updateHandle } = this.props;
+        const { isHighlighted } = this.state;
+        updateHandle({
+            isHighlighted,
+            doHighlight: () => {
+                this.setState({ isHighlighted: true, });
+            },
+            doUnhighlight: () => {
+                this.setState({ isHighlighted: false, },)
+            },
         });
+    }
+
+    componentDidMount() {
+        this._updateHandle();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        this._updateHandle();
+        const { viewerId, emitEvent } = this.props;
+        const { isHighlighted } = this.state;
+        if (isHighlighted !== prevState.isHighlighted) {
+            if (isHighlighted) {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            }
+            else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            }
+        }
     }
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, publishEvent, viewerHandle } = this.props;
-        const { size } = this.state;
+        const { classes, filePath, emitEvent, viewerId } = this.props;
+        const { isHighlighted } = this.state;
 
         return (
             <img
                 className={classNames({
                     [classes.image]: true,
-                    [classes.small]: size === 'small',
-                    [classes.medium]: size === 'medium',
-                    [classes.large]: size === 'large',
+                    [classes.imageHighlight]: isHighlighted,
                 })}
                 src={filePath}
                 onError={(e) => {
@@ -95,7 +109,7 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
                         '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png'; // TODO: Remove this hack!
                 }}
                 title={filePath.replace('/Users/Nikhil/Desktop/xnode/python/demo/', '')}
-                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
+                {...getViewerMouseFunctions(emitEvent, viewerId)}
             />
         );
     }
@@ -114,18 +128,7 @@ const styles = (theme) => ({
         borderColor: 'transparent',
     },
 
-    // Image size; one for each value of `PrimitiveSize`.
-    small: {
-        width: theme.shape.image.small.width,
-    },
-    medium: {
-        width: theme.shape.image.medium.width,
-    },
-    large: {
-        width: theme.shape.image.large.width,
-    },
-
-    highlighted: {
+    imageHighlight: {
         borderColor: theme.palette.primary.light,
     },
 });

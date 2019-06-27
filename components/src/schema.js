@@ -55,7 +55,7 @@ export type LayoutModel = GridLayoutModel | FlowLayoutModel | SwitchLayoutModel 
 export type GridLayoutModel = {
     type: 'GridLayout',
     contents: {|
-        elements: {
+        cells: {
             viewId: ViewId,
             col: number,
             row: number,
@@ -79,7 +79,7 @@ export type FlowLayoutModel = {
 export type SwitchLayoutModel = {
     type: 'SwitchLayout',
     contents: {|
-        elements: ViewId[],
+        modes: ViewId[],
     |},
     meta: ViewMeta,
 };

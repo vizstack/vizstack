@@ -8,16 +8,9 @@ import type { ViewerToViewerProps } from '../../Viewer';
 
 import type { ViewId } from '../../schema';
 import type {
-    Event,
-    EventMessage,
-    MouseEventProps,
-    OnViewerMouseEvent,
-    ReadOnlyViewerHandle,
-    HighlightEvent,
-    FocusSelectedEvent,
-    OnFocusSelectedEvent,
+    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';
-import {getViewerMouseFunctions, consumeEvents} from '../../interaction';
+import {getViewerMouseFunctions} from '../../interaction';
 
 
 /**
@@ -28,69 +21,127 @@ type SwitchLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
-     * interaction messages. */
-    viewerHandle: ReadOnlyViewerHandle,
+    /** The `ViewerId` of the `Viewer` rendering this component. */
+    viewerId: ViewerId,
 
-    eventHandler: (SwitchLayout) => void,
+    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
+     * state. Should be called whenever this component updates. */
+    updateHandle: (SwitchLayoutHandle) => void,
 
-    /** A function which publishes an event with given name and message to this view's
-     * `InteractionManager`. */
-    publishEvent: (event: SwitchLayoutPub) => void,
+    /** Publishes an event to this component's `InteractionManager`. */
+    emitEvent: <E: SwitchLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: ViewId[],
+    modes: ViewId[],
 };
 
-type SwitchLayoutDefaultProps = {};
-
-type SwitchLayoutState = {
-    isHighlighted: boolean,
-    currElementIdx: number,
-};
-
-export type OnSwitchChangeModeEvent = {|
-    eventName: 'onSwitchIncrement',
-    message: {|
-        newModeIdx: number,
-    |}
+type SwitchLayoutDefaultProps = {|
+    updateHandle: (SwitchLayoutHandle) => void;
 |};
 
-type SwitchLayoutPub = OnViewerMouseEvent | OnSwitchChangeModeEvent | OnFocusSelectedEvent;
+type SwitchLayoutState = {|
+    isHighlighted: boolean,
+    selectedModeIdx: number,
+|};
 
-export type SwitchChangeModeEvent = {|
-    eventName: 'switchChangeMode',
+export type SwitchLayoutHandle = {|
+    isHighlighted: boolean,
+    selectedModeIdx: number,
+    selectedViewerId: ?ViewerId,
+    doHighlight: () => void,
+    doUnhighlight: () => void,
+    doSelectMode: (modeIdx: number) => void,
+    doIncrementMode: (modeIdxDelta: number) => void,
+|};
+
+export type SwitchRequestSelectModeEvent = {|
+    topic: 'Switch.RequestSelectMode',
     message: {|
-        viewerId: string,
-        idxDelta: number,
-    |} | {|
-        viewerId: string,
+        viewerId: ViewerId,
         modeIdx: number,
     |},
 |};
 
-type SwitchLayoutSub = HighlightEvent | SwitchChangeModeEvent | FocusSelectedEvent;
+export type SwitchDidChangeModeEvent = {|
+    topic: 'Switch.DidChangeMode',
+    message: {|
+        viewerId: ViewerId,
+    |}
+|}
+
+type SwitchLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | SwitchRequestSelectModeEvent | SwitchDidChangeModeEvent;
 
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutState> {
     /** Prop default values. */
-    static defaultProps: SwitchLayoutDefaultProps = {};
+    static defaultProps: SwitchLayoutDefaultProps = {
+        updateHandle: () => {},
+    };
 
-    childRef;
+    childRef: {current: null | Viewer} = React.createRef();
 
     constructor(props: SwitchLayoutProps) {
         super(props);
         this.state = {
             isHighlighted: false,
-            currElementIdx: 0,
+            selectedModeIdx: 0,
         };
     }
 
+    _updateHandle() {
+        const { updateHandle } = this.props;
+        const { isHighlighted, selectedModeIdx, } = this.state;
+        updateHandle({
+            isHighlighted,
+            selectedModeIdx,
+            selectedViewerId: this.childRef.current ? this.childRef.current.viewerId : null,
+            doHighlight: () => {
+                this.setState({ isHighlighted: true, });
+            },
+            doUnhighlight: () => {
+                this.setState({ isHighlighted: false, });
+            },
+            doSelectMode: (modeIdx) => {
+                this.setState({ selectedModeIdx: modeIdx });
+            },
+            doIncrementMode: (modeIdxDelta = 1) => {
+                const { modes } = this.props;
+                this.setState((state) => {
+                    let modeIdx = state.selectedModeIdx + modeIdxDelta;
+                    while (modeIdx < 0) {
+                        modeIdx += modes.length;
+                    }
+                    while (modeIdx >= modes.length) {
+                        modeIdx -= modes.length;
+                    }
+                    return {selectedModeIdx: modeIdx};
+                });
+            },
+        });
+    }
+
+    componentDidMount() {
+        this._updateHandle();
+    }
+
     componentDidUpdate(prevProps, prevState) {
-        this.props.eventHandler(this);
+        this._updateHandle();
+        const { viewerId, emitEvent } = this.props;
+        const { isHighlighted, selectedModeIdx } = this.state;
+        if (isHighlighted !== prevState.isHighlighted) {
+            if (isHighlighted) {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            }
+            else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            }
+        }
+        if (selectedModeIdx !== prevState.selectedModeIdx) {
+            emitEvent<SwitchDidChangeModeEvent>('Switch.DidChangeMode', { viewerId: (viewerId: ViewerId), });
+        }
     }
 
     /**
@@ -99,12 +150,10 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, publishEvent, viewerHandle, viewerToViewerProps } = this.props;
-        const { isHighlighted, currElementIdx } = this.state;
+        const { classes, modes, emitEvent, viewerId, viewerToViewerProps } = this.props;
+        const { isHighlighted, selectedModeIdx } = this.state;
 
-        const viewId = elements[currElementIdx];
-
-        this.childRef = React.createRef();
+        const viewId = modes[selectedModeIdx];
 
         return (
             <div
@@ -112,7 +161,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
                     [classes.container]: true,
                     [classes.containerHovered]: isHighlighted,
                 })}
-                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
+                {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
                 <div key={viewId}>
                     <Viewer {...viewerToViewerProps} viewId={viewId} ref={this.childRef}/>
@@ -140,33 +189,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    consumeEvents({
-        'highlight': (layout) => layout.setState({ isHighlighted: true }),
-        'unhighlight': (layout) => layout.setState({ isHighlighted: false }),
-        'focusSelected': (layout) => {
-            const { childRef } = layout;
-            const { viewerHandle, publishEvent } = layout.props;
-            publishEvent({
-                eventName: 'onFocusSelected',
-                message: {
-                    parentViewerId: viewerHandle.viewerId,
-                    childViewerId: childRef.current.viewerId,
-                }
-            })
-        },
-        'switchChangeMode': (layout, message) => {
-            const { elements } = layout.props;
-            layout.setState((state) => {
-                let newIdx = message.idxDelta === undefined ? message.modeIdx : state.currElementIdx + message.idxDelta;
-                while (newIdx < 0) {
-                    newIdx += elements.length;
-                }
-                while (newIdx >= elements.length) {
-                    newIdx -= elements.length;
-                }
-                return { currElementIdx: newIdx };
-            });
-        },
-    }, SwitchLayout)
-);
+export default withStyles(styles)(SwitchLayout);

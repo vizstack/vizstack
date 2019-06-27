@@ -1,121 +1,61 @@
 // @flow
+/** This file exports the `Event` type, `Event` subtypes which are shared across `Viewer`s, and
+ * `getViewerMouseFunctions()`, which allows `Viewer` components to publish mouse-related events.*/
+
 import * as React from 'react';
 
-import type { ReadOnlyViewerHandle } from './manager';
+import type { ViewerId } from './manager';
 
-export type EventMessage = {
-    [string]: any,
-};
-
-// TODO: make this a union of all the known event types?
 export type Event = {
-    +eventName: string,
-    +message: EventMessage,
+    +topic: string,
+    +message: {[string]: any},
 };
 
-// =================================================================================================
-// Published events.
-// -----------------
-
-export type OnViewerMouseOverEvent = {|
-    // When the mouse enters the viewer
-    eventName: 'onViewerMouseOver',
+export type ViewerDidMouseOverEvent = {|
+    topic: 'Viewer.DidMouseOver',
     message: {|
-        publisher: ReadOnlyViewerHandle,
+        viewerId: ViewerId,
     |},
 |};
 
-export type OnViewerClickEvent = {|
-    // When the viewer is clicked
-    eventName: 'onViewerClick',
+export type ViewerDidClickEvent = {|
+    topic: 'Viewer.DidClick',
     message: {|
-        publisher: ReadOnlyViewerHandle,
+        viewerId: ViewerId,
     |},
 |};
 
-export type OnViewerDoubleClickEvent = {|
-    // When the viewer is double clicked
-    eventName: 'onViewerDoubleClick',
+export type ViewerDidDoubleClickEvent = {|
+    topic: 'Viewer.DidDoubleClick',
     message: {|
-        publisher: ReadOnlyViewerHandle,
+        viewerId: ViewerId,
     |},
 |};
 
-export type OnViewerMouseOutEvent = {|
-    // When the mouse leaves the viewer
-    eventName: 'onViewerMouseOut',
+export type ViewerDidMouseOutEvent = {|
+    topic: 'Viewer.DidMouseOut',
     message: {|
-        publisher: ReadOnlyViewerHandle,
+        viewerId: ViewerId,
     |},
 |};
 
-export type OnViewerMouseEvent =
-    | OnViewerMouseOverEvent
-    | OnViewerClickEvent
-    | OnViewerDoubleClickEvent
-    | OnViewerMouseOutEvent;
+export type ViewerDidMouseEvent =
+    | ViewerDidMouseOverEvent
+    | ViewerDidClickEvent
+    | ViewerDidDoubleClickEvent
+    | ViewerDidMouseOutEvent;
 
-export type OnResizeEvent = {|
-    eventName: 'onResize',
+export type ViewerDidHighlightEvent = {|
+    topic: 'Viewer.DidHighlight',
     message: {|
-        publisher: ReadOnlyViewerHandle,
-        oldSize: PrimitiveSize,
-        newSize: PrimitiveSize,
-    |},
-|};
-
-export type OnKeyDownEvent = {|
-    eventName: 'onKeyDown',
-    message: {|
-        key: string,
+        viewerId: ViewerId,
     |}
-|};
-
-export type OnKeyUpEvent = {|
-    eventName: 'onKeyUp',
+|} | {|
+    topic: 'Viewer.DidUnhighlight',
     message: {|
-        key: string,
-    |}
-|};
-
-export type OnFocusSelectedEvent = {|
-    eventName: 'onFocusSelected',
-    message: {|
-        parentViewerId: string,
-        childViewerId: string,
-    |},
-|}
-
-// =================================================================================================
-// Subscribed events.
-// ------------------
-
-export type ResizeEvent = {|
-    eventName: 'resize',
-    message: {|
-        viewerId: string,
-        newSize: PrimitiveSize,
-    |},
-|};
-
-// Subscription events
-export type HighlightEvent = {|
-    eventName: 'highlight' | 'unhighlight',
-    message: {|
-        viewerId: string,
-    |},
-|};
-
-export type FocusSelectedEvent = {|
-    eventName: 'focusSelected',
-    message: {|
-        viewerId: string,
+        viewerId: ViewerId,
     |}
 |}
-
-// =================================================================================================
-// ???
-// ---
 
 export type MouseEventProps = {
     onClick: (e: SyntheticEvent<>) => void,
@@ -125,70 +65,41 @@ export type MouseEventProps = {
 };
 
 /**
- * HOC that allows a component to consume the events to which it subscribes.
+ * Creates an object which, when spread on an HTML element, causes that element to publish mouse
+ * events.
  *
- * @param handlers
- * @param Component
+ * @param emitEvent: The function which publishes the event to an `InteractionManager`.
+ * @param viewerId: The `ViewerId` of the `Viewer` which is rendering the `HTMLElement` that
+ *                  publishes the events.
+ * @returns {{onMouseOut: onMouseOut, onMouseOver: onMouseOver, onClick: onClick, onDoubleClick: onDoubleClick}}
  */
-export function consumeEvents(handlers: {[string]: (component: any, message: any) => void}, Component) {
-    return class extends React.Component {
-        render() {
-            const { lastEvents, consumeEvent } = this.props;
-            const eventHandler = (component) => {
-                lastEvents.forEach((event) => {
-                    if (event.eventName in handlers) {
-                        handlers[event.eventName](component, event.message);
-                    }
-                    consumeEvent(event);
-                });
-            };
-            return <Component eventHandler={eventHandler} {...this.props} />
-        }
-    }
-}
-
-// TODO: move elsewhere and determine possible values
-export type PrimitiveSize = 'small' | 'medium' | 'large';
-
 export function getViewerMouseFunctions(
-    publishEvent: (OnViewerMouseEvent) => void,
-    viewerHandle: ReadOnlyViewerHandle) : MouseEventProps {
+    emitEvent: <E: ViewerDidMouseEvent>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    viewerId: ViewerId) : MouseEventProps {
     return {
         onClick: (e) => {
             e.stopPropagation();
-            publishEvent({
-                eventName: 'onViewerClick',
-                message: {
-                    publisher: viewerHandle,
-                },
-            });
+            emitEvent('Viewer.DidClick', {
+                    viewerId,
+                });
         },
         onDoubleClick: (e) => {
             e.stopPropagation();
-            publishEvent({
-                eventName: 'onViewerDoubleClick',
-                message: {
-                    publisher: viewerHandle,
-                },
-            });
+            emitEvent('Viewer.DidDoubleClick', {
+                viewerId,
+                });
         },
         onMouseOver: (e) => {
             e.stopPropagation();
-            publishEvent({
-                eventName: 'onViewerMouseOver',
-                message: {
-                    publisher: viewerHandle,
-                },
-            });
+            emitEvent('Viewer.DidMouseOver', {
+                viewerId,
+                });
         },
         onMouseOut: (e) => {
             e.stopPropagation();
-            publishEvent({
-                eventName: 'onViewerMouseOut',
-                message: {
-                    publisher: viewerHandle,
-                },
-            });
+            emitEvent('Viewer.DidMouseOut', {
+                viewerId,
+                });
         },
     };
 }

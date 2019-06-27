@@ -4,16 +4,11 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
 import type {
-    Event,
-    OnViewerMouseEvent,
-    MouseEventProps,
-    ReadOnlyViewerHandle,
-    PrimitiveSize,
-    ResizeEvent,
-    HighlightEvent,
+    ViewerId,
+    ViewerDidMouseEvent,
+    ViewerDidHighlightEvent,
 } from '../../interaction';
-import { getViewerMouseFunctions, consumeEvents } from '../../interaction';
-import type { InteractionProps } from '../../Viewer';
+import { getViewerMouseFunctions } from '../../interaction';
 
 
 /**
@@ -23,45 +18,68 @@ type TextPrimitiveProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
-     * interaction messages. */
-    viewerHandle: ReadOnlyViewerHandle,
+    /** The `ViewerId` of the `Viewer` rendering this component. */
+    viewerId: ViewerId,
 
-    eventHandler: (TextPrimitive) => void,
+    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
+     * state. Should be called whenever this component updates. */
+    updateHandle: (TextPrimitiveHandle) => void,
 
-    /** A function which publishes an event with given name and message to this view's
-     * `InteractionManager`. */
-    publishEvent: (event: TextPrimitivePub) => void,
+    /** Publishes an event to this component's `InteractionManager`. */
+    emitEvent: <E: TextPrimitivePub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
-    /** Text string displayed by token. */
+    /** Text string displayed by the component. */
     text: string,
 
-    /** The color scheme of the token. */
+    /** The color scheme of the component. */
     color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
+
+    /** Whether the component is plain text or a token. */
     variant?: 'plain' | 'token',
 };
 
-type TextPrimitiveDefaultProps = {
-    color: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
-    variant: 'plain' | 'token',
-};
+type TextPrimitiveDefaultProps = {|
+    color: 'default',
+    variant: 'plain',
+    updateHandle: (TextPrimitiveHandle) => void,
+|};
 
-type TextPrimitiveState = {
-    textSize: PrimitiveSize,
+type TextPrimitiveState = {|
+    textSize: 'small' | 'medium' | 'large',
     isHighlighted: boolean,
-};
+|};
 
-type TextPrimitivePub = OnViewerMouseEvent;
+export type TextRequestResizeEvent = {|
+    topic: 'Text.RequestResize',
+    message: {|
+        viewerId: ViewerId,
+        textSize: 'small' | 'medium' | 'large',
+    |},
+|};
 
-type TextPrimitiveSub =
-    | HighlightEvent
-    | UnhighlightEvent
-    | ResizeEvent;
+export type TextDidResizeEvent = {|
+    topic: 'Text.DidResize',
+    message: {|
+        viewerId: ViewerId,
+        textSize: 'small' | 'medium' | 'large',
+    |},
+|};
+
+type TextPrimitivePub = ViewerDidMouseEvent | ViewerDidHighlightEvent | TextRequestResizeEvent | TextDidResizeEvent;
+
+export type TextPrimitiveHandle = {
+    isHighlighted: boolean,
+    textSize: 'small' | 'medium' | 'large',
+    doHighlight: () => void,
+    doUnhighlight: () => void,
+    doResize: ('small' | 'medium' | 'large') => void,
+}
 
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
     static defaultProps: TextPrimitiveDefaultProps = {
         color: 'default',
         variant: 'plain',
+        updateHandle: () => {},
     };
 
     constructor(props: TextPrimitiveProps) {
@@ -72,19 +90,50 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         };
     }
 
-    componentDidUpdate(
-        prevProps: $ReadOnly<TextPrimitiveProps>,
-        prevState: $ReadOnly<TextPrimitiveState>,
-    ): void {
-        this.props.eventHandler(this);
+    _updateHandle() {
+        const { updateHandle } = this.props;
+        const { isHighlighted, textSize } = this.state;
+        updateHandle({
+            isHighlighted,
+            textSize,
+            doHighlight: () => {
+                this.setState({ isHighlighted: true, });
+            },
+            doUnhighlight: () => {
+                this.setState({ isHighlighted: false, });
+            },
+            doResize: (textSize) => {
+                this.setState({ textSize, });
+            }
+        });
     }
 
+    componentDidMount() {
+        this._updateHandle();
+    }
+
+    componentDidUpdate(prevProps, prevState): void {
+        this._updateHandle();
+        const { viewerId, emitEvent } = this.props;
+        const { textSize, isHighlighted } = this.state;
+        if (textSize !== prevState.textSize) {
+            emitEvent<TextDidResizeEvent>('Text.DidResize', { viewerId: (viewerId: ViewerId), textSize, });
+        }
+        if (isHighlighted !== prevState.isHighlighted) {
+            if (isHighlighted) {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            }
+            else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            }
+        }
+    }
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, publishEvent, viewerHandle } = this.props;
+        const { classes, text, color, variant, emitEvent, viewerId } = this.props;
         const { isHighlighted, textSize } = this.state;
 
         const split = text.split('\n');
@@ -130,11 +179,11 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
                 variant === 'token' && color === 'error' && isHighlighted,
         });
         return variant === 'token' ? (
-            <div className={names} {...getViewerMouseFunctions(publishEvent, viewerHandle)}>
+            <div className={names} {...getViewerMouseFunctions(emitEvent, viewerId)}>
                 {lines}
             </div>
         ) : (
-            <span className={names} {...getViewerMouseFunctions(publishEvent, viewerHandle)}>
+            <span className={names} {...getViewerMouseFunctions(emitEvent, viewerId)}>
                 {lines}
             </span>
         );
@@ -225,9 +274,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    consumeEvents({
-        'highlight': (primitive) => primitive.setState({ isHighlighted: true }),
-        'unhighlight': (primitive) => primitive.setState({ isHighlighted: false }),
-        'resize': (primitive, message) => primitive.setState({ textSize: message.newSize }),
-    }, TextPrimitive));
+export default withStyles(styles)(TextPrimitive);

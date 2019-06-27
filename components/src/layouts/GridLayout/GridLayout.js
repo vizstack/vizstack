@@ -8,17 +8,9 @@ import type { ViewerToViewerProps } from '../../Viewer';
 
 import type { ViewId } from '../../schema';
 import type {
-    Event,
-    EventMessage,
-    MouseEventProps,
-    ReadOnlyViewerHandle,
-    OnViewerMouseEvent,
-    HighlightEvent,
-    FocusSelectedEvent,
-    OnFocusSelectedEvent,
+    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';
-import { getViewerMouseFunctions,
-    consumeEvents } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 
 
 /**
@@ -29,22 +21,22 @@ type GridLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
-     * interaction messages. */
-    viewerHandle: ReadOnlyViewerHandle,
+    /** The `ViewerId` of the `Viewer` rendering this component. */
+    viewerId: ViewerId,
 
-    eventHandler: (GridLayout) => void,
+    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
+     * state. Should be called whenever this component updates. */
+    updateHandle: (GridLayoutHandle) => void,
 
-    /** A function which publishes an event with given name and message to this view's
-     * `InteractionManager`. */
-    publishEvent: (event: GridLayoutPub) => void,
+    /** Publishes an event to this component's `InteractionManager`. */
+    emitEvent: <E: GridLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Elements which should be rendered as children of the `GridLayout`. */
-    elements: {
+    cells: {
         viewId: ViewId,
         col: number,
         row: number,
@@ -53,45 +45,150 @@ type GridLayoutProps = {
     }[],
 };
 
-type GridLayoutDefaultProps = {};
-
-type GridLayoutState = {
+export type GridLayoutHandle = {|
+    selectedCellIdx: number,
+    selectedViewerId: ?ViewerId,
     isHighlighted: boolean,
-    selectedElementIdx: number,
-};
+    doHighlight: () => void,
+    doUnhighlight: () => void,
+    doSelectCell: (elementIdx: number) => void,
+    doSelectNeighborCell: (direction: 'north' | 'south' | 'east' | 'west') => void,
+|};
 
-type GridLayoutPub = OnViewerMouseEvent | OnFocusSelectedEvent;
+type GridLayoutDefaultProps = {|
+    updateHandle: (GridLayoutHandle) => void,
+|};
 
-export type GridSelectCellEvent = {|
-    eventName: 'gridSelectCell',
+type GridLayoutState = {|
+    isHighlighted: boolean,
+    selectedCellIdx: number,
+|};
+
+export type GridRequestSelectCellEvent = {|
+    topic: 'Grid.RequestSelectCell',
     message: {|
-        viewerId: string,
+        viewerId: ViewerId,
         elementIdx: number,
-    |} | {|
-        viewerId: string,
-        moveCursor: 'up' | 'down' | 'left' | 'right',
+    |},
+|};
+
+export type GridDidChangeCellEvent = {|
+    topic: 'Grid.DidChangeCell',
+    message: {|
+        viewerId: ViewerId,
     |},
 |}
 
-type GridLayoutSub = HighlightEvent | GridSelectCellEvent | FocusSelectedEvent;
+type GridLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | GridRequestSelectCellEvent | GridDidChangeCellEvent;
 
 class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
-    childRefs = [];
+    childRefs: Array<{current: null | Viewer}> = [];
 
     /** Prop default values. */
-    static defaultProps: GridLayoutDefaultProps = {};
+    static defaultProps: GridLayoutDefaultProps = {
+        updateHandle: () => {},
+    };
 
     constructor(props: GridLayoutProps) {
         super(props);
         this.state = {
             isHighlighted: false,
-            selectedElementIdx: 0,
+            selectedCellIdx: 0,
         };
     }
 
-    componentDidUpdate(prevProps, prevState) {
-        this.props.eventHandler(this);
+    _updateHandle() {
+        const { updateHandle } = this.props;
+        const { isHighlighted, selectedCellIdx } = this.state;
+        updateHandle({
+            selectedCellIdx,
+            selectedViewerId: this.childRefs.length > selectedCellIdx && this.childRefs[selectedCellIdx].current ? this.childRefs[selectedCellIdx].current.viewerId : null,
+            isHighlighted,
+            doHighlight: () => {
+                this.setState({ isHighlighted: true, });
+            },
+            doUnhighlight: () => {
+                this.setState({ isHighlighted: false, });
+            },
+            doSelectCell: (cellIdx) => {
+                this.setState({ selectedCellIdx: cellIdx, });
+            },
+            doSelectNeighborCell: (direction) => {
+                this.setState((state, props) => {
+                    const { cells } = props;
+                    const currentElem = cells[state.selectedCellIdx];
+                    let mainAxis, offAxis, increaseMainAxis;
+                    switch (direction) {
+                        case 'south':
+                            mainAxis = 'row'; offAxis = 'col'; increaseMainAxis = true;
+                            break;
+                        case 'east':
+                            mainAxis = 'col'; offAxis = 'row'; increaseMainAxis = true;
+                            break;
+                        case 'north':
+                            mainAxis = 'row'; offAxis = 'col'; increaseMainAxis = false;
+                            break;
+                        case 'west':
+                            mainAxis = 'col'; offAxis = 'row'; increaseMainAxis = false;
+                            break;
+                    }
+                    let closest = -1;
+                    cells.forEach((cell, i) => {
+                        if (i === state.selectedCellIdx) {
+                            return;
+                        }
+                        if ((increaseMainAxis && cell[mainAxis] <= currentElem[mainAxis]) || (!increaseMainAxis && cell[mainAxis] >= currentElem[mainAxis])) {
+                            return;
+                        }
+                        if (closest === -1 ||
+                            (increaseMainAxis ? cell[mainAxis] < cells[closest][mainAxis] : cell[mainAxis] > cells[closest][mainAxis]) ||
+                            (
+                                cell[mainAxis] === cells[closest][mainAxis] && (
+                                    (
+                                        cells[closest][offAxis] >= currentElem[offAxis] &&
+                                        cell[offAxis] >= currentElem[offAxis] &&
+                                        cell[offAxis] - currentElem[offAxis] < cells[closest][offAxis] - currentElem[offAxis]
+                                    ) || (
+                                        cells[closest][offAxis] < currentElem[offAxis] &&
+                                        cell[offAxis] > cells[closest][offAxis]
+                                    )
+                                )
+                            )) {
+                            closest = i;
+                        }
+                    });
+                    if (closest >= 0) {
+                        return { selectedCellIdx: closest };
+                    }
+                    else {
+                        return {};
+                    }
+                })
+            },
+        });
     }
+
+    componentDidMount() {
+        this._updateHandle();
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        this._updateHandle();
+        const { viewerId, emitEvent } = this.props;
+        const { isHighlighted, selectedCellIdx } = this.state;
+        if (isHighlighted !== prevState.isHighlighted) {
+            if (isHighlighted) {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            }
+            else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            }
+        }
+        if (selectedCellIdx !== prevState.selectedCellIdx) {
+            emitEvent<GridDidChangeCellEvent>('Grid.DidChangeCell', { viewerId: (viewerId: ViewerId), });
+        }
+    }
+
     /**
      * Renders a sequence of `Viewer` elements, optionally numbered with indices. The sequence can
      * have start/end motifs, which are large characters that can be used to indicate a type of
@@ -100,15 +197,15 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
     render() {
         const {
             classes,
-            elements,
-            viewerHandle,
-            publishEvent,
+            cells,
+            viewerId,
+            emitEvent,
             viewerToViewerProps,
         } = this.props;
 
         const {
             isHighlighted,
-            selectedElementIdx,
+            selectedCellIdx,
         } = this.state;
 
         this.childRefs = [];
@@ -118,9 +215,9 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                 className={classNames({
                     [classes.container]: true,
                 })}
-                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
+                {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                {elements.map(({ viewId, col, row, width, height }, i) => {
+                {cells.map(({ viewId, col, row, width, height }, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
                     return (
@@ -128,7 +225,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                             key={viewId}
                             className={classNames({
                                 [classes.cell]: true,
-                                [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
+                                [classes.cellSelected]: isHighlighted && selectedCellIdx === i,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -179,88 +276,4 @@ const styles = (theme) => ({
     }
 });
 
-export default withStyles(styles)(
-    consumeEvents(
-        {
-            'highlight': (layout) => {
-                layout.setState((state) => ({
-                    isHighlighted: true,
-                }));
-            },
-            'unhighlight': (layout) => {
-                layout.setState((state) => ({
-                    isHighlighted: false,
-                }));
-            },
-            'focusSelected': (layout) => {
-                const { childRefs } = layout;
-                const { selectedElementIdx } = layout.state;
-                const { publishEvent, viewerHandle } = layout.props;
-                publishEvent({
-                    eventName: 'onFocusSelected',
-                    message: {
-                        parentViewerId: viewerHandle.viewerId,
-                        childViewerId: childRefs[selectedElementIdx].current.viewerId,
-                    }
-                })
-            },
-            'gridSelectCell': (layout, message) => {
-                layout.setState((state) => {
-                    if (message.elementIdx !== undefined) {
-                        return { selectedElementIdx: message.elementIdx };
-                    }
-
-                    const { elements } = layout.props;
-                    const currentElem = elements[state.selectedElementIdx];
-                    let mainAxis, offAxis, increaseMainAxis;
-                    switch (message.moveCursor) {
-                        case 'down':
-                            mainAxis = 'row'; offAxis = 'col'; increaseMainAxis = true;
-                            break;
-                        case 'right':
-                            mainAxis = 'col'; offAxis = 'row'; increaseMainAxis = true;
-                            break;
-                        case 'up':
-                            mainAxis = 'row'; offAxis = 'col'; increaseMainAxis = false;
-                            break;
-                        case 'left':
-                            mainAxis = 'col'; offAxis = 'row'; increaseMainAxis = false;
-                            break;
-                    }
-                    let closest = -1;
-                    elements.forEach((elem, i) => {
-                        if (i === state.selectedElementIdx) {
-                            return;
-                        }
-                        if ((increaseMainAxis && elem[mainAxis] <= currentElem[mainAxis]) || (!increaseMainAxis && elem[mainAxis] >= currentElem[mainAxis])) {
-                            return;
-                        }
-                        if (closest === -1 ||
-                            (increaseMainAxis ? elem[mainAxis] < elements[closest][mainAxis] : elem[mainAxis] > elements[closest][mainAxis]) ||
-                            (
-                                elem[mainAxis] === elements[closest][mainAxis] && (
-                                    (
-                                        elements[closest][offAxis] >= currentElem[offAxis] &&
-                                        elem[offAxis] >= currentElem[offAxis] &&
-                                        elem[offAxis] - currentElem[offAxis] < elements[closest][offAxis] - currentElem[offAxis]
-                                    ) || (
-                                        elements[closest][offAxis] < currentElem[offAxis] &&
-                                        elem[offAxis] > elements[closest][offAxis]
-                                    )
-                                )
-                            )) {
-                            closest = i;
-                        }
-                    });
-                    if (closest >= 0) {
-                        return { selectedElementIdx: closest };
-                    }
-                    else {
-                        return {};
-                    }
-                })
-            }
-        },
-        GridLayout
-    ),
-);
+export default withStyles(styles)(GridLayout);

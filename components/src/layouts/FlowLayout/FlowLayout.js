@@ -7,16 +7,9 @@ import { Viewer } from '../../Viewer';
 import type { ViewId } from '../../schema';
 import type { ViewerToViewerProps } from '../../Viewer';
 import type {
-    Event,
-    EventMessage,
-    MouseEventProps,
-    HighlightEvent,
-    OnViewerMouseEvent,
-    FocusSelectedEvent,
-    OnFocusSelectedEvent,
-    ReadOnlyViewerHandle,
+    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';
-import { getViewerMouseFunctions, consumeEvents } from '../../interaction';
+import { getViewerMouseFunctions } from '../../interaction';
 
 
 /**
@@ -29,15 +22,15 @@ type FlowLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
-    /** The handle to the `Viewer` component which is rendering this view. Used when publishing
-     * interaction messages. */
-    viewerHandle: ReadOnlyViewerHandle,
+    /** The `ViewerId` of the `Viewer` rendering this component. */
+    viewerId: ViewerId,
 
-    eventHandler: (FlowLayout) => void,
+    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
+     * state. Should be called whenever this component updates. */
+    updateHandle: (FlowLayoutHandle) => void,
 
-    /** A function which publishes an event with given name and message to this view's
-     * `InteractionManager`. */
-    publishEvent: (event: FlowLayoutPub) => void,
+    /** Publishes an event to this component's `InteractionManager`. */
+    emitEvent: <E: FlowLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
@@ -47,33 +40,41 @@ type FlowLayoutProps = {
     elements: Array<ViewId>,
 };
 
-type FlowLayoutDefaultProps = {};
+export type FlowLayoutHandle = {|
+    selectedElementIdx: number,
+    selectedViewerId: ?ViewerId,
+    isHighlighted: boolean,
+    doHighlight: () => void,
+    doUnhighlight: () => void,
+    doSelectElement: (elementIdx: number) => void,
+    doIncrementElement: (elementIdxDelta: number) => void,
+|};
 
-type FlowLayoutState = {
+type FlowLayoutDefaultProps = {|
+    updateHandle: (FlowLayoutHandle) => void,
+|};
+
+type FlowLayoutState = {|
     selectedElementIdx: number,
     isHighlighted: boolean,
-};
+|};
 
-type FlowLayoutPub = OnViewerMouseEvent | OnFocusSelectedEvent;
-
-export type FlowSelectElementEvent = {|
-    eventName: 'flowSelectElement',
+export type FlowDidChangeElementEvent = {|
+    topic: 'Flow.DidChangeElement',
     message: {|
-        viewerId: string,
-        elementIdx: number,
-    |} | {|
-        viewerId: string,
-        idxDelta: number,
+        viewerId: ViewerId,
     |},
 |}
 
-type FlowLayoutSub = HighlightEvent | FocusSelectedEvent;
+type FlowLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | FlowDidChangeElementEvent;
 
 class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
     /** Prop default values. */
-    static defaultProps: FlowLayoutDefaultProps = {};
+    static defaultProps: FlowLayoutDefaultProps = {
+        updateHandle: () => {},
+    };
 
-    childRefs = [];
+    childRefs: Array<{current: null | Viewer}> = [];
 
     constructor(props) {
         super(props);
@@ -83,8 +84,59 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
         }
     }
 
+    _updateHandle() {
+        const { emitEvent, updateHandle, viewerId } = this.props;
+        const { isHighlighted, selectedElementIdx, } = this.state;
+        updateHandle({
+            selectedElementIdx,
+            selectedViewerId: this.childRefs.length > selectedElementIdx && this.childRefs[selectedElementIdx].current ? this.childRefs[selectedElementIdx].current.viewerId : null,
+            isHighlighted,
+            doHighlight: () => {
+                this.setState({ isHighlighted: true, });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            },
+            doUnhighlight: () => {
+                this.setState({ isHighlighted: false, });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            },
+            doSelectElement: (elementIdx) => {
+                this.setState({ selectedElementIdx: elementIdx });
+            },
+            doIncrementElement: (elementIdxDelta) => {
+                const { elements } = this.props;
+                this.setState((state) => {
+                    let elementIdx = state.selectedElementIdx + elementIdxDelta;
+                    while (elementIdx < 0) {
+                        elementIdx += elements.length;
+                    }
+                    while (elementIdx >= elements.length) {
+                        elementIdx -= elements.length;
+                    }
+                    return {selectedElementIdx: elementIdx};
+                });
+            },
+        });
+    }
+
+    componentDidMount() {
+        this._updateHandle();
+    }
+
     componentDidUpdate(prevProps, prevState) {
-        this.props.eventHandler(this);
+        this._updateHandle();
+        const { viewerId, emitEvent } = this.props;
+        const { isHighlighted, selectedElementIdx } = this.state;
+        if (isHighlighted !== prevState.isHighlighted) {
+            if (isHighlighted) {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
+            }
+            else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+            }
+        }
+        if (selectedElementIdx !== prevState.selectedElementIdx) {
+            emitEvent<FlowDidChangeElementEvent>('Flow.DidChangeElement', { viewerId: (viewerId: ViewerId), });
+        }
     }
 
     /**
@@ -93,7 +145,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps, publishEvent, viewerHandle } = this.props;
+        const { classes, elements, viewerToViewerProps, emitEvent, viewerId } = this.props;
 
         this.childRefs = [];
 
@@ -103,7 +155,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                 className={classNames({
                     [classes.root]: true,
                 })}
-                {...getViewerMouseFunctions(publishEvent, viewerHandle)}
+                {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
                 {elements.map((viewId, i) => {
                     const ref = React.createRef();
@@ -131,41 +183,4 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(
-    consumeEvents({
-        highlight: (layout) => {
-            layout.setState((state) => ({
-                isHighlighted: true,
-            }));
-        },
-        unhighlight: (layout) => {
-            layout.setState((state) => ({
-                isHighlighted: false,
-            }));
-        },
-        focusSelected: (layout) => {
-            const { childRefs } = layout;
-            const { selectedElementIdx } = layout.state;
-            const { publishEvent, viewerHandle } = layout.props;
-            publishEvent({
-                eventName: 'onFocusSelected',
-                message: {
-                    parentViewerId: viewerHandle.viewerId,
-                    childViewerId: childRefs[selectedElementIdx].current.viewerId,
-                }
-            })
-        },
-        flowSelectElement: (layout, message) => {
-            const { elements } = layout.props;
-            layout.setState((state) => {
-                let newIdx = message.idxDelta === undefined ? message.elementIdx : state.selectedElementIdx + message.idxDelta;
-                while (newIdx < 0) {
-                    newIdx += elements.length;
-                }
-                while (newIdx >= elements.length) {
-                    newIdx -= elements.length;
-                }
-                return { selectedElementIdx: newIdx };
-            })
-        }
-    }, FlowLayout));
+export default withStyles(styles)(FlowLayout);
