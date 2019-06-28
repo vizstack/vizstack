@@ -9,7 +9,7 @@ __all__ = ['assemble']
 
 
 def assemble(obj: Any) -> Dict[str, Union[str, Dict[str, Dict[str, JsonType]]]]:
-    """Returns a string which contains all of the information needed to render a visualization of `obj`.
+    """Returns a dict with all of the information needed to render a visualization of `obj`.
 
     Args:
         obj: An object to be visualized.
@@ -27,6 +27,7 @@ def assemble(obj: Any) -> Dict[str, Union[str, Dict[str, Dict[str, JsonType]]]]:
         'models': dict(),
     }
     while len(to_add) > 0:
+        # Create the ViewModel, add it to `return_dict`, then enqueue all Views referenced in the ViewModel
         view_obj: View = to_add.pop()
         view_id: str = view_obj.id
         if view_id in added:

@@ -21,7 +21,7 @@
       
 	  .. automethod:: __init__
 
-   .. autoclass:: xnode.viz.KeyValues
+   .. autoclass:: xnode.viz.KeyValue
       
 	  .. automethod:: __init__
 

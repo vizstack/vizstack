@@ -11,7 +11,7 @@ from typing import Any, Iterable, Optional, List, Tuple, Union, Dict
 import cuid
 from vizstack.types import JsonType
 
-__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 'Grid', 'DagLayout', 'get_view', 'View']
+__all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValue', 'Grid', 'DagLayout', 'get_view', 'View']
 
 # A naive implementation of `get_view()` loops infinitely when an object references itself, e.g.,
 # ```
@@ -39,11 +39,13 @@ __all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValues', 
 _CURRENT_PLACEHOLDERS = dict()
 
 
-def get_view(o: Any) -> Union['View']:
+def get_view(o: Any) -> 'View':
     """Gets the View associated with ``o``.
 
     If ``o`` is already a View, it is returned unchanged. If ``o`` has a ``__view__()`` method, its value is returned.
     Otherwise, a default visualization for ``o``, depending on its type, is returned.
+
+    TODO: use a stub file to define default Views
 
     Args:
         o: An object to be visualized.
@@ -62,9 +64,10 @@ def get_view(o: Any) -> Union['View']:
         view = o
     elif hasattr(o, '__view__'):
         view = getattr(o, '__view__')()
+    # Primitives: Token containing the value in full
     elif isinstance(o, (str, int, float, bool)) or o is None:
         view = Token(o if not isinstance(o, str) else '"{}"'.format(o))
-    # TODO: come up with a better method for dispatching default vizzes, like stubs
+    # List: Sequence of the list elements
     elif isinstance(o, list):
         view = _SwitchSequence(
             o,
@@ -72,6 +75,7 @@ def get_view(o: Any) -> Union['View']:
             end_motif=']',
             summary='List[{}]'.format(len(o)))
         is_switch = True
+    # Set: Sequence of the set items
     elif isinstance(o, set):
         view = _SwitchSequence(
             list(o),
@@ -79,6 +83,7 @@ def get_view(o: Any) -> Union['View']:
             end_motif='}',
             summary='Set[{}]'.format(len(o)))
         is_switch = True
+    # Tuple: Sequence of the tuple elements
     elif isinstance(o, tuple):
         view = _SwitchSequence(
             list(o),
@@ -86,13 +91,15 @@ def get_view(o: Any) -> Union['View']:
             end_motif=')',
             summary='Tuple[{}]'.format(len(o)))
         is_switch = True
+    # Dict: KeyValue of the dict items
     elif isinstance(o, dict):
-        view = _SwitchKeyValues(
+        view = _SwitchKeyValue(
             o,
             start_motif='Dict[{}] {{'.format(len(o)),
             end_motif='}',
             summary='Dict[{}]'.format(len(o)))
         is_switch = True
+    # Function: Sequence of positional arguments and the KeyValue of keyword arguments
     elif isinstance(
             o, (types.FunctionType, types.MethodType, type(all.__call__))):
         parameters = inspect.signature(o).parameters.items()
@@ -108,7 +115,7 @@ def get_view(o: Any) -> Union['View']:
                 end_motif=']',
                 summary='Args',
                 initial_expansion_mode='compact'),
-            _SwitchKeyValues(
+            _SwitchKeyValue(
                 kwargs,
                 start_motif='Keyword Args {',
                 end_motif='}',
@@ -120,6 +127,7 @@ def get_view(o: Any) -> Union['View']:
             orientation='vertical',
             summary='Function[{}]'.format(o.__name__))
         is_switch = True
+    # Module: KeyValue of module contents
     elif inspect.ismodule(o):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(o)):
@@ -133,12 +141,13 @@ def get_view(o: Any) -> Union['View']:
                     attributes[attr] = getattr(o, attr)
             except Exception:
                 continue
-        view = _SwitchKeyValues(
+        view = _SwitchKeyValue(
             attributes,
             start_motif='Module[{}] {{'.format(o.__name__),
             end_motif='}',
             summary='Module[{}]'.format(o.__name__))
         is_switch = True
+    # Class: KeyValue of functions and KeyValue of static fields
     elif inspect.isclass(o):
         functions = dict()
         staticfields = dict()
@@ -154,7 +163,7 @@ def get_view(o: Any) -> Union['View']:
         contents = []
         if len(functions) > 0:
             contents.append(
-                _SwitchKeyValues(
+                _SwitchKeyValue(
                     functions,
                     start_motif='Functions {',
                     end_motif='}',
@@ -162,7 +171,7 @@ def get_view(o: Any) -> Union['View']:
                     initial_expansion_mode='compact'))
         if len(staticfields) > 0:
             contents.append(
-                _SwitchKeyValues(
+                _SwitchKeyValue(
                     staticfields,
                     start_motif='Fields {',
                     end_motif='}',
@@ -175,6 +184,7 @@ def get_view(o: Any) -> Union['View']:
             summary='Class[{}]'.format(o.__name__),
             orientation='vertical')
         is_switch = True
+    # Object instance: KeyValue of all instance attributes
     else:
         instance_class = type(o)
         instance_class_attrs = dir(instance_class)
@@ -192,17 +202,20 @@ def get_view(o: Any) -> Union['View']:
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
-        view = _SwitchKeyValues(
+        view = _SwitchKeyValue(
             contents,
             item_separator='=',
             start_motif='Instance[{}] {{'.format(type(o).__name__),
             end_motif='}',
             summary='Instance[{}]'.format(type(o).__name__))
         is_switch = True
+    # If we have a cyclic reference where the `View` uses one of our defaults, then we need the placeholder to start
+    # in the "summary" mode; otherwise, our renderer would be caught in an loop, showing the same "full" mode within
+    # itself infinitely.
     if is_switch:
-        _CURRENT_PLACEHOLDERS[id(o)].__mutate__(Switch(view._modes[-1:] + view._modes[:-1], view._items))
+        mutate_view(_CURRENT_PLACEHOLDERS[id(o)], Switch(view._modes[-1:] + view._modes[:-1], view._items))
     else:
-        _CURRENT_PLACEHOLDERS[id(o)].__mutate__(view)
+        mutate_view(_CURRENT_PLACEHOLDERS[id(o)], view)
     del _CURRENT_PLACEHOLDERS[id(o)]
     return view
 
@@ -220,6 +233,7 @@ def get_view(o: Any) -> Union['View']:
 
 class View:
     def __init__(self):
+        # A unique ID which will be used to identify this `View` when assembled into a normalized nested dict.
         self.id: str = '@id:{}'.format(cuid.cuid())
         self._meta: Dict[str, JsonType] = {}
 
@@ -241,19 +255,21 @@ class View:
         """
         self._meta[key] = value
 
-    def __mutate__(self, view: 'View') -> None:
-        """Mutates this `View` into a copy of another `View`.
 
-        When creating the `View` for a given object, cyclic references -- for example, when d['key'] = d -- might be
-        encountered. When this happens, an `View` is used to denote the cyclic reference, then that `View` is mutated
-        into a copy of the object's "true" `View`. See `view.py` for more.
+def mutate_view(view: 'View', target: 'View') -> None:
+    """Mutates `view` into a copy of `target`.
 
-        Args:
-            view: A `View` that this instance should become a functional copy of.
-        """
-        self.id = view.id
-        self._meta = view._meta
-        self.assemble = view.assemble
+    When creating the `View` for a given object, cyclic references -- for example, when d['key'] = d -- might be
+    encountered. When this happens, a `View` is used to denote the cyclic reference, then that `View` is mutated
+    into a copy of the object's "true" `View`. See `view.py` for more.
+
+    Args:
+        view: A `View` that should be mutated.
+        target: A `View` that `view` should become a functional copy of.
+    """
+    view.id = target.id
+    view._meta = target._meta
+    view.assemble = target.assemble
 
 
 class Text(View):
@@ -664,7 +680,7 @@ class Sequence(View):
         return grid.assemble()
 
 
-class KeyValues(View):
+class KeyValue(View):
     """
 
     """
@@ -675,7 +691,7 @@ class KeyValues(View):
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None) -> None:
         """"""
-        super(KeyValues, self).__init__()
+        super(KeyValue, self).__init__()
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
         self._item_separator = item_separator
@@ -745,14 +761,14 @@ def _SwitchSequence(
     return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})
 
 
-def _SwitchKeyValues(
+def _SwitchKeyValue(
         key_value_mapping: Dict[Any, Any],
         item_separator: str = ':',
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         summary: Optional[str] = None,
         initial_expansion_mode: Optional[str] = None):
-    """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValues` with given items.
+    """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValue` with given items.
 
     Args:
         key_value_mapping:
@@ -765,13 +781,13 @@ def _SwitchKeyValues(
     Returns:
 
     """
-    full_view = KeyValues(key_value_mapping, item_separator, start_motif, end_motif)
+    full_view = KeyValue(key_value_mapping, item_separator, start_motif, end_motif)
     compact = dict()
     for i, (key, value) in enumerate(key_value_mapping.items()):
         if i >= _COMPACT_LEN:
             break
         compact[key] = value
-    compact_view = KeyValues(compact, item_separator, start_motif, '...')
+    compact_view = KeyValue(compact, item_separator, start_motif, '...')
     summary_view = summary if summary is not None else 'dict[{}]'.format(len(key_value_mapping))
     # If the compact and full modes would be the same, exclude the compact mode
     if len(key_value_mapping) <= _COMPACT_LEN:
