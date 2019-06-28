@@ -20,17 +20,15 @@ def assemble(obj: Any) -> Dict[str, Union[str, Dict[str, Dict[str, JsonType]]]]:
             'rootId': the View ID of the top-level View in 'models'.
         }
     """
-    return_dict: Dict[str, Union[Optional[str], Dict[str, JsonType]]] = {
-        'rootId': None,
-        'models': dict(),
-    }
     to_add: List[View] = [get_view(obj)]
     added: MutableSet[str] = set()
+    return_dict: Dict[str, Union[Optional[str], Dict[str, JsonType]]] = {
+        'rootId': to_add[0].id,
+        'models': dict(),
+    }
     while len(to_add) > 0:
         view_obj: View = to_add.pop()
         view_id: str = view_obj.id
-        if return_dict['rootId'] is None:
-            return_dict['rootId'] = view_id
         if view_id in added:
             continue
         added.add(view_id)
