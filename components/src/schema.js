@@ -48,7 +48,7 @@ export type ImagePrimitiveModel = {
 // Layouts (aka "configurations of building blocks").
 
 /** Any layout model. */
-export type LayoutModel = GridLayoutModel | FlowLayoutModel | SwitchLayoutModel | DagLayoutModel;
+export type LayoutModel = GridLayoutModel | SequenceLayoutModel | KeyValueLayoutModel | FlowLayoutModel | SwitchLayoutModel | DagLayoutModel;
 
 /** Grid layout arranges its elements in a container, with elements potentially spanning multiple
  *  rows and/or columns. */
@@ -62,6 +62,30 @@ export type GridLayoutModel = {
             width: number,
             height: number,
         }[],
+    |},
+    meta: ViewMeta,
+};
+
+/** Sequence layout arranges its element in a straight line, like a list. */
+export type SequenceLayoutModel = {
+    type: 'SequenceLayout',
+    contents: {|
+        elements: ViewId[],
+        startMotif?: ViewId,
+        endMotif?: ViewId,
+        orientation?: 'horizontal' | 'vertical',
+    |},
+    meta: ViewMeta,
+};
+
+/** KeyValue layout shows an ordered sequence of key-value pairs. */
+export type KeyValueLayoutModel = {
+    type: 'KeyValueLayout',
+    contents: {|
+        entries: Array<{key: ViewId, value: ViewId}>,
+        startMotif?: ViewId,
+        endMotif?: ViewId,
+        itemSep?: ViewId,
     |},
     meta: ViewMeta,
 };

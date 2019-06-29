@@ -28,15 +28,15 @@ __all__ = ['Text', 'Token', 'Image', 'Flow', 'Sequence', 'Switch', 'KeyValue', '
 # you've finished building the `View` for `a`, put it here."
 #
 # At the start of the first call to `get_view(a)`, we create an empty generic `View` instance and set
-# `_CURRENT_PLACEHOLDERS[id(a)] = View()`. The placeholder is an empty object at this point. The process
+# `_current_placeholders[id(a)] = View()`. The placeholder is an empty object at this point. The process
 # then continues as in the naive implementation, and eventually `get_view(a)` is called for the second time. When
-# this happens, `id(a)` will already by in `_CURRENT_PLACEHOLDERS`, so instead of trying to generate a new `View` for
-# `a` again, we immediately return `_CURRENT_PLACEHOLDERS[id(a)]`. This breaks the infinite loop, and the first call to
+# this happens, `id(a)` will already by in `_current_placeholders`, so instead of trying to generate a new `View` for
+# `a` again, we immediately return `_current_placeholders[id(a)]`. This breaks the infinite loop, and the first call to
 # `get_view(a)` is able to finish creating the `View` object for `a`. Before the function returns, the generic `View`
-# at `_CURRENT_PLACEHOLDERS[id(a)]` will be mutated to be identical to the `View` that was generated for `a`,
-# and is then removed from `_CURRENT_PLACEHOLDERS`. By the end of any top-level call to `get_view()`,
-# `_CURRENT_PLACEHOLDERS` will be empty.
-_CURRENT_PLACEHOLDERS = dict()
+# at `_current_placeholders[id(a)]` will be mutated to be identical to the `View` that was generated for `a`,
+# and is then removed from `_current_placeholders`. By the end of any top-level call to `get_view()`,
+# `_current_placeholders` will be empty.
+_current_placeholders = dict()
 
 
 def get_view(o: Any) -> 'View':
@@ -53,10 +53,10 @@ def get_view(o: Any) -> 'View':
     Returns:
         A View which describes how to render ``o``.
     """
-    global _CURRENT_PLACEHOLDERS
-    if id(o) in _CURRENT_PLACEHOLDERS:
-        return _CURRENT_PLACEHOLDERS[id(o)]
-    _CURRENT_PLACEHOLDERS[id(o)] = View()
+    global _current_placeholders
+    if id(o) in _current_placeholders:
+        return _current_placeholders[id(o)]
+    _current_placeholders[id(o)] = View()
 
     is_switch = False
 
@@ -213,10 +213,10 @@ def get_view(o: Any) -> 'View':
     # in the "summary" mode; otherwise, our renderer would be caught in an loop, showing the same "full" mode within
     # itself infinitely.
     if is_switch:
-        mutate_view(_CURRENT_PLACEHOLDERS[id(o)], Switch(view._modes[-1:] + view._modes[:-1], view._items))
+        mutate_view(_current_placeholders[id(o)], Switch(view._modes[-1:] + view._modes[:-1], view._items))
     else:
-        mutate_view(_CURRENT_PLACEHOLDERS[id(o)], view)
-    del _CURRENT_PLACEHOLDERS[id(o)]
+        mutate_view(_current_placeholders[id(o)], view)
+    del _current_placeholders[id(o)]
     return view
 
 
@@ -626,7 +626,7 @@ class Switch(View):
         return self
 
     def item(self, item: Any, mode_name: str):
-        self._items[mode_name] = item
+        self._items[mode_name] = get_view(item)
         return self
 
     def assemble(self) -> Tuple[Dict[str, JsonType], List[View]]:
@@ -650,7 +650,7 @@ class Sequence(View):
                  elements: Optional[Iterable[Any]] = None,
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None,
-                 orientation: str = 'horizontal') -> None:
+                 orientation: Optional[str] = None) -> None:
         """"""
         super(Sequence, self).__init__()
         self._orientation = orientation
@@ -663,21 +663,21 @@ class Sequence(View):
         return self
 
     def assemble(self):
-        grid = Grid()
-        update_index = 0 if self._orientation == 'horizontal' else 1
-        current_position = [0, 0]
-        if self._start_motif is not None:
-            grid.cell('start_motif', *current_position, 1, 1)
-            grid.item(self._start_motif, 'start_motif')
-            current_position[update_index] += 1
-        for i, item in enumerate(self._elements):
-            grid.cell('{}'.format(i), *current_position, 1, 1)
-            grid.item(item, '{}'.format(i))
-            current_position[update_index] += 1
-        if self._end_motif is not None:
-            grid.cell('end_motif', *current_position, 1, 1)
-            grid.item(self._end_motif, 'end_motif')
-        return grid.assemble()
+        referenced_views = list(self._elements)
+        if self._start_motif:
+            referenced_views.append(self._start_motif)
+        if self._end_motif:
+            referenced_views.append(self._end_motif)
+        return {
+            'type': 'SequenceLayout',
+            'contents': {
+                'startMotif': self._start_motif.id if self._start_motif else None,
+                'endMotif': self._end_motif.id if self._end_motif else None,
+                'orientation': self._orientation,
+                'elements': [elem.id for elem in self._elements],
+            },
+            'meta': self._meta,
+        }, referenced_views
 
 
 class KeyValue(View):
@@ -687,7 +687,7 @@ class KeyValue(View):
 
     def __init__(self,
                  key_value_mapping: Optional[Dict[Any, Any]] = None,
-                 item_separator: str = ':',
+                 item_separator: Optional[str] = None,
                  start_motif: Optional[str] = None,
                  end_motif: Optional[str] = None) -> None:
         """"""
@@ -695,32 +695,29 @@ class KeyValue(View):
         self._start_motif = Text(start_motif) if start_motif is not None else None
         self._end_motif = Text(end_motif) if end_motif is not None else None
         self._item_separator = item_separator
-        self._elements = [] if key_value_mapping is None else [(get_view(key), get_view(value)) for key, value in
-                                                               key_value_mapping.items()]
+        self._entries = [] if key_value_mapping is None else [(get_view(key), get_view(value)) for key, value in
+                                                              key_value_mapping.items()]
 
     def item(self, key: Any, value: Any):
-        self._elements.append((get_view(key), get_view(value)))
+        self._entries.append((get_view(key), get_view(value)))
         return self
 
     def assemble(self):
-        grid = Grid()
-        current_row = 0
-        if self._start_motif is not None:
-            grid.cell('start_motif', 0, current_row, 3, 1)
-            grid.item(self._start_motif, 'start_motif')
-            current_row += 1
-        for i, (key, value) in enumerate(self._elements):
-            grid.cell('k{}'.format(i), 0, current_row, 1, 1)
-            grid.item(key, 'k{}'.format(i))
-            grid.cell('sep{}'.format(i), 1, current_row, 1, 1)
-            grid.item(Text(self._item_separator), 'sep{}'.format(i))
-            grid.cell('v{}'.format(i), 2, current_row, 1, 1)
-            grid.item(value, 'v{}'.format(i))
-            current_row += 1
-        if self._end_motif is not None:
-            grid.cell('end_motif', 0, current_row, 3, 1)
-            grid.item(self._end_motif, 'end_motif')
-        return grid.assemble()
+        referenced_views = [t[0] for t in self._entries] + [t[1] for t in self._entries]
+        if self._start_motif:
+            referenced_views.append(self._start_motif)
+        if self._end_motif:
+            referenced_views.append(self._end_motif)
+        return {
+            'type': 'KeyValueLayout',
+            'contents': {
+                'startMotif': self._start_motif.id if self._start_motif else None,
+                'endMotif': self._end_motif.id if self._end_motif else None,
+                'itemSep': self._item_separator,
+                'entries': [{'key': key.id, 'value': value.id} for key, value in self._entries],
+            },
+            'meta': self._meta,
+        }, referenced_views
 
 
 _COMPACT_LEN = 3

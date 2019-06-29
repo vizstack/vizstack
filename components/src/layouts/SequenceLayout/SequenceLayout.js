@@ -18,7 +18,7 @@ import { getViewerMouseFunctions } from '../../interaction';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-type FlowLayoutProps = {
+type SequenceLayoutProps = {
     /** CSS-in-JS styling object. */
     classes: any,
 
@@ -27,20 +27,29 @@ type FlowLayoutProps = {
 
     /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
      * state. Should be called whenever this component updates. */
-    updateHandle: (FlowLayoutHandle) => void,
+    updateHandle: (SequenceLayoutHandle) => void,
 
     /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: FlowLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    emitEvent: <E: SequenceLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    /** Elements of the sequence that will be rendered as `Viewer`s. */
     elements: Array<ViewId>,
+
+    /** Whether the sequence is arranged horizontally or vertically. */
+    orientation?: 'horizontal' | 'vertical',
+
+    /** The `ViewId` of a `ViewModel` to show at the beginning of the sequence. */
+    startMotif?: ViewId,
+
+    /** The `ViewId` of a `ViewModel` to show at the end of the sequence. */
+    endMotif?: ViewId,
 };
 
-export type FlowLayoutHandle = {|
+export type SequenceLayoutHandle = {|
     selectedElementIdx: number,
     selectedViewerId: ?ViewerId,
     isHighlighted: boolean,
@@ -50,28 +59,30 @@ export type FlowLayoutHandle = {|
     doIncrementElement: (elementIdxDelta: number) => void,
 |};
 
-type FlowLayoutDefaultProps = {|
-    updateHandle: (FlowLayoutHandle) => void,
+type SequenceLayoutDefaultProps = {|
+    updateHandle: (SequenceLayoutHandle) => void,
+    orientation: 'vertical',
 |};
 
-type FlowLayoutState = {|
+type SequenceLayoutState = {|
     selectedElementIdx: number,
     isHighlighted: boolean,
 |};
 
-export type FlowDidChangeElementEvent = {|
-    topic: 'Flow.DidChangeElement',
+export type SequenceDidChangeElementEvent = {|
+    topic: 'Sequence.DidChangeElement',
     message: {|
         viewerId: ViewerId,
     |},
 |}
 
-type FlowLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | FlowDidChangeElementEvent;
+type SequenceLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | SequenceDidChangeElementEvent;
 
-class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
+class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLayoutState> {
     /** Prop default values. */
-    static defaultProps: FlowLayoutDefaultProps = {
+    static defaultProps: SequenceLayoutDefaultProps = {
         updateHandle: () => {},
+        orientation: 'vertical',
     };
 
     childRefs: Array<{current: null | Viewer}> = [];
@@ -133,7 +144,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
             }
         }
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emitEvent<FlowDidChangeElementEvent>('Flow.DidChangeElement', { viewerId: (viewerId: ViewerId), });
+            emitEvent<SequenceDidChangeElementEvent>('Sequence.DidChangeElement', { viewerId: (viewerId: ViewerId), });
         }
     }
 
@@ -143,7 +154,8 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps, emitEvent, viewerId } = this.props;
+        const { classes, elements, viewerToViewerProps, emitEvent, viewerId, orientation, startMotif, endMotif } = this.props;
+        const { isHighlighted, selectedElementIdx } = this.state;
 
         this.childRefs = [];
 
@@ -154,11 +166,38 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
+                {startMotif ? (
+                    <div className={classNames({
+                        [classes.motif]: true,
+                        [classes.horizontal]: orientation === 'horizontal',
+                        [classes.vertical]: orientation === 'vertical',
+                    })}>
+                        <Viewer {...viewerToViewerProps} viewId={startMotif} />
+                    </div>
+                ): null}
                 {elements.map((viewId, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
-                    return <Viewer key={i} ref={ref} {...viewerToViewerProps} viewId={viewId} />;
+                    return (
+                        <div className={classNames({
+                            [classes.cell]: true,
+                            [classes.horizontal]: orientation === 'horizontal',
+                            [classes.vertical]: orientation === 'vertical',
+                            [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
+                        })}>
+                            <Viewer key={i} ref={ref} {...viewerToViewerProps} viewId={viewId} />
+                        </div>
+                    );
                 })}
+                {endMotif ? (
+                    <div className={classNames({
+                        [classes.motif]: true,
+                        [classes.horizontal]: orientation === 'horizontal',
+                        [classes.vertical]: orientation === 'vertical',
+                    })}>
+                        <Viewer {...viewerToViewerProps} viewId={endMotif} />
+                    </div>
+                ): null}
             </div>
         );
     }
@@ -170,14 +209,32 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
 /** CSS-in-JS styling function. */
 const styles = (theme) => ({
     root: {
+        display: 'inline-block',
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
-        borderColor: 'transparent',
+        borderColor: theme.palette.atom.border,
+        whiteSpace: 'nowrap',
     },
-    hovered: {
+    cell: {
+        margin: theme.spacing.large,
+        borderStyle: theme.shape.border.style,
+        borderWidth: theme.shape.border.width,
+        borderRadius: theme.shape.border.radius,
+        borderColor: "rgba(255, 0, 0, 0)",
+    },
+    motif: {
+        margin: theme.spacing.large,
+    },
+    horizontal: {
+        display: 'inline-block',
+    },
+    vertical: {
+        display: 'block',
+    },
+    cellSelected: {
         borderColor: theme.palette.primary.light,
     },
 });
 
-export default withStyles(styles)(FlowLayout);
+export default withStyles(styles)(SequenceLayout);

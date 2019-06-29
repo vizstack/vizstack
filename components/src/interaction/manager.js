@@ -7,6 +7,8 @@ import type {ImagePrimitiveHandle} from "../primitives/ImagePrimitive";
 import type {SwitchLayoutHandle} from "../layouts/SwitchLayout";
 import type {GridLayoutHandle} from "../layouts/GridLayout";
 import type {FlowLayoutHandle} from "../layouts/FlowLayout";
+import type {SequenceLayoutHandle} from "../layouts/SequenceLayout";
+import type {KeyValueLayoutHandle} from "../layouts/KeyValueLayout";
 
 export type ViewerId = string;
 
@@ -17,7 +19,7 @@ type ViewerInfo = {|
 |};
 
 /** Fields in a `ViewerHandle` which are dependent upon the type of `ViewModel` being rendered by the `Viewer`. */
-export type ComponentHandle = TextPrimitiveHandle | ImagePrimitiveHandle | SwitchLayoutHandle | GridLayoutHandle | FlowLayoutHandle;
+export type ComponentHandle = TextPrimitiveHandle | ImagePrimitiveHandle | SwitchLayoutHandle | GridLayoutHandle | FlowLayoutHandle | SequenceLayoutHandle | KeyValueLayoutHandle;
 
 /** Provides information about a `Viewer`, as well as methods which alter its state. */
 export type ViewerHandle = {|
@@ -55,6 +57,20 @@ export type ViewerHandle = {|
         type: 'FlowLayout',
     },
     ...FlowLayoutHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'SequenceLayout',
+    },
+    ...SequenceLayoutHandle,
+|} | {|
+    ...ViewerInfo,
+    model: {
+        ...ViewModel,
+        type: 'KeyValueLayout',
+    },
+    ...KeyValueLayoutHandle,
 |};
 
 /** A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
@@ -175,7 +191,6 @@ export class InteractionManager {
             (all, message, global) => {
                 all.id(global.selected).forEach((viewer) => {
                     if (message.key === 'Enter') {
-                        console.log('processed');
                         if (viewer.selectedViewerId) {
                             global.selected = viewer.selectedViewerId;
                             viewer.doUnhighlight();
@@ -196,6 +211,31 @@ export class InteractionManager {
                             }
                             if (message.key === 'ArrowLeft') {
                                 viewer.doIncrementMode(-1);
+                            }
+                            break;
+                        case 'SequenceLayout':
+                            // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
+                            if ((message.key === 'ArrowRight' && viewer.model.contents.orientation !== 'vertical')
+                            || (message.key === 'ArrowDown' && viewer.model.contents.orientation === 'vertical')) {
+                                viewer.doIncrementElement();
+                            }
+                            if ((message.key === 'ArrowLeft' && viewer.model.contents.orientation !== 'vertical')
+                                || (message.key === 'ArrowUp' && viewer.model.contents.orientation === 'vertical')) {
+                                viewer.doIncrementElement(-1);
+                            }
+                            break;
+                        case 'KeyValueLayout':
+                            if (message.key === 'ArrowRight') {
+                                viewer.doSelectValue();
+                            }
+                            if (message.key === 'ArrowLeft') {
+                                viewer.doSelectKey();
+                            }
+                            if (message.key === 'ArrowUp') {
+                                viewer.doIncrementEntry(-1);
+                            }
+                            if (message.key === 'ArrowDown') {
+                                viewer.doIncrementEntry();
                             }
                             break;
                         case 'FlowLayout':

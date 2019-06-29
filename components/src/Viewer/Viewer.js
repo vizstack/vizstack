@@ -13,7 +13,8 @@ import type {
     GridLayoutModel,
     FlowLayoutModel,
     SwitchLayoutModel,
-    DagLayoutModel,
+    SequenceLayoutModel,
+    DagLayoutModel, KeyValueLayoutModel,
 } from '../schema';
 
 import { View as ViewObject, assemble } from 'vizstack';
@@ -26,7 +27,9 @@ import ImagePrimitive from '../primitives/ImagePrimitive';
 import GridLayout from '../layouts/GridLayout';
 import DagLayout from '../layouts/DagLayout';
 import FlowLayout from '../layouts/FlowLayout';
+import SequenceLayout from '../layouts/SequenceLayout';
 import SwitchLayout from '../layouts/SwitchLayout';
+import KeyValueLayout from '../layouts/KeyValueLayout';
 
 // Interactions
 import type {
@@ -177,6 +180,28 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                 const { contents } = (model: FlowLayoutModel);
                 return (
                     <FlowLayout
+                        viewerToViewerProps={viewerToViewerProps}
+                        {...interactionProps}
+                        {...contents}
+                    />
+                );
+            }
+
+            case 'SequenceLayout': {
+                const { contents } = (model: SequenceLayoutModel);
+                return (
+                    <SequenceLayout
+                        viewerToViewerProps={viewerToViewerProps}
+                        {...interactionProps}
+                        {...contents}
+                    />
+                );
+            }
+
+            case 'KeyValueLayout': {
+                const { contents } = (model: KeyValueLayoutModel);
+                return (
+                    <KeyValueLayout
                         viewerToViewerProps={viewerToViewerProps}
                         {...interactionProps}
                         {...contents}
