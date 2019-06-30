@@ -216,11 +216,8 @@ export class Grid extends View {
         this._items = items || {};
     }
 
-    cell(cellName: string, col: number, row: number, width: number, height: number, item=null) {
+    cell(cellName: string, col: number, row: number, width: number, height: number) {
         this._cells[cellName] = { col, row, width, height };
-        if (item) {
-            this.item(item, cellName);
-        }
         return this;
     }
 

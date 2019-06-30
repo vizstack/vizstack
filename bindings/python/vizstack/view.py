@@ -558,13 +558,15 @@ class Grid(View):
         else:
             self._items = dict()
 
-    def cell(self, cell_name: str, col: int, row: int, width: int, height: int):
+    def cell(self, cell_name: str, col: int, row: int, width: int, height: int, item=_DEFAULT_ITEM):
         self._cells[cell_name] = {
             'col': col,
             'row': row,
             'width': width,
             'height': height,
         }
+        if item is not _DEFAULT_ITEM:
+            self.item(item, cell_name)
         # TODO: assert non-overlapping
         return self
 
@@ -609,12 +611,13 @@ class Switch(View):
         else:
             self._items = dict()
 
-    def mode(self, mode_name: str, index: Optional[int] = None):
+    def mode(self, mode_name: str, index: Optional[int] = None, item = _DEFAULT_ITEM):
         """Adds a new mode to the list of modes.
 
         Args:
             mode_name: The name of the new mode.
             index: An optional index at which to insert the new mode; if `None`, the mode is inserted at the end.
+            item: An optional item to show in the new mode.
 
         Returns:
 
@@ -623,6 +626,8 @@ class Switch(View):
             self._modes.insert(index, mode_name)
         else:
             self._modes.append(mode_name)
+        if item is not _DEFAULT_ITEM:
+            self.item(item, mode_name)
         return self
 
     def item(self, item: Any, mode_name: str):
