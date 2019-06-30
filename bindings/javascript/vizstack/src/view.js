@@ -299,8 +299,8 @@ export class Sequence extends View {
                 orientation: 'horizontal' | 'vertical' | null = null,) {
         super();
         this._orientation = orientation;
-        this._startMotif = startMotif ? new Text(startMotif) : null;
-        this._endMotif = endMotif ? new Text(endMotif) : null;
+        this._startMotif = startMotif;
+        this._endMotif = endMotif;
         this._elements = elements.map((elem) => _getView(elem)) || [];
     }
 
@@ -310,25 +310,18 @@ export class Sequence extends View {
     }
 
     assemble() {
-        const referencedViews = [...this._elements];
-        if (this._startMotif) {
-            referencedViews.push(this._startMotif);
-        }
-        if (this._endMotif) {
-            referencedViews.push(this._endMotif);
-        }
         return {
             viewModel: {
                 type: 'SequenceLayout',
                 contents: {
                     elements: this._elements.map((elem) => elem.id),
-                    startMotif: this._startMotif ? this._startMotif.id : null,
-                    endMotif: this._endMotif ? this._endMotif.id : null,
+                    startMotif: this._startMotif,
+                    endMotif: this._endMotif,
                     orientation: this._orientation,
                 },
                 meta: this._meta,
             },
-            referencedViews,
+            referencedViews: this._elements,
         }
     }
 }
@@ -339,8 +332,8 @@ export class KeyValue extends View {
                 startMotif = null,
                 endMotif = null) {
         super();
-        this._startMotif = startMotif ? new Text(startMotif) : null;
-        this._endMotif = endMotif ? new Text(endMotif) : null;
+        this._startMotif = startMotif;
+        this._endMotif = endMotif;
         this._itemSep = itemSep;
         this._entries = keyValues ? Object.entries(keyValues).map(([key, value]) => ({key: _getView(key), value: _getView(value)})) : [];
     }
@@ -352,12 +345,6 @@ export class KeyValue extends View {
 
     assemble() {
         const referencedViews = [...this._entries.map(({key}) => key), ...this._entries.map(({value}) => value)];
-        if (this._startMotif) {
-            referencedViews.push(this._startMotif);
-        }
-        if (this._endMotif) {
-            referencedViews.push(this._endMotif);
-        }
         return {
             viewModel: {
                 type: 'KeyValueLayout',

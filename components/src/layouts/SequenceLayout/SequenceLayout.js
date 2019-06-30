@@ -42,11 +42,11 @@ type SequenceLayoutProps = {
     /** Whether the sequence is arranged horizontally or vertically. */
     orientation?: 'horizontal' | 'vertical',
 
-    /** The `ViewId` of a `ViewModel` to show at the beginning of the sequence. */
-    startMotif?: ViewId,
+    /** A string to show at the beginning of the sequence. */
+    startMotif?: string,
 
-    /** The `ViewId` of a `ViewModel` to show at the end of the sequence. */
-    endMotif?: ViewId,
+    /** A string to show at the end of the sequence. */
+    endMotif?: string,
 };
 
 export type SequenceLayoutHandle = {|
@@ -61,7 +61,7 @@ export type SequenceLayoutHandle = {|
 
 type SequenceLayoutDefaultProps = {|
     updateHandle: (SequenceLayoutHandle) => void,
-    orientation: 'vertical',
+    orientation: 'horizontal',
 |};
 
 type SequenceLayoutState = {|
@@ -82,7 +82,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
     /** Prop default values. */
     static defaultProps: SequenceLayoutDefaultProps = {
         updateHandle: () => {},
-        orientation: 'vertical',
+        orientation: 'horizontal',
     };
 
     childRefs: Array<{current: null | Viewer}> = [];
@@ -166,15 +166,11 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                {startMotif ? (
-                    <div className={classNames({
-                        [classes.motif]: true,
-                        [classes.horizontal]: orientation === 'horizontal',
-                        [classes.vertical]: orientation === 'vertical',
-                    })}>
-                        <Viewer {...viewerToViewerProps} viewId={startMotif} />
-                    </div>
-                ): null}
+                <div className={classNames({
+                    [classes.motif]: true,
+                    [classes.horizontal]: orientation === 'horizontal',
+                    [classes.vertical]: orientation === 'vertical',
+                })}>{startMotif}</div>
                 {elements.map((viewId, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
@@ -189,15 +185,11 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                         </div>
                     );
                 })}
-                {endMotif ? (
-                    <div className={classNames({
-                        [classes.motif]: true,
-                        [classes.horizontal]: orientation === 'horizontal',
-                        [classes.vertical]: orientation === 'vertical',
-                    })}>
-                        <Viewer {...viewerToViewerProps} viewId={endMotif} />
-                    </div>
-                ): null}
+                <div className={classNames({
+                    [classes.motif]: true,
+                    [classes.horizontal]: orientation === 'horizontal',
+                    [classes.vertical]: orientation === 'vertical',
+                })}>{endMotif}</div>
             </div>
         );
     }

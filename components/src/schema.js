@@ -71,8 +71,8 @@ export type SequenceLayoutModel = {
     type: 'SequenceLayout',
     contents: {|
         elements: ViewId[],
-        startMotif?: ViewId,
-        endMotif?: ViewId,
+        startMotif?: string,
+        endMotif?: string,
         orientation?: 'horizontal' | 'vertical',
     |},
     meta: ViewMeta,
@@ -83,9 +83,9 @@ export type KeyValueLayoutModel = {
     type: 'KeyValueLayout',
     contents: {|
         entries: Array<{key: ViewId, value: ViewId}>,
-        startMotif?: ViewId,
-        endMotif?: ViewId,
-        itemSep?: ViewId,
+        startMotif?: string,
+        endMotif?: string,
+        itemSep?: string,
     |},
     meta: ViewMeta,
 };

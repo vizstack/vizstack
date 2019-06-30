@@ -42,11 +42,11 @@ type KeyValueLayoutProps = {
     /** A string to be shown between each key and value. */
     itemSep?: string,
 
-    /** The `ViewId` of a `ViewModel` to show at the beginning of the sequence. */
-    startMotif?: ViewId,
+    /** A string to show at the beginning of the sequence. */
+    startMotif?: string,
 
-    /** The `ViewId` of a `ViewModel` to show at the end of the sequence. */
-    endMotif?: ViewId,
+    /** A string to show at the end of the sequence. */
+    endMotif?: string,
 };
 
 export type KeyValueLayoutHandle = {|
@@ -196,13 +196,9 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                {startMotif ? (
-                    <div className={classNames({
-                        [classes.cell]: true,
-                    })}>
-                        <Viewer {...viewerToViewerProps} viewId={startMotif} />
-                    </div>
-                ): null}
+                <div className={classNames({
+                    [classes.motif]: true,
+                })}>{startMotif}</div>
                 {entries.map(({key, value}, i) => {
                     const keyRef = React.createRef();
                     const valueRef = React.createRef();
@@ -227,13 +223,9 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                         </div>
                     );
                 })}
-                {endMotif ? (
-                    <div className={classNames({
-                        [classes.cell]: true,
-                    })}>
-                        <Viewer {...viewerToViewerProps} viewId={endMotif} />
-                    </div>
-                ): null}
+                <div className={classNames({
+                    [classes.motif]: true,
+                })}>{endMotif}</div>
             </div>
         );
     }

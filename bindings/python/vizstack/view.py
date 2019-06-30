@@ -654,8 +654,8 @@ class Sequence(View):
         """"""
         super(Sequence, self).__init__()
         self._orientation = orientation
-        self._start_motif = Text(start_motif) if start_motif is not None else None
-        self._end_motif = Text(end_motif) if end_motif is not None else None
+        self._start_motif = start_motif
+        self._end_motif = end_motif
         self._elements = [get_view(o) for o in elements] if elements is not None else []
 
     def item(self, item: Any):
@@ -663,21 +663,16 @@ class Sequence(View):
         return self
 
     def assemble(self):
-        referenced_views = list(self._elements)
-        if self._start_motif:
-            referenced_views.append(self._start_motif)
-        if self._end_motif:
-            referenced_views.append(self._end_motif)
         return {
             'type': 'SequenceLayout',
             'contents': {
-                'startMotif': self._start_motif.id if self._start_motif else None,
-                'endMotif': self._end_motif.id if self._end_motif else None,
+                'startMotif': self._start_motif,
+                'endMotif': self._end_motif,
                 'orientation': self._orientation,
                 'elements': [elem.id for elem in self._elements],
             },
             'meta': self._meta,
-        }, referenced_views
+        }, self._elements
 
 
 class KeyValue(View):
@@ -692,8 +687,8 @@ class KeyValue(View):
                  end_motif: Optional[str] = None) -> None:
         """"""
         super(KeyValue, self).__init__()
-        self._start_motif = Text(start_motif) if start_motif is not None else None
-        self._end_motif = Text(end_motif) if end_motif is not None else None
+        self._start_motif = start_motif
+        self._end_motif = end_motif
         self._item_separator = item_separator
         self._entries = [] if key_value_mapping is None else [(get_view(key), get_view(value)) for key, value in
                                                               key_value_mapping.items()]
@@ -703,21 +698,16 @@ class KeyValue(View):
         return self
 
     def assemble(self):
-        referenced_views = [t[0] for t in self._entries] + [t[1] for t in self._entries]
-        if self._start_motif:
-            referenced_views.append(self._start_motif)
-        if self._end_motif:
-            referenced_views.append(self._end_motif)
         return {
             'type': 'KeyValueLayout',
             'contents': {
-                'startMotif': self._start_motif.id if self._start_motif else None,
-                'endMotif': self._end_motif.id if self._end_motif else None,
+                'startMotif': self._start_motif,
+                'endMotif': self._end_motif,
                 'itemSep': self._item_separator,
                 'entries': [{'key': key.id, 'value': value.id} for key, value in self._entries],
             },
             'meta': self._meta,
-        }, referenced_views
+        }, [t[0] for t in self._entries] + [t[1] for t in self._entries]
 
 
 _COMPACT_LEN = 3
