@@ -1,4 +1,7 @@
+// TODO: document this. Until then, look at Python bindings, since this closely mirrors them.
+
 import JSON5 from 'json5';
+import cuid from 'cuid';
 
 const _CURRENT_PLACEHOLDERS = new Map();
 
@@ -6,47 +9,47 @@ export function _getView(o: any) {
     if (_CURRENT_PLACEHOLDERS.has(o)) {
         return _CURRENT_PLACEHOLDERS.get(o);
     }
-    _CURRENT_PLACEHOLDERS.set(o, new ViewPlaceholder());
+    _CURRENT_PLACEHOLDERS.set(o, new View());
     let view;
-    let shouldReplace = false;
-    if (o instanceof View || o instanceof ViewPlaceholder) {
+    let isSwitch = false;
+    if (o instanceof View) {
         view = o;
     }
-    else if ('__view__' in o) {
+    else if (o === Object(o) && '__view__' in o) {
         view = o.__view__();
     }
     else if (o !== Object(o)) {
-        view = Token(typeof o === 'string' ? `"${o}"` : `${o}`);
+        view = new Token(typeof o === 'string' ? `"${o}"` : `${o}`);
     }
     else if (Array.isArray(o)) {
         view = _SwitchSequence(o, `List[${o.length}] [`, ']',
             'horizontal',
             `List[${o.length}]`);
-        shouldReplace = true;
+        isSwitch = true;
     }
     else if (o instanceof Set) {
         view = _SwitchSequence(Array.from(o), `Set[${o.size}] {`, '}',
             'horizontal',
             `Set[${o.size}]`);
-        shouldReplace = true;
+        isSwitch = true;
     }
     else if (typeof o === 'function') {
         const { args, defaults } = _getArgs(o);
         const keyValues = {};
         args.forEach((arg, i) => keyValues[arg] = defaults[i]);
-        view = _SwitchKeyValues(keyValues, ':',  o.name ? `Function[${o.name}] (` : 'Function (', ')', o.name ? `Function[${o.name}]` : `Function(...)`);
-        shouldReplace = true;
+        view = _SwitchKeyValue(keyValues, ':',  o.name ? `Function[${o.name}] (` : 'Function (', ')', o.name ? `Function[${o.name}]` : `Function(...)`);
+        isSwitch = true;
     }
     else {
-        view = _SwitchKeyValues(o, ':', `Object[${Object.keys(o).length}] {`, '}',
+        view = _SwitchKeyValue(o, ':', `Object[${Object.keys(o).length}] {`, '}',
             `Object[${Object.keys(o).length}]`);
-        shouldReplace = true;
+        isSwitch = true;
     }
-    if (shouldReplace) {
-        _CURRENT_PLACEHOLDERS.get(o).view = Switch(view._modes[view._modes.length - 1].concat([view._modes.slice(0, view._modes.length - 1)]), view._items);
+    if (isSwitch) {
+        mutateView(_CURRENT_PLACEHOLDERS.get(o), new Switch([view._modes[view._modes.length - 1], ...[view._modes.slice(0, view._modes.length - 1)]], view._items));
     }
     else {
-        _CURRENT_PLACEHOLDERS.get(o).view = view;
+        mutateView(_CURRENT_PLACEHOLDERS.get(o), view);
     }
     _CURRENT_PLACEHOLDERS.delete(o);
     return view;
@@ -79,13 +82,20 @@ function _getArgs(func) {
 
 export class View {
     _meta = {};
+    id = `@id:${cuid()}`;
+
     meta(key, value) {
         this._meta[key] = value;
     }
+
+    assemble() {
+        throw new Error();
+    }
 }
 
-export class ViewPlaceholder {
-    view;
+function mutateView(view: View, target: View) {
+    Object.entries(target).forEach(([key, value]) => view[key] = value);
+    view.assemble = target.assemble;
 }
 
 export class Text extends View {
@@ -97,15 +107,18 @@ export class Text extends View {
         this._color = color;
         this._variant = variant;
     }
-    assembleDict() {
+    assemble() {
         return {
-            type: 'TextPrimitive',
-            contents: {
-                text: this._text,
-                color: this._color,
-                variant: this._variant,
+            viewModel: {
+                type: 'TextPrimitive',
+                contents: {
+                    text: this._text,
+                    color: this._color,
+                    variant: this._variant,
+                },
+                meta: this._meta,
             },
-            meta: this._meta,
+            referencedViews: [],
         }
     }
 }
@@ -116,13 +129,16 @@ export class Image extends View {
         this._filePath = filePath;
     }
 
-    assembleDict() {
+    assemble() {
         return {
-            type: 'ImagePrimitive',
-            contents: {
-                filePath: this._filePath,
+            viewModel: {
+                type: 'ImagePrimitive',
+                contents: {
+                    filePath: this._filePath,
+                    },
+                meta: this._meta,
             },
-            meta: this._meta,
+            referencedViews: [],
         }
     }
 }
@@ -144,14 +160,17 @@ export class Flow extends View {
         return this;
     }
 
-    assembleDict() {
+    assemble() {
         return {
-            type: 'FlowLayout',
-            contents: {
-                elements: this._elements,
+            viewModel: {
+                type: 'FlowLayout',
+                contents: {
+                    elements: this._elements.map((elem) => elem.id),
+                },
+                meta: this._meta,
             },
-            meta: this._meta,
-        }
+            referencedViews: this._elements,
+        };
     }
 }
 
@@ -210,24 +229,27 @@ export class Grid extends View {
         return this;
     }
 
-    assembleDict() {
+    assemble() {
         Object.keys(this._cells).forEach((cellName) => {
             if (!(cellName in this._items)) throw Error(`Cell ${cellName} has no item.`);
         });
         return {
-            type: 'GridLayout',
-            contents: {
-                cells: Object.entries(this._cells).map(([cellName, cell]) => ({
-                    ...cell,
-                    viewId: this._items[cellName],
-                }))
+            viewModel: {
+                type: 'GridLayout',
+                contents: {
+                    cells: Object.entries(this._cells).map(([cellName, cell]) => ({
+                        ...cell,
+                        viewId: this._items[cellName].id,
+                    }))
+                },
+                meta: this._meta,
             },
-            meta: this._meta,
-        }
+            referencedViews: Object.values(this._items),
+        };
     }
 }
 
-class Switch extends View {
+export class Switch extends View {
     constructor(modes: Array<string> | null = null,
                 items: {[string]: any} | null = null) {
         super();
@@ -253,29 +275,32 @@ class Switch extends View {
         return this;
     }
 
-    assembleDict() {
+    assemble() {
         this._modes.forEach((mode) => {
             if (!(mode in this._items)) throw Error(`No item was provided for mode "${mode}".`);
         });
         return {
-            type: 'SwitchLayout',
-            contents: {
-                modes: this._modes.map((mode) => this._items[mode]),
+            viewModel: {
+                type: 'SwitchLayout',
+                contents: {
+                    modes: this._modes.map((mode) => this._items[mode].id),
+                },
+                meta: this._meta,
             },
-            meta: this._meta,
-        }
+            referencedViews: Object.values(this._items),
+        };
     }
 }
 
-class Sequence extends View {
+export class Sequence extends View {
     constructor(elements: Array<any> | null = null,
                 startMotif: string | null = null,
                 endMotif: string | null = null,
-                orientation: string = 'horizontal') {
+                orientation: 'horizontal' | 'vertical' | null = null,) {
         super();
         this._orientation = orientation;
-        this._startMotif = startMotif ? Text(startMotif) : null;
-        this._endMotif = endMotif ? Text(endMotif) : null;
+        this._startMotif = startMotif ? new Text(startMotif) : null;
+        this._endMotif = endMotif ? new Text(endMotif) : null;
         this._elements = elements.map((elem) => _getView(elem)) || [];
     }
 
@@ -284,59 +309,68 @@ class Sequence extends View {
         return this;
     }
 
-    assembleDict() {
-        const grid = Grid();
-        let updateIndex = this._orientation === 'horizontal' ? 0 : 1;
-        const currentPosition: [number, number] = [0, 0];
+    assemble() {
+        const referencedViews = [...this._elements];
         if (this._startMotif) {
-            grid.cell('startMotif', ...currentPosition, 1, 1, this._startMotif);
-            currentPosition[updateIndex] += 1;
+            referencedViews.push(this._startMotif);
         }
-        this._elements.forEach((item, i) => {
-            grid.cell(`${i}`, ...currentPosition, 1, 1, item);
-            currentPosition[updateIndex] += 1;
-        });
         if (this._endMotif) {
-            grid.cell('endMotif', ...currentPosition, 1, 1, this._endMotif);
+            referencedViews.push(this._endMotif);
         }
-        return grid.assembleDict();
+        return {
+            viewModel: {
+                type: 'SequenceLayout',
+                contents: {
+                    elements: this._elements.map((elem) => elem.id),
+                    startMotif: this._startMotif ? this._startMotif.id : null,
+                    endMotif: this._endMotif ? this._endMotif.id : null,
+                    orientation: this._orientation,
+                },
+                meta: this._meta,
+            },
+            referencedViews,
+        }
     }
 }
 
-class KeyValues extends View {
+export class KeyValue extends View {
     constructor(keyValues = null,
-                itemSep = ':',
+                itemSep = null,
                 startMotif = null,
                 endMotif = null) {
         super();
-        this._startMotif = startMotif ? Text(startMotif) : null;
-        this._endMotif = endMotif ? Text(endMotif) : null;
+        this._startMotif = startMotif ? new Text(startMotif) : null;
+        this._endMotif = endMotif ? new Text(endMotif) : null;
         this._itemSep = itemSep;
-        this._elements = keyValues ? Object.entries(keyValues).map(([key, value]) => [_getView(key), _getView(value)]) : [];
+        this._entries = keyValues ? Object.entries(keyValues).map(([key, value]) => ({key: _getView(key), value: _getView(value)})) : [];
     }
 
     item(key, value) {
-        this._elements.push([_getView(key), _getView(value)]);
+        this._entries.push({key: _getView(key), value: _getView(value)});
         return this;
     }
 
-    assembleDict() {
-        const grid = Grid();
-        let currentRow = 0;
+    assemble() {
+        const referencedViews = [...this._entries.map(({key}) => key), ...this._entries.map(({value}) => value)];
         if (this._startMotif) {
-            grid.cell('startMotif', 0, currentRow, 3, 1, this._startMotif);
-            currentRow += 1;
+            referencedViews.push(this._startMotif);
         }
-        this._elements.forEach(([key, value], i) => {
-            grid.cell(`k${i}`, 0, currentRow, 1, 1, key);
-            grid.cell(`sep${i}`, 1, currentRow, 1, 1, Text(this._itemSep));
-            grid.cell(`v${i}`, 2, currentRow, 1, 1, value);
-            currentRow += 1;
-        });
         if (this._endMotif) {
-            grid.cell('endMotif', 0, currentRow, 3, 1, this._endMotif);
+            referencedViews.push(this._endMotif);
         }
-        return grid.assembleDict();
+        return {
+            viewModel: {
+                type: 'KeyValueLayout',
+                contents: {
+                    entries: this._entries.map(({key, value}) => ({key: key.id, value: value.id})),
+                    startMotif: this._startMotif ? this._startMotif.id : null,
+                    endMotif: this._endMotif ? this._endMotif.id : null,
+                    itemSep: this._itemSep,
+                },
+                meta: this._meta,
+            },
+            referencedViews,
+        }
     }
 }
 
@@ -348,12 +382,12 @@ function _SwitchSequence(
     summary = null,
     expansionMode = null,
 ) {
-    const fullView = Sequence(elements, startMotif, endMotif, orientation);
-    const compactView = Sequence(elements.slice(0, 3), startMotif, '...', orientation);
+    const fullView = new Sequence(elements, startMotif, endMotif, orientation);
+    const compactView = new Sequence(elements.slice(0, 3), startMotif, '...', orientation);
     const summaryView = summary || `sequence[${elements.length}]`;
     if (elements.length <= 3) {
         let modes = expansionMode === 'summary' ? ['summary', 'full'] : ['full', 'summary'];
-        return Switch(modes, {'full': fullView, 'summary': summaryView});
+        return new Switch(modes, {'full': fullView, 'summary': summaryView});
     }
     let modes;
     switch(expansionMode) {
@@ -368,10 +402,10 @@ function _SwitchSequence(
             modes = ['summary', 'full', 'compact'];
             break;
     }
-    return Switch(modes, {'full': fullView, 'compact': compactView, 'summary': summaryView});
+    return new Switch(modes, {'full': fullView, 'compact': compactView, 'summary': summaryView});
 }
 
-function _SwitchKeyValues(
+function _SwitchKeyValue(
     keyValues,
     itemSep = ':',
     startMotif = null,
@@ -379,14 +413,14 @@ function _SwitchKeyValues(
     summary = null,
     expansionMode = null,
 ) {
-    const fullView = KeyValues(keyValues, itemSep, startMotif, endMotif);
+    const fullView = new KeyValue(keyValues, itemSep, startMotif, endMotif);
     const compact = {};
     Object.entries(keyValues).slice(0, 3).forEach(([key, value]) => compact[key] = value);
-    const compactView = KeyValues(compact, itemSep, startMotif, '...');
+    const compactView = new KeyValue(compact, itemSep, startMotif, '...');
     const summaryView = summary || `object[${Object.keys(keyValues).length}]`;
     if (Object.keys(keyValues).length <= 3) {
         let modes = expansionMode === 'summary' ? ['summary', 'full'] : ['full', 'summary'];
-        return Switch(modes, {'full': fullView, 'summary': summaryView});
+        return new Switch(modes, {'full': fullView, 'summary': summaryView});
     }
     let modes;
     switch(expansionMode) {
@@ -401,5 +435,5 @@ function _SwitchKeyValues(
             modes = ['summary', 'full', 'compact'];
             break;
     }
-    return Switch(modes, {'full': fullView, 'compact': compactView, 'summary': summaryView});
+    return new Switch(modes, {'full': fullView, 'compact': compactView, 'summary': summaryView});
 }
