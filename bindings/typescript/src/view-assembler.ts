@@ -12,8 +12,11 @@
  * classes by implementing custom view methods (e.g. `__view__()`).
  */
 
+import md5 from 'js-md5';
+
  // TODO: Import package properly.
-import { View, Fragment, FragmentId, FragmentMeta } from '../../../core/src/schema';
+import { View, Fragment, FragmentId } from '../../../core/src/schema';
+import { FragmentAssembler } from './fragment-assembler';
 import { getLanguageDefault } from './lang';
 
 
@@ -21,10 +24,7 @@ import { getLanguageDefault } from './lang';
  * language construct (e.g. int, list, class, function), or objects with custom view methods.
  * In nested objects (e.g. list, set, map), it is possible to mix these types. */
 class ViewAssembler {
-    /* Prefix to include before all the generated IDs, including the root ID. */
-    private static _kIdPrefix = "frag:";
-
-    /* Default unprefixed ID for root fragment.*/
+    /* Default ID for root fragment.*/
     private static _kRootId = "root";
 
     private _getFragmentAssembler(obj: any): FragmentAssembler {
@@ -37,9 +37,19 @@ class ViewAssembler {
         }
     }
 
-    private _createFragmentId(parentId: FragmentId, name: string): FragmentId {
-        const parentHash = parentId.slice(ViewAssembler._kIdPrefix.length);
-        return `frag:${parentHash}${name}`;
+    private _getFragmentId(name: string, parentId: FragmentId): FragmentId {
+        return md5.base64(`${parentId}-${name}`).slice(0, 10);
+    }
+
+    /**
+     * Constructor.
+     * @param getFragmentId
+     *     Function to produce a FragmentId for an object given its name and its parent's ID.
+     */
+    public constructor(getFragmentId?: (name: string, parentId: FragmentId) => FragmentId) {
+        if(getFragmentId) {
+            this._getFragmentId = getFragmentId;
+        }
     }
 
     /**
@@ -53,12 +63,9 @@ class ViewAssembler {
         // the queue and processed. This must be the case since the children of an object are
         // processed later than it and since an object may reference itself.
         // TODO: Is there a circular references problem?
-        const assigned = new Map<any, FragmentId>([
-            [obj, ViewAssembler._kRootId],
-        ]);
-        const fragments: {[fragmentId: string]: Fragment | null} = {
-            [ViewAssembler._kRootId]: null,
-        };
+        const rootId = ViewAssembler._kRootId;
+        const assigned = new Map<any, FragmentId>([[obj, rootId]]);
+        const fragments: {[fragmentId: string]: Fragment | null} = {[rootId]: null};
         const queue: any[] = [obj];
         while(queue.length > 0) {
             const curr = queue.shift();
@@ -76,7 +83,7 @@ class ViewAssembler {
             const [frag, refs] = fasm.assemble((obj, name) => {
                 const existingId = assigned.get(obj);
                 if(existingId) return existingId;
-                const createdId = this._createFragmentId(fragId, name);
+                const createdId = this._getFragmentId(name, fragId);
                 assigned.set(obj, createdId);
                 fragments[createdId] = null;
                 return createdId;
@@ -92,28 +99,15 @@ class ViewAssembler {
         })
         
         return {
-            rootId: ViewAssembler._kRootId,
+            rootId: rootId,
             fragments: fragments as any as {[fragmentId: string]: Fragment},
         }
     }
 }
 
-export function assemble(obj: any): View {
-    return (new ViewAssembler()).assemble(obj);
-}
-
-/* Fragment-specific assembler with custom constructor and manipulation methods. */
-export abstract class FragmentAssembler {
-    protected _meta: FragmentMeta = {};
-    public meta(key: string, value?: any): FragmentAssembler {
-        this._meta[key] = value;
-        return this;
-    }
-
-    /**
-     * @return
-     *     `Fragment` data structure based on the current configuration, and a list of all 
-     *     referenced objects (i.e. child elements).
-     */
-    public abstract assemble(getId: (obj: any, name: string) => FragmentId): [Fragment, any[]];
+export function assemble(
+    obj: any,
+    getFragmentId?: (name: string, parentId: FragmentId) => FragmentId,
+): View {
+    return (new ViewAssembler(getFragmentId)).assemble(obj);
 }

@@ -1,7 +1,8 @@
 import JSON5 from 'json5';
 
+import { FragmentAssembler } from './fragment-assembler';
 import { Text, Sequence, KeyValue, Switch } from './assemblers';
-import { FragmentAssembler } from './assembler';
+
 
 export function getLanguageDefault(obj: any): FragmentAssembler {
     if (obj !== Object(obj)) {

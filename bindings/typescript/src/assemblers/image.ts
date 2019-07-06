@@ -1,5 +1,5 @@
 import { FragmentId, ImagePrimitiveFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 
 
 class ImagePrimitiveFragmentAssembler extends FragmentAssembler {

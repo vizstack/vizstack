@@ -1,5 +1,6 @@
 import { FragmentId, KeyValueLayoutFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
+import _ from 'lodash';
 
 class KeyValueLayoutFragmentAssembler extends FragmentAssembler {
     private _entries: { key: any, value: any }[] = [];
@@ -38,7 +39,7 @@ class KeyValueLayoutFragmentAssembler extends FragmentAssembler {
                 endMotif: this._endMotif,
             },
             meta: this._meta,
-        }, this._entries.flatMap(({ key, value }) => [key, value])];
+        }, _.flatMap(this._entries, ({ key, value }) => [key, value])];
     }
 }
 

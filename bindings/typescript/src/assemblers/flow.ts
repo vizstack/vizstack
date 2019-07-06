@@ -1,5 +1,5 @@
 import { FragmentId, FlowLayoutFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 
 
 class FlowLayoutFragmentAssembler extends FragmentAssembler {

@@ -1,5 +1,5 @@
 import { FragmentId, TextPrimitiveFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 
 
 class TextPrimitiveFragmentAssembler extends FragmentAssembler {

@@ -1,5 +1,5 @@
 import { FragmentId, SequenceLayoutFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 
 
 class SequenceLayoutFragmentAssembler extends FragmentAssembler {
@@ -21,6 +21,11 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
         this._endMotif = endMotif;
     }
 
+    public item(item: any) {
+        this._elements.push(item);
+        return this;
+    }
+    
     public items(...items: any) {
         this._elements.push(...items);
         return this;

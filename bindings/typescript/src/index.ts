@@ -1,2 +1,2 @@
-export { assemble } from './assembler';
-export * from './view';
+export { assemble } from './view-assembler';
+export * from './assemblers';

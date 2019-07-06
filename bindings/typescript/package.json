@@ -1,12 +1,14 @@
 {
-  "name": "vizstack",
+  "name": "vizstack-js",
   "version": "1.0.0",
   "description": "",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
+    "@types/js-md5": "^0.4.2",
     "cuid": "^2.1.6",
+    "js-md5": "^0.7.3",
     "json5": "^2.1.0",
     "lodash": "^4.17.11"
   },

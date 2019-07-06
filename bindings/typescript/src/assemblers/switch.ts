@@ -1,5 +1,5 @@
 import { FragmentId, SwitchLayoutFragment } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 
 
 const kNoneSpecified = Symbol();
@@ -35,7 +35,7 @@ class SwitchLayoutFragmentAssembler extends FragmentAssembler {
         return [{
             type: 'SwitchLayout',
             contents: {
-                modes: this._modes.map((name, idx) => getId(this._items[name], `${idx}`))
+                modes: this._modes.map((name) => getId(this._items[name], `${name}`))
             },
             meta: this._meta,
         }, this._modes.map((name) => this._items[name])];

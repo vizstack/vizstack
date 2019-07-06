@@ -1,5 +1,5 @@
 import { FragmentId, DagLayoutFragment, DagNode, DagEdge } from '../../../../core/src/schema';
-import { FragmentAssembler } from '../assembler';
+import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 
 
