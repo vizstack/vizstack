@@ -7,7 +7,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
-import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, ViewId } from '../../schema';
+import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, FragmentId } from '../../schema';
 import { Viewer } from '../../Viewer';
 import type { ViewerToViewerProps} from '../../Viewer';
 
@@ -917,7 +917,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const { viewId, isInteractive, isVisible } = this.props.nodes[id];
+                                    const { fragmentId, isInteractive, isVisible } = this.props.nodes[id];
                                     const { children, x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
@@ -935,7 +935,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                                                 this._onNodeResize(id, width, height)
                                             }
                                         >
-                                            <Viewer {...viewerToViewerProps} viewId={viewId} />
+                                            <Viewer {...viewerToViewerProps} fragmentId={fragmentId} />
                                         </DagNode>
                                     );
                                 }

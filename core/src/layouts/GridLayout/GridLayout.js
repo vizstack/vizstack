@@ -6,7 +6,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { ViewerToViewerProps } from '../../Viewer';
 
-import type { ViewId } from '../../schema';
+import type { FragmentId } from '../../schema';
 import type {
     ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';
@@ -37,7 +37,7 @@ type GridLayoutProps = {
 
     /** Elements which should be rendered as children of the `GridLayout`. */
     cells: {
-        viewId: ViewId,
+        fragmentId: FragmentId,
         col: number,
         row: number,
         width: number,
@@ -217,12 +217,12 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                {cells.map(({ viewId, col, row, width, height }, i) => {
+                {cells.map(({ fragmentId, col, row, width, height }, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
                     return (
                         <div
-                            key={viewId}
+                            key={fragmentId}
                             className={classNames({
                                 [classes.cell]: true,
                                 [classes.cellSelected]: isHighlighted && selectedCellIdx === i,
@@ -232,7 +232,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                                 gridRow: `${row + 1} / ${row + 1 + height}`,
                             }}
                         >
-                            <Viewer {...viewerToViewerProps} viewId={viewId} ref={ref}/>
+                            <Viewer {...viewerToViewerProps} fragmentId={fragmentId} ref={ref}/>
                         </div>
                     );
                 })}

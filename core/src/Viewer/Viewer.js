@@ -5,7 +5,7 @@ import Immutable from 'seamless-immutable';
 import cuid from 'cuid';
 
 import type {
-    ViewId,
+    FragmentId,
     ViewModel,
     View,
     TextPrimitiveModel,
@@ -59,9 +59,9 @@ export type ViewerProps = {
     /** Specification of View's root model and sub-models. */
     view: View | ViewObject,
 
-    /** Unique `ViewId` for the `ViewModel` to be rendered by this `Viewer` at the current
+    /** Unique `FragmentId` for the `ViewModel` to be rendered by this `Viewer` at the current
      *  level of nesting. If unspecified, the `view.rootId` is used. */
-    viewId?: ViewId,
+    fragmentId?: FragmentId,
 
     /** A function to be called when the viewer is mounted, which instructs an `InteractionManager`
      *  instance to begin handling events for this `Viewer`. */
@@ -105,8 +105,8 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     }
 
     _getModel() {
-        const { view, viewId } = this.props;
-        const currId: ViewId = viewId || view.rootId;
+        const { view, fragmentId } = this.props;
+        const currId: FragmentId = fragmentId || view.rootId;
         return view.models[currId];
     }
 
@@ -122,12 +122,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     /** Renderer. */
     render() {
-        const { view, viewId, emitEvent } = this.props;
+        const { view, fragmentId, emitEvent } = this.props;
 
         // Explicitly specified model for current viewer, or root-level model by default.
         const model: ViewModel = this._getModel();
         if (!model) {
-            console.error('Invalid ViewId within View: ', viewId, view);
+            console.error('Invalid FragmentId within View: ', fragmentId, view);
             return null;
         }
 

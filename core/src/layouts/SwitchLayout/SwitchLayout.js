@@ -6,7 +6,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { ViewerToViewerProps } from '../../Viewer';
 
-import type { ViewId } from '../../schema';
+import type { FragmentId } from '../../schema';
 import type {
     ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';
@@ -36,7 +36,7 @@ type SwitchLayoutProps = {
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    modes: ViewId[],
+    modes: FragmentId[],
 };
 
 type SwitchLayoutDefaultProps = {|
@@ -153,7 +153,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
         const { classes, modes, emitEvent, viewerId, viewerToViewerProps } = this.props;
         const { isHighlighted, selectedModeIdx } = this.state;
 
-        const viewId = modes[selectedModeIdx];
+        const fragmentId = modes[selectedModeIdx];
 
         return (
             <div
@@ -163,8 +163,8 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                <div key={viewId}>
-                    <Viewer {...viewerToViewerProps} viewId={viewId} ref={this.childRef}/>
+                <div key={fragmentId}>
+                    <Viewer {...viewerToViewerProps} fragmentId={fragmentId} ref={this.childRef}/>
                 </div>
             </div>
         );

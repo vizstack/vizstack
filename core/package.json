@@ -1,5 +1,5 @@
 {
-  "name": "vizstack-core",
+  "name": "vizstack",
   "version": "0.1.0",
   "description": "Components which render VizStack schemas.",
   "main": "build/index.js",

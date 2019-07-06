@@ -4,7 +4,7 @@ import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
 
 import { Viewer } from '../../Viewer';
-import type { ViewId } from '../../schema';
+import type { FragmentId } from '../../schema';
 import type { ViewerToViewerProps } from '../../Viewer';
 import type {
     ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
@@ -37,7 +37,7 @@ type KeyValueLayoutProps = {
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Key-value pairs where each key and value will be rendered as a `Viewer`. */
-    entries: Array<{key: ViewId, value: ViewId}>,
+    entries: Array<{key: FragmentId, value: FragmentId}>,
 
     /** A string to be shown between each key and value. */
     itemSep?: string,
@@ -211,14 +211,14 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                                 [classes.cell]: true,
                                 [classes.cellSelected]: isHighlighted && selectedEntryIdx === i && selectedType === 'key',
                             })}>
-                                <Viewer key={`k${i}`} ref={keyRef} {...viewerToViewerProps} viewId={key} />
+                                <Viewer key={`k${i}`} ref={keyRef} {...viewerToViewerProps} fragmentId={key} />
                             </div>
                             <span>{itemSep}</span>
                             <div className={classNames({
                                 [classes.cell]: true,
                                 [classes.cellSelected]: isHighlighted && selectedEntryIdx === i && selectedType === 'value',
                             })}>
-                                <Viewer key={`v${i}`} ref={valueRef} {...viewerToViewerProps} viewId={value} />
+                                <Viewer key={`v${i}`} ref={valueRef} {...viewerToViewerProps} fragmentId={value} />
                             </div>
                         </div>
                     );
