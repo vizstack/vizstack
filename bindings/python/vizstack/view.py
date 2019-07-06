@@ -212,6 +212,7 @@ def get_view(o: Any) -> 'View':
     # If we have a cyclic reference where the `View` uses one of our defaults, then we need the placeholder to start
     # in the "summary" mode; otherwise, our renderer would be caught in an loop, showing the same "full" mode within
     # itself infinitely.
+    # TODO: This is hacky.
     if is_switch:
         mutate_view(_current_placeholders[id(o)], Switch(view._modes[-1:] + view._modes[:-1], view._items))
     else:
@@ -490,7 +491,7 @@ class DagLayout(View):
                 'nodes':
                     {node_id: {
                     **{key: value for key, value in node.items() if value is not None and key is not 'parent'},
-                    'viewId': self._items[node_id].id,
+                    'fragmentId': self._items[node_id].id,
                     'children': [_node_id for _node_id in self._nodes if self._nodes[_node_id]['parent'] == node_id]}
                      for node_id, node in self._nodes.items()},
                 'edges':
@@ -580,7 +581,7 @@ class Grid(View):
         return {
             'type': 'GridLayout',
             'contents': {
-                'cells': [{**cell, 'viewId': self._items[cell_name].id} for cell_name, cell in self._cells.items()],
+                'cells': [{**cell, 'fragmentId': self._items[cell_name].id} for cell_name, cell in self._cells.items()],
             },
             'meta': self._meta,
         }, list(self._items.values())
@@ -708,7 +709,7 @@ class KeyValue(View):
             'contents': {
                 'startMotif': self._start_motif,
                 'endMotif': self._end_motif,
-                'itemSep': self._item_separator,
+                'separator': self._item_separator,
                 'entries': [{'key': key.id, 'value': value.id} for key, value in self._entries],
             },
             'meta': self._meta,
