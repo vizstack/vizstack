@@ -1,9 +1,9 @@
-import { FragmentId, DagLayoutFragment, DagNode, DagEdge } from '../../../../core/src/schema';
+import { FragmentId, DagLayoutFragment, DagNode, DagEdge } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 
 
-type DagNodeConfig = Omit<DagNode, 'fragmentId' | 'children'>
+type DagNodeConfig = Omit<DagNode, 'fragmentId' | 'children'>;
 type DagEdgeConfig = DagEdge;
 
 const kNoneSpecified = Symbol();

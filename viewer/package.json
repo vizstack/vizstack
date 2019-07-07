@@ -1,7 +1,9 @@
 {
-  "name": "vizstack",
-  "version": "0.1.0",
-  "description": "Components which render VizStack schemas.",
+  "name": "@vizstack/viewer",
+  "version": "1.0.0",
+  "description": "Vizstack Core components to render visualizations with React.",
+  "repository": "https://github.com/vizstack/vizstack",
+  "license": "MIT",
   "main": "build/index.js",
   "files": [
     "build"

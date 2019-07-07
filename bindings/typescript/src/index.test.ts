@@ -1,4 +1,4 @@
-import { View, Fragment, FragmentId } from '../../../core/src/schema';
+import { View, Fragment, FragmentId } from '@vizstack/schema';
 import {
     assemble,
     Text,

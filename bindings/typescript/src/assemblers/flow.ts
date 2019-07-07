@@ -1,4 +1,4 @@
-import { FragmentId, FlowLayoutFragment } from '../../../../core/src/schema';
+import { FragmentId, FlowLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 

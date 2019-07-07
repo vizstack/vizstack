@@ -1,4 +1,4 @@
-import { FragmentId, KeyValueLayoutFragment } from '../../../../core/src/schema';
+import { FragmentId, KeyValueLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 

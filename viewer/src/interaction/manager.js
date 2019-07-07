@@ -1,5 +1,5 @@
 // @flow
-import type {ViewModel} from '../schema';
+import type {ViewModel} from '@vizstack/schema';
 import type {ViewerDidMouseOverEvent, Event, ViewerDidMouseOutEvent, ViewerDidClickEvent } from './events';
 import type {TextPrimitiveHandle} from '../primitives/TextPrimitive';
 import * as React from "react";

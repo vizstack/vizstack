@@ -1,4 +1,4 @@
-import { Fragment, FragmentId, FragmentMeta } from '../../../core/src/schema';
+import { Fragment, FragmentId, FragmentMeta } from '@vizstack/schema';
 
 /* Fragment-specific assembler with custom constructor and manipulation methods. */
 export abstract class FragmentAssembler {

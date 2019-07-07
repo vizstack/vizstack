@@ -1,4 +1,4 @@
-import { FragmentId, SwitchLayoutFragment } from '../../../../core/src/schema';
+import { FragmentId, SwitchLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 

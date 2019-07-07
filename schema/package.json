@@ -1,23 +1,14 @@
 {
-  "name": "@vizstack/js",
+  "name": "@vizstack/schema",
   "version": "1.0.0",
-  "description": "Vizstack Core bindings for Javascript and Typescript.",
+  "description": "Vizstack Core schema of visualization data structures.",
   "repository": "https://github.com/vizstack/vizstack",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "dependencies": {
-    "@types/js-md5": "^0.4.2",
-    "cuid": "^2.1.6",
-    "js-md5": "^0.7.3",
-    "json5": "^2.1.0",
-    "lodash": "^4.17.11"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/cuid": "^1.3.0",
     "@types/jest": "^24.0.15",
-    "@types/json5": "0.0.30",
-    "@types/lodash": "^4.14.135",
     "@types/node": "^12.0.10",
     "jest": "^24.8.0",
     "nodemon": "^1.19.1",

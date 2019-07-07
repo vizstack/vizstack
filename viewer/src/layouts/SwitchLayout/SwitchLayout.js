@@ -6,7 +6,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { ViewerToViewerProps } from '../../Viewer';
 
-import type { FragmentId } from '../../schema';
+import type { FragmentId } from '@vizstack/schema';
 import type {
     ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
 } from '../../interaction';

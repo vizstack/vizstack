@@ -7,7 +7,7 @@ import { withStyles } from '@material-ui/core/styles';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
-import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, FragmentId } from '../../schema';
+import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, FragmentId } from '@vizstack/schema';
 import { Viewer } from '../../Viewer';
 import type { ViewerToViewerProps} from '../../Viewer';
 

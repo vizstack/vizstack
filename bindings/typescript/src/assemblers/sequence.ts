@@ -1,4 +1,4 @@
-import { FragmentId, SequenceLayoutFragment } from '../../../../core/src/schema';
+import { FragmentId, SequenceLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 

@@ -1,4 +1,4 @@
-import { FragmentId, TextPrimitiveFragment } from '../../../../core/src/schema';
+import { FragmentId, TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 

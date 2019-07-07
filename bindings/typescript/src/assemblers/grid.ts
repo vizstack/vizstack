@@ -1,4 +1,4 @@
-import { FragmentId, GridLayoutFragment } from '../../../../core/src/schema';
+import { FragmentId, GridLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 

@@ -14,8 +14,7 @@
 
 import md5 from 'js-md5';
 
- // TODO: Import package properly.
-import { View, Fragment, FragmentId } from '../../../core/src/schema';
+import { View, Fragment, FragmentId } from '@vizstack/schema';
 import { FragmentAssembler } from './fragment-assembler';
 import { getLanguageDefault } from './lang';
 
@@ -62,7 +61,6 @@ class ViewAssembler {
         // the corresponding `Fragment` object is `null` until the object has been taken off the
         // the queue and processed. This must be the case since the children of an object are
         // processed later than it and since an object may reference itself.
-        // TODO: Is there a circular references problem?
         const rootId = ViewAssembler._kRootId;
         const assigned = new Map<any, FragmentId>([[obj, rootId]]);
         const fragments: {[fragmentId: string]: Fragment | null} = {[rootId]: null};

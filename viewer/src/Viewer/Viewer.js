@@ -15,7 +15,7 @@ import type {
     SwitchLayoutModel,
     SequenceLayoutModel,
     DagLayoutModel, KeyValueLayoutModel,
-} from '../schema';
+} from '@vizstack/schema';
 
 import { View as ViewObject, assemble } from 'vizstack';
 
