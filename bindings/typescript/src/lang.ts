@@ -3,25 +3,14 @@ import JSON5 from 'json5';
 import { FragmentAssembler } from './fragment-assembler';
 import { Text, Sequence, KeyValue, Switch } from './assemblers';
 
-
 export function getLanguageDefault(obj: any): FragmentAssembler {
     if (obj !== Object(obj)) {
         // Primitive like number, string, or symbol.
         return Text(typeof obj === 'string' ? `"${obj}"` : `${obj}`, 'token');
     } else if (Array.isArray(obj)) {
-        return SwitchSequence(
-            obj,
-            `Array[${obj.length}]`,
-            `Array[${obj.length}] [`,
-            ']',
-        );
+        return SwitchSequence(obj, `Array[${obj.length}]`, `Array[${obj.length}] [`, ']');
     } else if (obj instanceof Set) {
-        return SwitchSequence(
-            Array.from(obj),
-            `Set[${obj.size}]`,
-            `Set[${obj.size}] {`,
-            '}',
-        );
+        return SwitchSequence(Array.from(obj), `Set[${obj.size}]`, `Set[${obj.size}] {`, '}');
     } else if (obj instanceof Map) {
         return SwitchKeyValue(
             Array.from(obj.entries()).map(([key, value]) => ({ key, value })),
@@ -32,14 +21,14 @@ export function getLanguageDefault(obj: any): FragmentAssembler {
     } else if (typeof obj === 'function') {
         const { args, defaults } = getFunctionArgs(obj);
         return SwitchKeyValue(
-            args.map((arg, idx) => ({ key: arg, value: defaults[idx]})),
+            args.map((arg, idx) => ({ key: arg, value: defaults[idx] })),
             obj.name ? `Function[${obj.name}]` : `Function`,
             obj.name ? `Function[${obj.name}] (` : `Function (`,
             ')',
         );
     } else {
         return SwitchKeyValue(
-            Object.entries(obj).map(([key, value]) =>({ key, value })),
+            Object.entries(obj).map(([key, value]) => ({ key, value })),
             `Object[${Object.keys(obj).length}]`,
             `Object[${Object.keys(obj).length}] {`,
             '}',
@@ -49,14 +38,15 @@ export function getLanguageDefault(obj: any): FragmentAssembler {
 
 function getFunctionArgs(func: any) {
     const params = (func + '')
-        .replace(/[/][/].*$/mg,'') // strip single-line comments
+        .replace(/[/][/].*$/gm, '') // strip single-line comments
         .replace(/\s+/g, '') // strip white space
         .replace(/[/][*][^/*]*[*][/]/g, '') // strip multi-line comments
         .split('){', 1)[0]
         .split(')=>')[0]
         .replace(/^[^(]*[(]/, '') // extract the parameters
         /* .replace(/=[^,]+/g, '') // strip any ES6 defaults */
-        .split(',').filter(Boolean); // split & filter [""]
+        .split(',')
+        .filter(Boolean); // split & filter [""]
 
     return {
         args: params.map((param) => param.split('=')[0]),
@@ -69,23 +59,13 @@ function getFunctionArgs(func: any) {
             } catch (error) {}
             return value;
         }),
-    }
+    };
 }
 
 const kCompactNum = 5;
 
-function SwitchSequence(
-    elements: any[],
-    summary: string,
-    startMotif?: string,
-    endMotif?: string
-) {
-    const fullMode = Sequence(
-        elements,
-        'horizontal',
-        startMotif,
-        endMotif,
-    );
+function SwitchSequence(elements: any[], summary: string, startMotif?: string, endMotif?: string) {
+    const fullMode = Sequence(elements, 'horizontal', startMotif, endMotif);
     const compactMode = Sequence(
         elements.slice(0, kCompactNum),
         'horizontal',
@@ -96,32 +76,30 @@ function SwitchSequence(
     if (elements.length <= kCompactNum) {
         return Switch(['full', 'summary'], { full: fullMode, summary: summaryMode });
     } else {
-        return Switch(['full', 'summary', 'compact'], { full: fullMode, summary: summaryMode, compact: compactMode });
+        return Switch(['full', 'summary', 'compact'], {
+            full: fullMode,
+            summary: summaryMode,
+            compact: compactMode,
+        });
     }
 }
 
 function SwitchKeyValue(
-    entries: { key: any, value: any }[],
+    entries: { key: any; value: any }[],
     summary: string,
     startMotif?: string,
     endMotif?: string,
 ) {
-    const fullMode = KeyValue(
-        entries,
-        ':',
-        startMotif,
-        endMotif,
-    );
-    const compactMode = KeyValue(
-        entries.slice(0, kCompactNum),
-        ':',
-        startMotif,
-        '... ' + endMotif,
-    );
+    const fullMode = KeyValue(entries, ':', startMotif, endMotif);
+    const compactMode = KeyValue(entries.slice(0, kCompactNum), ':', startMotif, '... ' + endMotif);
     const summaryMode = summary;
     if (entries.length <= kCompactNum) {
         return Switch(['full', 'summary'], { full: fullMode, summary: summaryMode });
     } else {
-        return Switch(['full', 'summary', 'compact'], { full: fullMode, summary: summaryMode, compact: compactMode });
+        return Switch(['full', 'summary', 'compact'], {
+            full: fullMode,
+            summary: summaryMode,
+            compact: compactMode,
+        });
     }
 }

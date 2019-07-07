@@ -1,0 +1,17 @@
+{
+  "name": "vizstack",
+  "version": "1.0.0",
+  "description": "Vizstack Core repository for schema, viewer, and language-specific bindings.",
+  "repository": "https://github.com/vizstack/vizstack",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^4.1.0",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^1.18.2"
+  },
+  "scripts": {
+    "format": "npm-run-all jsformat pyformat",
+    "jsformat": "prettier --config ./.prettierrc --write \"{schema,viewer,bindings/typescript}/src/**/*.{js,jsx,ts,tsx}\"",
+    "pyformat": "yapf -r -i -e \"venv/*,node_modules/*\" bindings/python/**/*.py"
+  }
+}

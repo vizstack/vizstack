@@ -6,11 +6,8 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { FragmentId } from '@vizstack/schema';
 import type { ViewerToViewerProps } from '../../Viewer';
-import type {
-    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
-} from '../../interaction';
+import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
-
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -64,7 +61,7 @@ export type FlowDidChangeElementEvent = {|
     message: {|
         viewerId: ViewerId,
     |},
-|}
+|};
 
 type FlowLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | FlowDidChangeElementEvent;
 
@@ -74,28 +71,32 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
         updateHandle: () => {},
     };
 
-    childRefs: Array<{current: null | Viewer}> = [];
+    childRefs: Array<{ current: null | Viewer }> = [];
 
     constructor(props) {
         super(props);
         this.state = {
             selectedElementIdx: 0,
             isHighlighted: false,
-        }
+        };
     }
 
     _updateHandle() {
         const { updateHandle } = this.props;
-        const { isHighlighted, selectedElementIdx, } = this.state;
+        const { isHighlighted, selectedElementIdx } = this.state;
         updateHandle({
             selectedElementIdx,
-            selectedViewerId: this.childRefs.length > selectedElementIdx && this.childRefs[selectedElementIdx].current ? this.childRefs[selectedElementIdx].current.viewerId : null,
+            selectedViewerId:
+                this.childRefs.length > selectedElementIdx &&
+                this.childRefs[selectedElementIdx].current
+                    ? this.childRefs[selectedElementIdx].current.viewerId
+                    : null,
             isHighlighted,
             doHighlight: () => {
-                this.setState({ isHighlighted: true, });
+                this.setState({ isHighlighted: true });
             },
             doUnhighlight: () => {
-                this.setState({ isHighlighted: false, });
+                this.setState({ isHighlighted: false });
             },
             doSelectElement: (elementIdx) => {
                 this.setState({ selectedElementIdx: elementIdx });
@@ -110,7 +111,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                     while (elementIdx >= elements.length) {
                         elementIdx -= elements.length;
                     }
-                    return {selectedElementIdx: elementIdx};
+                    return { selectedElementIdx: elementIdx };
                 });
             },
         });
@@ -126,14 +127,19 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
         const { isHighlighted, selectedElementIdx } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
-            }
-            else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
+            } else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
             }
         }
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emitEvent<FlowDidChangeElementEvent>('Flow.DidChangeElement', { viewerId: (viewerId: ViewerId), });
+            emitEvent<FlowDidChangeElementEvent>('Flow.DidChangeElement', {
+                viewerId: (viewerId: ViewerId),
+            });
         }
     }
 
@@ -157,7 +163,14 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                 {elements.map((fragmentId, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
-                    return <Viewer key={i} ref={ref} {...viewerToViewerProps} fragmentId={fragmentId} />;
+                    return (
+                        <Viewer
+                            key={i}
+                            ref={ref}
+                            {...viewerToViewerProps}
+                            fragmentId={fragmentId}
+                        />
+                    );
                 })}
             </div>
         );

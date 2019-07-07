@@ -8,7 +8,7 @@ import type { ViewerId } from './manager';
 
 export type Event = {
     +topic: string,
-    +message: {[string]: any},
+    +message: { [string]: any },
 };
 
 export type ViewerDidMouseOverEvent = {|
@@ -45,17 +45,19 @@ export type ViewerDidMouseEvent =
     | ViewerDidDoubleClickEvent
     | ViewerDidMouseOutEvent;
 
-export type ViewerDidHighlightEvent = {|
-    topic: 'Viewer.DidHighlight',
-    message: {|
-        viewerId: ViewerId,
-    |}
-|} | {|
-    topic: 'Viewer.DidUnhighlight',
-    message: {|
-        viewerId: ViewerId,
-    |}
-|}
+export type ViewerDidHighlightEvent =
+    | {|
+          topic: 'Viewer.DidHighlight',
+          message: {|
+              viewerId: ViewerId,
+          |},
+      |}
+    | {|
+          topic: 'Viewer.DidUnhighlight',
+          message: {|
+              viewerId: ViewerId,
+          |},
+      |};
 
 export type MouseEventProps = {
     onClick: (e: SyntheticEvent<>) => void,
@@ -74,32 +76,36 @@ export type MouseEventProps = {
  * @returns {{onMouseOut: onMouseOut, onMouseOver: onMouseOver, onClick: onClick, onDoubleClick: onDoubleClick}}
  */
 export function getViewerMouseFunctions(
-    emitEvent: <E: ViewerDidMouseEvent>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
-    viewerId: ViewerId) : MouseEventProps {
+    emitEvent: <E: ViewerDidMouseEvent>(
+        $PropertyType<E, 'topic'>,
+        $PropertyType<E, 'message'>,
+    ) => void,
+    viewerId: ViewerId,
+): MouseEventProps {
     return {
         onClick: (e) => {
             e.stopPropagation();
             emitEvent('Viewer.DidClick', {
-                    viewerId,
-                });
+                viewerId,
+            });
         },
         onDoubleClick: (e) => {
             e.stopPropagation();
             emitEvent('Viewer.DidDoubleClick', {
                 viewerId,
-                });
+            });
         },
         onMouseOver: (e) => {
             e.stopPropagation();
             emitEvent('Viewer.DidMouseOver', {
                 viewerId,
-                });
+            });
         },
         onMouseOut: (e) => {
             e.stopPropagation();
             emitEvent('Viewer.DidMouseOut', {
                 viewerId,
-                });
+            });
         },
     };
 }

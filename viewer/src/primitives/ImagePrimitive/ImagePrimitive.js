@@ -2,11 +2,9 @@
 import * as React from 'react';
 import classNames from 'classnames';
 import { withStyles } from '@material-ui/core/styles';
-import type {
-    ViewerDidMouseEvent, ViewerId, ViewerDidHighlightEvent
-} from '../../interaction';
+import type { ViewerDidMouseEvent, ViewerId, ViewerDidHighlightEvent } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
-import type {TextDidResizeEvent, TextPrimitiveHandle} from "../TextPrimitive";
+import type { TextDidResizeEvent, TextPrimitiveHandle } from '../TextPrimitive';
 
 /**
  * This pure dumb component renders visualization for a text string that represents a token.
@@ -23,7 +21,10 @@ type ImagePrimitiveProps = {
     updateHandle: (ImagePrimitiveHandle) => void,
 
     /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: ImagePrimitivePub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    emitEvent: <E: ImagePrimitivePub>(
+        $PropertyType<E, 'topic'>,
+        $PropertyType<E, 'message'>,
+    ) => void,
 
     /** Path at which the image file is saved. */
     filePath: string,
@@ -63,10 +64,10 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
         updateHandle({
             isHighlighted,
             doHighlight: () => {
-                this.setState({ isHighlighted: true, });
+                this.setState({ isHighlighted: true });
             },
             doUnhighlight: () => {
-                this.setState({ isHighlighted: false, },)
+                this.setState({ isHighlighted: false });
             },
         });
     }
@@ -81,10 +82,13 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimi
         const { isHighlighted } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
-            }
-            else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
+            } else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
             }
         }
     }

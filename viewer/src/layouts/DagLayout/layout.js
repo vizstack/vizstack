@@ -454,7 +454,6 @@ export default function layout(
         children?: number[],
     };
 
-
     // Step 2: Retarget to ports.
     // --------------------------
     // Since the size of `Group` is determined by the layout process, only after the positions and
@@ -463,16 +462,20 @@ export default function layout(
     // to point to them.
 
     type PortIdx = number;
-    let portLookup: { [NodeId]: { [string]: PortIdx }} = {};
+    let portLookup: { [NodeId]: { [string]: PortIdx } } = {};
 
     function addPortVertex(nodeId: NodeId, portName: string, x: number, y: number): PortIdx {
         let idx: PortIdx = graph.ports.length;
-        if(!(nodeId in portLookup)) {
+        if (!(nodeId in portLookup)) {
             portLookup[nodeId] = {};
         }
         portLookup[nodeId][portName] = idx;
         // Need non-zero size for cola to work.
-        graph.ports.push({ width: 1, height: 1, x: x, y: y,
+        graph.ports.push({
+            width: 1,
+            height: 1,
+            x: x,
+            y: y,
             bounds: new cola.Rectangle(x - 0.5, x + 0.5, y - 0.5, y + 0.5),
             // Ports will be appended to end: vertices + groups + ports.
             index: idx + graph.vertices.length + graph.groups.length,
@@ -482,7 +485,7 @@ export default function layout(
 
     function processPorts(nodeId: NodeId) {
         const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
-        if(node.ports === undefined) return;
+        if (node.ports === undefined) return;
         const portsBySide: { ['north' | 'south' | 'east' | 'west']: string[] } = {
             north: [],
             south: [],
@@ -496,7 +499,10 @@ export default function layout(
         for (let side of ['north', 'south', 'east', 'west']) {
             // Sort all ports on the side.
             portsBySide[side].sort((portName1: string, portName2: string) => {
-                if (node.ports[portName1].order === undefined || node.ports[portName2].order === undefined) {
+                if (
+                    node.ports[portName1].order === undefined ||
+                    node.ports[portName2].order === undefined
+                ) {
                     return 0;
                 }
                 return node.ports[portName2].order - node.ports[portName1].order;
@@ -504,32 +510,32 @@ export default function layout(
             // Create a dummy Vertex for each of the ports on the side.
             portsBySide[side].forEach((portName, i) => {
                 const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId).obj;
-                const sep = portsBySide[side].length + 1;  // Num parts for port separation.
+                const sep = portsBySide[side].length + 1; // Num parts for port separation.
 
                 let pos;
                 switch (side) {
                     case 'west':
                         pos = {
                             x: obj.bounds.x - kPortLength,
-                            y: obj.bounds.y + obj.bounds.height() / sep * (i + 1),
+                            y: obj.bounds.y + (obj.bounds.height() / sep) * (i + 1),
                         };
                         break;
                     case 'east':
                         pos = {
                             x: obj.bounds.X + kPortLength,
-                            y: obj.bounds.y + obj.bounds.height() / sep * (i + 1),
+                            y: obj.bounds.y + (obj.bounds.height() / sep) * (i + 1),
                         };
                         break;
                     case 'north':
                         pos = {
-                            x: obj.bounds.x + obj.bounds.width() / sep * (i + 1),
+                            x: obj.bounds.x + (obj.bounds.width() / sep) * (i + 1),
                             y: obj.bounds.y - kPortLength,
                         };
                         break;
                     case 'south':
                     default:
                         pos = {
-                            x: obj.bounds.x + obj.bounds.width() / sep * (i + 1),
+                            x: obj.bounds.x + (obj.bounds.width() / sep) * (i + 1),
                             y: obj.bounds.Y + kPortLength,
                         };
                         break;
@@ -552,7 +558,6 @@ export default function layout(
         }
         return { source, target };
     });
-
 
     // Step 3: Route edges within gridified positions.
     // -----------------------------------------------
@@ -630,12 +635,14 @@ export default function layout(
         maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
-    paths.forEach((segment) => segment.forEach((point) => {
-        minX = Math.min(minX, point.x - kEdgeMargin);
-        minY = Math.min(minY, point.y - kEdgeMargin);
-        maxX = Math.max(maxX, point.x + kEdgeMargin);
-        maxY = Math.max(maxY, point.y + kEdgeMargin);
-    }))
+    paths.forEach((segment) =>
+        segment.forEach((point) => {
+            minX = Math.min(minX, point.x - kEdgeMargin);
+            minY = Math.min(minY, point.y - kEdgeMargin);
+            maxX = Math.max(maxX, point.x + kEdgeMargin);
+            maxY = Math.max(maxY, point.y + kEdgeMargin);
+        }),
+    );
 
     if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
         console.error('Cannot calculate one of minX, minY, maxX, maxY for graph.');
@@ -661,23 +668,30 @@ export default function layout(
             const { startId, endId, startPort, endPort } = edge;
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
-            let points = paths[i].map((point) => ({x: point.x - minX, y: point.y - minY}));
+            let points = paths[i].map((point) => ({ x: point.x - minX, y: point.y - minY }));
             function getDelta(side) {
-                switch(side) {
+                switch (side) {
                     default:
-                    case "south": return { x: 0, y: -kPortLength };
-                    case "north": return { x: 0, y: kPortLength };
-                    case "east": return { x: -kPortLength, y: 0 };
-                    case "west": return { x: kPortLength, y: 0 };
+                    case 'south':
+                        return { x: 0, y: -kPortLength };
+                    case 'north':
+                        return { x: 0, y: kPortLength };
+                    case 'east':
+                        return { x: -kPortLength, y: 0 };
+                    case 'west':
+                        return { x: kPortLength, y: 0 };
                 }
             }
-            if(startPort) {
+            if (startPort) {
                 const d = getDelta(nodes[nodeIdxLookup[startId]].ports[startPort].side);
-                points.unshift({x: points[0].x + d.x, y: points[0].y + d.y});
+                points.unshift({ x: points[0].x + d.x, y: points[0].y + d.y });
             }
-            if(endPort) {
+            if (endPort) {
                 const d = getDelta(nodes[nodeIdxLookup[endId]].ports[endPort].side);
-                points.push({x: points[points.length-1].x + d.x, y: points[points.length-1].y + d.y});
+                points.push({
+                    x: points[points.length - 1].x + d.x,
+                    y: points[points.length - 1].y + d.y,
+                });
             }
             return {
                 ...edge,

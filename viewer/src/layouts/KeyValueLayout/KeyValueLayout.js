@@ -6,11 +6,8 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { FragmentId } from '@vizstack/schema';
 import type { ViewerToViewerProps } from '../../Viewer';
-import type {
-    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
-} from '../../interaction';
+import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
-
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -30,14 +27,17 @@ type KeyValueLayoutProps = {
     updateHandle: (KeyValueLayoutHandle) => void,
 
     /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: KeyValueLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    emitEvent: <E: KeyValueLayoutPub>(
+        $PropertyType<E, 'topic'>,
+        $PropertyType<E, 'message'>,
+    ) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
     viewerToViewerProps: ViewerToViewerProps,
 
     /** Key-value pairs where each key and value will be rendered as a `Viewer`. */
-    entries: Array<{key: FragmentId, value: FragmentId}>,
+    entries: Array<{ key: FragmentId, value: FragmentId }>,
 
     /** A string to be shown between each key and value. */
     itemSep?: string,
@@ -86,9 +86,13 @@ export type KeyValueDidChangeTypeEvent = {|
     message: {|
         viewerId: ViewerId,
     |},
-|}
+|};
 
-type KeyValueLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | KeyValueDidChangeEntryEvent | KeyValueDidChangeTypeEvent;
+type KeyValueLayoutPub =
+    | ViewerDidMouseEvent
+    | ViewerDidHighlightEvent
+    | KeyValueDidChangeEntryEvent
+    | KeyValueDidChangeTypeEvent;
 
 class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLayoutState> {
     /** Prop default values. */
@@ -98,8 +102,8 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
     };
 
     childRefs: Array<{
-        key: {current: null | Viewer},
-        value: {current: null | Viewer},
+        key: { current: null | Viewer },
+        value: { current: null | Viewer },
     }> = [];
 
     constructor(props) {
@@ -108,14 +112,17 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
             selectedEntryIdx: 0,
             selectedType: 'key',
             isHighlighted: false,
-        }
+        };
     }
 
     _updateHandle() {
         const { updateHandle } = this.props;
         const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
         let selectedViewerId = null;
-        if (this.childRefs.length > selectedEntryIdx && this.childRefs[selectedEntryIdx][selectedType].current) {
+        if (
+            this.childRefs.length > selectedEntryIdx &&
+            this.childRefs[selectedEntryIdx][selectedType].current
+        ) {
             selectedViewerId = this.childRefs[selectedEntryIdx][selectedType].current.viewerId;
         }
         updateHandle({
@@ -124,10 +131,10 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
             selectedViewerId,
             isHighlighted,
             doHighlight: () => {
-                this.setState({ isHighlighted: true, });
+                this.setState({ isHighlighted: true });
             },
             doUnhighlight: () => {
-                this.setState({ isHighlighted: false, });
+                this.setState({ isHighlighted: false });
             },
             doSelectEntry: (entryIdx) => {
                 this.setState({ selectedEntryIdx: entryIdx });
@@ -142,14 +149,14 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                     while (entryIdx >= entries.length) {
                         entryIdx -= entries.length;
                     }
-                    return {selectedEntryIdx: entryIdx};
+                    return { selectedEntryIdx: entryIdx };
                 });
             },
             doSelectKey: () => {
-                this.setState({selectedType: 'key'});
+                this.setState({ selectedType: 'key' });
             },
             doSelectValue: () => {
-                this.setState({selectedType: 'value'});
+                this.setState({ selectedType: 'value' });
             },
         });
     }
@@ -164,17 +171,24 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
         const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
-            }
-            else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
+            } else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
             }
         }
         if (selectedEntryIdx !== prevState.selectedEntryIdx) {
-            emitEvent<KeyValueDidChangeEntryEvent>('KeyValue.DidChangeEntry', { viewerId: (viewerId: ViewerId), });
+            emitEvent<KeyValueDidChangeEntryEvent>('KeyValue.DidChangeEntry', {
+                viewerId: (viewerId: ViewerId),
+            });
         }
         if (selectedType !== prevState.selectedType) {
-            emitEvent<KeyValueDidChangeTypeEvent>('KeyValue.DidChangeType', { viewerId: (viewerId: ViewerId), });
+            emitEvent<KeyValueDidChangeTypeEvent>('KeyValue.DidChangeType', {
+                viewerId: (viewerId: ViewerId),
+            });
         }
     }
 
@@ -184,7 +198,16 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, entries, viewerToViewerProps, emitEvent, viewerId, itemSep, startMotif, endMotif } = this.props;
+        const {
+            classes,
+            entries,
+            viewerToViewerProps,
+            emitEvent,
+            viewerId,
+            itemSep,
+            startMotif,
+            endMotif,
+        } = this.props;
         const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
 
         this.childRefs = [];
@@ -196,36 +219,66 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                <div className={classNames({
-                    [classes.motif]: true,
-                })}>{startMotif}</div>
-                {entries.map(({key, value}, i) => {
+                <div
+                    className={classNames({
+                        [classes.motif]: true,
+                    })}
+                >
+                    {startMotif}
+                </div>
+                {entries.map(({ key, value }, i) => {
                     const keyRef = React.createRef();
                     const valueRef = React.createRef();
-                    this.childRefs.push({key: keyRef, value: valueRef,});
+                    this.childRefs.push({ key: keyRef, value: valueRef });
                     return (
-                        <div className={classNames({
-                            [classes.entry]: true,
-                        })}>
-                            <div className={classNames({
-                                [classes.cell]: true,
-                                [classes.cellSelected]: isHighlighted && selectedEntryIdx === i && selectedType === 'key',
-                            })}>
-                                <Viewer key={`k${i}`} ref={keyRef} {...viewerToViewerProps} fragmentId={key} />
+                        <div
+                            className={classNames({
+                                [classes.entry]: true,
+                            })}
+                        >
+                            <div
+                                className={classNames({
+                                    [classes.cell]: true,
+                                    [classes.cellSelected]:
+                                        isHighlighted &&
+                                        selectedEntryIdx === i &&
+                                        selectedType === 'key',
+                                })}
+                            >
+                                <Viewer
+                                    key={`k${i}`}
+                                    ref={keyRef}
+                                    {...viewerToViewerProps}
+                                    fragmentId={key}
+                                />
                             </div>
                             <span>{itemSep}</span>
-                            <div className={classNames({
-                                [classes.cell]: true,
-                                [classes.cellSelected]: isHighlighted && selectedEntryIdx === i && selectedType === 'value',
-                            })}>
-                                <Viewer key={`v${i}`} ref={valueRef} {...viewerToViewerProps} fragmentId={value} />
+                            <div
+                                className={classNames({
+                                    [classes.cell]: true,
+                                    [classes.cellSelected]:
+                                        isHighlighted &&
+                                        selectedEntryIdx === i &&
+                                        selectedType === 'value',
+                                })}
+                            >
+                                <Viewer
+                                    key={`v${i}`}
+                                    ref={valueRef}
+                                    {...viewerToViewerProps}
+                                    fragmentId={value}
+                                />
                             </div>
                         </div>
                     );
                 })}
-                <div className={classNames({
-                    [classes.motif]: true,
-                })}>{endMotif}</div>
+                <div
+                    className={classNames({
+                        [classes.motif]: true,
+                    })}
+                >
+                    {endMotif}
+                </div>
             </div>
         );
     }
@@ -252,7 +305,7 @@ const styles = (theme) => ({
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
-        borderColor: "rgba(255, 0, 0, 0)",
+        borderColor: 'rgba(255, 0, 0, 0)',
         display: 'inline-block',
     },
     motif: {

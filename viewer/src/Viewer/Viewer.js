@@ -14,7 +14,8 @@ import type {
     FlowLayoutModel,
     SwitchLayoutModel,
     SequenceLayoutModel,
-    DagLayoutModel, KeyValueLayoutModel,
+    DagLayoutModel,
+    KeyValueLayoutModel,
 } from '@vizstack/schema';
 
 import { View as ViewObject, assemble } from 'vizstack';
@@ -32,14 +33,8 @@ import SwitchLayout from '../layouts/SwitchLayout';
 import KeyValueLayout from '../layouts/KeyValueLayout';
 
 // Interactions
-import type {
-    Event,
-    ViewerHandle,
-    ViewerId,
-    ComponentHandle,
-} from '../interaction';
+import type { Event, ViewerHandle, ViewerId, ComponentHandle } from '../interaction';
 import { InteractionContext } from '../interaction';
-
 
 export type ViewerToViewerProps = {
     parent: ViewerHandle,
@@ -152,14 +147,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             case 'TextPrimitive': {
                 const { contents } = (model: TextPrimitiveModel);
-                return <TextPrimitive {...interactionProps}
-                                      {...contents} />;
+                return <TextPrimitive {...interactionProps} {...contents} />;
             }
 
             case 'ImagePrimitive': {
                 const { contents } = (model: ImagePrimitiveModel);
-                return <ImagePrimitive {...interactionProps}
-                                       {...contents} />;
+                return <ImagePrimitive {...interactionProps} {...contents} />;
             }
 
             // =====================================================================================
@@ -260,9 +253,7 @@ function consumeInteractions<Config>(
     ));
 }
 
-function assembleView(
-    Component
-) {
+function assembleView(Component) {
     return React.forwardRef((props, ref) => (
         <Component
             {...props}

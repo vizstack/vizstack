@@ -10,7 +10,7 @@ export abstract class FragmentAssembler {
 
     /**
      * @return
-     *     `Fragment` data structure based on the current configuration, and a list of all 
+     *     `Fragment` data structure based on the current configuration, and a list of all
      *     referenced objects (i.e. child elements).
      */
     public abstract assemble(getId: (obj: any, name: string) => FragmentId): [Fragment, any[]];

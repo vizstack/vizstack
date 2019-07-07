@@ -1,23 +1,33 @@
 // @flow
 import * as React from 'react';
 import classNames from 'classnames';
-import Immutable, {type Immutable as ImmutableType} from 'seamless-immutable';
+import Immutable, { type Immutable as ImmutableType } from 'seamless-immutable';
 import cuid from 'cuid';
 import { withStyles } from '@material-ui/core/styles';
 import { line, curveBasis, curveLinear } from 'd3';
 import Measure from 'react-measure';
 
-import type { DagNodeId, DagNodeModel, DagEdgeId, DagEdgeModel, FragmentId } from '@vizstack/schema';
+import type {
+    DagNodeId,
+    DagNodeModel,
+    DagEdgeId,
+    DagEdgeModel,
+    FragmentId,
+} from '@vizstack/schema';
 import { Viewer } from '../../Viewer';
-import type { ViewerToViewerProps} from '../../Viewer';
+import type { ViewerToViewerProps } from '../../Viewer';
 
 import layout from './layout';
 import type { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../utils/data-utils';
-import type {Event, MouseEventProps, ReadOnlyViewerHandle, OnViewerMouseEvent, HighlightEvent } from "../../interaction";
+import type {
+    Event,
+    MouseEventProps,
+    ReadOnlyViewerHandle,
+    OnViewerMouseEvent,
+    HighlightEvent,
+} from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
-
-
 
 // =================================================================================================
 /** The pixel width of the interactive border surrounding expansible/collapsible nodes. */
@@ -99,17 +109,19 @@ class _DagNode extends React.PureComponent<DagNodeProps> {
         }
 
         // If not expanded, render the node, surrounded by an interactive border if `isInteractive`
-        const foreignObjectPos = isInteractive ? {
-            x: x + kBorderWidth,
-            y: y + kBorderWidth,
-            width: width - kBorderWidth * 2,
-            height: height - kBorderWidth * 2,
-        } : {
-            x,
-            y,
-            width,
-            height,
-        };
+        const foreignObjectPos = isInteractive
+            ? {
+                  x: x + kBorderWidth,
+                  y: y + kBorderWidth,
+                  width: width - kBorderWidth * 2,
+                  height: height - kBorderWidth * 2,
+              }
+            : {
+                  x,
+                  y,
+                  width,
+                  height,
+              };
 
         return (
             <g>
@@ -119,10 +131,10 @@ class _DagNode extends React.PureComponent<DagNodeProps> {
                         y={y}
                         width={width}
                         height={height}
-                        stroke={"black"}
+                        stroke={'black'}
                         strokeOpacity={highlighted ? 0.4 : 0.2}
                         strokeWidth={kBorderWidth}
-                        fill={"none"}
+                        fill={'none'}
                         {...mouseProps}
                     />
                 ) : null}
@@ -135,7 +147,12 @@ class _DagNode extends React.PureComponent<DagNodeProps> {
                     <Measure
                         bounds
                         onResize={(contentRect) =>
-                            isInteractive ? onResize(contentRect.bounds.width + kBorderWidth * 2, contentRect.bounds.height + kBorderWidth * 2) : onResize(contentRect.bounds.width, contentRect.bounds.height)
+                            isInteractive
+                                ? onResize(
+                                      contentRect.bounds.width + kBorderWidth * 2,
+                                      contentRect.bounds.height + kBorderWidth * 2,
+                                  )
+                                : onResize(contentRect.bounds.width, contentRect.bounds.height)
                         }
                     >
                         {({ measureRef }) => (
@@ -181,7 +198,6 @@ const DagNode = withStyles((theme) => ({
         fillOpacity: 0.2,
     },
 }))(_DagNode);
-
 
 // =================================================================================================
 
@@ -230,14 +246,7 @@ class _DagEdge extends React.PureComponent<DagEdgeProps, DagEdgeState> {
     }
 
     render() {
-        const {
-            classes,
-            points,
-            shape,
-            color,
-            label,
-            mouseProps,
-        } = this.props;
+        const { classes, points, shape, color, label, mouseProps } = this.props;
 
         if (!points) return null;
 
@@ -252,7 +261,6 @@ class _DagEdge extends React.PureComponent<DagEdgeProps, DagEdgeState> {
                 path = line().curve(curveLinear)(points.map((p) => [p.x, p.y]));
                 break;
         }
-
 
         return (
             <g>
@@ -418,20 +426,28 @@ type DagLayoutState = ImmutableType<{
 }>;
 
 export type OnDagNodeMouseEvent = {|
-    eventName: 'onDagNodeMouseOver' | 'onDagNodeMouseOut' | 'onDagNodeClick' | 'onDagNodeDoubleClick',
+    eventName:
+        | 'onDagNodeMouseOver'
+        | 'onDagNodeMouseOut'
+        | 'onDagNodeClick'
+        | 'onDagNodeDoubleClick',
     message: {|
         nodeId: DagNodeId,
         nodeExpanded: boolean,
         publisher: ReadOnlyViewerHandle,
-    |}
+    |},
 |};
 
 export type OnDagEdgeMouseEvent = {|
-    eventName: 'onDagEdgeMouseOver' | 'onDagEdgeMouseOut' | 'onDagEdgeClick' | 'onDagEdgeDoubleClick',
+    eventName:
+        | 'onDagEdgeMouseOver'
+        | 'onDagEdgeMouseOut'
+        | 'onDagEdgeClick'
+        | 'onDagEdgeDoubleClick',
     message: {
         edgeId: DagEdgeId,
         publisher: ReadOnlyViewerHandle,
-    }
+    },
 |};
 
 type DagLayoutPub = OnViewerMouseEvent | OnDagNodeMouseEvent | OnDagEdgeMouseEvent;
@@ -442,7 +458,7 @@ export type DagNodeHighlightEvent = {|
         nodeId: DagNodeId,
         viewerId: string,
     |},
-|}
+|};
 
 export type DagEdgeHighlightEvent = {|
     eventName: 'dagEdgeHighlight' | 'dagEdgeUnhighlight',
@@ -450,7 +466,7 @@ export type DagEdgeHighlightEvent = {|
         edgeId: DagEdgeId,
         viewerId: string,
     |},
-|}
+|};
 
 export type DagNodeExpansionEvent = {|
     eventName: 'dagNodeExpand' | 'dagNodeCollapse',
@@ -458,12 +474,9 @@ export type DagNodeExpansionEvent = {|
         nodeId: DagEdgeId,
         viewerId: string,
     |},
-|}
+|};
 
-type DagLayoutSub =
-    | DagNodeHighlightEvent
-    | DagEdgeHighlightEvent
-    | DagNodeExpansionEvent;
+type DagLayoutSub = DagNodeHighlightEvent | DagEdgeHighlightEvent | DagNodeExpansionEvent;
 
 type DagLayoutDefaultProps = {};
 
@@ -539,23 +552,24 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
             nodeExpansionStates: obj2obj(this.props.nodes, (k, model) => [
                 k,
                 model.isExpanded !== false,
-            ])
+            ]),
         };
 
         ((Object.entries(this.props.nodes): any): Array<[DagNodeId, DagNodeModel]>)
             .filter(([, model]) => model.isExpanded === false)
             .forEach(([nodeId]) => {
                 const { nodes, edges } = this._collapseNode(
-                    Immutable.asMutable(initialState.nodes, {deep: true}),
-                    Immutable.asMutable(initialState.edges, {deep: true}),
-                    nodeId);
+                    Immutable.asMutable(initialState.nodes, { deep: true }),
+                    Immutable.asMutable(initialState.edges, { deep: true }),
+                    nodeId,
+                );
                 initialState.nodes = nodes;
                 initialState.edges = edges;
             });
 
         initialState.ordering = [
-            ...obj2arr(initialState.nodes, (k,) => ({ type: 'node', id: k })),
-            ...obj2arr(initialState.edges, (k,) => ({ type: 'edge', id: k })),
+            ...obj2arr(initialState.nodes, (k) => ({ type: 'node', id: k })),
+            ...obj2arr(initialState.edges, (k) => ({ type: 'edge', id: k })),
         ];
         this.setState(initialState);
 
@@ -581,76 +595,86 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         lastEvents.forEach((event: DagLayoutSub, i: number) => {
             if (event === prevProps.lastEvents[i]) return;
             if (event.eventName === 'dagEdgeHighlight') {
-                const e = (event: DagEdgeHighlightEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagEdgeHighlightEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => ({
                     ...state,
                     highlightedEdgeIds: state.highlightedEdgeIds.concat([e.message.edgeId]),
                 }));
             }
             if (event.eventName === 'dagEdgeUnhighlight') {
-                const e = (event: DagEdgeHighlightEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagEdgeHighlightEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => ({
                     ...state,
-                    highlightedEdgeIds: state.highlightedEdgeIds.filter((edgeId) => edgeId !== e.message.edgeId),
+                    highlightedEdgeIds: state.highlightedEdgeIds.filter(
+                        (edgeId) => edgeId !== e.message.edgeId,
+                    ),
                 }));
             }
             if (event.eventName === 'dagNodeHighlight') {
-                const e = (event: DagNodeHighlightEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagNodeHighlightEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => ({
                     ...state,
                     highlightedNodeIds: state.highlightedNodeIds.concat([e.message.nodeId]),
                 }));
             }
             if (event.eventName === 'dagNodeUnhighlight') {
-                const e = (event: DagNodeHighlightEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagNodeHighlightEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => ({
                     ...state,
-                    highlightedNodeIds: state.highlightedNodeIds.filter((edgeId) => edgeId !== e.message.nodeId),
+                    highlightedNodeIds: state.highlightedNodeIds.filter(
+                        (edgeId) => edgeId !== e.message.nodeId,
+                    ),
                 }));
             }
             if (event.eventName === 'dagNodeExpand') {
-                const e = (event: DagNodeExpansionEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagNodeExpansionEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => {
-                    const { nodes, edges } = this._expandNode(state.nodes, state.edges, e.message.nodeId, state.nodeExpansionStates);
+                    const { nodes, edges } = this._expandNode(
+                        state.nodes,
+                        state.edges,
+                        e.message.nodeId,
+                        state.nodeExpansionStates,
+                    );
                     const ordering = [
-                        ...obj2arr(nodes, (k,) => ({ type: 'node', id: k })),
-                        ...obj2arr(edges, (k,) => ({ type: 'edge', id: k })),
+                        ...obj2arr(nodes, (k) => ({ type: 'node', id: k })),
+                        ...obj2arr(edges, (k) => ({ type: 'edge', id: k })),
                     ];
-                    return Immutable(state)
-                        .merge({
-                            nodes,
-                            edges,
-                            ordering,
-                            shouldLayout: false,
-                            nodeExpansionStates: {
-                                ...state.nodeExpansionStates,
-                                [e.message.nodeId]: true,
-                            }
-                        });
+                    return Immutable(state).merge({
+                        nodes,
+                        edges,
+                        ordering,
+                        shouldLayout: false,
+                        nodeExpansionStates: {
+                            ...state.nodeExpansionStates,
+                            [e.message.nodeId]: true,
+                        },
+                    });
                 });
                 this.forceUpdate();
             }
             if (event.eventName === 'dagNodeCollapse') {
-                const e = (event: DagNodeExpansionEvent);  // Flow won't dispatch on the correct type otherwise
+                const e = (event: DagNodeExpansionEvent); // Flow won't dispatch on the correct type otherwise
                 this.setState((state) => {
-                    const { nodes, edges } = this._collapseNode(state.nodes, state.edges, e.message.nodeId);
+                    const { nodes, edges } = this._collapseNode(
+                        state.nodes,
+                        state.edges,
+                        e.message.nodeId,
+                    );
                     const ordering = [
-                        ...obj2arr(nodes, (k,) => ({ type: 'node', id: k })),
-                        ...obj2arr(edges, (k,) => ({ type: 'edge', id: k })),
+                        ...obj2arr(nodes, (k) => ({ type: 'node', id: k })),
+                        ...obj2arr(edges, (k) => ({ type: 'edge', id: k })),
                     ];
-                    return Immutable(state)
-                        .merge({
-                            nodes,
-                            edges,
-                            ordering,
-                            shouldLayout: false,
-                            nodeExpansionStates: {
-                                ...state.nodeExpansionStates,
-                                [e.message.nodeId]: false,
-                            }
-                        })
-                    }
-                );
+                    return Immutable(state).merge({
+                        nodes,
+                        edges,
+                        ordering,
+                        shouldLayout: false,
+                        nodeExpansionStates: {
+                            ...state.nodeExpansionStates,
+                            [e.message.nodeId]: false,
+                        },
+                    });
+                });
                 this.forceUpdate();
             }
         });
@@ -670,22 +694,29 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
      * @param nodeExpansionStates
      * @private
      */
-    _expandNode(prevNodes: ImmutableType<{[DagNodeId]: NodeOut}>, prevEdges: ImmutableType<{[DagEdgeId]: EdgeOut}>, nodeId: DagNodeId, nodeExpansionStates: {[DagNodeId]: boolean}): {
-        nodes: {[DagNodeId]: NodeOut},
-        edges: {[DagEdgeId]: EdgeOut},
+    _expandNode(
+        prevNodes: ImmutableType<{ [DagNodeId]: NodeOut }>,
+        prevEdges: ImmutableType<{ [DagEdgeId]: EdgeOut }>,
+        nodeId: DagNodeId,
+        nodeExpansionStates: { [DagNodeId]: boolean },
+    ): {
+        nodes: { [DagNodeId]: NodeOut },
+        edges: { [DagEdgeId]: EdgeOut },
     } {
         // If node has no possible children
-        if (this.props.nodes[nodeId].children.length === 0) return { nodes: prevNodes, edges: prevEdges };
+        if (this.props.nodes[nodeId].children.length === 0)
+            return { nodes: prevNodes, edges: prevEdges };
         // If node is already expanded
         if (prevNodes[nodeId].children.length !== 0) return { nodes: prevNodes, edges: prevEdges };
-        const nodes = Immutable.asMutable(prevNodes, {deep: true});
+        const nodes = Immutable.asMutable(prevNodes, { deep: true });
         let children = [nodeId];
         while (children.length > 0) {
             const childId = children.pop();
             const childModel = this.props.nodes[childId];
             nodes[childId] = {
                 id: childId,
-                children: childId === nodeId || nodeExpansionStates[childId] ? childModel.children : [],
+                children:
+                    childId === nodeId || nodeExpansionStates[childId] ? childModel.children : [],
                 flowDirection: childModel.flowDirection,
                 alignChildren: childModel.alignChildren,
                 ports: childModel.ports,
@@ -708,12 +739,16 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
      * @param nodeId
      * @private
      */
-    _collapseNode(prevNodes: ImmutableType<{[DagNodeId]: NodeOut}>, prevEdges: ImmutableType<{[DagEdgeId]: EdgeOut}>, nodeId: DagNodeId): {
-        nodes: {[DagNodeId]: NodeOut},
-        edges: {[DagEdgeId]: EdgeOut},
+    _collapseNode(
+        prevNodes: ImmutableType<{ [DagNodeId]: NodeOut }>,
+        prevEdges: ImmutableType<{ [DagEdgeId]: EdgeOut }>,
+        nodeId: DagNodeId,
+    ): {
+        nodes: { [DagNodeId]: NodeOut },
+        edges: { [DagEdgeId]: EdgeOut },
     } {
         let children: Array<DagNodeId> = [...prevNodes[nodeId].children];
-        const nodes = Immutable.asMutable(prevNodes, {deep: true});
+        const nodes = Immutable.asMutable(prevNodes, { deep: true });
         nodes[nodeId].children = [];
         while (children.length > 0) {
             const childId = children.pop();
@@ -734,28 +769,34 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
      * @param nodes
      * @private
      */
-    _rerouteEdges(nodes: ImmutableType<{[DagNodeId]: NodeOut}>): {[DagEdgeId]: EdgeOut} {
+    _rerouteEdges(nodes: ImmutableType<{ [DagNodeId]: NodeOut }>): { [DagEdgeId]: EdgeOut } {
         const edges = {};
-        ((Object.entries(this.props.edges): any): Array<[DagEdgeId, DagEdgeModel]>).forEach(([edgeId, edge]) => {
-            let { startId, endId, startPort, endPort } = edge;
-            while (!(startId in nodes)) {
-                startId = Object.keys(this.props.nodes).find((nodeId) => this.props.nodes[nodeId].children.includes(startId));
-                startPort = undefined;
-            }
-            while (!(endId in nodes)) {
-                endId = Object.keys(this.props.nodes).find((nodeId) => this.props.nodes[nodeId].children.includes(endId));
-                endPort = undefined;
-            }
-            if (startId !== endId) {
-                edges[edgeId] = {
-                    id: edgeId,
-                    startId,
-                    startPort,
-                    endId,
-                    endPort,
-                };
-            }
-        });
+        ((Object.entries(this.props.edges): any): Array<[DagEdgeId, DagEdgeModel]>).forEach(
+            ([edgeId, edge]) => {
+                let { startId, endId, startPort, endPort } = edge;
+                while (!(startId in nodes)) {
+                    startId = Object.keys(this.props.nodes).find((nodeId) =>
+                        this.props.nodes[nodeId].children.includes(startId),
+                    );
+                    startPort = undefined;
+                }
+                while (!(endId in nodes)) {
+                    endId = Object.keys(this.props.nodes).find((nodeId) =>
+                        this.props.nodes[nodeId].children.includes(endId),
+                    );
+                    endPort = undefined;
+                }
+                if (startId !== endId) {
+                    edges[edgeId] = {
+                        id: edgeId,
+                        startId,
+                        startPort,
+                        endId,
+                        endPort,
+                    };
+                }
+            },
+        );
         return edges;
     }
 
@@ -798,8 +839,8 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         const { alignments, flowDirection, alignChildren } = this.props;
 
         layout(
-            (Object.values(Immutable.asMutable(nodes, { deep: true })): any),  // Flow workaround https://github.com/facebook/flow/issues/2221#issuecomment-428201605
-            (Object.values(Immutable.asMutable(edges, { deep: true })): any),  // Flow workaround https://github.com/facebook/flow/issues/2221#issuecomment-428201605
+            (Object.values(Immutable.asMutable(nodes, { deep: true })): any), // Flow workaround https://github.com/facebook/flow/issues/2221#issuecomment-428201605
+            (Object.values(Immutable.asMutable(edges, { deep: true })): any), // Flow workaround https://github.com/facebook/flow/issues/2221#issuecomment-428201605
             (width: number, height: number, nodes: NodeOut[], edges: EdgeOut[]) => {
                 console.log('DagLayout -- _layoutGraph(): ELK callback triggered');
                 // Sort elements by ascending z-order so SVGs can be overlaid correctly.
@@ -835,42 +876,50 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         const nodeMouseFunctions = (nodeId: DagNodeId) => {
             const nodeExpanded = this.state.nodes[nodeId].children.length !== 0;
             return {
-                onClick: () => publishEvent({
-                    eventName: 'onDagNodeClick',
-                    message: { nodeId, publisher: viewerHandle, nodeExpanded, },
-                }),
-                onDoubleClick: () => publishEvent({
-                    eventName: 'onDagNodeDoubleClick',
-                    message: { nodeId, publisher: viewerHandle, nodeExpanded, },
-                }),
-                onMouseOver: () => publishEvent({
-                    eventName: 'onDagNodeMouseOver',
-                    message: { nodeId, publisher: viewerHandle, nodeExpanded, },
-                }),
-                onMouseOut: () => publishEvent({
-                    eventName: 'onDagNodeMouseOut',
-                    message: { nodeId, publisher: viewerHandle, nodeExpanded, },
-                }),
-            }
+                onClick: () =>
+                    publishEvent({
+                        eventName: 'onDagNodeClick',
+                        message: { nodeId, publisher: viewerHandle, nodeExpanded },
+                    }),
+                onDoubleClick: () =>
+                    publishEvent({
+                        eventName: 'onDagNodeDoubleClick',
+                        message: { nodeId, publisher: viewerHandle, nodeExpanded },
+                    }),
+                onMouseOver: () =>
+                    publishEvent({
+                        eventName: 'onDagNodeMouseOver',
+                        message: { nodeId, publisher: viewerHandle, nodeExpanded },
+                    }),
+                onMouseOut: () =>
+                    publishEvent({
+                        eventName: 'onDagNodeMouseOut',
+                        message: { nodeId, publisher: viewerHandle, nodeExpanded },
+                    }),
+            };
         };
 
         const edgeMouseFunctions = (edgeId: DagEdgeId) => ({
-            onClick: () => publishEvent({
-                eventName: 'onDagEdgeClick',
-                message: { edgeId, publisher: viewerHandle },
-            }),
-            onDoubleClick: () => publishEvent({
-                eventName: 'onDagEdgeDoubleClick',
-                message: { edgeId, publisher: viewerHandle },
-            }),
-            onMouseOver: () => publishEvent({
-                eventName: 'onDagEdgeMouseOver',
-                message: { edgeId, publisher: viewerHandle }
-            }),
-            onMouseOut: () => publishEvent({
-                eventName: 'onDagEdgeMouseOut',
-                message: { edgeId, publisher: viewerHandle }
-            }),
+            onClick: () =>
+                publishEvent({
+                    eventName: 'onDagEdgeClick',
+                    message: { edgeId, publisher: viewerHandle },
+                }),
+            onDoubleClick: () =>
+                publishEvent({
+                    eventName: 'onDagEdgeDoubleClick',
+                    message: { edgeId, publisher: viewerHandle },
+                }),
+            onMouseOver: () =>
+                publishEvent({
+                    eventName: 'onDagEdgeMouseOver',
+                    message: { edgeId, publisher: viewerHandle },
+                }),
+            onMouseOut: () =>
+                publishEvent({
+                    eventName: 'onDagEdgeMouseOut',
+                    message: { edgeId, publisher: viewerHandle },
+                }),
         });
 
         console.log('DagLayout -- render(): ordering =', ordering, 'state =', this.state);
@@ -888,10 +937,7 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                     markerHeight='4'
                     orient='auto'
                 >
-                    <path
-                        d='M 0 0 L 10 5 L 0 10 L 4 5 z'
-                        className={className}
-                    />
+                    <path d='M 0 0 L 10 5 L 0 10 L 4 5 z' className={className} />
                 </marker>
             );
         }
@@ -900,12 +946,14 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
             <div className={classes.frame} {...getViewerMouseFunctions(publishEvent, viewerHandle)}>
                 <div className={classes.graph}>
                     <svg width={size.width} height={size.height}>
-                        <defs>{[
-                            buildArrowMarker('arrow-normal', classes.arrowNormal),
-                            buildArrowMarker('arrow-highlight', classes.arrowHighlight),
-                            buildArrowMarker('arrow-lowlight', classes.arrowLowlight),
-                            buildArrowMarker('arrow-selected', classes.arrowSelected),
-                        ]}</defs>
+                        <defs>
+                            {[
+                                buildArrowMarker('arrow-normal', classes.arrowNormal),
+                                buildArrowMarker('arrow-highlight', classes.arrowHighlight),
+                                buildArrowMarker('arrow-lowlight', classes.arrowLowlight),
+                                buildArrowMarker('arrow-selected', classes.arrowSelected),
+                            ]}
+                        </defs>
                         <rect
                             x={0}
                             y={0}
@@ -917,7 +965,11 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                         {ordering.map(({ type, id }) => {
                             switch (type) {
                                 case 'node': {
-                                    const { fragmentId, isInteractive, isVisible } = this.props.nodes[id];
+                                    const {
+                                        fragmentId,
+                                        isInteractive,
+                                        isVisible,
+                                    } = this.props.nodes[id];
                                     const { children, x, y, width, height } = this.state.nodes[id];
                                     return (
                                         <DagNode
@@ -927,7 +979,10 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                                             width={width}
                                             height={height}
                                             isExpanded={children.length !== 0}
-                                            isInteractive={isInteractive !== false && this.props.nodes[id].children.length !== 0}
+                                            isInteractive={
+                                                isInteractive !== false &&
+                                                this.props.nodes[id].children.length !== 0
+                                            }
                                             isVisible={isVisible}
                                             highlighted={this.state.highlightedNodeIds.includes(id)}
                                             mouseProps={nodeMouseFunctions(id)}
@@ -935,16 +990,26 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
                                                 this._onNodeResize(id, width, height)
                                             }
                                         >
-                                            <Viewer {...viewerToViewerProps} fragmentId={fragmentId} />
+                                            <Viewer
+                                                {...viewerToViewerProps}
+                                                fragmentId={fragmentId}
+                                            />
                                         </DagNode>
                                     );
                                 }
                                 case 'edge': {
                                     const { points } = this.state.edges[id];
                                     return (
-                                        <DagEdge key={`e${id}`} points={points}
-                                                 color={this.state.highlightedEdgeIds.includes(id) ? 'highlight' : 'normal'}
-                                                 mouseProps={edgeMouseFunctions(id)}/>
+                                        <DagEdge
+                                            key={`e${id}`}
+                                            points={points}
+                                            color={
+                                                this.state.highlightedEdgeIds.includes(id)
+                                                    ? 'highlight'
+                                                    : 'normal'
+                                            }
+                                            mouseProps={edgeMouseFunctions(id)}
+                                        />
                                     );
                                 }
                                 default:
@@ -958,7 +1023,6 @@ class DagLayout extends React.Component<DagLayoutProps, DagLayoutState> {
         );
     }
 }
-
 
 // To inject styles into component
 // -------------------------------

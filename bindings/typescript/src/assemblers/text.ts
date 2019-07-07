@@ -1,7 +1,6 @@
 import { FragmentId, TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
-
 class TextPrimitiveFragmentAssembler extends FragmentAssembler {
     private _text: string;
     private _variant?: 'plain' | 'token';
@@ -19,15 +18,18 @@ class TextPrimitiveFragmentAssembler extends FragmentAssembler {
     }
 
     public assemble(getId: (obj: any, name: string) => FragmentId): [TextPrimitiveFragment, any[]] {
-        return [{
-            type: 'TextPrimitive',
-            contents: {
-                text: this._text,
-                color: this._color,
-                variant: this._variant,
+        return [
+            {
+                type: 'TextPrimitive',
+                contents: {
+                    text: this._text,
+                    color: this._color,
+                    variant: this._variant,
+                },
+                meta: this._meta,
             },
-            meta: this._meta,
-        }, []];
+            [],
+        ];
     }
 }
 
@@ -39,4 +41,4 @@ export function Text(
     return new TextPrimitiveFragmentAssembler(text, variant, color);
 }
 
-export interface Text extends ReturnType<typeof Text> {};
+export interface Text extends ReturnType<typeof Text> {}

@@ -6,11 +6,8 @@ import { withStyles } from '@material-ui/core/styles';
 import { Viewer } from '../../Viewer';
 import type { FragmentId } from '@vizstack/schema';
 import type { ViewerToViewerProps } from '../../Viewer';
-import type {
-    ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId,
-} from '../../interaction';
+import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
-
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -30,7 +27,10 @@ type SequenceLayoutProps = {
     updateHandle: (SequenceLayoutHandle) => void,
 
     /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: SequenceLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    emitEvent: <E: SequenceLayoutPub>(
+        $PropertyType<E, 'topic'>,
+        $PropertyType<E, 'message'>,
+    ) => void,
 
     /** Contains properties which should be spread onto any `Viewer` components rendered by this
      * layout. */
@@ -74,9 +74,12 @@ export type SequenceDidChangeElementEvent = {|
     message: {|
         viewerId: ViewerId,
     |},
-|}
+|};
 
-type SequenceLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | SequenceDidChangeElementEvent;
+type SequenceLayoutPub =
+    | ViewerDidMouseEvent
+    | ViewerDidHighlightEvent
+    | SequenceDidChangeElementEvent;
 
 class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLayoutState> {
     /** Prop default values. */
@@ -85,28 +88,32 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
         orientation: 'horizontal',
     };
 
-    childRefs: Array<{current: null | Viewer}> = [];
+    childRefs: Array<{ current: null | Viewer }> = [];
 
     constructor(props) {
         super(props);
         this.state = {
             selectedElementIdx: 0,
             isHighlighted: false,
-        }
+        };
     }
 
     _updateHandle() {
         const { updateHandle } = this.props;
-        const { isHighlighted, selectedElementIdx, } = this.state;
+        const { isHighlighted, selectedElementIdx } = this.state;
         updateHandle({
             selectedElementIdx,
-            selectedViewerId: this.childRefs.length > selectedElementIdx && this.childRefs[selectedElementIdx].current ? this.childRefs[selectedElementIdx].current.viewerId : null,
+            selectedViewerId:
+                this.childRefs.length > selectedElementIdx &&
+                this.childRefs[selectedElementIdx].current
+                    ? this.childRefs[selectedElementIdx].current.viewerId
+                    : null,
             isHighlighted,
             doHighlight: () => {
-                this.setState({ isHighlighted: true, });
+                this.setState({ isHighlighted: true });
             },
             doUnhighlight: () => {
-                this.setState({ isHighlighted: false, });
+                this.setState({ isHighlighted: false });
             },
             doSelectElement: (elementIdx) => {
                 this.setState({ selectedElementIdx: elementIdx });
@@ -121,7 +128,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                     while (elementIdx >= elements.length) {
                         elementIdx -= elements.length;
                     }
-                    return {selectedElementIdx: elementIdx};
+                    return { selectedElementIdx: elementIdx };
                 });
             },
         });
@@ -137,14 +144,19 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
         const { isHighlighted, selectedElementIdx } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', { viewerId: (viewerId: ViewerId), });
-            }
-            else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', { viewerId: (viewerId: ViewerId), });
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
+            } else {
+                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
+                    viewerId: (viewerId: ViewerId),
+                });
             }
         }
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emitEvent<SequenceDidChangeElementEvent>('Sequence.DidChangeElement', { viewerId: (viewerId: ViewerId), });
+            emitEvent<SequenceDidChangeElementEvent>('Sequence.DidChangeElement', {
+                viewerId: (viewerId: ViewerId),
+            });
         }
     }
 
@@ -154,7 +166,16 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps, emitEvent, viewerId, orientation, startMotif, endMotif } = this.props;
+        const {
+            classes,
+            elements,
+            viewerToViewerProps,
+            emitEvent,
+            viewerId,
+            orientation,
+            startMotif,
+            endMotif,
+        } = this.props;
         const { isHighlighted, selectedElementIdx } = this.state;
 
         this.childRefs = [];
@@ -166,30 +187,45 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
-                <div className={classNames({
-                    [classes.motif]: true,
-                    [classes.horizontal]: orientation === 'horizontal',
-                    [classes.vertical]: orientation === 'vertical',
-                })}>{startMotif}</div>
+                <div
+                    className={classNames({
+                        [classes.motif]: true,
+                        [classes.horizontal]: orientation === 'horizontal',
+                        [classes.vertical]: orientation === 'vertical',
+                    })}
+                >
+                    {startMotif}
+                </div>
                 {elements.map((fragmentId, i) => {
                     const ref = React.createRef();
                     this.childRefs.push(ref);
                     return (
-                        <div className={classNames({
-                            [classes.cell]: true,
-                            [classes.horizontal]: orientation === 'horizontal',
-                            [classes.vertical]: orientation === 'vertical',
-                            [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
-                        })}>
-                            <Viewer key={i} ref={ref} {...viewerToViewerProps} fragmentId={fragmentId} />
+                        <div
+                            className={classNames({
+                                [classes.cell]: true,
+                                [classes.horizontal]: orientation === 'horizontal',
+                                [classes.vertical]: orientation === 'vertical',
+                                [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
+                            })}
+                        >
+                            <Viewer
+                                key={i}
+                                ref={ref}
+                                {...viewerToViewerProps}
+                                fragmentId={fragmentId}
+                            />
                         </div>
                     );
                 })}
-                <div className={classNames({
-                    [classes.motif]: true,
-                    [classes.horizontal]: orientation === 'horizontal',
-                    [classes.vertical]: orientation === 'vertical',
-                })}>{endMotif}</div>
+                <div
+                    className={classNames({
+                        [classes.motif]: true,
+                        [classes.horizontal]: orientation === 'horizontal',
+                        [classes.vertical]: orientation === 'vertical',
+                    })}
+                >
+                    {endMotif}
+                </div>
             </div>
         );
     }
@@ -213,7 +249,7 @@ const styles = (theme) => ({
         borderStyle: theme.shape.border.style,
         borderWidth: theme.shape.border.width,
         borderRadius: theme.shape.border.radius,
-        borderColor: "rgba(255, 0, 0, 0)",
+        borderColor: 'rgba(255, 0, 0, 0)',
     },
     motif: {
         margin: theme.spacing.large,
