@@ -4,5 +4,5 @@ setup(
     name='vizstack',
     packages=['vizstack'],
     zip_safe=False,
-    install_requires=['cuid']
+    install_requires=['cuid', 'mypy_extensions', 'typing_extensions']
 )
