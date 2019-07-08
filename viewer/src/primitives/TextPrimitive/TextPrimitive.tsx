@@ -1,9 +1,8 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
+import clsx from 'clsx';
 import { withStyles } from '@material-ui/core/styles';
 
-import type { ViewerId, ViewerDidMouseEvent, ViewerDidHighlightEvent } from '../../interaction';
+import { ViewerId, ViewerDidMouseEvent, ViewerDidHighlightEvent } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
 
 /**
@@ -21,10 +20,7 @@ type TextPrimitiveProps = {
     updateHandle: (TextPrimitiveHandle) => void,
 
     /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: TextPrimitivePub>(
-        $PropertyType<E, 'topic'>,
-        $PropertyType<E, 'message'>,
-    ) => void,
+    emitEvent: (topic: string, message: Record<string, any>) => void,
 
     /** Text string displayed by the component. */
     text: string,
@@ -36,32 +32,32 @@ type TextPrimitiveProps = {
     variant?: 'plain' | 'token',
 };
 
-type TextPrimitiveDefaultProps = {|
+type TextPrimitiveDefaultProps = {
     color: 'default',
     variant: 'plain',
     updateHandle: (TextPrimitiveHandle) => void,
-|};
+};
 
-type TextPrimitiveState = {|
+type TextPrimitiveState = {
     textSize: 'small' | 'medium' | 'large',
     isHighlighted: boolean,
-|};
+};
 
-export type TextRequestResizeEvent = {|
+export type TextRequestResizeEvent = {
     topic: 'Text.RequestResize',
-    message: {|
+    message: {
         viewerId: ViewerId,
         textSize: 'small' | 'medium' | 'large',
-    |},
-|};
+    },
+};
 
-export type TextDidResizeEvent = {|
+export type TextDidResizeEvent = {
     topic: 'Text.DidResize',
-    message: {|
+    message: {
         viewerId: ViewerId,
         textSize: 'small' | 'medium' | 'large',
-    |},
-|};
+    },
+};
 
 type TextPrimitivePub =
     | ViewerDidMouseEvent
@@ -70,11 +66,11 @@ type TextPrimitivePub =
     | TextDidResizeEvent;
 
 export type TextPrimitiveHandle = {
-    isHighlighted: boolean,
-    textSize: 'small' | 'medium' | 'large',
-    doHighlight: () => void,
-    doUnhighlight: () => void,
-    doResize: ('small' | 'medium' | 'large') => void,
+    isHighlighted: boolean;
+    textSize: 'small' | 'medium' | 'large';
+    doHighlight: () => void;
+    doUnhighlight: () => void;
+    doResize: (textSize: 'small' | 'medium' | 'large') => void;
 };
 
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
@@ -119,19 +115,19 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         const { viewerId, emitEvent } = this.props;
         const { textSize, isHighlighted } = this.state;
         if (textSize !== prevState.textSize) {
-            emitEvent<TextDidResizeEvent>('Text.DidResize', {
-                viewerId: (viewerId: ViewerId),
+            emitEvent('Text.DidResize', {
+                viewerId,
                 textSize,
             });
         }
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
+                emitEvent('Viewer.DidHighlight', {
+                    viewerId,
                 });
             } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
+                emitEvent('Viewer.DidUnhighlight', {
+                    viewerId,
                 });
             }
         }
@@ -155,7 +151,7 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
                 <span key={i}>{text}</span>
             ),
         );
-        const names = classNames({
+        const names = clsx({
             [classes.text]: true,
 
             [classes.small]: textSize === 'small',

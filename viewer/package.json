@@ -4,31 +4,44 @@
   "description": "Vizstack Core components to render visualizations with React.",
   "repository": "https://github.com/vizstack/vizstack",
   "license": "MIT",
-  "main": "build/index.js",
-  "files": [
-    "build"
-  ],
-  "scripts": {
-    "build": "rm -rf \"build/\" && babel src/ -d build/"
-  },
-  "author": "Nikhil Bhattasali and Ryan Holmdahl",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "dependencies": {
-    "@material-ui/core": "^1.5.1",
-    "classnames": "^2.2.6",
+    "@material-ui/core": "^4.1.1",
+    "@material-ui/icons": "^4.2.0",
+    "clsx": "^1.0.4",
     "cuid": "^2.1.6",
     "d3": "^5.9.2",
+    "lodash": "^4.17.11",
     "react": "^16.8.6",
+    "react-dom": "^16.8.6",
     "react-measure": "^2.3.0",
     "seamless-immutable": "^7.1.4",
     "webcola": "^3.4.0"
   },
   "devDependencies": {
-    "@babel/cli": "^7.4.4",
-    "@babel/core": "^7.4.5",
-    "@babel/plugin-proposal-class-properties": "^7.4.4",
-    "@babel/preset-env": "^7.4.5",
-    "@babel/preset-flow": "^7.0.0",
-    "@babel/preset-react": "^7.0.0",
-    "flow-bin": "^0.101.1"
+    "@cypress/webpack-preprocessor": "^4.1.0",
+    "@types/jest": "^24.0.15",
+    "@types/lodash": "^4.14.136",
+    "@types/node": "^12.0.10",
+    "@types/react": "^16.8.20",
+    "@types/react-dom": "^16.8.4",
+    "acorn": "^6.2.0",
+    "cypress": "^3.3.2",
+    "cypress-react-unit-test": "^2.4.3",
+    "jest": "^24.8.0",
+    "rimraf": "^2.6.3",
+    "ts-jest": "^24.0.2",
+    "ts-loader": "^6.0.4",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.5.2",
+    "webpack": "^4.35.2"
+  },
+  "scripts": {
+    "start": "cypress open",
+    "test": "jest",
+    "build": "tsc",
+    "clean": "rimraf dist/*",
+    "repl": "ts-node"
   }
 }

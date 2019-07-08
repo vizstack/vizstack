@@ -4,6 +4,7 @@
   "description": "Vizstack Core repository for schema, viewer, and language-specific bindings.",
   "repository": "https://github.com/vizstack/vizstack",
   "license": "MIT",
+  "author": "Nikhil Bhattasali and Ryan Holmdahl",
   "devDependencies": {
     "concurrently": "^4.1.0",
     "npm-run-all": "^4.1.5",

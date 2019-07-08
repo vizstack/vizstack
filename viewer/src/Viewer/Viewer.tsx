@@ -1,30 +1,29 @@
-// @flow
 import * as React from 'react';
 import Immutable from 'seamless-immutable';
 
 import cuid from 'cuid';
 
-import type {
+import {
     FragmentId,
-    ViewModel,
+    Fragment,
     View,
-    TextPrimitiveModel,
-    ImagePrimitiveModel,
-    GridLayoutModel,
-    FlowLayoutModel,
-    SwitchLayoutModel,
-    SequenceLayoutModel,
-    DagLayoutModel,
-    KeyValueLayoutModel,
+    TextPrimitiveFragment,
+    ImagePrimitiveFragment,
+    GridLayoutFragment,
+    FlowLayoutFragment,
+    SwitchLayoutFragment,
+    SequenceLayoutFragment,
+    DagLayoutFragment,
+    KeyValueLayoutFragment,
 } from '@vizstack/schema';
 
-import { View as ViewObject, assemble } from 'vizstack';
+import { FragmentAssembler, assemble } from '@vizstack/js';
 
 // Primitives components
 import TextPrimitive from '../primitives/TextPrimitive';
 import ImagePrimitive from '../primitives/ImagePrimitive';
 
-// Layouts
+// Layout components
 import GridLayout from '../layouts/GridLayout';
 import DagLayout from '../layouts/DagLayout';
 import FlowLayout from '../layouts/FlowLayout';
@@ -33,7 +32,7 @@ import SwitchLayout from '../layouts/SwitchLayout';
 import KeyValueLayout from '../layouts/KeyValueLayout';
 
 // Interactions
-import type { Event, ViewerHandle, ViewerId, ComponentHandle } from '../interaction';
+import { Event, ViewerHandle, ViewerId, ComponentHandle } from '../interaction';
 import { InteractionContext } from '../interaction';
 
 export type ViewerToViewerProps = {
@@ -41,36 +40,36 @@ export type ViewerToViewerProps = {
     view: View,
 };
 
-export type InteractionProps = {|
-    emitEvent: <E: Event>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+export type InteractionProps = {
+    emitEvent: (topic: string, message: Record<string, any>) => void,
     updateHandle: (handle: ComponentHandle) => void,
     viewerId: ViewerId,
-|};
+};
 
 /**
  * This smart component parses a Snapshot and assembles a corresponding Viz rendering.
  */
 export type ViewerProps = {
-    /** Specification of View's root model and sub-models. */
-    view: View | ViewObject,
+    /* Specification of View's root model and sub-models. */
+    view: View,
 
-    /** Unique `FragmentId` for the `ViewModel` to be rendered by this `Viewer` at the current
-     *  level of nesting. If unspecified, the `view.rootId` is used. */
+    /* Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
+     * level of nesting. If unspecified, the `view.rootId` is used. */
     fragmentId?: FragmentId,
 
-    /** A function to be called when the viewer is mounted, which instructs an `InteractionManager`
-     *  instance to begin handling events for this `Viewer`. */
-    register: (ViewerId, () => ViewerHandle) => void,
+    /* A function to be called when the viewer is mounted, which instructs an `InteractionManager`
+     * instance to begin handling events for this `Viewer`. */
+    register: (viewerId: ViewerId, handleFactory: () => ViewerHandle) => void,
 
-    /** A function to be called when the viewer is mounted, which instructs an `InteractionManager`
-     *  instance to stop handling events for this `Viewer`. */
-    unregister: (ViewerId, () => ViewerHandle) => void,
+    /* A function to be called when the viewer is mounted, which instructs an `InteractionManager`
+     * instance to stop handling events for this `Viewer`. */
+    unregister: (viewerId: ViewerId, handleFactory: () => ViewerHandle) => void,
 
-    /** A function which publishes an `Event` to the `InteractionManager` which was registered by
-     *  the `register()` function. */
-    emitEvent: <E: Event>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
+    /* A function which publishes an `Event` to the `InteractionManager` which was registered by
+     * the `register()` function. */
+    emitEvent: (topic: string, message: Record<string, any>) => void,
 
-    /** Information about the parent of this viewer, if one exists. */
+    /* Information about the parent of this viewer, if one exists. */
     parent?: ViewerHandle,
 };
 
@@ -120,7 +119,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         const { view, fragmentId, emitEvent } = this.props;
 
         // Explicitly specified model for current viewer, or root-level model by default.
-        const model: ViewModel = this._getModel();
+        const model: Fragment = this._getModel();
         if (!model) {
             console.error('Invalid FragmentId within View: ', fragmentId, view);
             return null;
@@ -146,12 +145,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             // Primitives
 
             case 'TextPrimitive': {
-                const { contents } = (model: TextPrimitiveModel);
+                const { contents } = model;
                 return <TextPrimitive {...interactionProps} {...contents} />;
             }
 
             case 'ImagePrimitive': {
-                const { contents } = (model: ImagePrimitiveModel);
+                const { contents } = model;
                 return <ImagePrimitive {...interactionProps} {...contents} />;
             }
 
@@ -159,7 +158,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             // Layouts
 
             case 'GridLayout': {
-                const { contents } = (model: GridLayoutModel);
+                const { contents } = model;
                 return (
                     <GridLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -170,7 +169,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             case 'FlowLayout': {
-                const { contents } = (model: FlowLayoutModel);
+                const { contents } = model;
                 return (
                     <FlowLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -181,7 +180,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             case 'SequenceLayout': {
-                const { contents } = (model: SequenceLayoutModel);
+                const { contents } = model;
                 return (
                     <SequenceLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -192,7 +191,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             case 'KeyValueLayout': {
-                const { contents } = (model: KeyValueLayoutModel);
+                const { contents } = model;
                 return (
                     <KeyValueLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -203,7 +202,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             case 'SwitchLayout': {
-                const { contents } = (model: SwitchLayoutModel);
+                const { contents } = model;
                 return (
                     <SwitchLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -214,7 +213,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             case 'DagLayout': {
-                const { contents } = (model: DagLayoutModel);
+                const { contents } = model;
                 return (
                     <DagLayout
                         viewerToViewerProps={viewerToViewerProps}
@@ -225,7 +224,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             default: {
-                console.error('Unrecognized ViewModel type: ', model.type);
+                console.error(`Unknown Fragment type "${(model as any).type}" passed to Viewer ${this.viewerId}`);
                 return null;
             }
         }
@@ -233,9 +232,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 }
 
 // TODO: do we need these as props
-function consumeInteractions<Config>(
-    Component: React.AbstractComponent<Config, Viewer>,
-): React.AbstractComponent<Config, Viewer> {
+function consumeInteractions<Config>(Component){
     return React.forwardRef<Config, Viewer>((props, ref) => (
         <InteractionContext.Consumer>
             {({ registerViewer, unregisterViewer, emitEvent }) => {
@@ -258,7 +255,7 @@ function assembleView(Component) {
         <Component
             {...props}
             ref={ref}
-            view={props.view instanceof ViewObject ? assemble(props.view) : props.view}
+            view={props.view instanceof FragmentAssembler ? assemble(props.view) : props.view}
         />
     ));
 }

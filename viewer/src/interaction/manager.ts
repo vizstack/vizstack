@@ -1,29 +1,50 @@
-// @flow
-import type { ViewModel } from '@vizstack/schema';
-import type {
-    ViewerDidMouseOverEvent,
+import * as React from 'react';
+import _ from 'lodash';
+
+import {
+    Fragment,
+    TextPrimitiveFragment,
+    ImagePrimitiveFragment,
+    SwitchLayoutFragment,
+    GridLayoutFragment,
+    FlowLayoutFragment,
+    SequenceLayoutFragment,
+    KeyValueLayoutFragment,
+    DagLayoutFragment
+} from '@vizstack/schema';
+import {
     Event,
+    ViewerDidMouseOverEvent,
     ViewerDidMouseOutEvent,
     ViewerDidClickEvent,
 } from './events';
-import type { TextPrimitiveHandle } from '../primitives/TextPrimitive';
-import * as React from 'react';
-import type { ImagePrimitiveHandle } from '../primitives/ImagePrimitive';
-import type { SwitchLayoutHandle } from '../layouts/SwitchLayout';
-import type { GridLayoutHandle } from '../layouts/GridLayout';
-import type { FlowLayoutHandle } from '../layouts/FlowLayout';
-import type { SequenceLayoutHandle } from '../layouts/SequenceLayout';
-import type { KeyValueLayoutHandle } from '../layouts/KeyValueLayout';
+import { TextPrimitiveHandle } from '../primitives/TextPrimitive';
+import { ImagePrimitiveHandle } from '../primitives/ImagePrimitive';
+import { SwitchLayoutHandle } from '../layouts/SwitchLayout';
+import { GridLayoutHandle } from '../layouts/GridLayout';
+import { FlowLayoutHandle } from '../layouts/FlowLayout';
+import { SequenceLayoutHandle } from '../layouts/SequenceLayout';
+import { KeyValueLayoutHandle } from '../layouts/KeyValueLayout';
 
-export type ViewerId = string;
+export type ViewerId = string & { readonly brand?: unique symbol };
 
-/** Information which is present in all `ViewerHandle` subtypes.*/
-type ViewerInfo = {|
+/* Information which is present in all `ViewerHandle` subtypes.*/
+type ViewerInfo = {
     id: ViewerId,
     parent?: ViewerHandle,
-|};
+};
 
-/** Fields in a `ViewerHandle` which are dependent upon the type of `ViewModel` being rendered by the `Viewer`. */
+type FragmentInfo =
+    | ({ fragment: TextPrimitiveFragment } & TextPrimitiveHandle)
+    | ({ fragment: ImagePrimitiveFragment } & ImagePrimitiveHandle)
+    | ({ fragment: SwitchLayoutFragment } & SwitchLayoutHandle)
+    | ({ fragment: GridLayoutFragment } & GridLayoutHandle)
+    | ({ fragment: FlowLayoutFragment } & FlowLayoutHandle)
+    | ({ fragment: SequenceLayoutFragment } & SequenceLayoutHandle)
+    | ({ fragment: KeyValueLayoutFragment } & KeyValueLayoutHandle);
+
+/* Fields in a `ViewerHandle` which are dependent upon the type of `Fragment` being rendered by
+ * the `Viewer`. */
 export type ComponentHandle =
     | TextPrimitiveHandle
     | ImagePrimitiveHandle
@@ -33,88 +54,24 @@ export type ComponentHandle =
     | SequenceLayoutHandle
     | KeyValueLayoutHandle;
 
-/** Provides information about a `Viewer`, as well as methods which alter its state. */
-export type ViewerHandle =
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'TextPrimitive',
-          },
-          ...TextPrimitiveHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'ImagePrimitive',
-          },
-          ...ImagePrimitiveHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'SwitchLayout',
-          },
-          ...SwitchLayoutHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'GridLayout',
-          },
-          ...GridLayoutHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'FlowLayout',
-          },
-          ...FlowLayoutHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'SequenceLayout',
-          },
-          ...SequenceLayoutHandle,
-      |}
-    | {|
-          ...ViewerInfo,
-          model: {
-              ...ViewModel,
-              type: 'KeyValueLayout',
-          },
-          ...KeyValueLayoutHandle,
-      |};
+/* Provides information about a `Viewer`, as well as methods which alter its state. */
+export type ViewerHandle = ViewerInfo & FragmentInfo;
 
-/** A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
+/* A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
  * wrappers around common filters, such as `id()` and `type()`. */
 class InteractionSet {
-    viewers: Array<ViewerHandle>;
+    viewers: ViewerHandle[];
 
-    constructor(viewers: Array<ViewerHandle>) {
+    constructor(viewers: ViewerHandle[]) {
         this.viewers = viewers;
     }
 
-    id(ids: ViewerId | Array<ViewerId>): InteractionSet {
-        if (Array.isArray(ids)) {
-            return this.filter((viewer) => ids.includes(viewer.id));
-        } else {
-            return this.filter((viewer) => viewer.id === ids);
-        }
+    id(...ids: ViewerId[]): InteractionSet {
+        return this.filter((viewer) => ids.includes(viewer.id));
     }
 
-    type(types: $PropertyType<ViewModel, 'type'> | Array<$PropertyType<ViewModel, 'type'>>) {
-        if (Array.isArray(types)) {
-            return this.filter((viewer) => types.includes(viewer.model.type));
-        } else {
-            return this.filter((viewer) => viewer.model.type === types);
-        }
+    type(...types: Fragment['type'][]): InteractionSet {
+        return this.filter((viewer) => types.includes(viewer.fragment.type));
     }
 
     filter(fn: (viewer: ViewerHandle) => boolean): InteractionSet {
@@ -126,31 +83,31 @@ class InteractionSet {
     }
 }
 
-/** The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
-type EventHandler<Message> = (all: InteractionSet, message: Message, global: any) => void;
+/* The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
+type EventHandler = (all?: InteractionSet, message?: Record<string, any>, global?: Record<string, any>) => void;
 
 export class InteractionManager {
     // Maps an event topic to the handler function(s) that should fire when that event is emitted.
-    handlers: { [$PropertyType<Event, 'topic'>]: Array<EventHandler<{}>> } = {};
+    handlers: { [topic: string]: EventHandler[] } = {};
     // Maps a `ViewerId` to a function which returns the current `ViewerHandle` of that `Viewer`.
-    viewers: { ViewerId: () => ViewerHandle } = {};
+    viewers: { [viewerId: string]: () => ViewerHandle } = {};
     // The global state which is accessed by `EventHandler` functions.
-    global: any = {};
+    global: Record<string, any> = {};
     // The queue of `Event`s which have been emitted but whose handlers have not yet been executed.
     eventQueue: Array<Event> = [];
     // Whether the `InteractionManager` is currently executing the handlers for an event.
     processingEvent: boolean = false;
 
     /**
-     *
-     * @param options: `documentElement` is needed, since `document` might not be correct in all
-     *                  applications (such as "vizstack-atom").
+     * @param options
+     *     `documentElement` is needed, since `document` might not be correct in all
+     *     applications (such as "vizstack-atom").
      */
     constructor(
         options: {
-            useMouseDefaults: boolean,
-            useKeyboardDefaults: boolean,
-            documentElement: Document | HTMLElement,
+            useMouseDefaults?: boolean,
+            useKeyboardDefaults?: boolean,
+            documentElement?: Document | HTMLElement,
         } = {},
     ) {
         this.emit = this.emit.bind(this);
@@ -172,7 +129,7 @@ export class InteractionManager {
     }
 
     _useMouseDefaults() {
-        this.on<ViewerDidMouseOverEvent>('Viewer.DidMouseOver', (all, message, global) => {
+        this.on('Viewer.DidMouseOver', (all, message, global) => {
             all.id(global.selected).forEach((viewer) => {
                 viewer.doUnhighlight();
             });
@@ -181,14 +138,14 @@ export class InteractionManager {
                 viewer.doHighlight();
             });
         });
-        this.on<ViewerDidMouseOutEvent>('Viewer.DidMouseOut', (all, message) => {
+        this.on('Viewer.DidMouseOut', (all, message) => {
             all.id(message.viewerId).forEach((viewer) => {
                 viewer.doUnhighlight();
             });
         });
-        this.on<ViewerDidClickEvent>('Viewer.DidClick', (all, message) => {
+        this.on('Viewer.DidClick', (all, message) => {
             all.id(message.viewerId).forEach((viewer) => {
-                if (viewer.model.type === 'SwitchLayout') {
+                if (viewer.fragment.type === 'SwitchLayout') {
                     viewer.doIncrementMode();
                 }
             });
@@ -197,18 +154,14 @@ export class InteractionManager {
 
     _useKeyboardDefaults(documentElement: Document | HTMLElement) {
         documentElement.addEventListener('keydown', (event: KeyboardEvent) => {
-            this.emit<{| topic: 'KeyDown', message: {| key: string |} |}>('KeyDown', {
-                key: event.key,
-            });
+            this.emit('KeyDown', { key: event.key });
         });
 
         documentElement.addEventListener('keyup', (event: KeyboardEvent) => {
-            this.emit<{| topic: 'KeyUp', message: {| key: string |} |}>('KeyUp', {
-                key: event.key,
-            });
+            this.emit('KeyUp', { key: event.key });
         });
 
-        this.on<{| topic: 'KeyDown', message: {| key: string |} |}>(
+        this.on(
             'KeyDown',
             (all, message, global) => {
                 all.id(global.selected).forEach((viewer) => {
@@ -226,7 +179,7 @@ export class InteractionManager {
                             all.id(global.selected).forEach((viewer) => viewer.doHighlight());
                         }
                     }
-                    switch (viewer.model.type) {
+                    switch (viewer.fragment.type) {
                         case 'SwitchLayout':
                             if (message.key === 'ArrowRight') {
                                 viewer.doIncrementMode();
@@ -239,17 +192,17 @@ export class InteractionManager {
                             // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
                             if (
                                 (message.key === 'ArrowRight' &&
-                                    viewer.model.contents.orientation !== 'vertical') ||
+                                    viewer.fragment.contents.orientation !== 'vertical') ||
                                 (message.key === 'ArrowDown' &&
-                                    viewer.model.contents.orientation === 'vertical')
+                                    viewer.fragment.contents.orientation === 'vertical')
                             ) {
                                 viewer.doIncrementElement();
                             }
                             if (
                                 (message.key === 'ArrowLeft' &&
-                                    viewer.model.contents.orientation !== 'vertical') ||
+                                    viewer.fragment.contents.orientation !== 'vertical') ||
                                 (message.key === 'ArrowUp' &&
-                                    viewer.model.contents.orientation === 'vertical')
+                                    viewer.fragment.contents.orientation === 'vertical')
                             ) {
                                 viewer.doIncrementElement(-1);
                             }
@@ -293,26 +246,26 @@ export class InteractionManager {
         );
     }
 
-    /** Adds a new `Viewer` to the `InteractionSet` passed to handler functions. */
+    /**
+     * Adds a new `Viewer` to the `InteractionSet` passed to handler functions.
+     */
     registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
         this.viewers[id] = handleFactory;
     };
 
-    /** Removes a `Viewer` from the `InteractionSet` passed to handler functions. */
+    /**
+     * Removes a `Viewer` from the `InteractionSet` passed to handler functions.
+     */
     unregisterViewer = (id: ViewerId) => {
         delete this.viewers[id];
     };
 
     /**
      * Adds a new handler for a given topic.
-     *
      * @param topic
      * @param handler
      */
-    on<E: Event>(
-        topic: $PropertyType<E, 'topic'>,
-        handler: EventHandler<$PropertyType<E, 'message'>>,
-    ) {
+    on(topic: string, handler: EventHandler) {
         if (!(topic in this.handlers)) {
             this.handlers[topic] = [];
         }
@@ -322,25 +275,18 @@ export class InteractionManager {
     /**
      * Enqueues a new `Event` to be processed. If no `Event` is currently being processed, then that
      * `Event` is processed immediately.
-     *
      * @param topic
      * @param message
      */
-    emit: <E: Event>(
-        topic: $PropertyType<E, 'topic'>,
-        message: $PropertyType<E, 'message'>,
-    ) => void = <E>(topic, message) => {
-        this.eventQueue.push({
-            topic,
-            message,
-        });
+    emit(topic: string, message: Record<string, any>) {
+        this.eventQueue.push({ topic, message });
         if (!this.processingEvent) {
             this._processNextEvent();
         }
     };
 
-    /** Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that
-     * `Event`. */
+    /**
+     * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
     _processNextEvent() {
         this.processingEvent = true;
         const { topic, message } = this.eventQueue.shift();
@@ -350,9 +296,7 @@ export class InteractionManager {
                     // Flow doesn't know how to handle `Object.values()`, so we have to cast it to
                     // `any` then cast the `handleFactory` to its proper type
                     new InteractionSet(
-                        (Object.values(this.viewers): any).map(
-                            (handleFactory: () => ViewerHandle) => handleFactory(),
-                        ),
+                        _.values(this.viewers).map((handleFactory) => handleFactory())
                     ),
                     message,
                     this.global,
@@ -365,7 +309,8 @@ export class InteractionManager {
         }
     }
 
-    /** Returns an object which can be passed to the `value` prop of an
+    /**
+     * Returns an object which can be passed to the `value` prop of an 
      * `InteractionContext.Provider` to make this `InteractionManager` available to all `Viewer`s
      * within that context. */
     getContextValue(): InteractionContextValue {
@@ -378,7 +323,7 @@ export class InteractionManager {
     }
 }
 
-/** A React context which allows all `Viewer`s nested within it to emit and respond to events. */
+/* React context which allows all `Viewer`s nested within it to emit and respond to events. */
 export const InteractionContext = React.createContext<InteractionContextValue>({
     registerViewer: () => {},
     unregisterViewer: () => {},
@@ -388,8 +333,5 @@ export const InteractionContext = React.createContext<InteractionContextValue>({
 export type InteractionContextValue = {
     registerViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
     unregisterViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
-    emitEvent: <E: Event>(
-        topic: $PropertyType<E, 'topic'>,
-        message: $PropertyType<E, 'message'>,
-    ) => void,
+    emitEvent: (topic?: string, message?: Record<string, any>) => void,
 };
