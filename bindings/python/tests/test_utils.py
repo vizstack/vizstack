@@ -74,20 +74,20 @@ def hash_ids(raw: Union[View, Dict[str, Fragment]]):
         return _hash_fragments(raw)
 
 
-def match_object(pred: Any, truth: Any) -> bool:
+def match_object(given: Any, expected: Any) -> bool:
     """Replicates the behavior of `toMatchObject()` in Javascript.
 
-    If `truth` is a `dict`, then `pred` must contain _at least_ all of the keys in `truth`, and `match_object` must
-    return `True` for each corresponding value. If `truth` is anything else, return `pred == truth`.
+    If `expected` is a `dict`, then `given` must contain _at least_ all of the keys in `expected`, and `match_object`
+    must return `True` for each corresponding value. If `expected` is anything else, return `given == truth`.
 
     Args:
-        pred:
-        truth:
+        given:
+        expected:
 
     Returns:
 
     """
-    if isinstance(truth, dict):
-        return all(match_object(pred[k], truth[k]) for k in truth)
+    if isinstance(expected, dict):
+        return all(match_object(given[k], expected[k]) for k in expected)
     else:
-        return pred == truth
+        return given == expected
