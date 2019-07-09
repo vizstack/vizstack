@@ -11,7 +11,7 @@ __all__ = ['get_language_default']
 def get_language_default(obj: Any) -> FragmentAssembler:
     # Primitives: Token containing the value in full
     if isinstance(obj, (str, int, float, bool)) or obj is None:
-        fasm = Text(obj if not isinstance(obj, str) else '"{}"'.format(obj), variant='token')
+        fasm = Text(str(obj) if not isinstance(obj, str) else '"{}"'.format(obj), variant='token')
 
     # List: Sequence of the list elements
     elif isinstance(obj, list):

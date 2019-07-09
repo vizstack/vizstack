@@ -19,8 +19,7 @@ coverage.xml
 .hypothesis/
 
 # Sphinx documentation
-docs/_build/
-python/docs/_build
+_build
 
 # dotenv
 *.env

@@ -16,7 +16,7 @@ class Image(FragmentAssembler):
             file_path: The local path to the image file.
         """
         super(Image, self).__init__()
-        self._file_path: str = os.path.abspath(file_path)
+        self._file_path: str = file_path
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
