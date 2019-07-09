@@ -158,4 +158,4 @@ class Dag(FragmentAssembler):
                     self._align_children,
             }, ['flowDirection', 'alignChildren']),
             'meta': self._meta,
-        }, list(self._items.values())
+        }, [self._items[node_id] for node_id in self._nodes]

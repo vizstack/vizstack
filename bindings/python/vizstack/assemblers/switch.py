@@ -63,4 +63,4 @@ class Switch(FragmentAssembler):
                 'modes': [get_id(self._items[mode_name], mode_name) for mode_name in self._modes],
             },
             'meta': self._meta,
-        }, list(self._items.values())
+        }, [self._items[mode] for mode in self._modes]

@@ -108,4 +108,4 @@ class Grid(FragmentAssembler):
                                  self._cells.items()],
                    },
                    'meta': self._meta,
-               }, list(self._items.values())
+               }, [self._items[cell_name] for cell_name in self._cells]
