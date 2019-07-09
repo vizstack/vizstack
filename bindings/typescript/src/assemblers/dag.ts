@@ -12,6 +12,7 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
     private _alignChildren?: boolean;
     private _nodes: Record<string, DagNodeConfig> = {};
     private _children: Record<string, string[]> = {}; // Maps parent -> children.
+    private _parents: Record<string, string> = {}; // Maps children -> parents.
     private _alignments: Array<string[]> = [];
     private _edges: Array<DagEdgeConfig> = [];
     private _items: Record<string, any> = {};
@@ -25,16 +26,27 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
     public node(
         name: string,
         config: DagNodeConfig & {
-            parent?: string;
+            parent?: string | null;
             alignWith?: string | string[];
         } = {},
         item: any = kNoneSpecified,
     ) {
         if (!this._nodes[name]) this._nodes[name] = {};
         const { parent, alignWith } = config;
-        if (parent) {
-            if (!this._children[parent]) this._children[parent] = [];
-            this._children[parent].push(name);
+        if (parent !== undefined) {
+            // If the node already had a parent, remove it from its list of children
+            if(this._parents[name]) {
+                const idx = this._children[this._parents[name]].indexOf(name);
+                this._children[this._parents[name]].splice(idx);
+            }
+            if (parent === null) {
+                delete this._parents[name];
+            }
+            else {
+                this._parents[name] = parent;
+                if (!this._children[parent]) this._children[parent] = [];
+                this._children[parent].push(name);
+            }
         }
         if (alignWith) {
             if (typeof alignWith === 'string') {
@@ -121,7 +133,7 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
                 },
                 meta: this._meta,
             },
-            _.values(this._items),
+            Object.keys(this._nodes).map((name) => this._items[name]),
         ];
     }
 }

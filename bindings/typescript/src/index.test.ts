@@ -83,6 +83,39 @@ describe('View Assemblers declarative bindings', () => {
             'root-0': { type: 'TextPrimitive', contents: { text: 'hello' } },
         });
     });
+
+    test('DagLayout with re-assigned parent', () => {
+        const dag = Dag();
+        dag.node('parent', {});
+        dag.item('parent', 'hello');
+        dag.node('child', {'parent': 'parent'});
+        dag.item('child', 'there');
+        expect(assemble(dag, getFragmentId).fragments).toMatchObject({
+            'root': {
+                'type': 'DagLayout',
+                'contents': {
+                    'nodes': {
+                        'parent': {
+                            'children': ['child']
+                        }
+                    }
+                }
+            },
+        });
+        dag.node('child', {'parent': null});
+        expect(assemble(dag, getFragmentId).fragments).toMatchObject({
+            'root': {
+                'type': 'DagLayout',
+                'contents': {
+                    'nodes': {
+                        'parent': {
+                            'children': []
+                        }
+                    }
+                }
+            },
+        });
+    })
 });
 
 describe('Custom Views defined by user', () => {

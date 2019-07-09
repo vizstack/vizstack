@@ -58,7 +58,7 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
                 },
                 meta: this._meta,
             },
-            _.values(this._items),
+            Object.keys(this._cells).map((name) => this._items[name]),
         ];
     }
 
