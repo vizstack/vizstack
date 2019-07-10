@@ -11,7 +11,7 @@ Side = Literal['north', 'south', 'east', 'west']
 Port = TypedDict('Port', {
     'side': Side,
     'order': Optional[int],
-})
+}, total=False)
 
 Node = TypedDict('Node', {
     'flowDirection': FlowDirection,
@@ -20,15 +20,16 @@ Node = TypedDict('Node', {
     'isInteractive': Optional[bool],
     'isVisible': Optional[bool],
     'parent': Optional[str],
+    'children': Optional[List[str]],
     'ports': Dict[str, Port],
-})
+}, total=False)
 
 Edge = TypedDict('Edge', {
     'startId': str,
     'endId': str,
     'startPort': Optional[str],
     'endPort': Optional[str],
-})
+}, total=False)
 
 
 class Dag(FragmentAssembler):
@@ -54,7 +55,7 @@ class Dag(FragmentAssembler):
         super(Dag, self).__init__()
         self._flow_direction = flow_direction
         self._align_children = align_children
-        self._nodes: Dict[str, Node] = defaultdict(dict)
+        self._nodes: Dict[str, Node] = defaultdict(lambda: {})
         self._items: Dict[str, Any] = dict()
         self._edges: List[Edge] = []
         self._alignments: List[List[str]] = []
@@ -90,7 +91,7 @@ class Dag(FragmentAssembler):
                 self.port(*port)
         return self
 
-    def port(self, node_id: str, port_name: str, side: str, order: Optional[int] = None):
+    def port(self, node_id: str, port_name: str, side: Side, order: Optional[int] = None):
         if 'ports' not in self._nodes[node_id]:
             self._nodes[node_id]['ports'] = {}
         self._nodes[node_id]['ports'][port_name] = {
@@ -103,7 +104,7 @@ class Dag(FragmentAssembler):
     # TODO: remove "id" and "name" everywhere
     def edge(self, start_node_id: str, end_node_id: str,
              start_port: Optional[str] = None, end_port: Optional[str] = None):
-        edge = {
+        edge: Edge = {
             'startId': start_node_id,
             'endId': end_node_id,
         }

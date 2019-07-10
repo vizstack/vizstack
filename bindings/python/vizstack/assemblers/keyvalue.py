@@ -19,7 +19,7 @@ class KeyValue(FragmentAssembler):
         self._start_motif = start_motif
         self._end_motif = end_motif
         self._item_separator = item_separator
-        self._entries = []
+        self._entries: List[Tuple[Any, Any]] = []
         if key_value_mapping:
             for key, value in key_value_mapping.items():
                 self.item(key, value)

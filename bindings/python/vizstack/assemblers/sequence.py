@@ -19,7 +19,7 @@ class Sequence(FragmentAssembler):
         self._orientation = orientation
         self._start_motif = start_motif
         self._end_motif = end_motif
-        self._elements = []
+        self._elements: List[Any] = []
         if elements:
             for elem in elements:
                 self.item(elem)

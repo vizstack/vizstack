@@ -10,7 +10,7 @@ __all__ = ['assemble']
 
 
 class ViewAssembler:
-    _ROOT_ID = 'root'
+    _ROOT_ID = FragmentId('root')
 
     @staticmethod
     def _get_fragment_assembler(obj: Any) -> FragmentAssembler:

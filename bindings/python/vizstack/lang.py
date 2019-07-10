@@ -11,7 +11,7 @@ __all__ = ['get_language_default']
 def get_language_default(obj: Any) -> FragmentAssembler:
     # Primitives: Token containing the value in full
     if isinstance(obj, (str, int, float, bool)) or obj is None:
-        fasm = Text(str(obj) if not isinstance(obj, str) else '"{}"'.format(obj), variant='token')
+        fasm: FragmentAssembler = Text(str(obj) if not isinstance(obj, str) else '"{}"'.format(obj), variant='token')
 
     # List: Sequence of the list elements
     elif isinstance(obj, list):
@@ -42,8 +42,7 @@ def get_language_default(obj: Any) -> FragmentAssembler:
             end_motif='}',
             summary='Dict[{}]'.format(len(obj)))
     # Function: Sequence of positional arguments and the KeyValue of keyword arguments
-    elif isinstance(
-        obj, (types.FunctionType, types.MethodType, type(all.__call__))):
+    elif callable(obj):
         parameters = inspect.signature(obj).parameters.items()
         args = [param_name for param_name, param in parameters if param.default is inspect._empty]
         kwargs = {
@@ -75,7 +74,7 @@ def get_language_default(obj: Any) -> FragmentAssembler:
             # There are some functions, like torch.Tensor.data, which exist just to throw errors. Testing these
             # fields will throw the errors. We should consume them and keep moving if so.
             try:
-                value = getattr(obj, attr)
+                value: Any = getattr(obj, attr)
                 if not inspect.ismodule(
                         value
                 ):  # Prevent recursing through many modules for no reason
@@ -100,7 +99,7 @@ def get_language_default(obj: Any) -> FragmentAssembler:
                     staticfields[attr] = value
             except AttributeError:
                 continue
-        contents = []
+        contents: List[FragmentAssembler] = []
         if len(functions) > 0:
             contents.append(
                 _SwitchKeyValue(
@@ -127,22 +126,19 @@ def get_language_default(obj: Any) -> FragmentAssembler:
     else:
         instance_class = type(obj)
         instance_class_attrs = dir(instance_class)
-        contents = dict()
+        instance_fields: Dict[str, Any] = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(obj)):
-            value: Any = getattr(obj, attr)
+            value = getattr(obj, attr)
             try:
-                if not isinstance(
-                        value,
-                        (types.FunctionType, types.MethodType, type(all.__call__)
-                         )) and (attr not in instance_class_attrs
+                if not callable(value) and (attr not in instance_class_attrs
                                  or getattr(instance_class, attr, None) != value):
-                    contents[attr] = value
+                    instance_fields[attr] = value
             except Exception:
                 # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
                 # and raise any error), just skip over instead of crashing
                 continue
         fasm = _SwitchKeyValue(
-            contents,
+            instance_fields,
             item_separator='=',
             start_motif='Instance[{}] {{'.format(type(obj).__name__),
             end_motif='}',
@@ -154,12 +150,12 @@ _COMPACT_LEN = 3
 
 
 def _SwitchSequence(
-        elements: Optional[List[Any]] = None,
+        elements: List[Any],
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         orientation: str = 'horizontal',
         summary: Optional[str] = None,
-        initial_expansion_mode: Optional[str] = None):
+        initial_expansion_mode: Optional[str] = None) -> Switch:
     """Returns a `Switch` which cycles through full, compact, and summary modes of a `Sequence` with the given elements.
 
     Args:
@@ -194,7 +190,7 @@ def _SwitchKeyValue(
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         summary: Optional[str] = None,
-        initial_expansion_mode: Optional[str] = None):
+        initial_expansion_mode: Optional[str] = None) -> Switch:
     """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValue` with given items.
 
     Args:
