@@ -31,13 +31,13 @@ class KeyValue(FragmentAssembler):
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'KeyValueLayout',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'startMotif': self._start_motif,
                 'endMotif': self._end_motif,
                 'separator': self._item_separator,
                 'entries': [{'key': get_id(key, '{}k'.format(i)), 'value': get_id(value, '{}v'.format(i))} for i, (key,
                                                                                          value) in
                             enumerate(self._entries)],
-            }, ['startMotif', 'endMotif', 'separator']),
+            },
             'meta': self._meta,
         }, [t[0] for t in self._entries] + [t[1] for t in self._entries]

@@ -30,10 +30,10 @@ class Text(FragmentAssembler):
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'TextPrimitive',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'text': self._text,
                 'color': self._color,
                 'variant': self._variant
-            }, ['color', 'variant']),
+            },
             'meta': self._meta,
         }, []

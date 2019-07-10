@@ -31,11 +31,11 @@ class Sequence(FragmentAssembler):
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'SequenceLayout',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'startMotif': self._start_motif,
                 'endMotif': self._end_motif,
                 'orientation': self._orientation,
                 'elements': [get_id(elem, '{}'.format(i)) for i, elem in enumerate(self._elements)],
-            }, ['startMotif', 'endMotif', 'orientation']),
+            },
             'meta': self._meta,
         }, self._elements

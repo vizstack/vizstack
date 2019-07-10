@@ -1,9 +1,9 @@
 from vizstack import *
 from vizstack.view_assembler import ViewAssembler
-from .test_utils import hash_ids, match_object
+from .utils import hash_ids, match_object
 
 
-def test_fragment_with_metadata():
+def test_fragment_should_include_metadata():
     text = Text("hello").meta("arr", [1,2,3])
     view = assemble(text)
     assert match_object(view['fragments'], hash_ids({
@@ -13,8 +13,8 @@ def test_fragment_with_metadata():
     }))
 
 
-def test_text_primitive():
-    text = Text("hello", variant='token')
+def test_text_primitives_should_match_schema():
+    text = Text("hello", variant='token', color='error')
     view = assemble(text)
     assert match_object(view['fragments'], hash_ids({
         'root': {
@@ -22,12 +22,13 @@ def test_text_primitive():
             'contents': {
                 'text': 'hello',
                 'variant': 'token',
+                'color': 'error',
             }
         }
     }))
 
 
-def test_image_primitive():
+def test_image_primitive_should_match_schema():
     image = Image('mypath.jpg')
     view = assemble(image)
     assert match_object(view['fragments'], hash_ids({
@@ -35,7 +36,7 @@ def test_image_primitive():
     }))
 
 
-def test_sequence_layout():
+def test_sequence_layout_should_match_schema():
     sequence = Sequence([Text('hello'), Text('there')], orientation='vertical', start_motif='[', end_motif=']')
     view = assemble(sequence)
     assert match_object(view['fragments'], hash_ids({
@@ -53,7 +54,7 @@ def test_sequence_layout():
     }))
 
 
-def test_sequence_with_default_id_generator(capsys):
+def test_sequence_with_default_id_generator_should_use_expected_hashes():
     sequence = Sequence([Text('hello'), Text('there')])
     view = assemble(sequence)
     assert match_object(view['fragments'], {
@@ -66,7 +67,7 @@ def test_sequence_with_default_id_generator(capsys):
     })
 
 
-def test_layout_with_duplicates():
+def test_layout_with_duplicate_should_use_same_fragment_id_for_both():
     text = Text('hello')
     sequence = Sequence([text, text])
     view = assemble(sequence)
@@ -82,7 +83,7 @@ def test_layout_with_duplicates():
     }))
 
 
-def test_layout_with_self_reference():
+def test_layout_with_self_reference_should_use_own_fragment_id():
     sequence = Sequence()
     sequence.item(sequence)
     view = assemble(sequence)

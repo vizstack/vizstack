@@ -141,7 +141,7 @@ class Dag(FragmentAssembler):
                                                                                             edge['endId'])
         return {
             'type': 'DagLayout',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'nodes':
                     {node_id: {
                     **{key: value for key, value in node.items() if value is not None and key is not 'parent'},
@@ -156,6 +156,6 @@ class Dag(FragmentAssembler):
                     self._flow_direction,
                 'alignChildren':
                     self._align_children,
-            }, ['flowDirection', 'alignChildren']),
+            },
             'meta': self._meta,
         }, [self._items[node_id] for node_id in self._nodes]

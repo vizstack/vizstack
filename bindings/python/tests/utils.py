@@ -45,6 +45,7 @@ def _hash_fragments(raw_fragments):
                     'value': hash_id(value),
                 } for key, value in raw_contents['entries'].items()]
             # Make no changes for non-layout types, since they have no FragmentIds in their contents
+            fragment['contents'] = contents
 
         if 'meta' in raw_fragment:
             fragment['meta'] = raw_fragment['meta']
