@@ -42,8 +42,12 @@ class Grid(FragmentAssembler):
         self._cells: Dict[str, Cell] = dict()
         if isinstance(cells, list):
             for cell in cells:
-                self._cells[cell['name']] = {**cell}
-                del self._cells[cell['name']]['name']
+                self._cells[cell['name']] = {
+                    'col': cell['col'],
+                    'row': cell['row'],
+                    'width': cell['width'],
+                    'height': cell['height'],
+                }
         elif isinstance(cells, str):
             self._parse_grid_string(cells)
         self._items: Dict[str, Any] = dict()
@@ -108,4 +112,4 @@ class Grid(FragmentAssembler):
                                  self._cells.items()],
                    },
                    'meta': self._meta,
-               }, list(self._items.values())
+               }, [self._items[cell_name] for cell_name in self._cells]

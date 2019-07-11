@@ -60,8 +60,7 @@ class Switch(FragmentAssembler):
         return {
             'type': 'SwitchLayout',
             'contents': {
-                'modes': [get_id(self._items[mode_name], '{}{}'.format(mode_name, i)) for i, mode_name in
-                          enumerate(self._modes)],
+                'modes': [get_id(self._items[mode_name], mode_name) for mode_name in self._modes],
             },
             'meta': self._meta,
-        }, list(self._items.values())
+        }, [self._items[mode] for mode in self._modes]

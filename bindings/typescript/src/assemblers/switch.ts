@@ -32,8 +32,7 @@ class SwitchLayoutFragmentAssembler extends FragmentAssembler {
             {
                 type: 'SwitchLayout',
                 contents: {
-                    // Mode names are not necessarily unique
-                    modes: this._modes.map((name, i) => getId(this._items[name], `${name}${i}`)),
+                    modes: this._modes.map((name) => getId(this._items[name], `${name}`)),
                 },
                 meta: this._meta,
             },

@@ -24,16 +24,16 @@ class Text(FragmentAssembler):
         """
         super(Text, self).__init__()
         self._text: str = text
-        self._color: str = color
-        self._variant: str = variant
+        self._color: Color = color
+        self._variant: Variant = variant
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'TextPrimitive',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'text': self._text,
                 'color': self._color,
                 'variant': self._variant
-            }, ['color', 'variant']),
+            },
             'meta': self._meta,
         }, []

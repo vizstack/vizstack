@@ -19,7 +19,7 @@ class KeyValue(FragmentAssembler):
         self._start_motif = start_motif
         self._end_motif = end_motif
         self._item_separator = item_separator
-        self._entries = []
+        self._entries: List[Tuple[Any, Any]] = []
         if key_value_mapping:
             for key, value in key_value_mapping.items():
                 self.item(key, value)
@@ -31,13 +31,13 @@ class KeyValue(FragmentAssembler):
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'KeyValueLayout',
-            'contents': FragmentAssembler._filter_none({
+            'contents': {
                 'startMotif': self._start_motif,
                 'endMotif': self._end_motif,
                 'separator': self._item_separator,
                 'entries': [{'key': get_id(key, '{}k'.format(i)), 'value': get_id(value, '{}v'.format(i))} for i, (key,
                                                                                          value) in
                             enumerate(self._entries)],
-            }, ['startMotif', 'endMotif', 'separator']),
+            },
             'meta': self._meta,
         }, [t[0] for t in self._entries] + [t[1] for t in self._entries]
