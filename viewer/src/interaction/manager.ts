@@ -10,7 +10,7 @@ import {
     FlowLayoutFragment,
     SequenceLayoutFragment,
     KeyValueLayoutFragment,
-    DagLayoutFragment
+    DagLayoutFragment,
 } from '@vizstack/schema';
 import {
     Event,
@@ -30,8 +30,8 @@ export type ViewerId = string & { readonly brand?: unique symbol };
 
 /* Information which is present in all `ViewerHandle` subtypes.*/
 type ViewerInfo = {
-    id: ViewerId,
-    parent?: ViewerHandle,
+    id: ViewerId;
+    parent?: ViewerHandle;
 };
 
 type FragmentInfo =
@@ -45,7 +45,7 @@ type FragmentInfo =
 
 /* Fields in a `ViewerHandle` which are dependent upon the type of `Fragment` being rendered by
  * the `Viewer`. */
-export type ComponentHandle =
+export type FragmentHandle =
     | TextPrimitiveHandle
     | ImagePrimitiveHandle
     | SwitchLayoutHandle
@@ -59,23 +59,23 @@ export type ViewerHandle = ViewerInfo & FragmentInfo;
 
 /* A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
  * wrappers around common filters, such as `id()` and `type()`. */
-class InteractionSet {
+class ViewerSelector {
     viewers: ViewerHandle[];
 
     constructor(viewers: ViewerHandle[]) {
         this.viewers = viewers;
     }
 
-    id(...ids: ViewerId[]): InteractionSet {
+    id(...ids: ViewerId[]): ViewerSelector {
         return this.filter((viewer) => ids.includes(viewer.id));
     }
 
-    type(...types: Fragment['type'][]): InteractionSet {
+    type(...types: Fragment['type'][]): ViewerSelector {
         return this.filter((viewer) => types.includes(viewer.fragment.type));
     }
 
-    filter(fn: (viewer: ViewerHandle) => boolean): InteractionSet {
-        return new InteractionSet(this.viewers.filter((viewer) => fn(viewer)));
+    filter(fn: (viewer: ViewerHandle) => boolean): ViewerSelector {
+        return new ViewerSelector(this.viewers.filter((viewer) => fn(viewer)));
     }
 
     forEach(fn: (viewer: ViewerHandle) => void): void {
@@ -84,17 +84,25 @@ class InteractionSet {
 }
 
 /* The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
-type EventHandler = (all?: InteractionSet, message?: Record<string, any>, global?: Record<string, any>) => void;
+type EventHandler = (
+    all?: ViewerSelector,
+    message?: Record<string, any>,
+    global?: Record<string, any>,
+) => void;
 
 export class InteractionManager {
     // Maps an event topic to the handler function(s) that should fire when that event is emitted.
     handlers: { [topic: string]: EventHandler[] } = {};
+    
     // Maps a `ViewerId` to a function which returns the current `ViewerHandle` of that `Viewer`.
     viewers: { [viewerId: string]: () => ViewerHandle } = {};
+    
     // The global state which is accessed by `EventHandler` functions.
     global: Record<string, any> = {};
+    
     // The queue of `Event`s which have been emitted but whose handlers have not yet been executed.
     eventQueue: Array<Event> = [];
+    
     // Whether the `InteractionManager` is currently executing the handlers for an event.
     processingEvent: boolean = false;
 
@@ -105,15 +113,11 @@ export class InteractionManager {
      */
     constructor(
         options: {
-            useMouseDefaults?: boolean,
-            useKeyboardDefaults?: boolean,
-            documentElement?: Document | HTMLElement,
+            useMouseDefaults?: boolean;
+            useKeyboardDefaults?: boolean;
+            documentElement?: Document | HTMLElement;
         } = {},
     ) {
-        this.emit = this.emit.bind(this);
-        this.registerViewer = this.registerViewer.bind(this);
-        this.unregisterViewer = this.unregisterViewer.bind(this);
-
         const {
             useMouseDefaults = true,
             useKeyboardDefaults = true,
@@ -128,7 +132,7 @@ export class InteractionManager {
         }
     }
 
-    _useMouseDefaults() {
+    private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
             all.id(global.selected).forEach((viewer) => {
                 viewer.doUnhighlight();
@@ -152,7 +156,7 @@ export class InteractionManager {
         });
     }
 
-    _useKeyboardDefaults(documentElement: Document | HTMLElement) {
+    private _useKeyboardDefaults(documentElement: Document | HTMLElement) {
         documentElement.addEventListener('keydown', (event: KeyboardEvent) => {
             this.emit('KeyDown', { key: event.key });
         });
@@ -161,102 +165,101 @@ export class InteractionManager {
             this.emit('KeyUp', { key: event.key });
         });
 
-        this.on(
-            'KeyDown',
-            (all, message, global) => {
-                all.id(global.selected).forEach((viewer) => {
-                    if (message.key === 'Enter') {
-                        if (viewer.selectedViewerId) {
-                            global.selected = viewer.selectedViewerId;
-                            viewer.doUnhighlight();
-                            all.id(global.selected).forEach((viewer) => viewer.doHighlight());
+        this.on('KeyDown', (all, message, global) => {
+            all.id(global.selected).forEach((viewer) => {
+                if (message.key === 'Enter') {
+                    if (viewer.selectedViewerId) {
+                        global.selected = viewer.selectedViewerId;
+                        viewer.doUnhighlight();
+                        all.id(global.selected).forEach((viewer) => viewer.doHighlight());
+                    }
+                }
+                if (message.key === 'Escape') {
+                    if (viewer.parent) {
+                        global.selected = viewer.parent.id;
+                        viewer.doUnhighlight();
+                        all.id(global.selected).forEach((viewer) => viewer.doHighlight());
+                    }
+                }
+                switch (viewer.fragment.type) {
+                    case 'SwitchLayout':
+                        if (message.key === 'ArrowRight') {
+                            viewer.doIncrementMode();
                         }
-                    }
-                    if (message.key === 'Escape') {
-                        if (viewer.parent) {
-                            global.selected = viewer.parent.id;
-                            viewer.doUnhighlight();
-                            all.id(global.selected).forEach((viewer) => viewer.doHighlight());
+                        if (message.key === 'ArrowLeft') {
+                            viewer.doIncrementMode(-1);
                         }
-                    }
-                    switch (viewer.fragment.type) {
-                        case 'SwitchLayout':
-                            if (message.key === 'ArrowRight') {
-                                viewer.doIncrementMode();
-                            }
-                            if (message.key === 'ArrowLeft') {
-                                viewer.doIncrementMode(-1);
-                            }
-                            break;
-                        case 'SequenceLayout':
-                            // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
-                            if (
-                                (message.key === 'ArrowRight' &&
-                                    viewer.fragment.contents.orientation !== 'vertical') ||
-                                (message.key === 'ArrowDown' &&
-                                    viewer.fragment.contents.orientation === 'vertical')
-                            ) {
-                                viewer.doIncrementElement();
-                            }
-                            if (
-                                (message.key === 'ArrowLeft' &&
-                                    viewer.fragment.contents.orientation !== 'vertical') ||
-                                (message.key === 'ArrowUp' &&
-                                    viewer.fragment.contents.orientation === 'vertical')
-                            ) {
-                                viewer.doIncrementElement(-1);
-                            }
-                            break;
-                        case 'KeyValueLayout':
-                            if (message.key === 'ArrowRight') {
-                                viewer.doSelectValue();
-                            }
-                            if (message.key === 'ArrowLeft') {
-                                viewer.doSelectKey();
-                            }
-                            if (message.key === 'ArrowUp') {
-                                viewer.doIncrementEntry(-1);
-                            }
-                            if (message.key === 'ArrowDown') {
-                                viewer.doIncrementEntry();
-                            }
-                            break;
-                        case 'FlowLayout':
-                            if (message.key === 'ArrowRight') {
-                                viewer.doIncrementElement();
-                            }
-                            if (message.key === 'ArrowLeft') {
-                                viewer.doIncrementElement(-1);
-                            }
-                            break;
-                        case 'GridLayout':
-                            const directions = {
-                                ArrowRight: 'east',
-                                ArrowLeft: 'west',
-                                ArrowUp: 'north',
-                                ArrowDown: 'south',
-                            };
-                            if (message.key in directions) {
-                                viewer.doSelectNeighborCell(directions[message.key]);
-                            }
-                            break;
-                    }
-                });
-            },
-        );
+                        break;
+                    case 'SequenceLayout':
+                        // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
+                        if (
+                            (message.key === 'ArrowRight' &&
+                                viewer.fragment.contents.orientation !== 'vertical') ||
+                            (message.key === 'ArrowDown' &&
+                                viewer.fragment.contents.orientation === 'vertical')
+                        ) {
+                            viewer.doIncrementElement();
+                        }
+                        if (
+                            (message.key === 'ArrowLeft' &&
+                                viewer.fragment.contents.orientation !== 'vertical') ||
+                            (message.key === 'ArrowUp' &&
+                                viewer.fragment.contents.orientation === 'vertical')
+                        ) {
+                            viewer.doIncrementElement(-1);
+                        }
+                        break;
+                    case 'KeyValueLayout':
+                        if (message.key === 'ArrowRight') {
+                            viewer.doSelectValue();
+                        }
+                        if (message.key === 'ArrowLeft') {
+                            viewer.doSelectKey();
+                        }
+                        if (message.key === 'ArrowUp') {
+                            viewer.doIncrementEntry(-1);
+                        }
+                        if (message.key === 'ArrowDown') {
+                            viewer.doIncrementEntry();
+                        }
+                        break;
+                    case 'FlowLayout':
+                        if (message.key === 'ArrowRight') {
+                            viewer.doIncrementElement();
+                        }
+                        if (message.key === 'ArrowLeft') {
+                            viewer.doIncrementElement(-1);
+                        }
+                        break;
+                    case 'GridLayout':
+                        const directions = {
+                            ArrowRight: 'east',
+                            ArrowLeft: 'west',
+                            ArrowUp: 'north',
+                            ArrowDown: 'south',
+                        };
+                        if (message.key in directions) {
+                            viewer.doSelectNeighborCell(directions[message.key]);
+                        }
+                        break;
+                }
+            });
+        });
     }
 
     /**
      * Adds a new `Viewer` to the `InteractionSet` passed to handler functions.
      */
-    registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
+    public registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
+        // Use lambda to automatically bind to `this`.
         this.viewers[id] = handleFactory;
     };
 
     /**
      * Removes a `Viewer` from the `InteractionSet` passed to handler functions.
      */
-    unregisterViewer = (id: ViewerId) => {
+    public unregisterViewer = (id: ViewerId) => {
+        // Use lambda to automatically bind to `this`.
         delete this.viewers[id];
     };
 
@@ -265,7 +268,8 @@ export class InteractionManager {
      * @param topic
      * @param handler
      */
-    on(topic: string, handler: EventHandler) {
+    public on = (topic: string, handler: EventHandler) => {
+        // Use lambda to automatically bind to `this`.
         if (!(topic in this.handlers)) {
             this.handlers[topic] = [];
         }
@@ -278,16 +282,17 @@ export class InteractionManager {
      * @param topic
      * @param message
      */
-    emit(topic: string, message: Record<string, any>) {
+    public emit = (topic: string, message: Record<string, any>) => {
+        // Use lambda to automatically bind to `this`.
         this.eventQueue.push({ topic, message });
         if (!this.processingEvent) {
             this._processNextEvent();
         }
-    };
+    }
 
     /**
      * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
-    _processNextEvent() {
+    private _processNextEvent() {
         this.processingEvent = true;
         const { topic, message } = this.eventQueue.shift();
         if (topic in this.handlers) {
@@ -295,8 +300,8 @@ export class InteractionManager {
                 handler(
                     // Flow doesn't know how to handle `Object.values()`, so we have to cast it to
                     // `any` then cast the `handleFactory` to its proper type
-                    new InteractionSet(
-                        _.values(this.viewers).map((handleFactory) => handleFactory())
+                    new ViewerSelector(
+                        _.values(this.viewers).map((handleFactory) => handleFactory()),
                     ),
                     message,
                     this.global,
@@ -310,28 +315,27 @@ export class InteractionManager {
     }
 
     /**
-     * Returns an object which can be passed to the `value` prop of an 
+     * Returns an object which can be passed to the `value` prop of an
      * `InteractionContext.Provider` to make this `InteractionManager` available to all `Viewer`s
      * within that context. */
-    getContextValue(): InteractionContextValue {
-        const { registerViewer, unregisterViewer, emit } = this;
+    public getContextValue(): InteractionContextValue {
         return {
-            registerViewer,
-            unregisterViewer,
-            emitEvent: emit,
+            registerViewer: this.registerViewer,
+            unregisterViewer: this.unregisterViewer,
+            emitEvent: this.emit,
         };
     }
 }
 
 /* React context which allows all `Viewer`s nested within it to emit and respond to events. */
+export type InteractionContextValue = {
+    registerViewer: (id: ViewerId, handleFactory: () => ViewerHandle) => void;
+    unregisterViewer: (id: ViewerId) => void;
+    emitEvent: (topic?: string, message?: Record<string, any>) => void;
+};
+
 export const InteractionContext = React.createContext<InteractionContextValue>({
     registerViewer: () => {},
     unregisterViewer: () => {},
     emitEvent: () => {},
 });
-
-export type InteractionContextValue = {
-    registerViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
-    unregisterViewer: (id: ViewerId, viewer: () => ViewerHandle) => void,
-    emitEvent: (topic?: string, message?: Record<string, any>) => void,
-};

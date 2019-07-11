@@ -6,6 +6,7 @@
     "lib": ["esnext", "dom"],
     "strict": true,
     "outDir": "./dist",
+    "types": ["jest"],
     
     "jsx": "preserve",
     "declaration": true,
@@ -21,5 +22,8 @@
   },
   "include": [
     "src/**/*.ts"
+  ],
+  "exclude": [
+    "tests"
   ]
 }

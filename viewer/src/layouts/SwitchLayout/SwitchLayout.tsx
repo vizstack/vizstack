@@ -1,74 +1,58 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
 import { Viewer } from '../../Viewer';
-import type { ViewerToViewerProps } from '../../Viewer';
+import { ViewerToViewerProps } from '../../Viewer';
 
-import type { FragmentId } from '@vizstack/schema';
-import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
+import { FragmentId } from '@vizstack/schema';
+import { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
 
-/**
- * This pure dumb component renders visualization for a stack of elements that can be switched
- * between.
- */
+/* This pure dumb component renders visualization for a stack of elements that can be switched
+ * between. */
 type SwitchLayoutProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
-
-    /** The `ViewerId` of the `Viewer` rendering this component. */
+    // TODO: Factor out with `InteractionProps`.
     viewerId: ViewerId,
+    updateHandle: (handle: SwitchLayoutHandle) => void,
+    emitEvent: (topic: string, message: Record<string, any>) => void,
 
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (SwitchLayoutHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: SwitchLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
-
-    /** Contains properties which should be spread onto any `Viewer` components rendered by this
-     * layout. */
+    // TODO: Factor out with `ViewerToViewerProps`.
     viewerToViewerProps: ViewerToViewerProps,
 
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
+    /* Elements of the sequence that serve as props to `Viewer` sub-components. */
     modes: FragmentId[],
 };
 
-type SwitchLayoutDefaultProps = {|
-    updateHandle: (SwitchLayoutHandle) => void,
-|};
-
-type SwitchLayoutState = {|
+type SwitchLayoutState = {
     isHighlighted: boolean,
     selectedModeIdx: number,
-|};
+};
 
-export type SwitchLayoutHandle = {|
+export type SwitchLayoutHandle = {
     isHighlighted: boolean,
     selectedModeIdx: number,
-    selectedViewerId: ?ViewerId,
+    selectedViewerId?: ViewerId,
     doHighlight: () => void,
     doUnhighlight: () => void,
     doSelectMode: (modeIdx: number) => void,
     doIncrementMode: (modeIdxDelta: number) => void,
-|};
+};
 
-export type SwitchRequestSelectModeEvent = {|
+export type SwitchRequestSelectModeEvent = {
     topic: 'Switch.RequestSelectMode',
-    message: {|
+    message: {
         viewerId: ViewerId,
         modeIdx: number,
-    |},
-|};
+    },
+};
 
-export type SwitchDidChangeModeEvent = {|
+export type SwitchDidChangeModeEvent = {
     topic: 'Switch.DidChangeMode',
-    message: {|
+    message: {
         viewerId: ViewerId,
-    |},
-|};
+    },
+};
 
 type SwitchLayoutPub =
     | ViewerDidMouseEvent
@@ -76,15 +60,14 @@ type SwitchLayoutPub =
     | SwitchRequestSelectModeEvent
     | SwitchDidChangeModeEvent;
 
-class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutState> {
-    /** Prop default values. */
-    static defaultProps: SwitchLayoutDefaultProps = {
+class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
+    static defaultProps: Partial<SwitchLayoutProps> = {
         updateHandle: () => {},
     };
 
-    childRef: { current: null | Viewer } = React.createRef();
+    childRef = React.createRef<Viewer>();
 
-    constructor(props: SwitchLayoutProps) {
+    constructor(props: SwitchLayoutProps & InternalProps) {
         super(props);
         this.state = {
             isHighlighted: false,
@@ -134,19 +117,13 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
         const { isHighlighted, selectedModeIdx } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
+                emitEvent('Viewer.DidHighlight', { viewerId });
             } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
+                emitEvent('Viewer.DidUnhighlight', { viewerId });
             }
         }
         if (selectedModeIdx !== prevState.selectedModeIdx) {
-            emitEvent<SwitchDidChangeModeEvent>('Switch.DidChangeMode', {
-                viewerId: (viewerId: ViewerId),
-            });
+            emitEvent('Switch.DidChangeMode', { viewerId });
         }
     }
 
@@ -163,7 +140,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps, SwitchLayoutSt
 
         return (
             <div
-                className={classNames({
+                className={clsx({
                     [classes.container]: true,
                     [classes.containerHovered]: isHighlighted,
                 })}
@@ -195,4 +172,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(SwitchLayout);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(SwitchLayout) as React.ComponentClass<SwitchLayoutProps>;

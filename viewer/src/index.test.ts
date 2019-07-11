@@ -1,5 +1,3 @@
-import {} from 'jest';
-
-test('ff', () => {
-    expect("foo").toEqual("foo");
+test('basic', () => {
+    expect(true).toEqual(true);
 });

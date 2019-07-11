@@ -1,41 +1,26 @@
 import * as React from 'react';
 import clsx from 'clsx';
-import { withStyles } from '@material-ui/core/styles';
+import Immutable from 'seamless-immutable';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
 import { ViewerId, ViewerDidMouseEvent, ViewerDidHighlightEvent } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
 
-/**
- * This pure dumb component renders visualization for a text string that represents a token.
- */
+/* This pure dumb component renders visualization for a text string that represents a token. */
 type TextPrimitiveProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
-
-    /** The `ViewerId` of the `Viewer` rendering this component. */
+    // TODO: Replace with `InteractionProps`.
     viewerId: ViewerId,
-
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (TextPrimitiveHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
+    updateHandle: (handle: TextPrimitiveHandle) => void,
     emitEvent: (topic: string, message: Record<string, any>) => void,
 
-    /** Text string displayed by the component. */
+    /* Text string displayed by the component. */
     text: string,
 
-    /** The color scheme of the component. */
+    /* The color scheme of the component. */
     color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
 
-    /** Whether the component is plain text or a token. */
+    /* Whether the component is plain text or a token. */
     variant?: 'plain' | 'token',
-};
-
-type TextPrimitiveDefaultProps = {
-    color: 'default',
-    variant: 'plain',
-    updateHandle: (TextPrimitiveHandle) => void,
 };
 
 type TextPrimitiveState = {
@@ -73,14 +58,14 @@ export type TextPrimitiveHandle = {
     doResize: (textSize: 'small' | 'medium' | 'large') => void;
 };
 
-class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiveState> {
-    static defaultProps: TextPrimitiveDefaultProps = {
+class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalProps, TextPrimitiveState> {
+    static defaultProps: Partial<TextPrimitiveProps> = {
         color: 'default',
         variant: 'plain',
         updateHandle: () => {},
     };
 
-    constructor(props: TextPrimitiveProps) {
+    constructor(props: TextPrimitiveProps & InternalProps) {
         super(props);
         this.state = {
             textSize: 'medium',
@@ -115,20 +100,13 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
         const { viewerId, emitEvent } = this.props;
         const { textSize, isHighlighted } = this.state;
         if (textSize !== prevState.textSize) {
-            emitEvent('Text.DidResize', {
-                viewerId,
-                textSize,
-            });
+            emitEvent('Text.DidResize', { viewerId, textSize });
         }
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent('Viewer.DidHighlight', {
-                    viewerId,
-                });
+                emitEvent('Viewer.DidHighlight', { viewerId });
             } else {
-                emitEvent('Viewer.DidUnhighlight', {
-                    viewerId,
-                });
+                emitEvent('Viewer.DidUnhighlight', { viewerId });
             }
         }
     }
@@ -194,11 +172,8 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps, TextPrimitiv
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) =>
+    createStyles({
     text: {
         textAlign: 'left',
         overflow: 'hidden',
@@ -208,21 +183,25 @@ const styles = (theme) => ({
 
     // Font sizes; one for each value in `PrimitiveSize`.
     small: {
-        fontSize: theme.typography.fontSize.caption,
+        fontSize: theme.scale(8),
     },
     medium: {
-        fontSize: theme.typography.fontSize.primary,
+        fontSize: theme.scale(12),
     },
     large: {
-        fontSize: theme.typography.fontSize.emphasis,
+        fontSize: theme.scale(16),
     },
 
     // Font styles.
-    sansSerif: theme.typography.sansSerif,
-    monospace: theme.typography.monospace,
+    sansSerif: {
+        fontFamily: theme.fonts.sans,
+    },
+    monospace: {
+        fontFamily: theme.fonts.monospace,
+    },
     framed: {
-        padding: theme.spacing.small,
-        borderRadius: theme.shape.border.radius,
+        padding: theme.scale(4),
+        borderRadius: theme.shape.borderRadius,
         display: 'inline-block',
         verticalAlign: 'middle',
         wordWrap: 'break-word',
@@ -233,7 +212,7 @@ const styles = (theme) => ({
 
     // Sans-serif styles.
     defaultPlain: {
-        color: theme.palette.atom.text,
+        color: theme.color.grey.d1,
     },
     primaryPlain: {
         color: theme.palette.primary.main,
@@ -247,8 +226,8 @@ const styles = (theme) => ({
 
     // Monospace styles.
     defaultToken: {
-        backgroundColor: theme.palette.default.main,
-        color: theme.palette.atom.text,
+        backgroundColor: theme.color.grey.l2,
+        color: theme.color.grey.d2,
     },
     primaryToken: {
         backgroundColor: theme.palette.primary.main,
@@ -265,7 +244,7 @@ const styles = (theme) => ({
 
     // Highlighted monospace styles
     defaultTokenHighlight: {
-        backgroundColor: theme.palette.default.light,
+        backgroundColor: theme.palette.primary.light,
     },
     primaryTokenHighlight: {
         backgroundColor: theme.palette.primary.light,
@@ -278,4 +257,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(TextPrimitive);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(TextPrimitive) as React.ComponentClass<TextPrimitiveProps>;
