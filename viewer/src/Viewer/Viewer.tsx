@@ -3,6 +3,8 @@ import Immutable from 'seamless-immutable';
 
 import cuid from 'cuid';
 
+import Button from '@material-ui/core/Button';
+
 import {
     FragmentId,
     Fragment,
@@ -75,7 +77,10 @@ export type ViewerProps = {
     provideHandleFactory?: (factory: () => ViewerHandle) => void,
 };
 
-type ViewerState = {};
+type ViewerState = {
+    /* Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
+    bypassedCycle: boolean,
+};
 
 class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     static contextType = InteractionContext;
@@ -89,6 +94,9 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     constructor(props: ViewerProps) {
         super(props);
+        this.state = {
+            bypassedCycle: false
+        };
         this.viewerId = this.props.viewerId || cuid();
     }
 
@@ -144,6 +152,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     render() {
         const { view, fragmentId, name } = this.props;
         const { emitEvent } = this.context;
+        const { bypassedCycle } = this.state;
 
         // Explicitly specified fragment for current viewer, or root-level fragment by default.
         const fragment: Fragment = this._getFragment();
@@ -152,10 +161,13 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             return null;
         }
 
-        if (this._isCycle()) {
-            console.error('View contains a cycle: ', view);
-            // TODO: show something useful here, like an error `Text`
-            return null;
+        if (this._isCycle() && !bypassedCycle) {
+            // TODO: once we can compile and test stuff, make this button pretty
+            return (
+                <Button onClick={() => this.setState({bypassedCycle: true})}>
+                    ...
+                </Button>
+            )
         }
 
         const viewerToViewerProps: ViewerToViewerProps = {
