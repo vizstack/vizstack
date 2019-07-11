@@ -43,9 +43,10 @@ export type InteractionProps = {
     /* The `ViewerId` of the `Viewer` rendering this component. */
     viewerId: ViewerId,
 
-    /* Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be invoken whenever the Fragment component updates. */
-    updateHandle: (handle: FragmentHandle) => void,
+    /* Called on mount; provides to the `Viewer` a factory which returns a `FragmentHandle` with the
+     current state of the rendered fragment. This factory is called whenever the `Viewer` creates
+     its `ViewerHandle` so that information about the fragment can be added to it. */
+    provideHandleFactory: (factory: () => FragmentHandle) => void,
 
     /* Publishes an event to the `InteractionManager`. */
     emitEvent: (topic: string, message: Record<string, any>) => void,  
@@ -67,6 +68,11 @@ export type ViewerProps = {
 
     /* Provided by parent or generated if root. */
     viewerId?: ViewerId,
+
+    /* Called on mount; provides to the parent layout (if any) a factory which returns this
+    `Viewer`'s current handle. This factory is called whenever the layout needs to add information
+    about this `Viewer` to its own `FragmentHandle`. */
+    provideHandleFactory?: (factory: () => ViewerHandle) => void,
 };
 
 type ViewerState = {};
@@ -79,7 +85,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     viewerId: ViewerId;
     
     /* Handle of the `Fragment` component that this `Viewer` renders. */
-    fragmentHandle = {};
+    fragmentHandleFactory = () => ({});
 
     constructor(props: ViewerProps) {
         super(props);
@@ -87,17 +93,24 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     }
 
     componentDidMount() {
-        this.context.registerViewer(this.viewerId, () => this._getHandle());
+        this.context.addViewer(this.viewerId, () => this._getHandle());
+        if (this.props.provideHandleFactory) {
+            this.props.provideHandleFactory(() => this._getHandle());
+        }
     }
 
     componentWillUnmount() {
-        this.context.unregisterViewer(this.viewerId);
+        this.context.removeViewer(this.viewerId);
+    }
+
+    private _getFragmentId() {
+        const { view, fragmentId } = this.props;
+        return fragmentId || view.rootId;
     }
 
     private _getFragment() {
-        const { view, fragmentId } = this.props;
-        const currId: FragmentId = fragmentId || view.rootId;
-        return view.fragments[currId];
+        const { view } = this.props;
+        return view.fragments[this._getFragmentId()];
     }
 
     private _getHandle(): ViewerHandle {
@@ -105,9 +118,27 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         return {
             id: this.viewerId,
             fragment: this._getFragment(),
+            fragmentId: this._getFragmentId(),
             parent,
-            ...this.fragmentHandle,
+            ...this.fragmentHandleFactory(),
         };
+    }
+
+    /**
+     * Returns `true` if this `Viewer` is rendering the same `Fragment` as one of its ancestors.
+     * @returns {boolean}
+     * @private
+     */
+    private _isCycle(): boolean {
+        let { parent } = this.props;
+        const fragmentId = this._getFragmentId();
+        while (parent) {
+            if (parent.fragmentId === fragmentId) {
+                return true;
+            }
+            parent = parent.parent;
+        }
+        return false;
     }
 
     render() {
@@ -121,6 +152,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             return null;
         }
 
+        if (this._isCycle()) {
+            console.error('View contains a cycle: ', view);
+            // TODO: show something useful here, like an error `Text`
+            return null;
+        }
+
         const viewerToViewerProps: ViewerToViewerProps = {
             parent: this._getHandle(),
             view,
@@ -130,7 +167,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         const interactionProps: InteractionProps = {
             viewerId: this.viewerId,
             emitEvent: (topic, message) => emitEvent(topic, message),
-            updateHandle: (handle) => this.fragmentHandle = handle,
+            provideHandleFactory: (factory) => this.fragmentHandleFactory = factory,
         };
 
         // The `Viewer` is the component that knows how to dispatch on fragment type to render

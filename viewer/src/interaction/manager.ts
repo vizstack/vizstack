@@ -11,6 +11,7 @@ import {
     SequenceLayoutFragment,
     KeyValueLayoutFragment,
     DagLayoutFragment,
+    FragmentId,
 } from '@vizstack/schema';
 import {
     Event,
@@ -31,6 +32,7 @@ export type ViewerId = string & { readonly brand?: unique symbol };
 /* Information which is present in all `ViewerHandle` subtypes.*/
 type ViewerInfo = {
     id: ViewerId;
+    fragmentId: FragmentId;
     parent?: ViewerHandle;
 };
 
@@ -57,13 +59,13 @@ export type FragmentHandle =
 /* Provides information about a `Viewer`, as well as methods which alter its state. */
 export type ViewerHandle = ViewerInfo & FragmentInfo;
 
-/* A fancy `Array` of `ViewerHandle`s. Besides `filter()` and `forEach()`, it also exposes
- * wrappers around common filters, such as `id()` and `type()`. */
+/* A fancy `Array` of `ViewerHandle`s. Besides `filter()`, `forEach()`, and `map()`, it also exposes
+ * wrappers around common filters and maps, such as `type()` and `mode()`. */
 class ViewerSelector {
-    viewers: ViewerHandle[];
+    current: ViewerHandle[];  // The `ViewerHandle`s currently selected.
 
     constructor(viewers: ViewerHandle[]) {
-        this.viewers = viewers;
+        this.current = viewers;
     }
 
     id(...ids: ViewerId[]): ViewerSelector {
@@ -74,12 +76,20 @@ class ViewerSelector {
         return this.filter((viewer) => types.includes(viewer.fragment.type));
     }
 
+    mode(): ViewerSelector {
+        return this.map((viewer) => viewer.selectedMode);
+    }
+
+    map(fn: (viewer: ViewerHandle) => ViewerHandle): ViewerSelector {
+        return new ViewerSelector(this.current.map(fn));
+    }
+
     filter(fn: (viewer: ViewerHandle) => boolean): ViewerSelector {
-        return new ViewerSelector(this.viewers.filter((viewer) => fn(viewer)));
+        return new ViewerSelector(this.current.filter(fn));
     }
 
     forEach(fn: (viewer: ViewerHandle) => void): void {
-        this.viewers.forEach((viewer) => fn(viewer));
+        this.current.forEach(fn);
     }
 }
 
@@ -274,7 +284,7 @@ export class InteractionManager {
             this.handlers[topic] = [];
         }
         this.handlers[topic].push(handler);
-    }
+    };
 
     /**
      * Enqueues a new `Event` to be processed. If no `Event` is currently being processed, then that
@@ -288,7 +298,7 @@ export class InteractionManager {
         if (!this.processingEvent) {
             this._processNextEvent();
         }
-    }
+    };
 
     /**
      * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
@@ -320,8 +330,8 @@ export class InteractionManager {
      * within that context. */
     public getContextValue(): InteractionContextValue {
         return {
-            registerViewer: this.registerViewer,
-            unregisterViewer: this.unregisterViewer,
+            addViewer: this.registerViewer,
+            removeViewer: this.unregisterViewer,
             emitEvent: this.emit,
         };
     }
@@ -329,13 +339,13 @@ export class InteractionManager {
 
 /* React context which allows all `Viewer`s nested within it to emit and respond to events. */
 export type InteractionContextValue = {
-    registerViewer: (id: ViewerId, handleFactory: () => ViewerHandle) => void;
-    unregisterViewer: (id: ViewerId) => void;
+    addViewer: (id: ViewerId, handleFactory: () => ViewerHandle) => void;
+    removeViewer: (id: ViewerId) => void;
     emitEvent: (topic?: string, message?: Record<string, any>) => void;
 };
 
 export const InteractionContext = React.createContext<InteractionContextValue>({
-    registerViewer: () => {},
-    unregisterViewer: () => {},
+    addViewer: () => {},
+    removeViewer: () => {},
     emitEvent: () => {},
 });

@@ -6,7 +6,12 @@ import { Viewer } from '../../Viewer';
 import { ViewerToViewerProps } from '../../Viewer';
 
 import { FragmentId } from '@vizstack/schema';
-import { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
+import {
+    ViewerDidMouseEvent,
+    ViewerDidHighlightEvent,
+    ViewerId,
+    ViewerHandle
+} from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
 
 /* This pure dumb component renders visualization for a stack of elements that can be switched
@@ -14,7 +19,7 @@ import { getViewerMouseFunctions } from '../../interaction';
 type SwitchLayoutProps = {
     // TODO: Factor out with `InteractionProps`.
     viewerId: ViewerId,
-    updateHandle: (handle: SwitchLayoutHandle) => void,
+    provideHandleFactory: (factory: () => SwitchLayoutHandle) => void,
     emitEvent: (topic: string, message: Record<string, any>) => void,
 
     // TODO: Factor out with `ViewerToViewerProps`.
@@ -32,7 +37,7 @@ type SwitchLayoutState = {
 export type SwitchLayoutHandle = {
     isHighlighted: boolean,
     selectedModeIdx: number,
-    selectedViewerId?: ViewerId,
+    selectedMode: ViewerHandle,
     doHighlight: () => void,
     doUnhighlight: () => void,
     doSelectMode: (modeIdx: number) => void,
@@ -61,11 +66,7 @@ type SwitchLayoutPub =
     | SwitchDidChangeModeEvent;
 
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
-    static defaultProps: Partial<SwitchLayoutProps> = {
-        updateHandle: () => {},
-    };
-
-    childRef = React.createRef<Viewer>();
+    selectedModeFactory: () => ViewerHandle | null = () => null;
 
     constructor(props: SwitchLayoutProps & InternalProps) {
         super(props);
@@ -75,13 +76,12 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
+    _getHandle(): SwitchLayoutHandle {
         const { isHighlighted, selectedModeIdx } = this.state;
-        updateHandle({
+        return {
             isHighlighted,
             selectedModeIdx,
-            selectedViewerId: this.childRef.current ? this.childRef.current.viewerId : null,
+            selectedMode: this.selectedModeFactory(),
             doHighlight: () => {
                 this.setState({ isHighlighted: true });
             },
@@ -104,15 +104,14 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                     return { selectedModeIdx: modeIdx };
                 });
             },
-        });
+        };
     }
 
     componentDidMount() {
-        this._updateHandle();
+        this.props.provideHandleFactory(() => this._getHandle());
     }
 
     componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
         const { viewerId, emitEvent } = this.props;
         const { isHighlighted, selectedModeIdx } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
@@ -147,7 +146,9 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
                 <div key={fragmentId}>
-                    <Viewer {...viewerToViewerProps} fragmentId={fragmentId} ref={this.childRef} />
+                    <Viewer {...viewerToViewerProps}
+                            fragmentId={fragmentId}
+                            provideHandleFactory={(factory) => this.selectedModeFactory = factory} />
                 </div>
             </div>
         );
