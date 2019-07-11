@@ -3,6 +3,8 @@ import Immutable from 'seamless-immutable';
 
 import cuid from 'cuid';
 
+import Button from '@material-ui/core/Button';
+
 import {
     FragmentId,
     Fragment,
@@ -33,10 +35,16 @@ import SwitchLayout from '../layouts/SwitchLayout';
 import { Event, ViewerHandle, ViewerId, FragmentHandle } from '../interaction';
 import { InteractionContext } from '../interaction';
 
-export type ViewerToViewerProps = {
+export type ViewerProps = {
+    /* Specification of View's root fragment and sub-fragments. */
     view: View,
-    parent: ViewerHandle,
-    name: string,
+
+    /* Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
+     * level of nesting. If unspecified, the `view.rootId` is used. */
+    fragmentId?: FragmentId,
+
+    /* Unique name for the root `Viewer`, passed down to any nested `Viewer`. */
+    name?: string,
 };
 
 export type InteractionProps = {
@@ -48,34 +56,22 @@ export type InteractionProps = {
      its `ViewerHandle` so that information about the fragment can be added to it. */
     provideHandleFactory: (factory: () => FragmentHandle) => void,
 
+    /* Information about the parent of this `Viewer`, if one exists. */
+    parent?: ViewerHandle,
+
     /* Publishes an event to the `InteractionManager`. */
     emitEvent: (topic: string, message: Record<string, any>) => void,  
 };
 
-export type ViewerProps = {
-    /* Specification of View's root fragment and sub-fragments. */
-    view: View,
+type ViewerPassdownProps = Pick<ViewerProps, 'view' | 'name'>;
+type InteractionPassdownProps = Pick<InteractionProps, 'parent'>;
 
-    /* Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
-     * level of nesting. If unspecified, the `view.rootId` is used. */
-    fragmentId?: FragmentId,
+export type PassdownProps = ViewerPassdownProps & InteractionPassdownProps;
 
-    /* Unique name for the root `Viewer`, passed down to any nested `Viewer`. */
-    name?: string,
-
-    /* Information about the parent of this viewer, if one exists. */
-    parent?: ViewerHandle,
-
-    /* Provided by parent or generated if root. */
-    viewerId?: ViewerId,
-
-    /* Called on mount; provides to the parent layout (if any) a factory which returns this
-    `Viewer`'s current handle. This factory is called whenever the layout needs to add information
-    about this `Viewer` to its own `FragmentHandle`. */
-    provideHandleFactory?: (factory: () => ViewerHandle) => void,
+type ViewerState = {
+    /* Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
+    bypassedCycle: boolean,
 };
-
-type ViewerState = {};
 
 class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     static contextType = InteractionContext;
@@ -89,18 +85,21 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     constructor(props: ViewerProps) {
         super(props);
+        this.state = {
+            bypassedCycle: false
+        };
         this.viewerId = this.props.viewerId || cuid();
     }
 
     componentDidMount() {
-        this.context.addViewer(this.viewerId, () => this._getHandle());
+        this.context.registerViewer(this.viewerId, () => this._getHandle());
         if (this.props.provideHandleFactory) {
             this.props.provideHandleFactory(() => this._getHandle());
         }
     }
 
     componentWillUnmount() {
-        this.context.removeViewer(this.viewerId);
+        this.context.unregisterViewer(this.viewerId);
     }
 
     private _getFragmentId() {
@@ -144,6 +143,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     render() {
         const { view, fragmentId, name } = this.props;
         const { emit } = this.context;
+        const { bypassedCycle } = this.state;
 
         // Explicitly specified fragment for current viewer, or root-level fragment by default.
         const fragment: Fragment = this._getFragment();
@@ -152,13 +152,16 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             return null;
         }
 
-        if (this._isCycle()) {
-            console.error('View contains a cycle: ', view);
-            // TODO: show something useful here, like an error `Text`
-            return null;
+        if (this._isCycle() && !bypassedCycle) {
+            // TODO: once we can compile and test stuff, make this button pretty
+            return (
+                <Button onClick={() => this.setState({bypassedCycle: true})}>
+                    ...
+                </Button>
+            )
         }
 
-        const viewerToViewerProps: ViewerToViewerProps = {
+        const viewerToViewerProps: PassdownProps = {
             parent: this._getHandle(),
             view,
             name: name || this.viewerId,
@@ -166,7 +169,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
         const interactionProps: InteractionProps = {
             viewerId: this.viewerId,
-            emitEvent: (topic, message) => emitEvent(topic, message),
+            emitEvent: (topic, message) => emit(topic, message),
             provideHandleFactory: (factory) => this.fragmentHandleFactory = factory,
         };
 
