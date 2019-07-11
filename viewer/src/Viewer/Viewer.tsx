@@ -142,39 +142,19 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     }
 
     render() {
-        const { fragmentId, name } = this.props;
+        const { view, fragmentId, name } = this.props;
         const { emitEvent } = this.context;
 
         // Explicitly specified fragment for current viewer, or root-level fragment by default.
-        let view: View = this.props.view;
-        let fragment: Fragment = this._getFragment();
-        if (this._isCycle()) {
-            view = {...view};
-            const switchId = `${this._getFragmentId()}_switch`;
-            const textId = `${this._getFragmentId()}_text`;
-            view[switchId] = {
-                type: 'SwitchLayout',
-                contents: {
-                    modes: [textId, this._getFragmentId()],
-                },
-                meta: {},
-            };
-            view[textId] = {
-                type: 'TextPrimitive',
-                contents: {
-                    text: '...',
-                    variant: 'token',
-                },
-                meta: {},
-            };
-            fragment = view[switchId];
-        }
-        else {
-            fragment = this._getFragment();
-        }
-
+        const fragment: Fragment = this._getFragment();
         if (!fragment) {
             console.error('Invalid FragmentId within View: ', fragmentId, view);
+            return null;
+        }
+
+        if (this._isCycle()) {
+            console.error('View contains a cycle: ', view);
+            // TODO: show something useful here, like an error `Text`
             return null;
         }
 
