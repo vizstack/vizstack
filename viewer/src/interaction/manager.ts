@@ -1,4 +1,3 @@
-import * as React from 'react';
 import _ from 'lodash';
 
 import {
@@ -100,45 +99,60 @@ type EventHandler = (
     global?: Record<string, any>,
 ) => void;
 
+/** TODO: Document. */
 export class InteractionManager {
-    // Maps an event topic to the handler function(s) that should fire when that event is emitted.
-    handlers: { [topic: string]: EventHandler[] } = {};
+
+    // Maps a topic to the `EventHandler` functions that should fire when a message is emitted.
+    private _handlers: { [topic: string]: EventHandler[] } = {};
     
-    // Maps a `ViewerId` to a function which returns the current `ViewerHandle` of that `Viewer`.
-    viewers: { [viewerId: string]: () => ViewerHandle } = {};
+    // Maps a `ViewerId` to a factory for its `ViewerHandle`.
+    private _viewers: { [viewerId: string]: () => ViewerHandle } = {};
     
-    // The global state which is accessed by `EventHandler` functions.
-    global: Record<string, any> = {};
+    // Global state that can be accessed by `EventHandler` functions.
+    private _global: Record<string, any> = {};
     
-    // The queue of `Event`s which have been emitted but whose handlers have not yet been executed.
-    eventQueue: Array<Event> = [];
+    // Queue of `Event`s that have been emitted but whose handlers have not yet been executed.
+    private _eventQueue: Array<Event> = [];
     
-    // Whether the `InteractionManager` is currently executing the handlers for an event.
-    processingEvent: boolean = false;
+    // Whether the `InteractionManager` is currently executing the handlers for any event.
+    private _isProcessingEvent: boolean = false;
 
     /**
      * @param options
-     *     `documentElement` is needed, since `document` might not be correct in all
-     *     applications (such as "vizstack-atom").
+     *     `useMouseDefaults`: Whether to use default mouse interactions for hovering and selecting.
+     *     `useKeyboardDefaults`: Whether to use default keyboard interactions for cursor movement.
+     *     `domElement`: DOM element on which to bind the keyboard listeners.
      */
     constructor(
         options: {
             useMouseDefaults?: boolean;
             useKeyboardDefaults?: boolean;
-            documentElement?: Document | HTMLElement;
+            domElement?: Document | HTMLElement;
         } = {},
     ) {
         const {
             useMouseDefaults = true,
             useKeyboardDefaults = true,
-            documentElement = document,
+            domElement = document,
         } = options;
 
         if (useMouseDefaults) {
             this._useMouseDefaults();
         }
+
+        if (domElement) {
+            domElement.addEventListener('keydown', (event: KeyboardEvent) => {
+                this.emit('KeyDown', { key: event.key });
+            });
+            domElement.addEventListener('keyup', (event: KeyboardEvent) => {
+                this.emit('KeyUp', { key: event.key });
+            });
+        } else {
+            console.warn(`Keyboard interactions needs 'domElement' to attach listeners.`);
+        }
+
         if (useKeyboardDefaults) {
-            this._useKeyboardDefaults(documentElement);
+            this._useKeyboardDefaults();
         }
     }
 
@@ -166,15 +180,7 @@ export class InteractionManager {
         });
     }
 
-    private _useKeyboardDefaults(documentElement: Document | HTMLElement) {
-        documentElement.addEventListener('keydown', (event: KeyboardEvent) => {
-            this.emit('KeyDown', { key: event.key });
-        });
-
-        documentElement.addEventListener('keyup', (event: KeyboardEvent) => {
-            this.emit('KeyUp', { key: event.key });
-        });
-
+    private _useKeyboardDefaults() {
         this.on('KeyDown', (all, message, global) => {
             all.id(global.selected).forEach((viewer) => {
                 if (message.key === 'Enter') {
@@ -258,19 +264,41 @@ export class InteractionManager {
     }
 
     /**
-     * Adds a new `Viewer` to the `InteractionSet` passed to handler functions.
+     * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
+    private _processNextEvent() {
+        this._isProcessingEvent = true;
+        const { topic, message } = this._eventQueue.shift();
+        if (topic in this._handlers) {
+            this._handlers[topic].forEach((handler) =>
+                handler(
+                    new ViewerSelector(
+                        _.values(this._viewers).map((handleFactory) => handleFactory()),
+                    ),
+                    message,
+                    this._global,
+                ),
+            );
+        }
+        this._isProcessingEvent = false;
+        if (this._eventQueue.length > 0) {
+            this._processNextEvent();
+        }
+    }
+
+    /**
+     * Adds a `Viewer` to those accessible using a `ViewerSelector`.
      */
     public registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
         // Use lambda to automatically bind to `this`.
-        this.viewers[id] = handleFactory;
+        this._viewers[id] = handleFactory;
     };
 
     /**
-     * Removes a `Viewer` from the `InteractionSet` passed to handler functions.
+     * Removes a `Viewer` from those accessible using a `ViewerSelector`.
      */
     public unregisterViewer = (id: ViewerId) => {
         // Use lambda to automatically bind to `this`.
-        delete this.viewers[id];
+        delete this._viewers[id];
     };
 
     /**
@@ -280,10 +308,10 @@ export class InteractionManager {
      */
     public on = (topic: string, handler: EventHandler) => {
         // Use lambda to automatically bind to `this`.
-        if (!(topic in this.handlers)) {
-            this.handlers[topic] = [];
+        if (!(topic in this._handlers)) {
+            this._handlers[topic] = [];
         }
-        this.handlers[topic].push(handler);
+        this._handlers[topic].push(handler);
     };
 
     /**
@@ -294,58 +322,9 @@ export class InteractionManager {
      */
     public emit = (topic: string, message: Record<string, any>) => {
         // Use lambda to automatically bind to `this`.
-        this.eventQueue.push({ topic, message });
-        if (!this.processingEvent) {
+        this._eventQueue.push({ topic, message });
+        if (!this._isProcessingEvent) {
             this._processNextEvent();
         }
     };
-
-    /**
-     * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
-    private _processNextEvent() {
-        this.processingEvent = true;
-        const { topic, message } = this.eventQueue.shift();
-        if (topic in this.handlers) {
-            this.handlers[topic].forEach((handler) =>
-                handler(
-                    // Flow doesn't know how to handle `Object.values()`, so we have to cast it to
-                    // `any` then cast the `handleFactory` to its proper type
-                    new ViewerSelector(
-                        _.values(this.viewers).map((handleFactory) => handleFactory()),
-                    ),
-                    message,
-                    this.global,
-                ),
-            );
-        }
-        this.processingEvent = false;
-        if (this.eventQueue.length > 0) {
-            this._processNextEvent();
-        }
-    }
-
-    /**
-     * Returns an object which can be passed to the `value` prop of an
-     * `InteractionContext.Provider` to make this `InteractionManager` available to all `Viewer`s
-     * within that context. */
-    public getContextValue(): InteractionContextValue {
-        return {
-            addViewer: this.registerViewer,
-            removeViewer: this.unregisterViewer,
-            emitEvent: this.emit,
-        };
-    }
 }
-
-/* React context which allows all `Viewer`s nested within it to emit and respond to events. */
-export type InteractionContextValue = {
-    addViewer: (id: ViewerId, handleFactory: () => ViewerHandle) => void;
-    removeViewer: (id: ViewerId) => void;
-    emitEvent: (topic?: string, message?: Record<string, any>) => void;
-};
-
-export const InteractionContext = React.createContext<InteractionContextValue>({
-    addViewer: () => {},
-    removeViewer: () => {},
-    emitEvent: () => {},
-});

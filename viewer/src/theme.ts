@@ -9,7 +9,7 @@ type Color = string;
 type Color5 = { l2: Color; l1: Color; base: Color; d1: Color; d2: Color };
 type Color7 = { l3: Color; d3: Color } & Color5;
 
-const generalOptions: {
+const general: {
     color: {
         white: Color;
         grey: Color7;
@@ -85,14 +85,20 @@ const generalOptions: {
 
 // =================================================================================================
 
-const specificOptions = {
-    domains: {
+const specific = {
+    domain: {
+        fragmentContainer: {
+            borderStyle: 'solid',
+            borderWidth: general.scale(1),
+            borderRadius: general.scale(2),
+            borderColor: general.color.grey.l2,
+        }
     }
 };
 
 // =================================================================================================
 
-const defaultOptions = {
+const builtin = {
     typography: {
         h1: { fontWeight: 300 }, // Grabber.
         h2: { fontWeight: 400 }, // Page title.
@@ -107,13 +113,13 @@ const defaultOptions = {
     },
     palette: {
         primary: {
-            main: generalOptions.color.blue.base,
+            main: general.color.blue.base,
         },
         secondary: {
-            main: generalOptions.color.teal.base,
+            main: general.color.teal.base,
         },
         error: {
-            main: generalOptions.color.red.base,
+            main: general.color.red.base,
         },
     },
     spacing: 4,
@@ -133,14 +139,14 @@ const defaultOptions = {
     },
 };
 
-type ThemeExtensions = typeof generalOptions & typeof specificOptions;
+type ThemeExtensions = typeof general & typeof specific;
 declare module '@material-ui/core/styles/createMuiTheme' {
     interface Theme extends ThemeExtensions {}
     interface ThemeOptions extends ThemeExtensions {}
 }
 
 export default createMuiTheme({
-    ...defaultOptions,
-    ...generalOptions,
-    ...specificOptions,
+    ...builtin,
+    ...general,
+    ...specific,
 });

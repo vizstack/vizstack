@@ -95,12 +95,8 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                 const { modes } = this.props;
                 this.setState((state) => {
                     let modeIdx = state.selectedModeIdx + modeIdxDelta;
-                    while (modeIdx < 0) {
-                        modeIdx += modes.length;
-                    }
-                    while (modeIdx >= modes.length) {
-                        modeIdx -= modes.length;
-                    }
+                    // Ensure it is a positive array index.
+                    modeIdx = (modeIdx % modes.length + modes.length) % modes.length;
                     return { selectedModeIdx: modeIdx };
                 });
             },
@@ -146,27 +142,23 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
                 <div key={fragmentId}>
-                    <Viewer {...viewerToViewerProps}
-                            fragmentId={fragmentId}
-                            provideHandleFactory={(factory) => this.selectedModeFactory = factory} />
+                    <Viewer
+                        {...viewerToViewerProps}
+                        fragmentId={fragmentId}
+                        provideHandleFactory={(factory) => this.selectedModeFactory = factory} />
                 </div>
             </div>
         );
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) => createStyles({
     container: {
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
-        borderColor: theme.palette.atom.border,
-        padding: theme.spacing.unit,
-        display: 'inline-block', // Wraps the switch to its contents, allowing it to fit in flow layouts
+        ...theme.domain.fragmentContainer,
+        padding: theme.scale(4),
+
+        // Wrap the switch to its contents, allowing it to fit in flow layouts.
+        display: 'inline-block', 
     },
     containerHovered: {
         borderColor: theme.palette.primary.light,

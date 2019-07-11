@@ -172,8 +172,7 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
     }
 }
 
-const styles = (theme: Theme) =>
-    createStyles({
+const styles = (theme: Theme) => createStyles({
     text: {
         textAlign: 'left',
         overflow: 'hidden',

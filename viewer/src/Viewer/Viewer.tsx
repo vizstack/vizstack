@@ -40,7 +40,7 @@ export type ViewerToViewerProps = {
 };
 
 export type InteractionProps = {
-    /* The `ViewerId` of the `Viewer` rendering this component. */
+    /** The `ViewerId` of the `Viewer` rendering this component. */
     viewerId: ViewerId,
 
     /* Called on mount; provides to the `Viewer` a factory which returns a `FragmentHandle` with the
@@ -60,7 +60,7 @@ export type ViewerProps = {
      * level of nesting. If unspecified, the `view.rootId` is used. */
     fragmentId?: FragmentId,
 
-    /* Unique name for the `Viewer`, defined for the root and propagated to any sub-Viewers. */
+    /* Unique name for the root `Viewer`, passed down to any nested `Viewer`. */
     name?: string,
 
     /* Information about the parent of this viewer, if one exists. */
@@ -143,7 +143,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     render() {
         const { view, fragmentId, name } = this.props;
-        const { emitEvent } = this.context;
+        const { emit } = this.context;
 
         // Explicitly specified fragment for current viewer, or root-level fragment by default.
         const fragment: Fragment = this._getFragment();

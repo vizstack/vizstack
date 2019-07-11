@@ -8,7 +8,7 @@ import { ViewerId } from './manager';
 export type Event = {
     readonly topic: string;
     readonly message: Record<string, any>;
-};
+};``
 
 export type ViewerDidMouseOverEvent = {
     topic: 'Viewer.DidMouseOver';
@@ -84,27 +84,19 @@ export function getViewerMouseFunctions(
     return {
         onClick: (e) => {
             e.stopPropagation();
-            emitEvent('Viewer.DidClick', {
-                viewerId,
-            });
+            emitEvent('Viewer.DidClick', { viewerId });
         },
         onDoubleClick: (e) => {
             e.stopPropagation();
-            emitEvent('Viewer.DidDoubleClick', {
-                viewerId,
-            });
+            emitEvent('Viewer.DidDoubleClick', { viewerId });
         },
         onMouseOver: (e) => {
             e.stopPropagation();
-            emitEvent('Viewer.DidMouseOver', {
-                viewerId,
-            });
+            emitEvent('Viewer.DidMouseOver', { viewerId });
         },
         onMouseOut: (e) => {
             e.stopPropagation();
-            emitEvent('Viewer.DidMouseOut', {
-                viewerId,
-            });
+            emitEvent('Viewer.DidMouseOut', { viewerId });
         },
     };
 }
