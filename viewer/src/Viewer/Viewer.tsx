@@ -32,9 +32,11 @@ import SwitchLayout from '../layouts/SwitchLayout';
 // import KeyValueLayout from '../layouts/KeyValueLayout';
 
 // Interactions
-import { Event, ViewerHandle, ViewerId, FragmentHandle } from '../interaction';
+import { ViewerId, ViewerHandle, FragmentHandle } from '../interaction';
 import { InteractionContext } from '../interaction';
 
+
+/** Public API for interacting with a `Viewer`. */
 export type ViewerProps = {
     /* Specification of View's root fragment and sub-fragments. */
     view: View,
@@ -47,33 +49,49 @@ export type ViewerProps = {
     name?: string,
 };
 
-export type InteractionProps = {
-    /** The `ViewerId` of the `Viewer` rendering this component. */
+// Private props that enable a `Viewer` to respond to interactions.
+type ViewerInteractionProps = {
+
+    /* Information about the parent of this `Viewer`, if one exists. */
+    parentHandle?: ViewerHandle,
+     
+    /* Called on mount; provides to the parent layout (if any) a factory which returns this
+    `Viewer`'s current handle. This factory is called whenever the layout needs to add information
+    about this `Viewer` to its own `FragmentHandle`. */
+    registerViewerHandleFactory?: (factory: () => ViewerHandle) => void,
+};
+
+// Private props that are passed from one `Viewer` to the next sub-`Viewer`.
+type ViewerPassdownProps = Pick<ViewerProps, 'view' | 'name'>;
+type ViewerInteractionPassdownProps = Pick<ViewerInteractionProps, 'parentHandle'>;
+type PassdownProps = ViewerPassdownProps & ViewerInteractionPassdownProps;
+
+// Private props that enable a Fragment component to respond to interactions.
+type FragmentInteractionProps = {
+
+    /* The `ViewerId` of the `Viewer` rendering this component. */
     viewerId: ViewerId,
 
     /* Called on mount; provides to the `Viewer` a factory which returns a `FragmentHandle` with the
-     current state of the rendered fragment. This factory is called whenever the `Viewer` creates
-     its `ViewerHandle` so that information about the fragment can be added to it. */
-    provideHandleFactory: (factory: () => FragmentHandle) => void,
-
-    /* Information about the parent of this `Viewer`, if one exists. */
-    parent?: ViewerHandle,
+     * current state of the rendered fragment. This factory is called whenever the `Viewer` creates
+     * its `ViewerHandle` so that information about the fragment can be added to it. */
+    registerFragmentHandleFactory: (factory: () => FragmentHandle) => void,
 
     /* Publishes an event to the `InteractionManager`. */
     emitEvent: (topic: string, message: Record<string, any>) => void,  
 };
 
-type ViewerPassdownProps = Pick<ViewerProps, 'view' | 'name'>;
-type InteractionPassdownProps = Pick<InteractionProps, 'parent'>;
-
-export type PassdownProps = ViewerPassdownProps & InteractionPassdownProps;
+export type FragmentProps<T extends Fragment> = {
+    interactions: FragmentInteractionProps,
+    passdown: PassdownProps,
+} & T['contents'];
 
 type ViewerState = {
     /* Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
     bypassedCycle: boolean,
 };
 
-class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
+class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, ViewerState> {
     static contextType = InteractionContext;
     context!: React.ContextType<typeof InteractionContext>;
 
@@ -83,18 +101,18 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     /* Handle of the `Fragment` component that this `Viewer` renders. */
     fragmentHandleFactory = () => ({});
 
-    constructor(props: ViewerProps) {
+    constructor(props: ViewerProps & ViewerInteractionProps) {
         super(props);
         this.state = {
             bypassedCycle: false
         };
-        this.viewerId = this.props.viewerId || cuid();
+        this.viewerId = cuid();
     }
 
     componentDidMount() {
         this.context.registerViewer(this.viewerId, () => this._getHandle());
-        if (this.props.provideHandleFactory) {
-            this.props.provideHandleFactory(() => this._getHandle());
+        if (this.props.registerViewerHandleFactory) {
+            this.props.registerViewerHandleFactory(() => this._getHandle());
         }
     }
 
@@ -113,12 +131,12 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     }
 
     private _getHandle(): ViewerHandle {
-        const { parent } = this.props;
+        const { parentHandle } = this.props;
         return {
             id: this.viewerId,
             fragment: this._getFragment(),
             fragmentId: this._getFragmentId(),
-            parent,
+            parent: parentHandle,
             ...this.fragmentHandleFactory(),
         };
     }
@@ -129,7 +147,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
      * @private
      */
     private _isCycle(): boolean {
-        let { parent } = this.props;
+        let { parentHandle: parent } = this.props;
         const fragmentId = this._getFragmentId();
         while (parent) {
             if (parent.fragmentId === fragmentId) {
@@ -161,16 +179,16 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             )
         }
 
-        const viewerToViewerProps: PassdownProps = {
-            parent: this._getHandle(),
+        const passdown: PassdownProps = {
             view,
             name: name || this.viewerId,
+            parentHandle: this._getHandle(),
         };
 
-        const interactionProps: InteractionProps = {
+        const interactions: FragmentInteractionProps = {
             viewerId: this.viewerId,
+            registerFragmentHandleFactory: (factory) => this.fragmentHandleFactory = factory,
             emitEvent: (topic, message) => emit(topic, message),
-            provideHandleFactory: (factory) => this.fragmentHandleFactory = factory,
         };
 
         // The `Viewer` is the component that knows how to dispatch on fragment type to render
@@ -181,8 +199,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             // Primitives
 
             case 'TextPrimitive': {
-                const { contents } = fragment;
-                return <TextPrimitive {...interactionProps} {...contents} />;
+                return <TextPrimitive {...{ interactions, passdown, ...fragment.contents }} />;
             }
 
             // case 'ImagePrimitive': {
@@ -238,14 +255,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             // }
 
             case 'SwitchLayout': {
-                const { contents } = fragment;
-                return (
-                    <SwitchLayout
-                        viewerToViewerProps={viewerToViewerProps}
-                        {...interactionProps}
-                        {...contents}
-                    />
-                );
+                return <SwitchLayout {...{ interactions, passdown, ...fragment.contents }} />;
             }
 
             // case 'DagLayout': {

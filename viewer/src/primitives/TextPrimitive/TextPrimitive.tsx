@@ -3,25 +3,13 @@ import clsx from 'clsx';
 import Immutable from 'seamless-immutable';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import { TextPrimitiveFragment } from '@vizstack/schema';
 import { ViewerId, ViewerDidMouseEvent, ViewerDidHighlightEvent } from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
+import { FragmentProps } from '../../Viewer';
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
-type TextPrimitiveProps = {
-    // TODO: Replace with `InteractionProps`.
-    viewerId: ViewerId,
-    updateHandle: (handle: TextPrimitiveHandle) => void,
-    emitEvent: (topic: string, message: Record<string, any>) => void,
-
-    /* Text string displayed by the component. */
-    text: string,
-
-    /* The color scheme of the component. */
-    color?: 'default' | 'primary' | 'secondary' | 'error' | 'invisible',
-
-    /* Whether the component is plain text or a token. */
-    variant?: 'plain' | 'token',
-};
+type TextPrimitiveProps = FragmentProps<TextPrimitiveFragment>;
 
 type TextPrimitiveState = {
     textSize: 'small' | 'medium' | 'large',
@@ -62,7 +50,6 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
     static defaultProps: Partial<TextPrimitiveProps> = {
         color: 'default',
         variant: 'plain',
-        updateHandle: () => {},
     };
 
     constructor(props: TextPrimitiveProps & InternalProps) {
@@ -97,7 +84,7 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
 
     componentDidUpdate(prevProps, prevState): void {
         this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
+        const { viewerId, emitEvent } = this.props.interactions;
         const { textSize, isHighlighted } = this.state;
         if (textSize !== prevState.textSize) {
             emitEvent('Text.DidResize', { viewerId, textSize });

@@ -67,6 +67,7 @@ class ViewerSelector {
         this.current = viewers;
     }
 
+    // TODO: Do we need this? How is the user supposed to get the viewerId?
     id(...ids: ViewerId[]): ViewerSelector {
         return this.filter((viewer) => ids.includes(viewer.id));
     }
