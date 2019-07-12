@@ -1,12 +1,16 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-import { Viewer } from '../../Viewer';
-import type { FragmentId } from '@vizstack/schema';
-import type { ViewerToViewerProps } from '../../Viewer';
-import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
+import { SequenceLayoutFragment, FragmentId } from '@vizstack/schema';
+import { Viewer, FragmentProps } from '../../Viewer';
+
+import {
+    ViewerId,
+    ViewerHandle,
+    ViewerDidMouseEvent,
+    ViewerDidHighlightEvent,
+} from '../../interaction';
 import { getViewerMouseFunctions } from '../../interaction';
 
 /**
@@ -15,99 +19,60 @@ import { getViewerMouseFunctions } from '../../interaction';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-type SequenceLayoutProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
+type SequenceLayoutProps = FragmentProps<SequenceLayoutFragment>;
 
-    /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
-
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (SequenceLayoutHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: SequenceLayoutPub>(
-        $PropertyType<E, 'topic'>,
-        $PropertyType<E, 'message'>,
-    ) => void,
-
-    /** Contains properties which should be spread onto any `Viewer` components rendered by this
-     * layout. */
-    viewerToViewerProps: ViewerToViewerProps,
-
-    /** Elements of the sequence that will be rendered as `Viewer`s. */
-    elements: Array<FragmentId>,
-
-    /** Whether the sequence is arranged horizontally or vertically. */
-    orientation?: 'horizontal' | 'vertical',
-
-    /** A string to show at the beginning of the sequence. */
-    startMotif?: string,
-
-    /** A string to show at the end of the sequence. */
-    endMotif?: string,
+type SequenceLayoutState = {
+    isHighlighted: boolean,
+    selectedElementIdx: number,
 };
 
-export type SequenceLayoutHandle = {|
-    selectedElementIdx: number,
-    selectedViewerId: ?ViewerId,
+export type SequenceLayoutHandle = {
     isHighlighted: boolean,
+    selectedElementIdx: number,
+    elements: ViewerHandle[],
     doHighlight: () => void,
     doUnhighlight: () => void,
     doSelectElement: (elementIdx: number) => void,
     doIncrementElement: (elementIdxDelta: number) => void,
-|};
+};
 
-type SequenceLayoutDefaultProps = {|
-    updateHandle: (SequenceLayoutHandle) => void,
+type SequenceLayoutDefaultProps = {
     orientation: 'horizontal',
-|};
+};
 
-type SequenceLayoutState = {|
-    selectedElementIdx: number,
-    isHighlighted: boolean,
-|};
-
-export type SequenceDidChangeElementEvent = {|
+export type SequenceDidChangeElementEvent = {
     topic: 'Sequence.DidChangeElement',
-    message: {|
+    message: {
         viewerId: ViewerId,
-    |},
-|};
+    },
+};
 
-type SequenceLayoutPub =
+type SequenceLayoutEvent =
     | ViewerDidMouseEvent
     | ViewerDidHighlightEvent
     | SequenceDidChangeElementEvent;
 
-class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLayoutState> {
+class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalProps, SequenceLayoutState> {
     /** Prop default values. */
     static defaultProps: SequenceLayoutDefaultProps = {
-        updateHandle: () => {},
         orientation: 'horizontal',
     };
 
-    childRefs: Array<{ current: null | Viewer }> = [];
+    private _elementFactories: Array<() => ViewerHandle | null> = [() => null];
 
-    constructor(props) {
+    constructor(props: SequenceLayoutProps & InternalProps) {
         super(props);
         this.state = {
-            selectedElementIdx: 0,
             isHighlighted: false,
+            selectedElementIdx: 0,
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
+    private _getHandle(): SequenceLayoutHandle {
         const { isHighlighted, selectedElementIdx } = this.state;
-        updateHandle({
+        return {
             selectedElementIdx,
-            selectedViewerId:
-                this.childRefs.length > selectedElementIdx &&
-                this.childRefs[selectedElementIdx].current
-                    ? this.childRefs[selectedElementIdx].current.viewerId
-                    : null,
+            elements: this._elementFactories.map((factory) => factory()),
             isHighlighted,
             doHighlight: () => {
                 this.setState({ isHighlighted: true });
@@ -131,31 +96,31 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                     return { selectedElementIdx: elementIdx };
                 });
             },
-        });
+        };
     }
 
     componentDidMount() {
-        this._updateHandle();
+        const { registerFragmentHandleFactory: registerFragmentHandle } = this.props.interactions;
+        registerFragmentHandle(() => this._getHandle());
     }
 
     componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
+        const { viewerId, emitEvent } = this.props.interactions;
         const { isHighlighted, selectedElementIdx } = this.state;
         if (isHighlighted !== prevState.isHighlighted) {
             if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
+                emitEvent('Viewer.DidHighlight', {
+                    viewerId: viewerId,
                 });
             } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
+                emitEvent('Viewer.DidUnhighlight', {
+                    viewerId: viewerId,
                 });
             }
         }
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emitEvent<SequenceDidChangeElementEvent>('Sequence.DidChangeElement', {
-                viewerId: (viewerId: ViewerId),
+            emitEvent('Sequence.DidChangeElement', {
+                viewerId: viewerId,
             });
         }
     }
@@ -169,26 +134,26 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
         const {
             classes,
             elements,
-            viewerToViewerProps,
-            emitEvent,
-            viewerId,
+            passdown,
+            interactions,
             orientation,
             startMotif,
             endMotif,
         } = this.props;
+        const { emitEvent, viewerId } = interactions;
         const { isHighlighted, selectedElementIdx } = this.state;
 
-        this.childRefs = [];
+        this._elementFactories = elements.map(() => () => null);
 
         return (
             <div
-                className={classNames({
+                className={clsx({
                     [classes.root]: true,
                 })}
                 {...getViewerMouseFunctions(emitEvent, viewerId)}
             >
                 <div
-                    className={classNames({
+                    className={clsx({
                         [classes.motif]: true,
                         [classes.horizontal]: orientation === 'horizontal',
                         [classes.vertical]: orientation === 'vertical',
@@ -196,29 +161,27 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
                 >
                     {startMotif}
                 </div>
-                {elements.map((fragmentId, i) => {
-                    const ref = React.createRef();
-                    this.childRefs.push(ref);
+                {elements.map((fragmentId: FragmentId, i: number) => {
                     return (
                         <div
-                            className={classNames({
+                            className={clsx({
                                 [classes.cell]: true,
                                 [classes.horizontal]: orientation === 'horizontal',
                                 [classes.vertical]: orientation === 'vertical',
                                 [classes.cellSelected]: isHighlighted && selectedElementIdx === i,
                             })}
+                            key={i}
                         >
                             <Viewer
-                                key={i}
-                                ref={ref}
-                                {...viewerToViewerProps}
+                                {...passdown}
                                 fragmentId={fragmentId}
+                                registerViewerHandleFactory={(factory) => this._elementFactories[i] = factory}
                             />
                         </div>
                     );
                 })}
                 <div
-                    className={classNames({
+                    className={clsx({
                         [classes.motif]: true,
                         [classes.horizontal]: orientation === 'horizontal',
                         [classes.vertical]: orientation === 'vertical',
@@ -235,6 +198,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps, SequenceLa
 // -------------------------------
 
 /** CSS-in-JS styling function. */
+// TODO: update to match SwitchLayout
 const styles = (theme) => ({
     root: {
         display: 'inline-block',
@@ -265,4 +229,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(SequenceLayout);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(SequenceLayout) as React.ComponentClass<SequenceLayoutProps>;
