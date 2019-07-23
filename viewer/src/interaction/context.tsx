@@ -3,7 +3,7 @@ import * as React from 'react';
 import { InteractionManager, ViewerId, ViewerHandle } from './manager';
 
 /** React context which allows all `Viewer`s nested within it to emit and respond to events. */
-type InteractionContextValue = {
+export type InteractionContextValue = {
     registerViewer: InteractionManager['registerViewer'];
     unregisterViewer: InteractionManager['unregisterViewer'];
     emit: InteractionManager['emit'];

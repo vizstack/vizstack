@@ -1,119 +1,65 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-import { Viewer } from '../../Viewer';
-import type { ViewerToViewerProps } from '../../Viewer';
-
-import type { FragmentId } from '@vizstack/schema';
-import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
+import { GridLayoutFragment } from '@vizstack/schema';
+import { Viewer, FragmentProps } from '../../Viewer';
+import { ViewerId } from '../../interaction';
 
 /**
  * This pure dumb component renders visualization for a 2D grid of elements.
  * TODO: Allow element-type-specific background coloring.
  */
-type GridLayoutProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
+type GridLayoutProps = FragmentProps<GridLayoutFragment>;
 
-    /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
-
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (GridLayoutHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: GridLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
-
-    /** Contains properties which should be spread onto any `Viewer` components rendered by this
-     * layout. */
-    viewerToViewerProps: ViewerToViewerProps,
-
-    /** Elements which should be rendered as children of the `GridLayout`. */
-    cells: {
-        fragmentId: FragmentId,
-        col: number,
-        row: number,
-        width: number,
-        height: number,
-    }[],
+type GridLayoutState = {
+    selectedCellIdx: number,
 };
 
-export type GridLayoutHandle = {|
+export type GridLayoutHandle = {
+    cells: ViewerId[],
     selectedCellIdx: number,
-    selectedViewerId: ?ViewerId,
-    isHighlighted: boolean,
-    doHighlight: () => void,
-    doUnhighlight: () => void,
     doSelectCell: (elementIdx: number) => void,
     doSelectNeighborCell: (direction: 'north' | 'south' | 'east' | 'west') => void,
-|};
+};
 
-type GridLayoutDefaultProps = {|
-    updateHandle: (GridLayoutHandle) => void,
-|};
-
-type GridLayoutState = {|
-    isHighlighted: boolean,
-    selectedCellIdx: number,
-|};
-
-export type GridRequestSelectCellEvent = {|
+export type GridRequestSelectCellEvent = {
     topic: 'Grid.RequestSelectCell',
-    message: {|
+    message: {
         viewerId: ViewerId,
         elementIdx: number,
-    |},
-|};
+    },
+};
 
-export type GridDidChangeCellEvent = {|
+export type GridDidChangeCellEvent = {
     topic: 'Grid.DidChangeCell',
-    message: {|
-        viewerId: ViewerId,
-    |},
-|};
+    message: { viewerId: ViewerId },
+};
 
-type GridLayoutPub =
-    | ViewerDidMouseEvent
-    | ViewerDidHighlightEvent
+type GridLayoutEvent =
     | GridRequestSelectCellEvent
     | GridDidChangeCellEvent;
 
-class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
-    childRefs: Array<{ current: null | Viewer }> = [];
+class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, GridLayoutState> {
+    
+    private _childViewers: Viewer[] = [];
 
-    /** Prop default values. */
-    static defaultProps: GridLayoutDefaultProps = {
-        updateHandle: () => {},
-    };
+    private _registerViewer(viewer: Viewer, idx: number) {
+        this._childViewers[idx] = viewer;
+    }
 
-    constructor(props: GridLayoutProps) {
+    constructor(props: GridLayoutProps & InternalProps) {
         super(props);
         this.state = {
-            isHighlighted: false,
             selectedCellIdx: 0,
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
-        const { isHighlighted, selectedCellIdx } = this.state;
-        updateHandle({
+    public getHandle(): GridLayoutHandle {
+        const { selectedCellIdx } = this.state;
+        return {
+            cells: this._childViewers.map((viewer) => viewer.viewerId),
             selectedCellIdx,
-            selectedViewerId:
-                this.childRefs.length > selectedCellIdx && this.childRefs[selectedCellIdx].current
-                    ? this.childRefs[selectedCellIdx].current.viewerId
-                    : null,
-            isHighlighted,
-            doHighlight: () => {
-                this.setState({ isHighlighted: true });
-            },
-            doUnhighlight: () => {
-                this.setState({ isHighlighted: false });
-            },
             doSelectCell: (cellIdx) => {
                 this.setState({ selectedCellIdx: cellIdx });
             },
@@ -121,7 +67,11 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                 this.setState((state, props) => {
                     const { cells } = props;
                     const currentElem = cells[state.selectedCellIdx];
-                    let mainAxis, offAxis, increaseMainAxis;
+
+                    // TODO: Rewrite with clearer logic.
+                    let mainAxis: 'row' | 'col';
+                    let offAxis: 'row' | 'col';
+                    let increaseMainAxis: boolean;
                     switch (direction) {
                         case 'south':
                             mainAxis = 'row';
@@ -174,36 +124,18 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
                     if (closest >= 0) {
                         return { selectedCellIdx: closest };
                     } else {
-                        return {};
+                        return { selectedCellIdx: selectedCellIdx };
                     }
                 });
             },
-        });
+        };
     }
 
-    componentDidMount() {
-        this._updateHandle();
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
-        const { isHighlighted, selectedCellIdx } = this.state;
-        if (isHighlighted !== prevState.isHighlighted) {
-            if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            }
-        }
+    componentDidUpdate(prevProps: any, prevState: GridLayoutState) {
+        const { viewerId, emit } = this.props.interactions;
+        const { selectedCellIdx } = this.state;
         if (selectedCellIdx !== prevState.selectedCellIdx) {
-            emitEvent<GridDidChangeCellEvent>('Grid.DidChangeCell', {
-                viewerId: (viewerId: ViewerId),
-            });
+            emit<GridLayoutEvent>('Grid.DidChangeCell', { viewerId });
         }
     }
 
@@ -213,71 +145,61 @@ class GridLayout extends React.PureComponent<GridLayoutProps, GridLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, cells, viewerId, emitEvent, viewerToViewerProps } = this.props;
-
-        const { isHighlighted, selectedCellIdx } = this.state;
-
-        this.childRefs = [];
+        const { classes, cells, passdown, interactions, light } = this.props;
+        const { mouseHandlers } = interactions;
+        const { selectedCellIdx } = this.state;
 
         return (
             <div
-                className={classNames({
+                className={clsx({
                     [classes.container]: true,
                 })}
-                {...getViewerMouseFunctions(emitEvent, viewerId)}
+                {...mouseHandlers}
             >
-                {cells.map(({ fragmentId, col, row, width, height }, i) => {
-                    const ref = React.createRef();
-                    this.childRefs.push(ref);
-                    return (
-                        <div
-                            key={fragmentId}
-                            className={classNames({
-                                [classes.cell]: true,
-                                [classes.cellSelected]: isHighlighted && selectedCellIdx === i,
-                            })}
-                            style={{
-                                gridColumn: `${col + 1} / ${col + 1 + width}`,
-                                gridRow: `${row + 1} / ${row + 1 + height}`,
-                            }}
-                        >
-                            <Viewer {...viewerToViewerProps} fragmentId={fragmentId} ref={ref} />
-                        </div>
-                    );
-                })}
+                {cells.map(({ fragmentId, col, row, width, height }, idx) => (
+                    <div
+                        key={fragmentId}
+                        className={clsx({
+                            [classes.cell]: true,
+                            [classes.cellSelected]: light === 'highlight' && selectedCellIdx === idx,
+                        })}
+                        style={{
+                            gridColumn: `${col + 1} / ${col + 1 + width}`,
+                            gridRow: `${row + 1} / ${row + 1 + height}`,
+                        }}
+                    >
+                        <Viewer
+                            ref={(viewer) => this._registerViewer(viewer!, idx)}
+                            key={`${idx}-${fragmentId}`}
+                            {...passdown}
+                            fragmentId={fragmentId}
+                        />
+                    </div>
+                ))}
             </div>
         );
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) => createStyles({
     container: {
         display: 'inline-grid',
         verticalAlign: 'middle',
-        gridGap: `${theme.spacing.large}px`, // Need px.
+        gridGap: `${theme.scale(16)}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
-        borderColor: theme.palette.atom.border,
+        ...theme.vars.fragmentContainer,
     },
     compactGrid: {
-        gridGap: `${theme.spacing.large}px`, // Need px.
+        gridGap: `${theme.scale(16)}px`, // Need px.
     },
     containerHovered: {
         borderColor: theme.palette.primary.light,
     },
     cell: {
         textAlign: 'left',
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
+        ...theme.vars.fragmentContainer,
         borderColor: 'rgba(255, 0, 0, 0)',
     },
     cellSelected: {
@@ -285,4 +207,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(GridLayout);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(GridLayout) as React.ComponentClass<GridLayoutProps>;

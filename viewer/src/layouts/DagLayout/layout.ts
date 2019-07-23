@@ -1,4 +1,3 @@
-// @flow
 /**
  * Layout engine for a directed acyclic graph (DAG).
  *
@@ -10,7 +9,7 @@ import * as cola from 'webcola';
 import { arr2obj, obj2obj } from '../../utils/data-utils';
 
 export type NodeId = string;
-export type NodeIn = {|
+export type NodeIn = {
     /** String ID unique among all nodes in a graph. */
     id: NodeId,
 
@@ -26,7 +25,7 @@ export type NodeIn = {|
 
     /** Named points on node boundaries that serve as the source/destination of edges. */
     ports?: {
-        [string]: {
+        [name: string]: {
             /** Absolute location of side on which port resides. */
             side: 'north' | 'south' | 'east' | 'west',
 
@@ -38,14 +37,12 @@ export type NodeIn = {|
     /** Size dimensions of leaf nodes with fixed sizes; parent node dimensions will be populated. */
     width?: number,
     height?: number,
-|};
-export type NodeOut = {
-    ...NodeIn,
-
+};
+export type NodeOut = NodeIn & {
     flowDirection: 'north' | 'south' | 'east' | 'west',
     alignChildren: boolean,
     ports?: {
-        [string]: {
+        [name: string]: {
             side: 'north' | 'south' | 'east' | 'west',
             order: number,
 
@@ -80,9 +77,7 @@ export type EdgeIn = {
     startPort?: string,
     endPort?: string,
 };
-export type EdgeOut = {
-    ...EdgeIn,
-
+export type EdgeOut = EdgeIn & {
     /** Layout coordinates populated by layout engine. */
     points: { x: number, y: number }[],
     z: number,
@@ -134,8 +129,8 @@ export default function layout(
     // Build lookup tables and record useful info by traversing the entire graph's node component
     // hierarchy (not edges, but containment relations).
     type NodeIdx = number;
-    const nodeIdxLookup: { [NodeId]: NodeIdx } = arr2obj(nodes, (node, idx) => [node.id, idx]);
-    const parentIdLookup: { [NodeId]: NodeId } = {};
+    const nodeIdxLookup: { [nodeId: string]: NodeIdx } = arr2obj(nodes, (node, idx) => [node.id, idx]);
+    const parentIdLookup: { [nodeId: string]: NodeId } = {};
     let numLeafNodes = 0;
     function traverseNode(nodeId: NodeId, processed: Set<NodeId>) {
         if (processed.has(nodeId)) return;
@@ -153,8 +148,8 @@ export default function layout(
     const traverseSet: Set<NodeId> = new Set();
     nodes.forEach((node) => traverseNode(node.id, traverseSet));
 
-    const targetIdLookup: { [NodeId]: Array<NodeId> } = {};
-    function traverseEdge(node) {}
+    // const targetIdLookup: { [nodeId: string]: Array<NodeId> } = {};
+    // function traverseEdge(node) {}
     // TODO: Use topoligical sort finish_time to order nodes in terms of nesting. This allows
     // z-position calculations later?
 
@@ -178,7 +173,7 @@ export default function layout(
     };
 
     type VertexIdx = number;
-    let vertexIdxLookup: { [NodeId]: VertexIdx } = {};
+    let vertexIdxLookup: { [nodeId: string]: VertexIdx } = {};
 
     function addVertex(nodeId: NodeId, vertex: Vertex): VertexIdx {
         let idx: VertexIdx = graph.vertices.length;
@@ -188,7 +183,7 @@ export default function layout(
     }
 
     type GroupIdx = number;
-    const groupIdxLookup: { [NodeId]: GroupIdx } = {};
+    const groupIdxLookup: { [nodeId: string]: GroupIdx } = {};
     // Note: This `idx` is 0-indexed, but the computed `index` by WebCola starts after the largest
     // vertex `index`.
 
@@ -206,16 +201,16 @@ export default function layout(
     function getNodeInfo(
         nodeId: NodeId,
     ):
-        | {|
+        | {
               type: 'vertex',
               idx: VertexIdx,
               obj: Vertex,
-          |}
-        | {|
+          }
+        | {
               type: 'group',
               idx: GroupIdx,
               obj: Group,
-          |}
+          }
         | null {
         if (vertexIdxLookup[nodeId] !== undefined) {
             return {
@@ -257,7 +252,7 @@ export default function layout(
 
         // Note: Negative gaps were found NOT to work, even on simple cases of 2 nodes. Instead,
         // we must reverse the left and right terms in the constraint inequality.
-        let options;
+        let options: { axis: 'x' | 'y', left: number, right: number };
         switch (flowDirection) {
             case 'west':
                 options = { axis: 'x', left: endIdx, right: startIdx };
@@ -275,7 +270,7 @@ export default function layout(
         }
 
         const { gap = kFlowSpacing, equality = false } = kwargs;
-        const constraint = {
+        const constraint: SeparationConstraint = {
             type: 'separation',
             ...options,
             gap,
@@ -286,7 +281,7 @@ export default function layout(
 
     function processNode(
         nodeId: NodeId,
-        processed: { [NodeId]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } },
+        processed: { [nodeId: string]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } },
     ): { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } {
         if (processed[nodeId]) return processed[nodeId];
         const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
@@ -309,7 +304,7 @@ export default function layout(
             const { vertexIdx: childVertexIdx, groupIdx: childGroupIdx } = processNode(
                 childId,
                 processed,
-            );
+            ) as any;  // TODO: What is accepted pattern?
 
             // Update `Group` according to whether child is leaf or group.
             if (childGroupIdx !== undefined) {
@@ -326,11 +321,11 @@ export default function layout(
         processed[nodeId] = { groupIdx };
         return processed[nodeId];
     }
-    const processCache: { [NodeId]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } } = {};
+    const processCache: { [nodeId: string]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } } = {};
     nodes.forEach((node) => processNode(node.id, processCache));
 
-    function findLeafDescendants(startId: NodeId): Array<NodeId> {
-        const leaves = [];
+    function findLeafDescendants(startId: NodeId): NodeId[] {
+        const leaves: NodeId[] = [];
         function dfs(nodeId: NodeId) {
             const node = nodes[nodeIdxLookup[nodeId]];
             if (node.children.length === 0) {
@@ -413,9 +408,9 @@ export default function layout(
         .avoidOverlaps(true)
         .handleDisconnected(true)
         .nodes(graph.vertices)
-        .links(graph.links)
+        .links(graph.links as any)  // TODO: Hack
         .constraints(graph.constraints)
-        .groups(graph.groups)
+        .groups(graph.groups as any)  // TODO: Hack
         .groupCompactness(1e-5) // TODO: Choose
         .linkDistance(kFlowSpacing)
         .convergenceThreshold(1e-3) // TODO: Choose
@@ -431,24 +426,13 @@ export default function layout(
     console.log('layout.js -- Done with preliminary layout.', graph);
 
     // After layout, there are several changes in the `Vertex` and `Group`  objects.
-    type Bounds = {
-        x: number,
-        y: number,
-        X: number,
-        Y: number,
-        width: () => number,
-        height: () => number,
-        inflate: (number) => Bounds,
-    };
-    type VertexPopulated = {
-        ...Vertex,
+    type VertexPopulated = Vertex & {
         index: number,
-        bounds: Bounds,
+        bounds: cola.Rectangle,
     };
-    type GroupPopulated = {
-        ...Group,
+    type GroupPopulated = Group & {
         index: number,
-        bounds: Bounds,
+        bounds: cola.Rectangle,
         leaves: VertexPopulated[],
         groups: GroupPopulated[],
         children?: number[],
@@ -462,7 +446,7 @@ export default function layout(
     // to point to them.
 
     type PortIdx = number;
-    let portLookup: { [NodeId]: { [string]: PortIdx } } = {};
+    let portLookup: { [nodeId: string]: { [portName: string]: PortIdx } } = {};
 
     function addPortVertex(nodeId: NodeId, portName: string, x: number, y: number): PortIdx {
         let idx: PortIdx = graph.ports.length;
@@ -486,7 +470,12 @@ export default function layout(
     function processPorts(nodeId: NodeId) {
         const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
         if (node.ports === undefined) return;
-        const portsBySide: { ['north' | 'south' | 'east' | 'west']: string[] } = {
+        const portsBySide: {
+            north: string[],
+            south: string[],
+            east: string[],
+            west: string[],
+        } = {
             north: [],
             south: [],
             east: [],
@@ -496,20 +485,21 @@ export default function layout(
             const side = node.ports[portName].side;
             portsBySide[side].push(portName);
         }
-        for (let side of ['north', 'south', 'east', 'west']) {
+        for (let _side of ['north', 'south', 'east', 'west']) {
             // Sort all ports on the side.
+            let side: 'north' | 'south' | 'east' | 'west' = _side as any;
             portsBySide[side].sort((portName1: string, portName2: string) => {
                 if (
-                    node.ports[portName1].order === undefined ||
-                    node.ports[portName2].order === undefined
+                    node.ports![portName1].order === undefined ||
+                    node.ports![portName2].order === undefined
                 ) {
                     return 0;
                 }
-                return node.ports[portName2].order - node.ports[portName1].order;
+                return node.ports![portName2].order! - node.ports![portName1].order!;
             });
             // Create a dummy Vertex for each of the ports on the side.
             portsBySide[side].forEach((portName, i) => {
-                const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId).obj;
+                const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId)!.obj;
                 const sep = portsBySide[side].length + 1; // Num parts for port separation.
 
                 let pos;
@@ -548,8 +538,8 @@ export default function layout(
 
     // Overwrite the dummy links with the real links.
     graph.links = edges.map((edge) => {
-        let source: Vertex | Group = getNodeInfo(edge.startId).obj;
-        let target: Vertex | Group = getNodeInfo(edge.endId).obj;
+        let source: Vertex | Group = getNodeInfo(edge.startId)!.obj;
+        let target: Vertex | Group = getNodeInfo(edge.endId)!.obj;
         if (edge.startPort) {
             source = graph.ports[portLookup[edge.startId][edge.startPort]];
         }
@@ -563,10 +553,11 @@ export default function layout(
     // -----------------------------------------------
 
     // Add margin around the vertices and groups, and prepare for routing.
-    ((graph.vertices: any[]): VertexPopulated[]).forEach((v) => {
+    graph.vertices.forEach((v) => {
         // v.bounds.inflate(kNodeMargin);
     });
-    ((graph.groups: any[]): GroupPopulated[]).forEach((g) => {
+    graph.groups.forEach((_g) => {
+        const g = _g as GroupPopulated;
         // g.bounds.inflate(kGroupMargin);
         g.children = g.groups.map((subg) => subg.index).concat(g.leaves.map((l) => l.index));
     });
@@ -738,6 +729,8 @@ type Vertex = {
     height: number,
     x?: number,
     y?: number,
+    bounds?: cola.Rectangle,
+    index?: number,
 };
 
 type Group = {

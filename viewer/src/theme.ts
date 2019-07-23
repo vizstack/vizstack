@@ -86,13 +86,20 @@ const general: {
 // =================================================================================================
 
 const specific = {
-    domain: {
+    vars: {
         fragmentContainer: {
             borderStyle: 'solid',
             borderWidth: general.scale(1),
             borderRadius: general.scale(2),
             borderColor: general.color.grey.l2,
-        }
+        },
+        selectable: {
+            normal: general.color.grey.l2,
+            highlight: general.color.blue.l1,
+            lowlight: general.color.grey.d1,
+            selected: general.color.blue.base,
+        },
+        
     }
 };
 

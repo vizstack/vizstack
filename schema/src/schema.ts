@@ -67,10 +67,10 @@ export type ImagePrimitiveFragment = {
 /* A "Fragment" that is an configuration for other elements, e.g. Grid, Sequence, and KeyValue. */
 export type LayoutFragment =
     | FlowLayoutFragment
+    | SwitchLayoutFragment
     | GridLayoutFragment
     | SequenceLayoutFragment
     | KeyValueLayoutFragment
-    | SwitchLayoutFragment
     | DagLayoutFragment;
 
 /* Flow layout arranges its element one after another, like in a word-document. */
@@ -78,6 +78,15 @@ export type FlowLayoutFragment = {
     type: 'FlowLayout';
     contents: {
         elements: FragmentId[];
+    };
+    meta: FragmentMeta;
+};
+
+/* Switch layout allows switching between each of its elements. */
+export type SwitchLayoutFragment = {
+    type: 'SwitchLayout';
+    contents: {
+        modes: FragmentId[];
     };
     meta: FragmentMeta;
 };
@@ -118,15 +127,6 @@ export type KeyValueLayoutFragment = {
         separator?: string;
         startMotif?: string;
         endMotif?: string;
-    };
-    meta: FragmentMeta;
-};
-
-/* Switch layout allows switching between each of its elements. */
-export type SwitchLayoutFragment = {
-    type: 'SwitchLayout';
-    contents: {
-        modes: FragmentId[];
     };
     meta: FragmentMeta;
 };

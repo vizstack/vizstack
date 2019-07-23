@@ -2,6 +2,7 @@ import _ from 'lodash';
 
 import {
     Fragment,
+    FragmentId,
     TextPrimitiveFragment,
     ImagePrimitiveFragment,
     SwitchLayoutFragment,
@@ -10,103 +11,197 @@ import {
     SequenceLayoutFragment,
     KeyValueLayoutFragment,
     DagLayoutFragment,
-    FragmentId,
 } from '@vizstack/schema';
-import {
-    Event,
-    ViewerDidMouseOverEvent,
-    ViewerDidMouseOutEvent,
-    ViewerDidClickEvent,
-} from './events';
 import { TextPrimitiveHandle } from '../primitives/TextPrimitive';
 import { ImagePrimitiveHandle } from '../primitives/ImagePrimitive';
+import { FlowLayoutHandle } from '../layouts/FlowLayout';
 import { SwitchLayoutHandle } from '../layouts/SwitchLayout';
 import { GridLayoutHandle } from '../layouts/GridLayout';
-import { FlowLayoutHandle } from '../layouts/FlowLayout';
 import { SequenceLayoutHandle } from '../layouts/SequenceLayout';
 import { KeyValueLayoutHandle } from '../layouts/KeyValueLayout';
+import { DagLayoutHandle } from '../layouts/DagLayout';
 
+/** Globally unique identifier for a specific `Viewer` that renders a `Fragment`. Note that the
+ * same `Fragment` may be rendered by many different `Viewer`s. */
 export type ViewerId = string & { readonly brand?: unique symbol };
 
-/* Information which is present in all `ViewerHandle` subtypes.*/
-type ViewerInfo = {
-    id: ViewerId;
-    fragmentId: FragmentId;
-    parent?: ViewerHandle;
-};
+type FragmentType = Fragment['type'];
 
-type FragmentInfo =
-    | ({ fragment: TextPrimitiveFragment } & TextPrimitiveHandle)
-    | ({ fragment: ImagePrimitiveFragment } & ImagePrimitiveHandle)
-    | ({ fragment: SwitchLayoutFragment } & SwitchLayoutHandle)
-    | ({ fragment: GridLayoutFragment } & GridLayoutHandle)
-    | ({ fragment: FlowLayoutFragment } & FlowLayoutHandle)
-    | ({ fragment: SequenceLayoutFragment } & SequenceLayoutHandle)
-    | ({ fragment: KeyValueLayoutFragment } & KeyValueLayoutHandle);
+/** Enables reading and interacting with a `Viewer`'s state, along with its corresponding
+ * `Fragment`'s contents and metadata. '*/
+export type ViewerHandle<T extends FragmentType = FragmentType> = {
+    viewerId: ViewerId,
+    parentId?: ViewerId,
+    fragmentId: FragmentId,
+    meta: Fragment['meta'],
+    appearance: {
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected',
+        doSetLight: (light: 'normal' | 'highlight' | 'lowlight' | 'selected') => void,
+    },
+} & FragmentSpecificInfo<T>;
 
-/* Fields in a `ViewerHandle` which are dependent upon the type of `Fragment` being rendered by
- * the `Viewer`. */
-export type FragmentHandle =
-    | TextPrimitiveHandle
-    | ImagePrimitiveHandle
-    | SwitchLayoutHandle
-    | GridLayoutHandle
-    | FlowLayoutHandle
-    | SequenceLayoutHandle
-    | KeyValueLayoutHandle;
+// In order to perform type inference properly, Typescript needs a discriminated union
+// to have its descriminant (i.e. `type` field) at the top level. This is why we unpack
+// the `Fragment` into the `ViewerHandle` as opposed to nesting it within another property.
+type FragmentSpecificInfo<T extends FragmentType> = 
+    T extends "TextPrimitive" ? {
+        type: T,
+        contents: TextPrimitiveFragment['contents'],
+        state: TextPrimitiveHandle,
+    } :
+    T extends "ImagePrimitive" ? {
+        type: T,
+        contents: ImagePrimitiveFragment['contents'],
+        state: ImagePrimitiveHandle,
+    } :
+    T extends "FlowLayout" ? {
+        type: T,
+        contents: FlowLayoutFragment['contents'],
+        state: FlowLayoutHandle,
+    } :
+    T extends "SwitchLayout" ? {
+        type: T,
+        contents: SwitchLayoutFragment['contents'],
+        state: SwitchLayoutHandle,
+    } :
+    T extends "GridLayout" ? {
+        type: T,
+        contents: GridLayoutFragment['contents'],
+        state: GridLayoutHandle,
+    } :
+    T extends "SequenceLayout" ? {
+        type: T,
+        contents: SequenceLayoutFragment['contents'],
+        state: SequenceLayoutHandle,
+    } :
+    T extends "KeyValueLayout" ? {
+        type: T,
+        contents: KeyValueLayoutFragment['contents'],
+        state: KeyValueLayoutHandle,
+    } :
+    T extends "DagLayout" ? {
+        type: T,
+        contents: DagLayoutFragment['contents'],
+        state: DagLayoutHandle,
+    } :
+    never;
 
-/* Provides information about a `Viewer`, as well as methods which alter its state. */
-export type ViewerHandle = ViewerInfo & FragmentInfo;
+/** Enables reading and interacting with a `Viewer`'s `Fragment`-specific state and properties. */
+export type FragmentHandle = ViewerHandle['state'];
 
-/* A fancy `Array` of `ViewerHandle`s. Besides `filter()`, `forEach()`, and `map()`, it also exposes
- * wrappers around common filters and maps, such as `type()` and `mode()`. */
-class ViewerSelector {
-    current: ViewerHandle[];  // The `ViewerHandle`s currently selected.
+/** A set of `ViewerHandle`s, which can be transformed using `filter()` and `map()` operations and
+ * iterated over using `forEach()`. It surfaces commonly used operations for filtering on ids,
+ * types, and metadata. */
+class ViewerSelector<T extends FragmentType = FragmentType> {
+    private _selected: ViewerHandle<T>[];
 
-    constructor(viewers: ViewerHandle[]) {
-        this.current = viewers;
+    constructor(viewers: ViewerHandle<T>[]) {
+        this._selected = viewers;
     }
 
-    // TODO: Do we need this? How is the user supposed to get the viewerId?
-    id(...ids: ViewerId[]): ViewerSelector {
-        return this.filter((viewer) => ids.includes(viewer.id));
+    /**
+     * Keep only `Viewer`s with any of the specified `ViewerId`s.
+     * @param ids
+     */
+    public viewerId(...ids: ViewerId[]): ViewerSelector<T> {
+        return this.filter((viewer) => ids.includes(viewer.viewerId));
     }
 
-    type(...types: Fragment['type'][]): ViewerSelector {
-        return this.filter((viewer) => types.includes(viewer.fragment.type));
+    /**
+     * Keep only `Viewer`s rendering `Fragment`s with any of the specified `FragmentId`s.
+     * @param ids 
+     */
+    public fragmentId(...ids: FragmentId[]): ViewerSelector<T> {
+        return this.filter((viewer) => ids.includes(viewer.fragmentId));
     }
 
-    mode(): ViewerSelector {
-        return this.map((viewer) => viewer.selectedMode);
+   /**
+    * Keep only `Viewer`s rendering `Fragment`s belonging to any of the specified types.
+    * @param types 
+    */
+    public type<U extends T>(...types: U[]): ViewerSelector<U> {
+        function fn(viewer: ViewerHandle<T>): viewer is ViewerHandle<U> {
+            return types.includes(viewer.type as any);
+        }
+        return new ViewerSelector<U>(_.filter(this._selected, fn));
     }
 
-    map(fn: (viewer: ViewerHandle) => ViewerHandle): ViewerSelector {
-        return new ViewerSelector(this.current.map(fn));
+    /**
+     * Keep only `Viewer`s rendering `Fragment`s with any of the specified metadata.
+     * @param metas
+     *     A tuple of 2 elements: (1) string key name, (2) either a testing function that
+     *     takes the value and returns whether to keep it, or a value which will be mathched
+     *     through shallow equality.
+     */
+    public meta(...metas: [string, ((value: any) => boolean) | any][]): ViewerSelector<T> {
+        return this.filter((viewer) => {
+            for(let [key, value] of metas) {
+                if(key in viewer.meta) {
+                    if(value instanceof Function) {
+                        return value(viewer.meta[key]);
+                    } else {
+                        return value === viewer.meta[key];
+                    }
+                }
+            }
+        });
     }
 
-    filter(fn: (viewer: ViewerHandle) => boolean): ViewerSelector {
-        return new ViewerSelector(this.current.filter(fn));
+    // public mode(): ViewerSelector {
+    //     return this.map((viewer) => viewer.selectedMode);
+    // }
+
+    /**
+     * Map each `ViewerHandle` to a different `ViewerHandle`.
+     * @param fn
+     */
+    public map<U extends FragmentType>(
+        fn: (viewer: ViewerHandle<T>) => ViewerHandle<U>
+    ): ViewerSelector<U> {
+        return new ViewerSelector<U>(this._selected.map(fn));
     }
 
-    forEach(fn: (viewer: ViewerHandle) => void): void {
-        this.current.forEach(fn);
+    /**
+     * Filter the set of `ViewerHandle`s using a predicate function.
+     * @param fn 
+     */
+    public filter(fn: (viewer: ViewerHandle<T>) => boolean): ViewerSelector<T> {
+        return new ViewerSelector<T>(this._selected.filter(fn));
+    }
+
+    /**
+     * Iterate over each `ViewerHandle` in the set.
+     * @param fn
+     */
+    public forEach(fn: (viewer: ViewerHandle<T>) => void): void {
+        this._selected.forEach(fn);
     }
 }
 
+type Event = {
+    topic: string,
+    message: Record<string, any>,
+};
+
 /* The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
-type EventHandler = (
-    all?: ViewerSelector,
-    message?: Record<string, any>,
-    global?: Record<string, any>,
+type EventHandler<E extends Event = Event> = (
+    all: ViewerSelector,
+    message: E['message'],
+    global: Record<string, any>,
 ) => void;
 
-/** TODO: Document. */
+/** Configuration object used to define how user interactions should be handled by the `Viewer`s
+ * and/or the external application. This `InteractionManager` adopts a Pub/Sub model for attaching
+ * event handlers to different topics (i.e. channels for messages). By using `ViewerSelector`s and 
+ * `ViewerHandle`s, it is possible to target specific `Viewer`s to query and manipulate. */
 export class InteractionManager {
 
     // Maps a topic to the `EventHandler` functions that should fire when a message is emitted.
     private _handlers: { [topic: string]: EventHandler[] } = {};
     
-    // Maps a `ViewerId` to a factory for its `ViewerHandle`.
+    // Maps a `ViewerId` to a factory for its `ViewerHandle`. The factory will always produce a
+    // valid `ViewerHandle` since its corresponding `Viewer` will have been mounted (as well as
+    // the `Fragment` it renders).
     private _viewers: { [viewerId: string]: () => ViewerHandle } = {};
     
     // Global state that can be accessed by `EventHandler` functions.
@@ -142,14 +237,14 @@ export class InteractionManager {
         }
 
         if (domElement) {
-            domElement.addEventListener('keydown', (event: KeyboardEvent) => {
-                this.emit('KeyDown', { key: event.key });
+            domElement.addEventListener('keydown', (e: any) => {
+                this.emit('KeyDown', { key: e.key });
             });
-            domElement.addEventListener('keyup', (event: KeyboardEvent) => {
-                this.emit('KeyUp', { key: event.key });
+            domElement.addEventListener('keyup', (e: any) => {
+                this.emit('KeyUp', { key: e.key });
             });
         } else {
-            console.warn(`Keyboard interactions needs 'domElement' to attach listeners.`);
+            console.warn(`Keyboard interactions needs 'domElement' to attach listeners to, instead got: ${domElement}`);
         }
 
         if (useKeyboardDefaults) {
@@ -159,23 +254,23 @@ export class InteractionManager {
 
     private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
-            all.id(global.selected).forEach((viewer) => {
-                viewer.doUnhighlight();
+            all.viewerId(global.selected).forEach((viewer) => {
+                viewer.appearance.doSetLight('normal');
             });
             global.selected = message.viewerId;
-            all.id(global.selected).forEach((viewer) => {
-                viewer.doHighlight();
+            all.viewerId(global.selected).forEach((viewer) => {
+                viewer.appearance.doSetLight('highlight');
             });
         });
         this.on('Viewer.DidMouseOut', (all, message) => {
-            all.id(message.viewerId).forEach((viewer) => {
-                viewer.doUnhighlight();
+            all.viewerId(message.viewerId).forEach((viewer) => {
+                viewer.appearance.doSetLight('normal');
             });
         });
         this.on('Viewer.DidClick', (all, message) => {
-            all.id(message.viewerId).forEach((viewer) => {
-                if (viewer.fragment.type === 'SwitchLayout') {
-                    viewer.doIncrementMode();
+            all.viewerId(message.viewerId).forEach((viewer) => {
+                if (viewer.type === 'SwitchLayout') {
+                    viewer.state.doIncrementMode();
                 }
             });
         });
@@ -183,82 +278,82 @@ export class InteractionManager {
 
     private _useKeyboardDefaults() {
         this.on('KeyDown', (all, message, global) => {
-            all.id(global.selected).forEach((viewer) => {
-                if (message.key === 'Enter') {
-                    if (viewer.selectedViewerId) {
-                        global.selected = viewer.selectedViewerId;
-                        viewer.doUnhighlight();
-                        all.id(global.selected).forEach((viewer) => viewer.doHighlight());
-                    }
-                }
-                if (message.key === 'Escape') {
-                    if (viewer.parent) {
-                        global.selected = viewer.parent.id;
-                        viewer.doUnhighlight();
-                        all.id(global.selected).forEach((viewer) => viewer.doHighlight());
-                    }
-                }
-                switch (viewer.fragment.type) {
+            all.viewerId(global.selected).forEach((viewer) => {
+                // if (message.key === 'Enter') {
+                //     if (viewer.state.selectedModeIdx) {
+                //         global.selected = viewer.selectedViewerId;
+                //         viewer.state.doUnhighlight();
+                //         all.viewerId(global.selected).forEach((viewer) => viewer.state.doHighlight());
+                //     }
+                // }
+                // if (message.key === 'Escape') {
+                //     if (viewer.parent) {
+                //         global.selected = viewer.parent.viewerId;
+                //         viewer.appearance.doSetLight('normal');
+                //         all.viewerId(global.selected).forEach((viewer) => viewer.state.doHighlight());
+                //     }
+                // }
+                switch (viewer.type) {
                     case 'SwitchLayout':
                         if (message.key === 'ArrowRight') {
-                            viewer.doIncrementMode();
+                            viewer.state.doIncrementMode();
                         }
                         if (message.key === 'ArrowLeft') {
-                            viewer.doIncrementMode(-1);
+                            viewer.state.doIncrementMode(-1);
                         }
                         break;
-                    case 'SequenceLayout':
-                        // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
-                        if (
-                            (message.key === 'ArrowRight' &&
-                                viewer.fragment.contents.orientation !== 'vertical') ||
-                            (message.key === 'ArrowDown' &&
-                                viewer.fragment.contents.orientation === 'vertical')
-                        ) {
-                            viewer.doIncrementElement();
-                        }
-                        if (
-                            (message.key === 'ArrowLeft' &&
-                                viewer.fragment.contents.orientation !== 'vertical') ||
-                            (message.key === 'ArrowUp' &&
-                                viewer.fragment.contents.orientation === 'vertical')
-                        ) {
-                            viewer.doIncrementElement(-1);
-                        }
-                        break;
-                    case 'KeyValueLayout':
-                        if (message.key === 'ArrowRight') {
-                            viewer.doSelectValue();
-                        }
-                        if (message.key === 'ArrowLeft') {
-                            viewer.doSelectKey();
-                        }
-                        if (message.key === 'ArrowUp') {
-                            viewer.doIncrementEntry(-1);
-                        }
-                        if (message.key === 'ArrowDown') {
-                            viewer.doIncrementEntry();
-                        }
-                        break;
-                    case 'FlowLayout':
-                        if (message.key === 'ArrowRight') {
-                            viewer.doIncrementElement();
-                        }
-                        if (message.key === 'ArrowLeft') {
-                            viewer.doIncrementElement(-1);
-                        }
-                        break;
-                    case 'GridLayout':
-                        const directions = {
-                            ArrowRight: 'east',
-                            ArrowLeft: 'west',
-                            ArrowUp: 'north',
-                            ArrowDown: 'south',
-                        };
-                        if (message.key in directions) {
-                            viewer.doSelectNeighborCell(directions[message.key]);
-                        }
-                        break;
+                    // case 'SequenceLayout':
+                    //     // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
+                    //     if (
+                    //         (message.key === 'ArrowRight' &&
+                    //             viewer.contents.orientation !== 'vertical') ||
+                    //         (message.key === 'ArrowDown' &&
+                    //             viewer.contents.orientation === 'vertical')
+                    //     ) {
+                    //         viewer.state.doIncrementElement();
+                    //     }
+                    //     if (
+                    //         (message.key === 'ArrowLeft' &&
+                    //             viewer.contents.orientation !== 'vertical') ||
+                    //         (message.key === 'ArrowUp' &&
+                    //             viewer.contents.orientation === 'vertical')
+                    //     ) {
+                    //         viewer.state.doIncrementElement(-1);
+                    //     }
+                    //     break;
+                    // case 'KeyValueLayout':
+                    //     if (message.key === 'ArrowRight') {
+                    //         viewer.state.doSelectValue();
+                    //     }
+                    //     if (message.key === 'ArrowLeft') {
+                    //         viewer.state.doSelectKey();
+                    //     }
+                    //     if (message.key === 'ArrowUp') {
+                    //         viewer.state.doIncrementEntry(-1);
+                    //     }
+                    //     if (message.key === 'ArrowDown') {
+                    //         viewer.state.doIncrementEntry();
+                    //     }
+                    //     break;
+                    // case 'FlowLayout':
+                    //     if (message.key === 'ArrowRight') {
+                    //         viewer.state.doIncrementElement();
+                    //     }
+                    //     if (message.key === 'ArrowLeft') {
+                    //         viewer.state.doIncrementElement(-1);
+                    //     }
+                    //     break;
+                    // case 'GridLayout':
+                    //     const directions = {
+                    //         ArrowRight: 'east',
+                    //         ArrowLeft: 'west',
+                    //         ArrowUp: 'north',
+                    //         ArrowDown: 'south',
+                    //     };
+                    //     if (message.key in directions) {
+                    //         viewer.state.doSelectNeighborCell(directions[message.key]);
+                    //     }
+                    //     break;
                 }
             });
         });
@@ -268,7 +363,12 @@ export class InteractionManager {
      * Dequeues an `Event` from `this.eventQueue` and fires all handler functions for that `Event`. */
     private _processNextEvent() {
         this._isProcessingEvent = true;
-        const { topic, message } = this._eventQueue.shift();
+        const curr = this._eventQueue.shift();
+        if(!curr) {
+            this._isProcessingEvent = false;
+            return;
+        }
+        const { topic, message } = curr;
         if (topic in this._handlers) {
             this._handlers[topic].forEach((handler) =>
                 handler(
@@ -287,10 +387,10 @@ export class InteractionManager {
     }
 
     /**
-     * Adds a `Viewer` to those accessible using a `ViewerSelector`.
+     * Adds a `Viewer` to those accessible using a `ViewerSelector`. The `Viewer` must already
+     * be mounted so that the `ViewerHandle` it produces is well-formed.
      */
     public registerViewer = (id: ViewerId, handleFactory: () => ViewerHandle) => {
-        // Use lambda to automatically bind to `this`.
         this._viewers[id] = handleFactory;
     };
 
@@ -298,7 +398,6 @@ export class InteractionManager {
      * Removes a `Viewer` from those accessible using a `ViewerSelector`.
      */
     public unregisterViewer = (id: ViewerId) => {
-        // Use lambda to automatically bind to `this`.
         delete this._viewers[id];
     };
 
@@ -307,12 +406,11 @@ export class InteractionManager {
      * @param topic
      * @param handler
      */
-    public on = (topic: string, handler: EventHandler) => {
-        // Use lambda to automatically bind to `this`.
+    public on = <E extends Event = Event>(topic: E['topic'], handler: EventHandler<E>) => {
         if (!(topic in this._handlers)) {
             this._handlers[topic] = [];
         }
-        this._handlers[topic].push(handler);
+        this._handlers[topic].push(handler as any);
     };
 
     /**
@@ -321,8 +419,7 @@ export class InteractionManager {
      * @param topic
      * @param message
      */
-    public emit = (topic: string, message: Record<string, any>) => {
-        // Use lambda to automatically bind to `this`.
+    public emit = <E extends Event = Event>(topic: E['topic'], message: E['message'] = {}) => {
         this._eventQueue.push({ topic, message });
         if (!this._isProcessingEvent) {
             this._processNextEvent();

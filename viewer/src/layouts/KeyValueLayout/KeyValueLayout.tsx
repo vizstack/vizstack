@@ -1,13 +1,10 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-import { Viewer } from '../../Viewer';
-import type { FragmentId } from '@vizstack/schema';
-import type { ViewerToViewerProps } from '../../Viewer';
-import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
+import { KeyValueLayoutFragment } from '@vizstack/schema';
+import { Viewer, FragmentProps } from '../../Viewer';
+import { ViewerId } from '../../interaction';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -15,131 +12,70 @@ import { getViewerMouseFunctions } from '../../interaction';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-type KeyValueLayoutProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
+type KeyValueLayoutProps = FragmentProps<KeyValueLayoutFragment>;
 
-    /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
-
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (KeyValueLayoutHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: KeyValueLayoutPub>(
-        $PropertyType<E, 'topic'>,
-        $PropertyType<E, 'message'>,
-    ) => void,
-
-    /** Contains properties which should be spread onto any `Viewer` components rendered by this
-     * layout. */
-    viewerToViewerProps: ViewerToViewerProps,
-
-    /** Key-value pairs where each key and value will be rendered as a `Viewer`. */
-    entries: Array<{ key: FragmentId, value: FragmentId }>,
-
-    /** A string to be shown between each key and value. */
-    itemSep?: string,
-
-    /** A string to show at the beginning of the sequence. */
-    startMotif?: string,
-
-    /** A string to show at the end of the sequence. */
-    endMotif?: string,
+type KeyValueLayoutState = {
+    selectedEntryIdx: number,
+    selectedEntryType: 'key' | 'value',
 };
 
-export type KeyValueLayoutHandle = {|
+export type KeyValueLayoutHandle = {
+    entries: { key: ViewerId, value: ViewerId }[]
     selectedEntryIdx: number,
-    selectedType: 'key' | 'value',
-    selectedViewerId: ?ViewerId,
-    isHighlighted: boolean,
-    doHighlight: () => void,
-    doUnhighlight: () => void,
+    selectedEntryType: 'key' | 'value',
     doSelectEntry: (entryIdx: number) => void,
     doIncrementEntry: (entryIdxDelta: number) => void,
     doSelectKey: () => void,
     doSelectValue: () => void,
-|};
+};
 
-type KeyValueLayoutDefaultProps = {|
-    updateHandle: (KeyValueLayoutHandle) => void,
-    itemSep: ':',
-|};
-
-type KeyValueLayoutState = {|
-    selectedEntryIdx: number,
-    selectedType: 'key' | 'value',
-    isHighlighted: boolean,
-|};
-
-export type KeyValueDidChangeEntryEvent = {|
+export type KeyValueDidChangeEntryEvent = {
     topic: 'KeyValue.DidChangeEntry',
-    message: {|
-        viewerId: ViewerId,
-    |},
-|};
+    message: { viewerId: ViewerId },
+};
 
 // Emitted whenever the selected type switches from 'key' to 'value' or vice-versa.
-export type KeyValueDidChangeTypeEvent = {|
+export type KeyValueDidChangeTypeEvent = {
     topic: 'KeyValue.DidChangeType',
-    message: {|
-        viewerId: ViewerId,
-    |},
-|};
+    message: { viewerId: ViewerId },
+};
 
-type KeyValueLayoutPub =
-    | ViewerDidMouseEvent
-    | ViewerDidHighlightEvent
+type KeyValueLayoutEvent =
     | KeyValueDidChangeEntryEvent
     | KeyValueDidChangeTypeEvent;
 
-class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLayoutState> {
-    /** Prop default values. */
-    static defaultProps: KeyValueLayoutDefaultProps = {
-        updateHandle: () => {},
-        itemSep: ':',
+class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalProps, KeyValueLayoutState> {
+    static defaultProps: Partial<KeyValueLayoutProps> = {
+        separator: ':',
     };
 
-    childRefs: Array<{
-        key: { current: null | Viewer },
-        value: { current: null | Viewer },
-    }> = [];
+    private _childViewers: { key: Viewer, value: Viewer }[] = [];
 
-    constructor(props) {
+    private _registerViewer(viewer: Viewer, idx: number, type: 'key' | 'value') {
+        this._childViewers[idx][type] = viewer;
+    }
+
+    constructor(props: KeyValueLayoutProps & InternalProps) {
         super(props);
         this.state = {
             selectedEntryIdx: 0,
-            selectedType: 'key',
-            isHighlighted: false,
+            selectedEntryType: 'key',
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
-        const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
-        let selectedViewerId = null;
-        if (
-            this.childRefs.length > selectedEntryIdx &&
-            this.childRefs[selectedEntryIdx][selectedType].current
-        ) {
-            selectedViewerId = this.childRefs[selectedEntryIdx][selectedType].current.viewerId;
-        }
-        updateHandle({
+    private _getHandle(): KeyValueLayoutHandle {
+        const { selectedEntryIdx, selectedEntryType } = this.state;
+        return {
+            entries: this._childViewers.map(({ key, value }) => ({
+                key: key.viewerId,
+                value: value.viewerId,
+            })),
             selectedEntryIdx,
-            selectedType,
-            selectedViewerId,
-            isHighlighted,
-            doHighlight: () => {
-                this.setState({ isHighlighted: true });
-            },
-            doUnhighlight: () => {
-                this.setState({ isHighlighted: false });
-            },
-            doSelectEntry: (entryIdx) => {
+            selectedEntryType,
+            doSelectEntry: (entryIdx: number) => {
                 this.setState({ selectedEntryIdx: entryIdx });
             },
-            doIncrementEntry: (entryIdxDelta = 1) => {
+            doIncrementEntry: (entryIdxDelta: number = 1) => {
                 const { entries } = this.props;
                 this.setState((state) => {
                     let entryIdx = state.selectedEntryIdx + entryIdxDelta;
@@ -153,42 +89,22 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
                 });
             },
             doSelectKey: () => {
-                this.setState({ selectedType: 'key' });
+                this.setState({ selectedEntryType: 'key' });
             },
             doSelectValue: () => {
-                this.setState({ selectedType: 'value' });
+                this.setState({ selectedEntryType: 'value' });
             },
-        });
+        };
     }
 
-    componentDidMount() {
-        this._updateHandle();
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
-        const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
-        if (isHighlighted !== prevState.isHighlighted) {
-            if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            }
-        }
+    componentDidUpdate(prevProps: KeyValueLayoutProps & InternalProps, prevState: KeyValueLayoutState) {
+        const { viewerId, emit } = this.props.interactions;
+        const { selectedEntryIdx, selectedEntryType } = this.state;
         if (selectedEntryIdx !== prevState.selectedEntryIdx) {
-            emitEvent<KeyValueDidChangeEntryEvent>('KeyValue.DidChangeEntry', {
-                viewerId: (viewerId: ViewerId),
-            });
+            emit<KeyValueLayoutEvent>('KeyValue.DidChangeEntry', { viewerId });
         }
-        if (selectedType !== prevState.selectedType) {
-            emitEvent<KeyValueDidChangeTypeEvent>('KeyValue.DidChangeType', {
-                viewerId: (viewerId: ViewerId),
-            });
+        if (selectedEntryType !== prevState.selectedEntryType) {
+            emit<KeyValueLayoutEvent>('KeyValue.DidChangeType', { viewerId });
         }
     }
 
@@ -198,82 +114,68 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const {
-            classes,
-            entries,
-            viewerToViewerProps,
-            emitEvent,
-            viewerId,
-            itemSep,
-            startMotif,
-            endMotif,
-        } = this.props;
-        const { isHighlighted, selectedEntryIdx, selectedType } = this.state;
-
-        this.childRefs = [];
+        const { classes, passdown, interactions, light } = this.props;
+        const { mouseHandlers } = interactions;
+        const { entries, separator, startMotif, endMotif } = this.props;
+        const { selectedEntryIdx, selectedEntryType: selectedType } = this.state;
 
         return (
             <div
-                className={classNames({
+                className={clsx({
                     [classes.root]: true,
                 })}
-                {...getViewerMouseFunctions(emitEvent, viewerId)}
+                {...mouseHandlers}
             >
                 <div
-                    className={classNames({
+                    className={clsx({
                         [classes.motif]: true,
                     })}
                 >
                     {startMotif}
                 </div>
-                {entries.map(({ key, value }, i) => {
-                    const keyRef = React.createRef();
-                    const valueRef = React.createRef();
-                    this.childRefs.push({ key: keyRef, value: valueRef });
-                    return (
+                {entries.map(({ key, value }, idx) => (
                         <div
-                            className={classNames({
+                            className={clsx({
                                 [classes.entry]: true,
                             })}
                         >
                             <div
-                                className={classNames({
+                                className={clsx({
                                     [classes.cell]: true,
                                     [classes.cellSelected]:
-                                        isHighlighted &&
-                                        selectedEntryIdx === i &&
+                                        light === 'highlight' &&
+                                        selectedEntryIdx === idx &&
                                         selectedType === 'key',
                                 })}
                             >
                                 <Viewer
-                                    key={`k${i}`}
-                                    ref={keyRef}
-                                    {...viewerToViewerProps}
+                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
+                                    key={`k${idx}`}
+                                    {...passdown}
                                     fragmentId={key}
                                 />
                             </div>
-                            <span>{itemSep}</span>
+                            <span>{separator}</span>
                             <div
-                                className={classNames({
+                                className={clsx({
                                     [classes.cell]: true,
                                     [classes.cellSelected]:
-                                        isHighlighted &&
-                                        selectedEntryIdx === i &&
+                                        light === 'highlight' &&
+                                        selectedEntryIdx === idx &&
                                         selectedType === 'value',
                                 })}
                             >
                                 <Viewer
-                                    key={`v${i}`}
-                                    ref={valueRef}
-                                    {...viewerToViewerProps}
+                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
+                                    key={`v${idx}`}
+                                    {...passdown}
                                     fragmentId={value}
                                 />
                             </div>
                         </div>
-                    );
-                })}
+                    ))}
                 <div
-                    className={classNames({
+                    className={clsx({
                         [classes.motif]: true,
                     })}
                 >
@@ -284,32 +186,23 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps, KeyValueLa
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) => createStyles({
     root: {
         display: 'inline-block',
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
-        borderColor: theme.palette.atom.border,
+        ...theme.vars.fragmentContainer,
         whiteSpace: 'nowrap',
     },
     entry: {
         display: 'block',
     },
     cell: {
-        margin: theme.spacing.large,
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
+        margin: theme.scale(16),
+        ...theme.vars.fragmentContainer,
         borderColor: 'rgba(255, 0, 0, 0)',
         display: 'inline-block',
     },
     motif: {
-        margin: theme.spacing.large,
+        margin: theme.scale(16),
         display: 'block',
     },
     cellSelected: {
@@ -317,4 +210,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(KeyValueLayout);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(KeyValueLayout) as React.ComponentClass<KeyValueLayoutProps>;

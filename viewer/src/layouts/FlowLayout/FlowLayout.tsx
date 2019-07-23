@@ -1,13 +1,10 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-import { Viewer } from '../../Viewer';
-import type { FragmentId } from '@vizstack/schema';
-import type { ViewerToViewerProps } from '../../Viewer';
-import type { ViewerDidMouseEvent, ViewerDidHighlightEvent, ViewerId } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
+import { FlowLayoutFragment } from '@vizstack/schema';
+import { Viewer, FragmentProps } from '../../Viewer';
+import { ViewerId } from '../../interaction';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -15,89 +12,47 @@ import { getViewerMouseFunctions } from '../../interaction';
  * TODO: Allow element-type-specific background coloring.
  * TODO: Merge with MatrixLayout to form generic RowColLayout
  */
-type FlowLayoutProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
+type FlowLayoutProps = FragmentProps<FlowLayoutFragment>;
 
-    /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
-
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (FlowLayoutHandle) => void,
-
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: FlowLayoutPub>($PropertyType<E, 'topic'>, $PropertyType<E, 'message'>) => void,
-
-    /** Contains properties which should be spread onto any `Viewer` components rendered by this
-     * layout. */
-    viewerToViewerProps: ViewerToViewerProps,
-
-    /** Elements of the sequence that serve as props to `Viewer` sub-components. */
-    elements: Array<FragmentId>,
+type FlowLayoutState = {
+    selectedElementIdx: number,
 };
 
-export type FlowLayoutHandle = {|
+export type FlowLayoutHandle = {
+    elements: ViewerId[],
     selectedElementIdx: number,
-    selectedViewerId: ?ViewerId,
-    isHighlighted: boolean,
-    doHighlight: () => void,
-    doUnhighlight: () => void,
     doSelectElement: (elementIdx: number) => void,
     doIncrementElement: (elementIdxDelta: number) => void,
-|};
+};
 
-type FlowLayoutDefaultProps = {|
-    updateHandle: (FlowLayoutHandle) => void,
-|};
-
-type FlowLayoutState = {|
-    selectedElementIdx: number,
-    isHighlighted: boolean,
-|};
-
-export type FlowDidChangeElementEvent = {|
+export type FlowDidChangeElementEvent = {
     topic: 'Flow.DidChangeElement',
-    message: {|
-        viewerId: ViewerId,
-    |},
-|};
+    message: { viewerId: ViewerId },
+};
 
-type FlowLayoutPub = ViewerDidMouseEvent | ViewerDidHighlightEvent | FlowDidChangeElementEvent;
+type FlowLayoutEvent = 
+    | FlowDidChangeElementEvent;
 
-class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
-    /** Prop default values. */
-    static defaultProps: FlowLayoutDefaultProps = {
-        updateHandle: () => {},
-    };
+class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, FlowLayoutState> {
 
-    childRefs: Array<{ current: null | Viewer }> = [];
+    private _childViewers: Viewer[] = [];
 
-    constructor(props) {
+    private _registerViewer(viewer: Viewer, idx: number) {
+        this._childViewers[idx] = viewer;
+    }
+
+    constructor(props: FlowLayoutProps & InternalProps) {
         super(props);
         this.state = {
             selectedElementIdx: 0,
-            isHighlighted: false,
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
-        const { isHighlighted, selectedElementIdx } = this.state;
-        updateHandle({
+    public getHandle(): FlowLayoutHandle {
+        const { selectedElementIdx } = this.state;
+        return {
+            elements: this._childViewers.map((viewer) => viewer.viewerId),
             selectedElementIdx,
-            selectedViewerId:
-                this.childRefs.length > selectedElementIdx &&
-                this.childRefs[selectedElementIdx].current
-                    ? this.childRefs[selectedElementIdx].current.viewerId
-                    : null,
-            isHighlighted,
-            doHighlight: () => {
-                this.setState({ isHighlighted: true });
-            },
-            doUnhighlight: () => {
-                this.setState({ isHighlighted: false });
-            },
             doSelectElement: (elementIdx) => {
                 this.setState({ selectedElementIdx: elementIdx });
             },
@@ -114,32 +69,14 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
                     return { selectedElementIdx: elementIdx };
                 });
             },
-        });
+        };
     }
 
-    componentDidMount() {
-        this._updateHandle();
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
-        const { isHighlighted, selectedElementIdx } = this.state;
-        if (isHighlighted !== prevState.isHighlighted) {
-            if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            }
-        }
+    componentDidUpdate(prevProps: any, prevState: FlowLayoutState) {
+        const { viewerId, emit } = this.props.interactions;
+        const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emitEvent<FlowDidChangeElementEvent>('Flow.DidChangeElement', {
-                viewerId: (viewerId: ViewerId),
-            });
+            emit<FlowLayoutEvent>('Flow.DidChangeElement', { viewerId });
         }
     }
 
@@ -149,43 +86,32 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps, FlowLayoutState> {
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, viewerToViewerProps, emitEvent, viewerId } = this.props;
-
-        this.childRefs = [];
+        const { classes, elements, passdown, interactions } = this.props;
+        const { mouseHandlers } = interactions;
 
         return (
             <div
-                className={classNames({
+                className={clsx({
                     [classes.root]: true,
                 })}
-                {...getViewerMouseFunctions(emitEvent, viewerId)}
+                {...mouseHandlers}
             >
-                {elements.map((fragmentId, i) => {
-                    const ref = React.createRef();
-                    this.childRefs.push(ref);
-                    return (
-                        <Viewer
-                            key={i}
-                            ref={ref}
-                            {...viewerToViewerProps}
-                            fragmentId={fragmentId}
-                        />
-                    );
-                })}
+                {elements.map((fragmentId, idx) => (
+                    <Viewer
+                        ref={(viewer) => this._registerViewer(viewer!, idx)}
+                        key={`${idx}-${fragmentId}`}
+                        {...passdown}
+                        fragmentId={fragmentId}
+                    />
+                ))}
             </div>
         );
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) => createStyles({
     root: {
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
-        borderRadius: theme.shape.border.radius,
+        ...theme.vars.fragmentContainer,
         borderColor: 'transparent',
     },
     hovered: {
@@ -193,4 +119,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(FlowLayout);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(FlowLayout) as React.ComponentClass<FlowLayoutProps>;

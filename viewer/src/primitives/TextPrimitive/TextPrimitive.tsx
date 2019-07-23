@@ -1,19 +1,17 @@
 import * as React from 'react';
 import clsx from 'clsx';
-import Immutable from 'seamless-immutable';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
 import { TextPrimitiveFragment } from '@vizstack/schema';
-import { ViewerId, ViewerDidMouseEvent, ViewerDidHighlightEvent } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
 import { FragmentProps } from '../../Viewer';
+import { ViewerId } from '../../interaction';
+
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type TextPrimitiveProps = FragmentProps<TextPrimitiveFragment>;
 
 type TextPrimitiveState = {
     textSize: 'small' | 'medium' | 'large',
-    isHighlighted: boolean,
 };
 
 export type TextRequestResizeEvent = {
@@ -32,17 +30,12 @@ export type TextDidResizeEvent = {
     },
 };
 
-type TextPrimitivePub =
-    | ViewerDidMouseEvent
-    | ViewerDidHighlightEvent
+type TextPrimitiveEvent =
     | TextRequestResizeEvent
     | TextDidResizeEvent;
 
 export type TextPrimitiveHandle = {
-    isHighlighted: boolean;
     textSize: 'small' | 'medium' | 'large';
-    doHighlight: () => void;
-    doUnhighlight: () => void;
     doResize: (textSize: 'small' | 'medium' | 'large') => void;
 };
 
@@ -56,45 +49,24 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
         super(props);
         this.state = {
             textSize: 'medium',
-            isHighlighted: false,
         };
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
-        const { isHighlighted, textSize } = this.state;
-        updateHandle({
-            isHighlighted,
+    private _getHandle(): TextPrimitiveHandle {
+        const { textSize } = this.state;
+        return {
             textSize,
-            doHighlight: () => {
-                this.setState({ isHighlighted: true });
-            },
-            doUnhighlight: () => {
-                this.setState({ isHighlighted: false });
-            },
             doResize: (textSize) => {
                 this.setState({ textSize });
             },
-        });
+        };
     }
 
-    componentDidMount() {
-        this._updateHandle();
-    }
-
-    componentDidUpdate(prevProps, prevState): void {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props.interactions;
-        const { textSize, isHighlighted } = this.state;
+    componentDidUpdate(prevProps: any, prevState: TextPrimitiveState): void {
+        const { viewerId, emit } = this.props.interactions;
+        const { textSize } = this.state;
         if (textSize !== prevState.textSize) {
-            emitEvent('Text.DidResize', { viewerId, textSize });
-        }
-        if (isHighlighted !== prevState.isHighlighted) {
-            if (isHighlighted) {
-                emitEvent('Viewer.DidHighlight', { viewerId });
-            } else {
-                emitEvent('Viewer.DidUnhighlight', { viewerId });
-            }
+            emit<TextPrimitiveEvent>('Text.DidResize', { viewerId, textSize });
         }
     }
 
@@ -102,8 +74,9 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, emitEvent, viewerId } = this.props;
-        const { isHighlighted, textSize } = this.state;
+        const { classes, text, color, variant, interactions, light } = this.props;
+        const { mouseHandlers } = interactions;
+        const { textSize } = this.state;
 
         const split = text.split('\n');
         const lines = split.map((text, i) =>
@@ -139,20 +112,20 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
             [classes.errorToken]: variant === 'token' && color === 'error',
 
             [classes.defaultTokenHighlight]:
-                variant === 'token' && color === 'default' && isHighlighted,
+                variant === 'token' && color === 'default' && light === 'highlight',
             [classes.primaryTokenHighlight]:
-                variant === 'token' && color === 'primary' && isHighlighted,
+                variant === 'token' && color === 'primary' && light === 'highlight',
             [classes.secondaryTokenHighlight]:
-                variant === 'token' && color === 'secondary' && isHighlighted,
+                variant === 'token' && color === 'secondary' && light === 'highlight',
             [classes.errorTokenHighlight]:
-                variant === 'token' && color === 'error' && isHighlighted,
+                variant === 'token' && color === 'error' && light === 'highlight',
         });
         return variant === 'token' ? (
-            <div className={names} {...getViewerMouseFunctions(emitEvent, viewerId)}>
+            <div className={names} {...mouseHandlers}>
                 {lines}
             </div>
         ) : (
-            <span className={names} {...getViewerMouseFunctions(emitEvent, viewerId)}>
+            <span className={names} {...mouseHandlers}>
                 {lines}
             </span>
         );

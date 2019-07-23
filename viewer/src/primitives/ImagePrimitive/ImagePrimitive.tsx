@@ -1,134 +1,63 @@
-// @flow
 import * as React from 'react';
-import classNames from 'classnames';
-import { withStyles } from '@material-ui/core/styles';
-import type { ViewerDidMouseEvent, ViewerId, ViewerDidHighlightEvent } from '../../interaction';
-import { getViewerMouseFunctions } from '../../interaction';
-import type { TextDidResizeEvent, TextPrimitiveHandle } from '../TextPrimitive';
+import clsx from 'clsx';
+import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-/**
- * This pure dumb component renders visualization for a text string that represents a token.
- */
-type ImagePrimitiveProps = {
-    /** CSS-in-JS styling object. */
-    classes: any,
+import { ImagePrimitiveFragment } from '@vizstack/schema';
+import { FragmentProps } from '../../Viewer';
+import { ViewerId } from '../../interaction';
 
-    /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
+/* This pure dumb component renders visualization for a text string that represents a token. */
+type ImagePrimitiveProps = FragmentProps<ImagePrimitiveFragment>;
 
-    /** Updates the `ViewerHandle` of the `Viewer` rendering this component to reflect its current
-     * state. Should be called whenever this component updates. */
-    updateHandle: (ImagePrimitiveHandle) => void,
+type ImagePrimitiveState = {};
 
-    /** Publishes an event to this component's `InteractionManager`. */
-    emitEvent: <E: ImagePrimitivePub>(
-        $PropertyType<E, 'topic'>,
-        $PropertyType<E, 'message'>,
-    ) => void,
+export type ImagePrimitiveHandle = {};
 
-    /** Path at which the image file is saved. */
-    filePath: string,
-};
+type ImagePrimitiveEvent = {};
 
-type ImagePrimitiveDefaultProps = {|
-    updateHandle: (TextPrimitiveHandle) => void,
-|};
+class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalProps, ImagePrimitiveState> {
 
-type ImagePrimitiveState = {|
-    isHighlighted: boolean,
-|};
-
-export type ImagePrimitiveHandle = {|
-    isHighlighted: boolean,
-    doHighlight: () => void,
-    doUnhighlight: () => void,
-|};
-
-type ImagePrimitivePub = ViewerDidMouseEvent | ViewerDidHighlightEvent;
-
-class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps, ImagePrimitiveState> {
-    static defaultProps: ImagePrimitiveDefaultProps = {
-        updateHandle: () => {},
-    };
-
-    constructor(props: ImagePrimitiveProps) {
+    constructor(props: ImagePrimitiveProps & InternalProps) {
         super(props);
-        this.state = {
-            isHighlighted: false,
-        };
+        this.state = {};
     }
 
-    _updateHandle() {
-        const { updateHandle } = this.props;
-        const { isHighlighted } = this.state;
-        updateHandle({
-            isHighlighted,
-            doHighlight: () => {
-                this.setState({ isHighlighted: true });
-            },
-            doUnhighlight: () => {
-                this.setState({ isHighlighted: false });
-            },
-        });
+    _getHandle(): ImagePrimitiveHandle {
+        return {};
     }
 
-    componentDidMount() {
-        this._updateHandle();
-    }
-
-    componentDidUpdate(prevProps, prevState) {
-        this._updateHandle();
-        const { viewerId, emitEvent } = this.props;
-        const { isHighlighted } = this.state;
-        if (isHighlighted !== prevState.isHighlighted) {
-            if (isHighlighted) {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidHighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            } else {
-                emitEvent<ViewerDidHighlightEvent>('Viewer.DidUnhighlight', {
-                    viewerId: (viewerId: ViewerId),
-                });
-            }
-        }
+    componentDidUpdate(prevProps: any, prevState: ImagePrimitiveState) {
     }
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, emitEvent, viewerId } = this.props;
-        const { isHighlighted } = this.state;
+        const { classes, filePath, interactions, light } = this.props;
+        const { mouseHandlers } = interactions;
 
         return (
             <img
-                className={classNames({
+                className={clsx({
                     [classes.image]: true,
-                    [classes.imageHighlight]: isHighlighted,
+                    [classes.imageHighlight]: light === 'highlight',
                 })}
                 src={filePath}
-                onError={(e) => {
+                onError={(e: any) => {
                     e.target.onerror = null;
-                    e.target.src =
-                        '/Users/Nikhil/Desktop/xnode/xnode/src/components/primitives/ImagePrimitive/img-not-found.png'; // TODO: Remove this hack!
+                    e.target.src = './img-not-found.png';
                 }}
-                title={filePath.replace('/Users/Nikhil/Desktop/xnode/python/demo/', '')}
-                {...getViewerMouseFunctions(emitEvent, viewerId)}
+                {...mouseHandlers}
             />
         );
     }
 }
 
-// To inject styles into component
-// -------------------------------
-
-/** CSS-in-JS styling function. */
-const styles = (theme) => ({
+const styles = (theme: Theme) => createStyles({
     image: {
-        marginLeft: theme.spacing.unit,
-        marginRight: theme.spacing.unit,
-        borderStyle: theme.shape.border.style,
-        borderWidth: theme.shape.border.width,
+        marginLeft: theme.scale(8),
+        marginRight: theme.scale(8),
+        ...theme.vars.fragmentContainer,
         borderColor: 'transparent',
     },
 
@@ -137,4 +66,6 @@ const styles = (theme) => ({
     },
 });
 
-export default withStyles(styles)(ImagePrimitive);
+type InternalProps = WithStyles<typeof styles>;
+
+export default withStyles(styles)(ImagePrimitive) as React.ComponentClass<ImagePrimitiveProps>;
