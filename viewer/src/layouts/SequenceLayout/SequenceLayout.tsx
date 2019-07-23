@@ -35,7 +35,7 @@ type SequenceLayoutEvent =
     | SequenceDidChangeElementEvent;
 
 class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalProps, SequenceLayoutState> {
-    
+
     static defaultProps: Partial<SequenceLayoutProps> = {
         orientation: 'horizontal',
     };
@@ -57,7 +57,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         const { selectedElementIdx } = this.state;
         return {
             elements: this._childViewers.map((viewer) => viewer.viewerId),
-            selectedElementIdx,            
+            selectedElementIdx,
             doSelectElement: (elementIdx) => {
                 this.setState({ selectedElementIdx: elementIdx });
             },
