@@ -26,10 +26,10 @@ type DagNodeProps = {
 
     /** Mouse event handlers which should be spread on the interactive region of the node. */
     mouseHandlers: {
-        onClick: (e: any) => void,
-        onDoubleClick: (e: any) => void,
-        onMouseOver: (e: any) => void,
-        onMouseOut: (e: any) => void,
+        onClick?: (e: React.SyntheticEvent) => void,
+        onDoubleClick?: (e: React.SyntheticEvent) => void,
+        onMouseOver?: (e: React.SyntheticEvent) => void,
+        onMouseOut?: (e: React.SyntheticEvent) => void,
     },
 
     /** Whether the node should highlight if expanded and not invisible. */
@@ -38,6 +38,7 @@ type DagNodeProps = {
     /** Callback on component resize. */
     onResize: (width: number, height: number) => void,
 };
+
 class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
 
     static defaultProps: Partial<DagNodeProps> = {
@@ -117,13 +118,17 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                 >
                     <Measure
                         bounds
-                        onResize={(contentRect) =>
-                            isInteractive
-                                ? onResize(
-                                      contentRect.bounds.width + kBorderWidth * 2,
-                                      contentRect.bounds.height + kBorderWidth * 2,
+                        onResize={(contentRect) => {
+                            const bounds = contentRect.bounds;
+                            if(bounds) {
+                                return isInteractive ? onResize(
+                                      bounds.width + kBorderWidth * 2,
+                                      bounds.height + kBorderWidth * 2,
                                   )
-                                : onResize(contentRect.bounds.width, contentRect.bounds.height)
+                                : onResize(bounds.width, bounds.height);
+                            }
+                            
+                        }
                         }
                     >
                         {({ measureRef }) => (

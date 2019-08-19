@@ -22,17 +22,20 @@ type SequenceLayoutState = {
 export type SequenceLayoutHandle = {
     elements: ViewerId[],
     selectedElementIdx: number,
-    doSelectElement: (elementIdx: number) => void,
-    doIncrementElement: (elementIdxDelta: number) => void,
+    doSelectElement: (idx: number) => void,
+    doIncrementElement: (delta?: number) => void,
 };
 
-export type SequenceDidChangeElementEvent = {
-    topic: 'Sequence.DidChangeElement',
-    message: { viewerId: ViewerId },
+type SequenceDidSelectElementEvent = {
+    topic: 'Sequence.DidSelectElement',
+    message: {
+        viewerId: ViewerId,
+        selectedElementIdx: number,
+    },
 };
 
-type SequenceLayoutEvent =
-    | SequenceDidChangeElementEvent;
+export type SequenceLayoutEvent =
+    | SequenceDidSelectElementEvent;
 
 class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalProps, SequenceLayoutState> {
 
@@ -58,19 +61,15 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         return {
             elements: this._childViewers.map((viewer) => viewer.viewerId),
             selectedElementIdx,
-            doSelectElement: (elementIdx) => {
-                this.setState({ selectedElementIdx: elementIdx });
+            doSelectElement: (idx) => {
+                this.setState({ selectedElementIdx: idx });
             },
-            doIncrementElement: (elementIdxDelta = 1) => {
+            doIncrementElement: (delta = 1) => {
                 const { elements } = this.props;
                 this.setState((state) => {
-                    let elementIdx = state.selectedElementIdx + elementIdxDelta;
-                    while (elementIdx < 0) {
-                        elementIdx += elements.length;
-                    }
-                    while (elementIdx >= elements.length) {
-                        elementIdx -= elements.length;
-                    }
+                    let elementIdx = state.selectedElementIdx + delta;
+                    // Ensure wrapping to valid array index.
+                    elementIdx = (elementIdx % elements.length + elements.length) % elements.length;
                     return { selectedElementIdx: elementIdx };
                 });
             },
@@ -81,7 +80,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         const { viewerId, emit } = this.props.interactions;
         const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emit<SequenceLayoutEvent>('Sequence.DidChangeElement', { viewerId });
+            emit<SequenceLayoutEvent>('Sequence.DidSelectElement', { viewerId, selectedElementIdx });
         }
     }
 

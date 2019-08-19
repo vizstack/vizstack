@@ -14,15 +14,12 @@ type TextPrimitiveState = {
     textSize: 'small' | 'medium' | 'large',
 };
 
-export type TextRequestResizeEvent = {
-    topic: 'Text.RequestResize',
-    message: {
-        viewerId: ViewerId,
-        textSize: 'small' | 'medium' | 'large',
-    },
+export type TextPrimitiveHandle = {
+    textSize: 'small' | 'medium' | 'large';
+    doResize: (size: 'small' | 'medium' | 'large') => void;
 };
 
-export type TextDidResizeEvent = {
+type TextDidResizeEvent = {
     topic: 'Text.DidResize',
     message: {
         viewerId: ViewerId,
@@ -30,14 +27,8 @@ export type TextDidResizeEvent = {
     },
 };
 
-type TextPrimitiveEvent =
-    | TextRequestResizeEvent
+export type TextPrimitiveEvent =
     | TextDidResizeEvent;
-
-export type TextPrimitiveHandle = {
-    textSize: 'small' | 'medium' | 'large';
-    doResize: (textSize: 'small' | 'medium' | 'large') => void;
-};
 
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalProps, TextPrimitiveState> {
     static defaultProps: Partial<TextPrimitiveProps> = {
@@ -52,12 +43,12 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
         };
     }
 
-    private _getHandle(): TextPrimitiveHandle {
+    public getHandle(): TextPrimitiveHandle {
         const { textSize } = this.state;
         return {
             textSize,
-            doResize: (textSize) => {
-                this.setState({ textSize });
+            doResize: (size) => {
+                this.setState({ textSize: size });
             },
         };
     }

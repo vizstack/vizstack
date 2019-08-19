@@ -17,17 +17,20 @@ type SwitchLayoutState = {
 export type SwitchLayoutHandle = {
     mode: ViewerId,
     selectedModeIdx: number,
-    doSelectMode: (modeIdx: number) => void,
-    doIncrementMode: (modeIdxDelta?: number) => void,
+    doSelectMode: (idx: number) => void,
+    doIncrementMode: (delta?: number) => void,
 };
 
-type SwitchDidChangeModeEvent = {
-    topic: 'Switch.DidChangeMode',
-    message: { viewerId: ViewerId },
+type SwitchDidSelectModeEvent = {
+    topic: 'Switch.DidSelectMode',
+    message: {
+        viewerId: ViewerId,
+        selectedModeIdx: number,
+    },
 };
 
-type SwitchLayoutEvent =
-    | SwitchDidChangeModeEvent;
+export type SwitchLayoutEvent =
+    | SwitchDidSelectModeEvent;
 
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
     
@@ -49,14 +52,14 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         return {
             mode: this._childViewer!.viewerId,
             selectedModeIdx,
-            doSelectMode: (modeIdx) => {
-                this.setState({ selectedModeIdx: modeIdx });
+            doSelectMode: (idx) => {
+                this.setState({ selectedModeIdx: idx });
             },
-            doIncrementMode: (modeIdxDelta = 1) => {
+            doIncrementMode: (delta = 1) => {
                 const { modes } = this.props;
                 this.setState((state) => {
-                    let modeIdx = state.selectedModeIdx + modeIdxDelta;
-                    // Ensure it is a positive array index.
+                    let modeIdx = state.selectedModeIdx + delta;
+                    // Ensure wrapping to valid array index.
                     modeIdx = (modeIdx % modes.length + modes.length) % modes.length;
                     return { selectedModeIdx: modeIdx };
                 });
@@ -68,7 +71,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         const { viewerId, emit } = this.props.interactions;
         const { selectedModeIdx } = this.state;
         if (selectedModeIdx !== prevState.selectedModeIdx) {
-            emit<SwitchLayoutEvent>('Switch.DidChangeMode', { viewerId });
+            emit<SwitchLayoutEvent>('Switch.DidSelectMode', { viewerId, selectedModeIdx });
         }
     }
 

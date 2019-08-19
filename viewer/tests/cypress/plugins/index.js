@@ -2,6 +2,8 @@ const wp = require('@cypress/webpack-preprocessor')
 module.exports = (on) => {
   const options = {
     webpackOptions: {
+      mode: "development",
+      devtool: 'inline-source-map',
       resolve: {
         extensions: [".ts", ".tsx", ".js"]
       },

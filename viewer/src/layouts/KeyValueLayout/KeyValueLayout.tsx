@@ -23,26 +23,23 @@ export type KeyValueLayoutHandle = {
     entries: { key: ViewerId, value: ViewerId }[]
     selectedEntryIdx: number,
     selectedEntryType: 'key' | 'value',
-    doSelectEntry: (entryIdx: number) => void,
-    doIncrementEntry: (entryIdxDelta: number) => void,
+    doSelectEntry: (idx: number) => void,
+    doIncrementEntry: (delta?: number) => void,
     doSelectKey: () => void,
     doSelectValue: () => void,
 };
 
-export type KeyValueDidChangeEntryEvent = {
-    topic: 'KeyValue.DidChangeEntry',
-    message: { viewerId: ViewerId },
+type KeyValueDidSelectEntryEvent = {
+    topic: 'KeyValue.DidSelectEntryEvent',
+    message: {
+        viewerId: ViewerId,
+        selectedEntryIdx: number,
+        selectedEntryType: 'key' | 'value',
+    },
 };
 
-// Emitted whenever the selected type switches from 'key' to 'value' or vice-versa.
-export type KeyValueDidChangeTypeEvent = {
-    topic: 'KeyValue.DidChangeType',
-    message: { viewerId: ViewerId },
-};
-
-type KeyValueLayoutEvent =
-    | KeyValueDidChangeEntryEvent
-    | KeyValueDidChangeTypeEvent;
+export type KeyValueLayoutEvent =
+    | KeyValueDidSelectEntryEvent;
 
 class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalProps, KeyValueLayoutState> {
     static defaultProps: Partial<KeyValueLayoutProps> = {
@@ -72,19 +69,15 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
             })),
             selectedEntryIdx,
             selectedEntryType,
-            doSelectEntry: (entryIdx: number) => {
-                this.setState({ selectedEntryIdx: entryIdx });
+            doSelectEntry: (idx: number) => {
+                this.setState({ selectedEntryIdx: idx });
             },
-            doIncrementEntry: (entryIdxDelta: number = 1) => {
+            doIncrementEntry: (delta: number = 1) => {
                 const { entries } = this.props;
                 this.setState((state) => {
-                    let entryIdx = state.selectedEntryIdx + entryIdxDelta;
-                    while (entryIdx < 0) {
-                        entryIdx += entries.length;
-                    }
-                    while (entryIdx >= entries.length) {
-                        entryIdx -= entries.length;
-                    }
+                    let entryIdx = state.selectedEntryIdx + delta;
+                    // Ensure wrapping to valid array index.
+                    entryIdx = (entryIdx % entries.length + entries.length) % entries.length;
                     return { selectedEntryIdx: entryIdx };
                 });
             },
@@ -100,11 +93,11 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     componentDidUpdate(prevProps: KeyValueLayoutProps & InternalProps, prevState: KeyValueLayoutState) {
         const { viewerId, emit } = this.props.interactions;
         const { selectedEntryIdx, selectedEntryType } = this.state;
-        if (selectedEntryIdx !== prevState.selectedEntryIdx) {
-            emit<KeyValueLayoutEvent>('KeyValue.DidChangeEntry', { viewerId });
-        }
-        if (selectedEntryType !== prevState.selectedEntryType) {
-            emit<KeyValueLayoutEvent>('KeyValue.DidChangeType', { viewerId });
+        if (selectedEntryIdx !== prevState.selectedEntryIdx || 
+            selectedEntryType !== prevState.selectedEntryType) {
+            emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntryEvent', {
+                viewerId, selectedEntryIdx, selectedEntryType
+            });
         }
     }
 

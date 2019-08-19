@@ -22,16 +22,16 @@ type DagEdgeProps = {
     label?: string,
 
     /** Mouse event handlers which should be spread on the node. */
-    mouseProps: {
-        onClick: (e: any) => void,
-        onDoubleClick: (e: any) => void,
-        onMouseOver: (e: any) => void,
-        onMouseOut: (e: any) => void,
+    mouseHandlers: {
+        onClick?: (e: React.SyntheticEvent) => void,
+        onDoubleClick?: (e: React.SyntheticEvent) => void,
+        onMouseOver?: (e: React.SyntheticEvent) => void,
+        onMouseOut?: (e: React.SyntheticEvent) => void,
     },
 };
 
 class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
-    static defaultProps = {
+    static defaultProps: Partial<DagEdgeProps> = {
         points: [],
         shape: 'line',
         color: 'normal',
@@ -40,12 +40,12 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
     private _xlinkId = cuid();
 
     render() {
-        const { classes, points, shape, color, label, mouseProps } = this.props;
+        const { classes, points, shape, color, label, mouseHandlers } = this.props;
 
         if (!points) return null;
 
         // Create d3 path string
-        let path = null;
+        let path = undefined;
         switch (shape) {
             case 'curve':
                 path = line().curve(curveBasis)(points.map((p) => [p.x, p.y]));
@@ -60,15 +60,15 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
             <g>
                 {/** Transparent hotspot captures mouse events in vicinity of the edge. */}
                 <path
-                    d={path}
+                    d={path || undefined}
                     className={clsx({
                         [classes.hotspot]: true,
                     })}
-                    {...mouseProps}
+                    {...mouseHandlers}
                 />
                 <path
                     id={this._xlinkId}
-                    d={path}
+                    d={path || undefined}
                     pointerEvents='none'
                     className={clsx({
                         [classes.edge]: true,
@@ -129,7 +129,7 @@ const styles = (theme: Theme) => createStyles({
     edgeLabel: {
         opacity: 1,
         textAlign: 'right',
-        fontFamily: theme.typography.monospace.fontFamily,
+        fontFamily: theme.fonts.monospace,
         fontWeight: theme.typography.fontWeightMedium,
         fontSize: '7pt',
         userSelect: 'none',

@@ -19,26 +19,20 @@ type GridLayoutState = {
 export type GridLayoutHandle = {
     cells: ViewerId[],
     selectedCellIdx: number,
-    doSelectCell: (elementIdx: number) => void,
+    doSelectCell: (idx: number) => void,
     doSelectNeighborCell: (direction: 'north' | 'south' | 'east' | 'west') => void,
 };
 
-export type GridRequestSelectCellEvent = {
-    topic: 'Grid.RequestSelectCell',
+type GridDidSelectCellEvent = {
+    topic: 'Grid.DidSelectCell',
     message: {
         viewerId: ViewerId,
-        elementIdx: number,
+        selectedCellIdx: number,
     },
 };
 
-export type GridDidChangeCellEvent = {
-    topic: 'Grid.DidChangeCell',
-    message: { viewerId: ViewerId },
-};
-
-type GridLayoutEvent =
-    | GridRequestSelectCellEvent
-    | GridDidChangeCellEvent;
+export type GridLayoutEvent =
+    | GridDidSelectCellEvent;
 
 class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, GridLayoutState> {
     
@@ -135,7 +129,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         const { viewerId, emit } = this.props.interactions;
         const { selectedCellIdx } = this.state;
         if (selectedCellIdx !== prevState.selectedCellIdx) {
-            emit<GridLayoutEvent>('Grid.DidChangeCell', { viewerId });
+            emit<GridLayoutEvent>('Grid.DidSelectCell', { viewerId, selectedCellIdx });
         }
     }
 
@@ -158,7 +152,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
             >
                 {cells.map(({ fragmentId, col, row, width, height }, idx) => (
                     <div
-                        key={fragmentId}
+                        key={`${idx}-${fragmentId}`}
                         className={clsx({
                             [classes.cell]: true,
                             [classes.cellSelected]: light === 'highlight' && selectedCellIdx === idx,
@@ -170,7 +164,6 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                     >
                         <Viewer
                             ref={(viewer) => this._registerViewer(viewer!, idx)}
-                            key={`${idx}-${fragmentId}`}
                             {...passdown}
                             fragmentId={fragmentId}
                         />

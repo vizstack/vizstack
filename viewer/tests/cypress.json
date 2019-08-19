@@ -1,5 +1,4 @@
 {
-    "fixturesFolder": false,
     "env": {
         "cypress-react-unit-test": {
             "react": "../node_modules/react/umd/react.development.js",

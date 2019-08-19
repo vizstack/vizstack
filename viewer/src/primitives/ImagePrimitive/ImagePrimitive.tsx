@@ -13,7 +13,7 @@ type ImagePrimitiveState = {};
 
 export type ImagePrimitiveHandle = {};
 
-type ImagePrimitiveEvent = {};
+export type ImagePrimitiveEvent = {};
 
 class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalProps, ImagePrimitiveState> {
 
@@ -22,7 +22,7 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalP
         this.state = {};
     }
 
-    _getHandle(): ImagePrimitiveHandle {
+    public getHandle(): ImagePrimitiveHandle {
         return {};
     }
 

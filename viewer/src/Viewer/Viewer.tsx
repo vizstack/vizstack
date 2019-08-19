@@ -2,7 +2,8 @@ import * as React from 'react';
 import cuid from 'cuid';
 
 import Button from '@material-ui/core/Button';
-
+// import { MuiThemeProvider } from '@material-ui/core/styles';
+// import theme from '../theme';
 import { FragmentId, Fragment, View } from '@vizstack/schema';
 
 // Primitives components
@@ -21,7 +22,6 @@ import DagLayout from '../layouts/DagLayout';
 import {
     ViewerId,
     ViewerHandle,
-    FragmentHandle,
     InteractionContext,
     InteractionContextValue,
     ViewerDidMouseEvent,
@@ -82,7 +82,7 @@ type ViewerState = {
     /* Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
     bypassedCycle: boolean,
 
-    /* How pronounced the`Viewer` appears as a result of interactions. */
+    /* How pronounced the `Viewer` appears as a result of interactions. */
     light: 'normal' | 'highlight' | 'lowlight' | 'selected',
 };
 
@@ -146,8 +146,8 @@ class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, V
                 light,
                 doSetLight: (l) => this.setState({ light: l }),
             },
-            type: fragment.type,
-            contents: fragment.contents,
+            type: fragment.type as any,
+            contents: fragment.contents as any,
             state: this._childFragmentRef.current!.getHandle(),
         };
     }

@@ -25,13 +25,16 @@ export type FlowLayoutHandle = {
     doIncrementElement: (elementIdxDelta: number) => void,
 };
 
-export type FlowDidChangeElementEvent = {
-    topic: 'Flow.DidChangeElement',
-    message: { viewerId: ViewerId },
+type FlowDidSelectElementEvent = {
+    topic: 'Flow.DidSelectElement',
+    message: {
+        viewerId: ViewerId,
+        selectedElementIdx: number,
+    },
 };
 
-type FlowLayoutEvent = 
-    | FlowDidChangeElementEvent;
+export type FlowLayoutEvent = 
+    | FlowDidSelectElementEvent;
 
 class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, FlowLayoutState> {
 
@@ -76,7 +79,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         const { viewerId, emit } = this.props.interactions;
         const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emit<FlowLayoutEvent>('Flow.DidChangeElement', { viewerId });
+            emit<FlowLayoutEvent>('Flow.DidSelectElement', { viewerId, selectedElementIdx });
         }
     }
 
