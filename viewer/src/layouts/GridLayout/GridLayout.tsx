@@ -2,6 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import defaultTheme from '../../theme';
+
 import { GridLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
@@ -202,4 +204,4 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(GridLayout) as React.ComponentClass<GridLayoutProps>;
+export default withStyles(styles, { defaultTheme })(GridLayout) as React.ComponentClass<GridLayoutProps>;

@@ -499,6 +499,7 @@ export default function layout(
             });
             // Create a dummy Vertex for each of the ports on the side.
             portsBySide[side].forEach((portName, i) => {
+                // @ts-ignore
                 const obj: VertexPopulated | GroupPopulated = getNodeInfo(nodeId)!.obj;
                 const sep = portsBySide[side].length + 1; // Num parts for port separation.
 
@@ -559,10 +560,12 @@ export default function layout(
     graph.groups.forEach((_g) => {
         const g = _g as GroupPopulated;
         // g.bounds.inflate(kGroupMargin);
+        // @ts-ignore
         g.children = g.groups.map((subg) => subg.index).concat(g.leaves.map((l) => l.index));
     });
     const router = new cola.GridRouter(
         [...graph.vertices, ...graph.groups, ...graph.ports],
+        // @ts-ignore
         { getChildren: (v) => v.children, getBounds: (v) => v.bounds },
         kPortLength,
     );
@@ -570,7 +573,9 @@ export default function layout(
     const routes = router.routeEdges(
         graph.links,
         kEdgeMargin,
+        // @ts-ignore
         (e) => e.source.index,
+        // @ts-ignore
         (e) => e.target.index,
     );
     // TODO: What is this doing?
@@ -588,6 +593,7 @@ export default function layout(
     };
 
     function getGroupDims(nodeId: NodeId): Dims {
+        // @ts-ignore
         const g: GroupPopulated = graph.groups[groupIdxLookup[nodeId]];
         return {
             x: g.bounds.x,
@@ -598,6 +604,7 @@ export default function layout(
         };
     }
     function getVertexDims(nodeId: NodeId): Dims {
+        // @ts-ignore
         const v: VertexPopulated = graph.vertices[vertexIdxLookup[nodeId]];
         return {
             x: v.bounds.x, // TODO: +pad?
@@ -608,8 +615,9 @@ export default function layout(
         };
     }
 
-    let minX, minY, maxX, maxY;
-    const nodeDimsLookup: { [NodeId]: Dims } = {};
+    // @ts-ignore
+    let minX: number | undefined, minY: number | undefined, maxX: number | undefined, maxY: number | undefined;
+    const nodeDimsLookup: { [nodeId: string]: Dims } = {};
     for (let node of nodes) {
         const { id } = node;
         let dims: Dims;
@@ -626,30 +634,31 @@ export default function layout(
         maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
-    paths.forEach((segment) =>
-        segment.forEach((point) => {
-            minX = Math.min(minX, point.x - kEdgeMargin);
-            minY = Math.min(minY, point.y - kEdgeMargin);
-            maxX = Math.max(maxX, point.x + kEdgeMargin);
-            maxY = Math.max(maxY, point.y + kEdgeMargin);
-        }),
-    );
-
+    
     if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
         console.error('Cannot calculate one of minX, minY, maxX, maxY for graph.');
         return;
     }
 
+    paths.forEach((segment) =>
+        segment.forEach((point) => {
+            minX = Math.min(minX!, point.x - kEdgeMargin);
+            minY = Math.min(minY!, point.y - kEdgeMargin);
+            maxX = Math.max(maxX!, point.y + kEdgeMargin);
+        }),
+    );
+
     callback(
         maxX - minX, // width
         maxY - minY, // height
+        // @ts-ignore
         nodes.map((node) => {
             const { id } = node;
             const dims: Dims = nodeDimsLookup[id];
             return {
                 ...node,
-                x: dims.x - minX,
-                y: dims.y - minY,
+                x: dims.x - minX!,
+                y: dims.y - minY!,
                 z: dims.z,
                 width: dims.width,
                 height: dims.height,
@@ -659,8 +668,8 @@ export default function layout(
             const { startId, endId, startPort, endPort } = edge;
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
-            let points = paths[i].map((point) => ({ x: point.x - minX, y: point.y - minY }));
-            function getDelta(side) {
+            let points = paths[i].map((point) => ({ x: point.x - minX!, y: point.y - minY! }));
+            function getDelta(side: "north" | "south" | "east" | "west") {
                 switch (side) {
                     default:
                     case 'south':
@@ -674,11 +683,11 @@ export default function layout(
                 }
             }
             if (startPort) {
-                const d = getDelta(nodes[nodeIdxLookup[startId]].ports[startPort].side);
+                const d = getDelta(nodes[nodeIdxLookup[startId]].ports![startPort].side);
                 points.unshift({ x: points[0].x + d.x, y: points[0].y + d.y });
             }
             if (endPort) {
-                const d = getDelta(nodes[nodeIdxLookup[endId]].ports[endPort].side);
+                const d = getDelta(nodes[nodeIdxLookup[endId]].ports![endPort].side);
                 points.push({
                     x: points[points.length - 1].x + d.x,
                     y: points[points.length - 1].y + d.y,
@@ -694,7 +703,7 @@ export default function layout(
 }
 
 export function findLowestCommonAncestor(
-    parents: { [NodeId]: NodeId },
+    parents: { [nodeId: string]: NodeId },
     leftId: NodeId,
     rightId: NodeId,
 ): NodeId | null {

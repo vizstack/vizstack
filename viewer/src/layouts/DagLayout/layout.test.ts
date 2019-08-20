@@ -13,7 +13,7 @@ test('findLowestCommonAncestor() finds lca if it exists, or returns null', () =>
      *
      *  a2 - b2 - c1 - d1
      */
-    let parents: { [NodeId]: NodeId } = {
+    let parents: { [nodeId: string]: NodeId } = {
         a0: 'b0',
         a1: 'b0',
         b0: 'c0',

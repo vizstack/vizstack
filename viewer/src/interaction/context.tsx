@@ -15,7 +15,6 @@ export const InteractionContext = React.createContext<InteractionContextValue>({
     emit: () => {},
 });
 
-
 type InteractionProviderProps = {
     manager: InteractionManager,
     children?: React.ReactNode,

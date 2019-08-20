@@ -10,7 +10,10 @@
  *     obj2obj(obj, (k, v, i) => [k, v * 2]);
  *     >> { 1: 2, 2: 4, 3: 6 }
  */
-export function obj2obj(obj, transform: (k, v, i) => [string, any]): {} {
+export function obj2obj<A, B>(
+    obj: Record<string, A>,
+    transform: (k: string, v: A, i: number) => [string, B],
+): Record<string, B> {
     return pairs2obj(
         Object.entries(obj)
             .map(([k, v], i) => transform(k, v, i))
@@ -24,7 +27,10 @@ export function obj2obj(obj, transform: (k, v, i) => [string, any]): {} {
  *     obj2arr(obj, (k, v, i) => Number(k) + v);
  *     >> [5, 5, 5]
  */
-export function obj2arr(obj, transform: (k, v, i) => any): Array {
+export function obj2arr<A, B>(
+    obj: Record<string, A>,
+    transform: (k: string, v: A, i: number) => B,
+): Array<B> {
     return Object.entries(obj)
         .map(([k, v], i) => transform(k, v, i))
         .filter((elem) => elem !== undefined);
@@ -36,7 +42,10 @@ export function obj2arr(obj, transform: (k, v, i) => any): Array {
  *     arr2obj(arr, (x, i) => [String(x), i]);
  *     >> { 5: 0, 4: 1, 3: 2 }
  */
-export function arr2obj(arr, transform: (x, i) => [string, any]): {} {
+export function arr2obj<A, B>(
+    arr: Array<A>,
+    transform: (x: A, i: number) => [string, B]
+): Record<string, B> {
     return pairs2obj(arr.map((x, i) => transform(x, i)).filter((pair) => pair !== undefined));
 }
 
@@ -46,11 +55,13 @@ export function arr2obj(arr, transform: (x, i) => [string, any]): {} {
  *     pairs2obj(pairs);
  *     >> { 1: 1, 2: 2 }
  */
-export function pairs2obj(pairs: Array<[string, any]>): {} {
+export function pairs2obj<T>(
+    pairs: Array<[string, T]>
+): Record<string, T> {
     return pairs.reduce((obj, [k, v]) => {
         obj[k] = v;
         return obj;
-    }, {});
+    }, {} as Record<string, T>);
 }
 
 /**
@@ -60,8 +71,8 @@ export function pairs2obj(pairs: Array<[string, any]>): {} {
  * @returns
  *     An array of numbers like Python's `range` function.
  */
-export function range(start: number, end?: number, step?: number = 1): number[] {
-    if (end === undefined || end === null) {
+export function range(start: number, end?: number, step: number = 1): number[] {
+    if (end === undefined) {
         start = 0;
         end = start;
     }

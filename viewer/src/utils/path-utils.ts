@@ -10,7 +10,7 @@
  * @returns
  *      A map from unique filepath strings to the minimal disambiguated path suffixes.
  */
-export function getMinimalDisambiguatedPaths(paths: Array<string>): { [string]: string } {
+export function getMinimalDisambiguatedPaths(paths: Array<string>): { [uniquePath: string]: string } {
     const uniquePaths: Array<string> = Array.from(new Set(paths));
     const tokenizedPaths: Array<Array<string>> = uniquePaths.map((path) => path.split(/[/\\]+/));
 
@@ -21,7 +21,7 @@ export function getMinimalDisambiguatedPaths(paths: Array<string>): { [string]: 
     // Continue until all paths are disambiguated.
     while (ambiguousIdxs.length > 0) {
         // Build index from token to indices of paths currently ending with the token.
-        let tokenToIdxs: { [string]: Array<number> } = {};
+        let tokenToIdxs: Record<string, number[]> = {};
         for (const idx of ambiguousIdxs) {
             const tokens = tokenizedPaths[idx];
             const token = tokens[tokens.length - tokenFromEnd];
@@ -51,7 +51,7 @@ export function getMinimalDisambiguatedPaths(paths: Array<string>): { [string]: 
     return uniquePaths.reduce((uniqueToMinimal, uniquePath, i) => {
         uniqueToMinimal[uniquePath] = minimalPaths[i];
         return uniqueToMinimal;
-    }, {});
+    }, {} as Record<string, string>);
 }
 
 // console.log("test1", getMinimalDisambiguatedPaths(["/a/z/c/d.py", '/a/b/c/d.py', '/z/a/b/c/d.py', '/']));

@@ -171,4 +171,4 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(SequenceLayout) as React.ComponentClass<SequenceLayoutProps>;
+export default withStyles(styles, { defaultTheme })(SequenceLayout) as React.ComponentClass<SequenceLayoutProps>;

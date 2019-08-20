@@ -2,6 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import defaultTheme from '../../theme';
+
 import { KeyValueLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
@@ -205,4 +207,4 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(KeyValueLayout) as React.ComponentClass<KeyValueLayoutProps>;
+export default withStyles(styles, { defaultTheme })(KeyValueLayout) as React.ComponentClass<KeyValueLayoutProps>;

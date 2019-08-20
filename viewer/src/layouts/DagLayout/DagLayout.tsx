@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import _ from 'lodash';
 
+import defaultTheme from '../../theme';
+
 import { DagLayoutFragment, DagNodeId, DagNode, DagEdgeId, DagEdge } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 
@@ -28,10 +30,10 @@ type DagLayoutState = {
 
     /** Nodes and Edges after populated with size and position information. */
     nodes: {
-        [nodeId: string]: NodeOut,  // DagNodeId -> ...
+        [nodeId: string]: any,  // DagNodeId -> ...
     },
     edges: {
-        [edgeId: string]: EdgeOut,  // DagEdgeId -> ...
+        [edgeId: string]: any,  // DagEdgeId -> ...
     },
 
     /** Z-axis arrangement of graph elements after layout, sorted by ascending z-order. */
@@ -159,6 +161,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     ports: node.ports,
                     width: kNodeInitialWidth, // Allow space for `Viewer` to be rendered.
                     height: undefined, // Needs to be populated.
+                    x: 0, y: 0, z: 0,  // Default values.
                 },
             ]),
             edges: obj2obj(this.props.edges, (edgeId, edge) => [
@@ -636,5 +639,5 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(DagLayout) as React.ComponentClass<DagLayoutProps>;
+export default withStyles(styles, { defaultTheme })(DagLayout) as React.ComponentClass<DagLayoutProps>;
 
