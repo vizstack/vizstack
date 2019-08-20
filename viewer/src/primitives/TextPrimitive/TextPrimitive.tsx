@@ -2,6 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import defaultTheme from '../../theme';
+
 import { TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
@@ -209,4 +211,4 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(TextPrimitive) as React.ComponentClass<TextPrimitiveProps>;
+export default withStyles(styles, { defaultTheme })(TextPrimitive) as React.ComponentClass<TextPrimitiveProps>;

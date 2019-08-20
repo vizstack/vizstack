@@ -2,6 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import defaultTheme from '../../theme';
+
 import { SequenceLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';

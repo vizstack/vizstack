@@ -2,6 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
+import defaultTheme from '../../theme';
+
 import { SwitchLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
@@ -122,4 +124,4 @@ const styles = (theme: Theme) => createStyles({
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(SwitchLayout) as React.ComponentClass<SwitchLayoutProps>;
+export default withStyles(styles, { defaultTheme })(SwitchLayout) as React.ComponentClass<SwitchLayoutProps>;

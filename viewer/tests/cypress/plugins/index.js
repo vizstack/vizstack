@@ -15,7 +15,7 @@ module.exports = (on) => {
             options: { transpileOnly: true }
           }
         ]
-      }
+      },
     },
   }
   on('file:preprocessor', wp(options))

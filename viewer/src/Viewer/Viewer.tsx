@@ -2,8 +2,8 @@ import * as React from 'react';
 import cuid from 'cuid';
 
 import Button from '@material-ui/core/Button';
-// import { MuiThemeProvider } from '@material-ui/core/styles';
-// import theme from '../theme';
+import { MuiThemeProvider } from '@material-ui/core/styles';
+import theme from '../theme';
 import { FragmentId, Fragment, View } from '@vizstack/schema';
 
 // Primitives components
