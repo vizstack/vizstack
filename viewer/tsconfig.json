@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
+    "rootDirs": ["src", "stories"],
+    "outDir": "./dist",
     "target": "es6",
     "module": "commonjs",
     "moduleResolution": "node",
     "lib": ["esnext", "dom"],
     "strict": true,
-    "outDir": "./dist",
     "types": ["jest"],
     
-    "jsx": "preserve",
+    "jsx": "react",
     "declaration": true,
     "sourceMap": true,
     
@@ -21,9 +22,9 @@
     "noEmitOnError": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts", "src/**/*.tsx"
   ],
   "exclude": [
-    "tests"
+    "node_modules", "dist"
   ]
 }

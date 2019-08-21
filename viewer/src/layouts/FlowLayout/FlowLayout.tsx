@@ -23,8 +23,8 @@ type FlowLayoutState = {
 export type FlowLayoutHandle = {
     elements: ViewerId[],
     selectedElementIdx: number,
-    doSelectElement: (elementIdx: number) => void,
-    doIncrementElement: (elementIdxDelta: number) => void,
+    doSelectElement: (idx: number) => void,
+    doIncrementElement: (delta?: number) => void,
 };
 
 type FlowDidSelectElementEvent = {
@@ -58,19 +58,15 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         return {
             elements: this._childViewers.map((viewer) => viewer.viewerId),
             selectedElementIdx,
-            doSelectElement: (elementIdx) => {
-                this.setState({ selectedElementIdx: elementIdx });
+            doSelectElement: (idx) => {
+                this.setState({ selectedElementIdx: idx });
             },
-            doIncrementElement: (elementIdxDelta = 1) => {
+            doIncrementElement: (delta = 1) => {
                 const { elements } = this.props;
                 this.setState((state) => {
-                    let elementIdx = state.selectedElementIdx + elementIdxDelta;
-                    while (elementIdx < 0) {
-                        elementIdx += elements.length;
-                    }
-                    while (elementIdx >= elements.length) {
-                        elementIdx -= elements.length;
-                    }
+                    let elementIdx = state.selectedElementIdx + delta;
+                    // Ensure wrapping to valid array index.
+                    elementIdx = (elementIdx % elements.length + elements.length) % elements.length;
                     return { selectedElementIdx: elementIdx };
                 });
             },

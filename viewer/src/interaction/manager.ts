@@ -348,14 +348,17 @@ export class InteractionManager {
                         }
                         break;
                     case 'GridLayout':
-                        const directions = {
-                            ArrowRight: 'east',
-                            ArrowLeft: 'west',
-                            ArrowUp: 'north',
-                            ArrowDown: 'south',
-                        };
-                        if (message.key in directions) {
-                            viewer.state.doSelectNeighborCell(directions[message.key]);
+                        if (message.key === 'ArrowUp') {
+                            viewer.state.doSelectNeighborCell('north');
+                        }
+                        if (message.key === 'ArrowDown') {
+                            viewer.state.doSelectNeighborCell('south');
+                        }
+                        if (message.key === 'ArrowLeft') {
+                            viewer.state.doSelectNeighborCell('west');
+                        }
+                        if (message.key === 'ArrowRight') {
+                            viewer.state.doSelectNeighborCell('east');
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');

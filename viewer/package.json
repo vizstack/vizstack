@@ -9,10 +9,8 @@
   "dependencies": {
     "@material-ui/core": "^4.3.2",
     "@material-ui/icons": "^4.2.1",
-    "@material-ui/styles": "^4.3.0",
     "clsx": "^1.0.4",
     "cuid": "^2.1.6",
-    "cypress-react-unit-test": "^2.4.3",
     "d3": "^5.9.2",
     "lodash": "^4.17.15",
     "react": "^16.9.0",
@@ -22,6 +20,13 @@
     "webcola": "^3.4.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.5.5",
+    "@storybook/addon-actions": "^5.1.11",
+    "@storybook/addon-info": "^5.1.11",
+    "@storybook/addon-links": "^5.1.11",
+    "@storybook/addon-storyshots": "^5.1.11",
+    "@storybook/addons": "^5.1.11",
+    "@storybook/react": "^5.1.11",
     "@types/d3": "^5.7.2",
     "@types/jest": "^24.0.15",
     "@types/lodash": "^4.14.136",
@@ -30,17 +35,25 @@
     "@types/react-dom": "^16.8.4",
     "@types/react-measure": "^2.0.5",
     "@types/seamless-immutable": "^7.1.10",
+    "@types/storybook__addon-info": "^4.1.2",
+    "@types/storybook__react": "^4.0.2",
+    "babel-loader": "^8.0.6",
     "jest": "^24.8.0",
+    "react-docgen-typescript-loader": "^3.1.1",
+    "react-test-renderer": "^16.9.0",
     "rimraf": "^2.6.3",
     "ts-jest": "^24.0.2",
+    "ts-loader": "^6.0.4",
     "ts-node": "^8.3.0",
     "typescript": "^3.5.2"
   },
   "scripts": {
-    "start": "node start-tests.js",
+    "start": "npm run start-storybook",
     "test": "jest",
     "build": "tsc",
     "clean": "rimraf dist/*",
-    "repl": "ts-node"
+    "repl": "ts-node",
+    "start-storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
   }
 }

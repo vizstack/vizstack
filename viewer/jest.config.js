@@ -1,7 +1,5 @@
 module.exports = {
-  "roots": [
-    "src"
-  ],
+  "roots": ["src", "stories"],
   "transform": {
     "^.+\\.tsx?$": "ts-jest"
   },
