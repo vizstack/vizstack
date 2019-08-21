@@ -48,9 +48,10 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         separator: ':',
     };
 
-    private _childViewers: { key: Viewer, value: Viewer }[] = [];
+    private _childViewers: { key?: Viewer, value?: Viewer }[] = [];
 
     private _registerViewer(viewer: Viewer, idx: number, type: 'key' | 'value') {
+        if(!this._childViewers[idx]) this._childViewers[idx] = {};
         this._childViewers[idx][type] = viewer;
     }
 
@@ -66,8 +67,8 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         const { selectedEntryIdx, selectedEntryType } = this.state;
         return {
             entries: this._childViewers.map(({ key, value }) => ({
-                key: key.viewerId,
-                value: value.viewerId,
+                key: key!.viewerId,
+                value: value!.viewerId,
             })),
             selectedEntryIdx,
             selectedEntryType,
@@ -161,7 +162,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                 })}
                             >
                                 <Viewer
-                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
+                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'value')}
                                     key={`v${idx}`}
                                     {...passdown}
                                     fragmentId={value}

@@ -1,8 +1,8 @@
-export * from './dag';
-export * from './flow';
-export * from './grid';
-export * from './image';
-export * from './key-value';
-export * from './sequence';
-export * from './switch';
-export * from './text';
+export { Dag } from './dag';
+export { Flow } from './flow';
+export { Grid } from './grid';
+export { Image } from './image';
+export { KeyValue } from './key-value';
+export { Sequence } from './sequence';
+export { Switch } from './switch';
+export { Text } from './text';

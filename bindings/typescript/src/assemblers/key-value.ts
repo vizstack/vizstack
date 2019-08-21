@@ -49,12 +49,12 @@ class KeyValueLayoutFragmentAssembler extends FragmentAssembler {
 }
 
 export function KeyValue(
-    elements?: any[],
+    entries?: { key: any; value: any }[],
     separator?: string,
     startMotif?: string,
     endMotif?: string,
 ) {
-    return new KeyValueLayoutFragmentAssembler(elements, separator, startMotif, endMotif);
+    return new KeyValueLayoutFragmentAssembler(entries, separator, startMotif, endMotif);
 }
 
 export interface KeyValue extends ReturnType<typeof KeyValue> {}
