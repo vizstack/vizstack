@@ -157,7 +157,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                         key={`${idx}-${fragmentId}`}
                         className={clsx({
                             [classes.cell]: true,
-                            [classes.cellSelected]: light === 'highlight' && selectedCellIdx === idx,
+                            [classes.cellSelected]: light === 'selected' && selectedCellIdx === idx,
                         })}
                         style={{
                             gridColumn: `${col + 1} / ${col + 1 + width}`,

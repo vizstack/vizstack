@@ -9,7 +9,7 @@ class FlowLayoutFragmentAssembler extends FragmentAssembler {
         this._elements = elements;
     }
 
-    public items(...items: any) {
+    public items(...items: any[]) {
         this._elements.push(...items);
         return this;
     }

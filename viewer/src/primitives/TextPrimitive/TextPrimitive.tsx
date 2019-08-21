@@ -112,6 +112,15 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
                 variant === 'token' && color === 'secondary' && light === 'highlight',
             [classes.errorTokenHighlight]:
                 variant === 'token' && color === 'error' && light === 'highlight',
+
+            [classes.defaultTokenSelected]:
+                variant === 'token' && color === 'default' && light === 'selected',
+            [classes.primaryTokenSelected]:
+                variant === 'token' && color === 'primary' && light === 'selected',
+            [classes.secondaryTokenSelected]:
+                variant === 'token' && color === 'secondary' && light === 'selected',
+            [classes.errorTokenSelected]:
+                variant === 'token' && color === 'error' && light === 'selected',
         });
         return variant === 'token' ? (
             <div className={names} {...mouseHandlers}>
@@ -195,6 +204,7 @@ const styles = (theme: Theme) => createStyles({
     },
 
     // Highlighted monospace styles
+    // TODO: choose colors for these styles
     defaultTokenHighlight: {
         backgroundColor: theme.palette.primary.light,
     },
@@ -205,6 +215,21 @@ const styles = (theme: Theme) => createStyles({
         backgroundColor: theme.palette.secondary.light,
     },
     errorTokenHighlight: {
+        backgroundColor: theme.palette.error.light,
+    },
+
+    // Selected monospace styles
+    // TODO: choose colors for these styles
+    defaultTokenSelected: {
+        backgroundColor: theme.palette.primary.light,
+    },
+    primaryTokenSelected: {
+        backgroundColor: theme.palette.primary.light,
+    },
+    secondaryTokenSelected: {
+        backgroundColor: theme.palette.secondary.light,
+    },
+    errorTokenSelected: {
         backgroundColor: theme.palette.error.light,
     },
 });

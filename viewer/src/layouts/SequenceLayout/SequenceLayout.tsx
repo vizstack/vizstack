@@ -119,7 +119,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                             [classes.cell]: true,
                             [classes.horizontal]: orientation === 'horizontal',
                             [classes.vertical]: orientation === 'vertical',
-                            [classes.cellSelected]: light === 'highlight' && selectedElementIdx === idx,
+                            [classes.cellSelected]: light === 'selected' && selectedElementIdx === idx,
                         })}
                     >
                         <Viewer

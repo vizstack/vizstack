@@ -254,11 +254,11 @@ export class InteractionManager {
 
     private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
-            all.viewerId(global.selected).forEach((viewer) => {
+            all.viewerId(global.hovered).forEach((viewer) => {
                 viewer.appearance.doSetLight('normal');
             });
-            global.selected = message.viewerId;
-            all.viewerId(global.selected).forEach((viewer) => {
+            global.hovered = message.viewerId;
+            all.viewerId(global.hovered).forEach((viewer) => {
                 viewer.appearance.doSetLight('highlight');
             });
         });
@@ -267,8 +267,10 @@ export class InteractionManager {
                 viewer.appearance.doSetLight('normal');
             });
         });
-        this.on('Viewer.DidClick', (all, message) => {
-            all.viewerId(message.viewerId).forEach((viewer) => {
+        this.on('Viewer.DidClick', (all, message, global) => {
+            global.selected = message.viewerId;
+            all.viewerId(global.selected).forEach((viewer) => {
+                viewer.appearance.doSetLight('selected');
                 if (viewer.type === 'SwitchLayout') {
                     viewer.state.doIncrementMode();
                 }
@@ -279,20 +281,13 @@ export class InteractionManager {
     private _useKeyboardDefaults() {
         this.on('KeyDown', (all, message, global) => {
             all.viewerId(global.selected).forEach((viewer) => {
-                // if (message.key === 'Enter') {
-                //     if (viewer.state.selectedModeIdx) {
-                //         global.selected = viewer.selectedViewerId;
-                //         viewer.state.doUnhighlight();
-                //         all.viewerId(global.selected).forEach((viewer) => viewer.state.doHighlight());
-                //     }
-                // }
-                // if (message.key === 'Escape') {
-                //     if (viewer.parent) {
-                //         global.selected = viewer.parent.viewerId;
-                //         viewer.appearance.doSetLight('normal');
-                //         all.viewerId(global.selected).forEach((viewer) => viewer.state.doHighlight());
-                //     }
-                // }
+                if (message.key === 'Escape') {
+                    if (viewer.parentId) {
+                        viewer.appearance.doSetLight('normal');
+                        global.selected = viewer.parentId;
+                        all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                    }
+                }
                 switch (viewer.type) {
                     case 'SwitchLayout':
                         if (message.key === 'ArrowRight') {
@@ -301,59 +296,73 @@ export class InteractionManager {
                         if (message.key === 'ArrowLeft') {
                             viewer.state.doIncrementMode(-1);
                         }
+                        if (message.key === 'Enter') {
+                            viewer.appearance.doSetLight('normal');
+                            global.selected = viewer.state.mode;
+                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        }
                         break;
-                    // case 'SequenceLayout':
-                    //     // TODO: this is an abstraction leak, since someone writing an interaction now needs to know what the default content values are.
-                    //     if (
-                    //         (message.key === 'ArrowRight' &&
-                    //             viewer.contents.orientation !== 'vertical') ||
-                    //         (message.key === 'ArrowDown' &&
-                    //             viewer.contents.orientation === 'vertical')
-                    //     ) {
-                    //         viewer.state.doIncrementElement();
-                    //     }
-                    //     if (
-                    //         (message.key === 'ArrowLeft' &&
-                    //             viewer.contents.orientation !== 'vertical') ||
-                    //         (message.key === 'ArrowUp' &&
-                    //             viewer.contents.orientation === 'vertical')
-                    //     ) {
-                    //         viewer.state.doIncrementElement(-1);
-                    //     }
-                    //     break;
-                    // case 'KeyValueLayout':
-                    //     if (message.key === 'ArrowRight') {
-                    //         viewer.state.doSelectValue();
-                    //     }
-                    //     if (message.key === 'ArrowLeft') {
-                    //         viewer.state.doSelectKey();
-                    //     }
-                    //     if (message.key === 'ArrowUp') {
-                    //         viewer.state.doIncrementEntry(-1);
-                    //     }
-                    //     if (message.key === 'ArrowDown') {
-                    //         viewer.state.doIncrementEntry();
-                    //     }
-                    //     break;
-                    // case 'FlowLayout':
-                    //     if (message.key === 'ArrowRight') {
-                    //         viewer.state.doIncrementElement();
-                    //     }
-                    //     if (message.key === 'ArrowLeft') {
-                    //         viewer.state.doIncrementElement(-1);
-                    //     }
-                    //     break;
-                    // case 'GridLayout':
-                    //     const directions = {
-                    //         ArrowRight: 'east',
-                    //         ArrowLeft: 'west',
-                    //         ArrowUp: 'north',
-                    //         ArrowDown: 'south',
-                    //     };
-                    //     if (message.key in directions) {
-                    //         viewer.state.doSelectNeighborCell(directions[message.key]);
-                    //     }
-                    //     break;
+                    case 'SequenceLayout':
+                        if (message.key === 'ArrowRight' || message.key === 'ArrowDown') {
+                            viewer.state.doIncrementElement();
+                        }
+                        if (message.key === 'ArrowLeft' || message.key === 'ArrowUp') {
+                            viewer.state.doIncrementElement(-1);
+                        }
+                        if (message.key === 'Enter') {
+                            viewer.appearance.doSetLight('normal');
+                            global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
+                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        }
+                        break;
+                    case 'KeyValueLayout':
+                        if (message.key === 'ArrowRight') {
+                            viewer.state.doSelectValue();
+                        }
+                        if (message.key === 'ArrowLeft') {
+                            viewer.state.doSelectKey();
+                        }
+                        if (message.key === 'ArrowUp') {
+                            viewer.state.doIncrementEntry(-1);
+                        }
+                        if (message.key === 'ArrowDown') {
+                            viewer.state.doIncrementEntry();
+                        }
+                        if (message.key === 'Enter') {
+                            viewer.appearance.doSetLight('normal');
+                            global.selected = viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType];
+                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        }
+                        break;
+                    case 'FlowLayout':
+                        if (message.key === 'ArrowRight') {
+                            viewer.state.doIncrementElement();
+                        }
+                        if (message.key === 'ArrowLeft') {
+                            viewer.state.doIncrementElement(-1);
+                        }
+                        if (message.key === 'Enter') {
+                            viewer.appearance.doSetLight('normal');
+                            global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
+                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        }
+                        break;
+                    case 'GridLayout':
+                        const directions = {
+                            ArrowRight: 'east',
+                            ArrowLeft: 'west',
+                            ArrowUp: 'north',
+                            ArrowDown: 'south',
+                        };
+                        if (message.key in directions) {
+                            viewer.state.doSelectNeighborCell(directions[message.key]);
+                        }
+                        if (message.key === 'Enter') {
+                            viewer.appearance.doSetLight('normal');
+                            global.selected = viewer.state.cells[viewer.state.selectedCellIdx];
+                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        }
+                        break;
                 }
             });
         });

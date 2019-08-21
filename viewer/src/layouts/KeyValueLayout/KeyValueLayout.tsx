@@ -139,7 +139,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                 className={clsx({
                                     [classes.cell]: true,
                                     [classes.cellSelected]:
-                                        light === 'highlight' &&
+                                        light === 'selected' &&
                                         selectedEntryIdx === idx &&
                                         selectedType === 'key',
                                 })}
@@ -156,7 +156,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                 className={clsx({
                                     [classes.cell]: true,
                                     [classes.cellSelected]:
-                                        light === 'highlight' &&
+                                        light === 'selected' &&
                                         selectedEntryIdx === idx &&
                                         selectedType === 'value',
                                 })}
