@@ -5,7 +5,6 @@ import { linkTo } from '@storybook/addon-links';
 
 import { Viewer } from '../src'
 import {
-    assemble,
     Text,
     Image,
     Flow,
@@ -15,26 +14,27 @@ import {
     KeyValue,
 } from '@vizstack/js';
 
+
 storiesOf('Text (Primitive)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Text("Hello, world!")
-        )}/>
+        }/>
     ));
 
 storiesOf('Flow (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Flow(
                 Text("Hello, world!"),
                 Text("Goodbye!"),
             )
-        )}/>
+        }/>
     ));
 
 storiesOf('Switch (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Switch(
                 ["foo", "bar"],
                 {
@@ -42,21 +42,21 @@ storiesOf('Switch (Layout)', module)
                     "bar": Text("BAR!"),
                 },
             )
-        )}/>
+        }/>
     ));
 
 storiesOf('Sequence (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Sequence(
                 [Text("A"), Text("B"), Text("C")]
             )
-        )}/>
+        }/>
     ));
 
 storiesOf('Grid (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Grid(
                 `AAB
                  CDD`,
@@ -67,14 +67,14 @@ storiesOf('Grid (Layout)', module)
                     D: Text("DD"),
                 }
             )
-        )}/>
+        }/>
     ));
 
 storiesOf('KeyValue (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             KeyValue(
                 [{key: Text('Hello'), value: Text('World!')}]
             )
-        )}/>
+        }/>
     ));

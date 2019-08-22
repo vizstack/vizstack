@@ -3,6 +3,7 @@ import cuid from 'cuid';
 
 import Button from '@material-ui/core/Button';
 import { FragmentId, Fragment, View } from '@vizstack/schema';
+import { FragmentAssembler, assemble } from '@vizstack/js';
 
 // Primitives components
 import TextPrimitive from '../primitives/TextPrimitive';
@@ -26,41 +27,33 @@ import {
     ViewerDidChangeLightEvent,
  } from '../interaction';
 
+// TODO: Add way for user to confine selection to a particular root `Viewer` and its descendants.
 
-/** Public API for interacting with a `Viewer`. */
-export type ViewerProps = {
-    /* Specification of View's root fragment and sub-fragments. */
+// All props that a `Viewer` receives.
+type ViewerProps = {
+    /** Specification of View's root fragment and sub-fragments. */
     view: View,
 
-    /* Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
-     * level of nesting. If unspecified, the `view.rootId` is used. */
-    fragmentId?: FragmentId,
+    /** Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
+     * level of nesting. */
+    fragmentId: FragmentId,
 
-    /* Unique name for the root `Viewer`, passed down to any nested `Viewer`. */
-    name?: string,
-};
-
-// Private props that enable a `Viewer` to respond to interactions.
-type ViewerInteractionProps = {
-    /* Unique `ViewerId` for the parent `Viewer`, if one exists. */
+    /** Unique `ViewerId` for the parent `Viewer`, if one exists. */
     parentId?: ViewerId,
 };
 
-// Private props that are passed from one `Viewer` to the next sub-`Viewer`.
-type PassdownProps =
-    Pick<ViewerProps, 'view' | 'name'> &
-    Pick<ViewerInteractionProps, 'parentId'>;
+// Props that are passed from one `Viewer` to the next sub-`Viewer`.
+type ViewerPassdownProps = Pick<ViewerProps, 'view' | 'parentId'>;
 
-// Private props that enable a Fragment component to respond to interactions.
+// Props that enable a Fragment component to respond to interactions.
 type FragmentInteractionProps = {
-
-    /* The `ViewerId` of the `Viewer` rendering this component. */
+    /** The `ViewerId` of the `Viewer` rendering this component. */
     viewerId: ViewerId,
 
-    /* Publishes an event to the `InteractionManager`. */
+    /** Publishes an event to the `InteractionManager`. */
     emit: InteractionContextValue['emit'],  
     
-    /* Mouse handlers to place on React component that will trigger the general "Viewer.Did[*]"
+    /** Mouse handlers to place on React component that will trigger the general "Viewer.Did[*]"
      * events. */
     mouseHandlers: {
         onClick: (e: React.SyntheticEvent) => void,
@@ -72,30 +65,30 @@ type FragmentInteractionProps = {
 
 export type FragmentProps<T extends Fragment> = {
     interactions: FragmentInteractionProps,
-    passdown: PassdownProps,
+    passdown: ViewerPassdownProps,
     light: 'normal' | 'highlight' | 'lowlight' | 'selected',
 } & T['contents'];
 
 type ViewerState = {
-    /* Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
+    /** Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
     bypassedCycle: boolean,
 
-    /* How pronounced the `Viewer` appears as a result of interactions. */
+    /** How pronounced the `Viewer` appears as a result of interactions. */
     light: 'normal' | 'highlight' | 'lowlight' | 'selected',
 };
 
-class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, ViewerState> {
+class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
     static contextType = InteractionContext;
     context!: React.ContextType<typeof InteractionContext>;
 
-    /* Unique `ViewerId` correponding to this `Viewer`. */
+    /** Unique `ViewerId` correponding to this `Viewer`. */
     public viewerId: ViewerId;
     
-    /* Ref to the `Fragment` component that this `Viewer` renders. The specific component used
+    /** Ref to the `Fragment` component that this `Viewer` renders. The specific component used
      * is determined at runtime, so the `any` workaround is needed. */
     private _childFragmentRef = React.createRef<any>();
 
-    constructor(props: ViewerProps & ViewerInteractionProps) {
+    constructor(props: ViewerProps) {
         super(props);
         this.state = {
             bypassedCycle: false,
@@ -168,7 +161,7 @@ class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, V
     }
 
     render() {
-        const { view, fragmentId, name } = this.props;
+        const { view, fragmentId } = this.props;
         const { emit } = this.context;
         const { bypassedCycle, light } = this.state;
         const viewerId = this.viewerId;
@@ -189,9 +182,8 @@ class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, V
             )
         }
 
-        const passdown: PassdownProps = {
+        const passdown: ViewerPassdownProps = {
             view,
-            name: name || viewerId,
             parentId: viewerId,
         };
 
@@ -276,4 +268,41 @@ class Viewer extends React.PureComponent<ViewerProps & ViewerInteractionProps, V
     }
 }
 
-export { Viewer };
+type ViewerRootProps = {
+    view: View | FragmentAssembler,
+    fragmentId?: FragmentId,
+};
+
+/**
+ * A `Viewer` is used to render a `View`, conforming to the schema in `@vizstack/schema`, which has
+ * been constructed manually or produced through language bindings. For convenience, it is
+ * possible to pass the `@vizstack/js` bindings directly to the `Viewer`. 
+ * @example
+ * ```
+ * // JS-bindings input
+ * <Viewer view={Text('Hello, world!')} />
+ * 
+ * // Schema input
+ * <Viewer view={{
+ *     rootId: 'root',
+ *     fragments: {
+ *       root: {
+ *         type: 'TextPrimitive',
+ *         contents: { text: 'Hello, world!' },
+ *         meta: {},
+ *       }
+ *     }
+ *   }} />
+ * ```
+ */
+class ViewerRoot extends React.PureComponent<ViewerRootProps> {
+    render() {
+        const { view, fragmentId } = this.props;
+        const schematized: View = view instanceof FragmentAssembler ? assemble(view) : view;
+        return (
+            <Viewer view={schematized} fragmentId={fragmentId || schematized.rootId}/>
+        )
+    }
+}
+
+export { Viewer, ViewerRoot };
