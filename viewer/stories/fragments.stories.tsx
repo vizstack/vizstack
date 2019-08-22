@@ -5,7 +5,6 @@ import { linkTo } from '@storybook/addon-links';
 
 import { Viewer, InteractionManager, InteractionProvider } from '../src'
 import {
-    assemble,
     Text,
     Image,
     Flow,
@@ -15,43 +14,44 @@ import {
     KeyValue,
 } from '@vizstack/js';
 
+
 storiesOf('Text (Primitive)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Text("Hello, world!")
-        )}/>
+        }/>
     ))
     .add('interactive token', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 Text("Hello, world!", "token")
-            )} />
+            } />
         </InteractionProvider>
     ));
 
 storiesOf('Flow (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Flow(
                 Text("Hello, world!"),
                 Text("Goodbye!", "token"),
             )
-        )}/>
+        }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 Flow(
                     Text("Hello, world!"),
                     Text("Goodbye!", "token"),
                 )
-            )} />
+            } />
         </InteractionProvider>
     ));
 
 storiesOf('Switch (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Switch(
                 ["foo", "bar"],
                 {
@@ -59,11 +59,11 @@ storiesOf('Switch (Layout)', module)
                     "bar": Text("BAR!"),
                 },
             )
-        )}/>
+        }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 Switch(
                     ["foo", "bar"],
                     {
@@ -71,31 +71,31 @@ storiesOf('Switch (Layout)', module)
                         "bar": Text("BAR!"),
                     },
                 )
-            )} />
+            } />
         </InteractionProvider>
     ));
 
 storiesOf('Sequence (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Sequence(
                 [Text("A"), Text("B"), Text("C")]
             )
-        )}/>
+        }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 Sequence(
                     [Text("A"), Text("B"), Text("C")]
                 )
-            )}/>
+            }/>
         </InteractionProvider>
     ));
 
 storiesOf('Grid (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             Grid(
                 `AAB
                  CDD`,
@@ -106,11 +106,11 @@ storiesOf('Grid (Layout)', module)
                     D: Text("DD"),
                 }
             )
-        )}/>
+        }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 Grid(
                     `AAB
                     CDD`,
@@ -121,26 +121,26 @@ storiesOf('Grid (Layout)', module)
                         D: Text("DD"),
                     }
                 )
-            )}/>
+            }/>
         </InteractionProvider>
     ));
 
 storiesOf('KeyValue (Layout)', module)
     .add('basic', () => (
-        <Viewer view={assemble(
+        <Viewer view={
             KeyValue(
                 [{key: Text('Hello'), value: Text('World!')},
                  {key: Text('Good'), value: Text('Bye!')}]
             )
-        )}/>
+        }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={assemble(
+            <Viewer view={
                 KeyValue(
                     [{key: Text('Hello'), value: Text('World!')},
                      {key: Text('Good'), value: Text('Bye!')}]
                 )
-            )}/>
+            }/>
         </InteractionProvider>
     ));

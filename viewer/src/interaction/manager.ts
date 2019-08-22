@@ -215,9 +215,11 @@ export class InteractionManager {
 
     /**
      * @param options
-     *     `useMouseDefaults`: Whether to use default mouse interactions for hovering and selecting.
-     *     `useKeyboardDefaults`: Whether to use default keyboard interactions for cursor movement.
-     *     `domElement`: DOM element on which to bind the keyboard listeners.
+     *     - `useMouseDefaults`: Whether to use default mouse interactions for hovering and
+     *       selection.
+     *     - `useKeyboardDefaults`: Whether to use default keyboard interactions for cursor
+     *       navigation and selection.
+     *     - `domElement`: DOM element on which to bind the keyboard listeners.
      */
     constructor(
         options: {
