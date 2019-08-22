@@ -63,7 +63,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         };
     }
 
-    private _getHandle(): KeyValueLayoutHandle {
+    public getHandle(): KeyValueLayoutHandle {
         const { selectedEntryIdx, selectedEntryType } = this.state;
         return {
             entries: this._childViewers.map(({ key, value }) => ({

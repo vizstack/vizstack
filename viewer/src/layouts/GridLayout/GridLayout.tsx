@@ -84,41 +84,32 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                             offAxis = 'col';
                             increaseMainAxis = false;
                             break;
+                        default:
                         case 'west':
                             mainAxis = 'col';
                             offAxis = 'row';
                             increaseMainAxis = false;
                             break;
                     }
-                    let closest = -1;
-                    cells.forEach((cell, i) => {
-                        if (i === state.selectedCellIdx) {
-                            return;
-                        }
+                    const mainSize = (mainAxis === 'row' ? 'height' : 'width');
+                    const mainEdge = (increaseMainAxis ? currentElem[mainAxis] + currentElem[mainSize] : currentElem[mainAxis]);
+                    const cellPenalties = cells.map((cell, i) => {
+                        const penalty = {idx: i, off: 0, main: 0, valid: true};
                         if (
-                            (increaseMainAxis && cell[mainAxis] <= currentElem[mainAxis]) ||
-                            (!increaseMainAxis && cell[mainAxis] >= currentElem[mainAxis])
+                            i === state.selectedCellIdx || 
+                            (increaseMainAxis && cell[mainAxis] < mainEdge) ||
+                            (!increaseMainAxis && cell[mainAxis] >= mainEdge)
                         ) {
-                            return;
+                            penalty.valid = false;
                         }
-                        if (
-                            closest === -1 ||
-                            (increaseMainAxis
-                                ? cell[mainAxis] < cells[closest][mainAxis]
-                                : cell[mainAxis] > cells[closest][mainAxis]) ||
-                            (cell[mainAxis] === cells[closest][mainAxis] &&
-                                ((cells[closest][offAxis] >= currentElem[offAxis] &&
-                                    cell[offAxis] >= currentElem[offAxis] &&
-                                    cell[offAxis] - currentElem[offAxis] <
-                                        cells[closest][offAxis] - currentElem[offAxis]) ||
-                                    (cells[closest][offAxis] < currentElem[offAxis] &&
-                                        cell[offAxis] > cells[closest][offAxis])))
-                        ) {
-                            closest = i;
-                        }
+                        penalty.off = Math.abs(cell[offAxis] - currentElem[offAxis]);
+                        penalty.main = Math.abs(cell[mainAxis] - mainEdge);
+                        return penalty;
+                    }).filter((c) => {console.log(c); return c.valid}).sort((c1, c2) => {
+                        return c1.off === c2.off ? c1.main - c2.main : c1.off - c2.off;
                     });
-                    if (closest >= 0) {
-                        return { selectedCellIdx: closest };
+                    if (cellPenalties.length > 0) {
+                        return { selectedCellIdx: cellPenalties[0].idx };
                     } else {
                         return { selectedCellIdx: selectedCellIdx };
                     }

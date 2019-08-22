@@ -254,27 +254,44 @@ export class InteractionManager {
 
     private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
-            all.viewerId(global.hovered).forEach((viewer) => {
-                viewer.appearance.doSetLight('normal');
-            });
+            if (global.hovered !== global.selected) {
+                all.viewerId(global.hovered).forEach((viewer) => {
+                    viewer.appearance.doSetLight('normal');
+                });
+            }
             global.hovered = message.viewerId;
-            all.viewerId(global.hovered).forEach((viewer) => {
-                viewer.appearance.doSetLight('highlight');
-            });
+            if (global.hovered !== global.selected) {
+                all.viewerId(global.hovered).forEach((viewer) => {
+                    viewer.appearance.doSetLight('highlight');
+                });
+            }
         });
-        this.on('Viewer.DidMouseOut', (all, message) => {
-            all.viewerId(message.viewerId).forEach((viewer) => {
-                viewer.appearance.doSetLight('normal');
-            });
+        this.on('Viewer.DidMouseOut', (all, message, global) => {
+            if (message.viewerId !== global.selected) {
+                all.viewerId(message.viewerId).forEach((viewer) => {
+                    viewer.appearance.doSetLight('normal');
+                });
+            }
         });
         this.on('Viewer.DidClick', (all, message, global) => {
-            global.selected = message.viewerId;
-            all.viewerId(global.selected).forEach((viewer) => {
-                viewer.appearance.doSetLight('selected');
-                if (viewer.type === 'SwitchLayout') {
-                    viewer.state.doIncrementMode();
-                }
-            });
+            if (message.viewerId !== global.selected) {
+                all.viewerId(global.selected).forEach((viewer) => {
+                    viewer.appearance.doSetLight('normal');
+                });
+                global.selected = message.viewerId;
+                all.viewerId(global.selected).forEach((viewer) => {
+                    viewer.appearance.doSetLight('selected');
+                    if (viewer.type === 'SwitchLayout') {
+                        viewer.state.doIncrementMode();
+                    }
+                });
+            }
+            else {
+                all.viewerId(global.selected).forEach((viewer) => {
+                    viewer.appearance.doSetLight('highlight');
+                });
+                global.selected = null;
+            }
         });
     }
 

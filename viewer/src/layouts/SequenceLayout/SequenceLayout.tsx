@@ -121,6 +121,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                             [classes.vertical]: orientation === 'vertical',
                             [classes.cellSelected]: light === 'selected' && selectedElementIdx === idx,
                         })}
+                        key={idx}
                     >
                         <Viewer
                             ref={(viewer) => this._registerViewer(viewer!, idx)}
