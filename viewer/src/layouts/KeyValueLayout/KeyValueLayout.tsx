@@ -32,11 +32,13 @@ export type KeyValueLayoutHandle = {
 };
 
 type KeyValueDidSelectEntryEvent = {
-    topic: 'KeyValue.DidSelectEntryEvent',
+    topic: 'KeyValue.DidSelectEntry',
     message: {
         viewerId: ViewerId,
         selectedEntryIdx: number,
         selectedEntryType: 'key' | 'value',
+        prevSelectedEntryIdx: number,
+        prevSelectedEntryType: 'key' | 'value',
     },
 };
 
@@ -98,8 +100,8 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         const { selectedEntryIdx, selectedEntryType } = this.state;
         if (selectedEntryIdx !== prevState.selectedEntryIdx || 
             selectedEntryType !== prevState.selectedEntryType) {
-            emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntryEvent', {
-                viewerId, selectedEntryIdx, selectedEntryType
+            emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntry', {
+                viewerId, selectedEntryIdx, selectedEntryType, prevSelectedEntryIdx: prevState.selectedEntryIdx, prevSelectedEntryType: prevState.selectedEntryType,
             });
         }
     }
@@ -119,6 +121,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
             <div
                 className={clsx({
                     [classes.root]: true,
+                    [classes.rootSelected]: light === 'selected',
                 })}
                 {...mouseHandlers}
             >
@@ -138,10 +141,6 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                             <div
                                 className={clsx({
                                     [classes.cell]: true,
-                                    [classes.cellSelected]:
-                                        light === 'selected' &&
-                                        selectedEntryIdx === idx &&
-                                        selectedType === 'key',
                                 })}
                             >
                                 <Viewer
@@ -155,10 +154,6 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                             <div
                                 className={clsx({
                                     [classes.cell]: true,
-                                    [classes.cellSelected]:
-                                        light === 'selected' &&
-                                        selectedEntryIdx === idx &&
-                                        selectedType === 'value',
                                 })}
                             >
                                 <Viewer
@@ -201,7 +196,7 @@ const styles = (theme: Theme) => createStyles({
         margin: theme.scale(16),
         display: 'block',
     },
-    cellSelected: {
+    rootSelected: {
         borderColor: theme.palette.primary.light,
     },
 });

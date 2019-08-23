@@ -30,6 +30,7 @@ type GridDidSelectCellEvent = {
     message: {
         viewerId: ViewerId,
         selectedCellIdx: number,
+        prevSelectedCellIdx: number,
     },
 };
 
@@ -105,7 +106,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                         penalty.off = Math.abs(cell[offAxis] - currentElem[offAxis]);
                         penalty.main = Math.abs(cell[mainAxis] - mainEdge);
                         return penalty;
-                    }).filter((c) => {console.log(c); return c.valid}).sort((c1, c2) => {
+                    }).filter((c) => c.valid).sort((c1, c2) => {
                         return c1.off === c2.off ? c1.main - c2.main : c1.off - c2.off;
                     });
                     if (cellPenalties.length > 0) {
@@ -122,7 +123,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         const { viewerId, emit } = this.props.interactions;
         const { selectedCellIdx } = this.state;
         if (selectedCellIdx !== prevState.selectedCellIdx) {
-            emit<GridLayoutEvent>('Grid.DidSelectCell', { viewerId, selectedCellIdx });
+            emit<GridLayoutEvent>('Grid.DidSelectCell', { viewerId, selectedCellIdx, prevSelectedCellIdx: prevState.selectedCellIdx });
         }
     }
 
@@ -140,6 +141,8 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
             <div
                 className={clsx({
                     [classes.container]: true,
+                    [classes.containerHighlighted]: light === 'highlight',
+                    [classes.containerSelected]: light === 'selected',
                 })}
                 {...mouseHandlers}
             >
@@ -148,7 +151,6 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                         key={`${idx}-${fragmentId}`}
                         className={clsx({
                             [classes.cell]: true,
-                            [classes.cellSelected]: light === 'selected' && selectedCellIdx === idx,
                         })}
                         style={{
                             gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -180,8 +182,11 @@ const styles = (theme: Theme) => createStyles({
     compactGrid: {
         gridGap: `${theme.scale(16)}px`, // Need px.
     },
-    containerHovered: {
+    containerHighlighted: {
         borderColor: theme.palette.primary.light,
+    },
+    containerSelected: {
+        borderColor: theme.palette.primary.dark,
     },
     cell: {
         textAlign: 'left',

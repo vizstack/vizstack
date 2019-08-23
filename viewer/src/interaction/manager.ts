@@ -388,6 +388,30 @@ export class InteractionManager {
                 }
             });
         });
+        this.on('Grid.DidSelectCell', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((grid: any) => {  // TODO: correct typing here
+                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(grid.state.cells[message.selectedCellIdx]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                })
+            }
+        });
+        this.on('Sequence.DidSelectElement', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((sequence: any) => {  // TODO: correct typing here
+                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(sequence.state.elements[message.selectedElementIdx]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                })
+            }
+        });
+        this.on('KeyValue.DidSelectEntry', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((kv: any) => {  // TODO: correct typing here
+                    all.viewerId(kv.state.entries[message.prevSelectedEntryIdx][message.prevSelectedEntryType]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(kv.state.entries[message.selectedEntryIdx][message.selectedEntryType]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                })
+            }
+        });
     }
 
     /**

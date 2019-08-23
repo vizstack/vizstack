@@ -233,7 +233,7 @@ storiesOf('Sequence (Layout)', module)
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
                 Sequence(
-                    [Text(kTextSingleShort), Text(kTextMultiNarrow), Text(kTextSingleShort)]
+                    [Text(kTextSingleShort, 'token'), Text(kTextMultiNarrow, 'token'), Text(kTextSingleShort, 'token')]
                 )
             }/>
         </InteractionProvider>
@@ -328,9 +328,9 @@ storiesOf('Grid (Layout)', module)
                     `AAAB
                      .CCB`,
                     {
-                        A: Text(kTextSingleShort),
-                        B: Text(kTextMultiNarrow),
-                        C: Text(kTextSingleShort),
+                        A: Text(kTextSingleShort, 'token'),
+                        B: Text(kTextMultiNarrow, 'token'),
+                        C: Text(kTextSingleShort, 'token'),
                     }
                 )
             }/>
@@ -406,10 +406,10 @@ storiesOf('KeyValue (Layout)', module)
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
                 KeyValue([
-                    {key: Text('Egg yolks'), value: Text('6 yolks')},
-                    {key: Text('White sugar'), value: Text('6 tbsp')},
-                    {key: Text('Heavy cream'), value: Text('2 1/2 cups')},
-                    {key: Text('Vanilla extract'), value: Text('1/2 tsp')},
+                    {key: Text('Egg yolks', 'token'), value: Text('6 yolks', 'token')},
+                    {key: Text('White sugar', 'token'), value: Text('6 tbsp', 'token')},
+                    {key: Text('Heavy cream', 'token'), value: Text('2 1/2 cups', 'token')},
+                    {key: Text('Vanilla extract', 'token'), value: Text('1/2 tsp', 'token')},
                 ])
             }/>
         </InteractionProvider>
