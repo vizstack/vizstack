@@ -2,6 +2,8 @@ import { FragmentId, KeyValueLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 
+// TODO: KeyValue input: either [[k1, v1], [k2, v2]], or { k1: v1, k2: v2 } => Text(k1) + v1
+
 class KeyValueLayoutFragmentAssembler extends FragmentAssembler {
     private _entries: { key: any; value: any }[] = [];
     private _separator?: string;

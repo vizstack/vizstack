@@ -142,12 +142,12 @@ const styles = (theme: Theme) => createStyles({
         color: theme.palette.text.primary,
     },
 
-    // Font sizes; one for each value in `PrimitiveSize`.
+    // Font sizes.
     small: {
-        fontSize: theme.scale(8),
+        fontSize: theme.scale(12),
     },
     medium: {
-        fontSize: theme.scale(12),
+        fontSize: theme.scale(14),
     },
     large: {
         fontSize: theme.scale(16),
@@ -159,9 +159,10 @@ const styles = (theme: Theme) => createStyles({
     },
     monospace: {
         fontFamily: theme.fonts.monospace,
+        fontSize: 'small',  // Need to adjust for difference.
     },
     framed: {
-        padding: theme.scale(4),
+        padding: `${theme.scale(1)}px ${theme.scale(2)}px`,
         borderRadius: theme.shape.borderRadius,
         display: 'inline-block',
         verticalAlign: 'middle',
@@ -173,7 +174,7 @@ const styles = (theme: Theme) => createStyles({
 
     // Sans-serif styles.
     defaultPlain: {
-        color: theme.color.grey.d1,
+        color: theme.color.grey.d3,
     },
     primaryPlain: {
         color: theme.palette.primary.main,

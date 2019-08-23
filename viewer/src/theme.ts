@@ -4,6 +4,8 @@
  * general-purpose variables as well as domain-specific (semantically meaningful) variables.
  */
 import { createMuiTheme } from '@material-ui/core/styles';
+import 'typeface-roboto-mono';
+import 'typeface-ubuntu-mono';
 
 type Color = string;
 type Color5 = { l2: Color; l1: Color; base: Color; d1: Color; d2: Color };
@@ -20,12 +22,13 @@ const general: {
         red: Color5;
     };
     // prettier-ignore
-    scale: (value: 0 | 1 | 2 | 4 | 6 | 8 | 12 | 16 | 24 | 32 | 48 | 64 | 96 | 128 | 192 | 256
-        | 384 | 512 | 640 | 768 | 1024 | 1280 | 1536 | 1792 | 2048) => number;
+    scale: (value: 0 | 1 | 2 | 4 | 6 | 8 | 10 | 12 | 14 | 16 |24 | 32 | 48 | 64 | 96 | 128 | 192
+        | 256 | 384 | 512 | 640 | 768 | 1024 | 1280 | 1536 | 1792 | 2048) => number;
     fonts: {
-        serif: string;
-        sans: string;
-        monospace: string;
+        RobotoMono: string,
+        UbuntuMono: string,
+        sans: string,
+        monospace: string,
     };
 } = {
     color: {
@@ -77,9 +80,10 @@ const general: {
     },
     scale: (value) => value,
     fonts: {
-        serif: '"Roboto Slab", "Georgia", serif',
-        sans: '"Roboto", "Helvetica Neue", sans-serif',
-        monospace: '"Roboto Mono", "Courier New", monospace',
+        RobotoMono: '"Roboto Mono", monospace',
+        UbuntuMono: '"Ubuntu Mono", monospace',
+        sans: '"Ubuntu Mono", sans-serif',
+        monospace: '"Roboto Mono", monospace',
     }
 };
 
@@ -128,6 +132,9 @@ const builtin = {
         error: {
             main: general.color.red.base,
         },
+    },
+    shape: {
+        borderRadius: 2,
     },
     spacing: 4,
     overrides: {
