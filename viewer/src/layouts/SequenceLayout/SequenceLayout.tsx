@@ -33,6 +33,7 @@ type SequenceDidSelectElementEvent = {
     message: {
         viewerId: ViewerId,
         selectedElementIdx: number,
+        prevSelectedElementIdx: number,
     },
 };
 
@@ -82,7 +83,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         const { viewerId, emit } = this.props.interactions;
         const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emit<SequenceLayoutEvent>('Sequence.DidSelectElement', { viewerId, selectedElementIdx });
+            emit<SequenceLayoutEvent>('Sequence.DidSelectElement', { viewerId, selectedElementIdx, prevSelectedElementIdx: prevState.selectedElementIdx, });
         }
     }
 
@@ -123,11 +124,10 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                             [classes.spacing]: idx < elements.length - 1,
                             [classes.horizontal]: orientation === 'horizontal',
                             [classes.vertical]: orientation === 'vertical',
-                            [classes.cellSelected]: light === 'selected' && selectedElementIdx === idx,
                         })}
                         key={idx}
                     >
-                        <div className={classes.slot}> 
+                        <div className={classes.slot}>
                             <Viewer
                                 ref={(viewer) => this._registerViewer(viewer!, idx)}
                                 key={`${idx}-${fragmentId}`}
@@ -171,7 +171,7 @@ const styles = (theme: Theme) => createStyles({
     },
 
     cell: {
-        
+
     },
     slot: {
         paddingLeft: theme.vars.slot.padding,
@@ -181,7 +181,7 @@ const styles = (theme: Theme) => createStyles({
         marginRight: theme.vars.slot.spacing,
     },
     motif: {
-        
+
     },
     indices: {
         borderTopColor: theme.vars.slot.borderColor,
@@ -199,7 +199,7 @@ const styles = (theme: Theme) => createStyles({
     vertical: {
         display: 'block',
     },
-    cellSelected: {
+    rootSelected: {
         borderColor: theme.palette.primary.light,
     },
 });

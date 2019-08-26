@@ -32,11 +32,13 @@ export type KeyValueLayoutHandle = {
 };
 
 type KeyValueDidSelectEntryEvent = {
-    topic: 'KeyValue.DidSelectEntryEvent',
+    topic: 'KeyValue.DidSelectEntry',
     message: {
         viewerId: ViewerId,
         selectedEntryIdx: number,
         selectedEntryType: 'key' | 'value',
+        prevSelectedEntryIdx: number,
+        prevSelectedEntryType: 'key' | 'value',
     },
 };
 
@@ -96,10 +98,10 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     componentDidUpdate(prevProps: KeyValueLayoutProps & InternalProps, prevState: KeyValueLayoutState) {
         const { viewerId, emit } = this.props.interactions;
         const { selectedEntryIdx, selectedEntryType } = this.state;
-        if (selectedEntryIdx !== prevState.selectedEntryIdx || 
+        if (selectedEntryIdx !== prevState.selectedEntryIdx ||
             selectedEntryType !== prevState.selectedEntryType) {
-            emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntryEvent', {
-                viewerId, selectedEntryIdx, selectedEntryType
+            emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntry', {
+                viewerId, selectedEntryIdx, selectedEntryType, prevSelectedEntryIdx: prevState.selectedEntryIdx, prevSelectedEntryType: prevState.selectedEntryType,
             });
         }
     }

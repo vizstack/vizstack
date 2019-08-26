@@ -30,6 +30,7 @@ type GridDidSelectCellEvent = {
     message: {
         viewerId: ViewerId,
         selectedCellIdx: number,
+        prevSelectedCellIdx: number,
     },
 };
 
@@ -37,7 +38,7 @@ export type GridLayoutEvent =
     | GridDidSelectCellEvent;
 
 class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, GridLayoutState> {
-    
+
     private _childViewers: Viewer[] = [];
 
     private _registerViewer(viewer: Viewer, idx: number) {
@@ -96,7 +97,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                     const cellPenalties = cells.map((cell, i) => {
                         const penalty = {idx: i, off: 0, main: 0, valid: true};
                         if (
-                            i === state.selectedCellIdx || 
+                            i === state.selectedCellIdx ||
                             (increaseMainAxis && cell[mainAxis] < mainEdge) ||
                             (!increaseMainAxis && cell[mainAxis] >= mainEdge)
                         ) {
@@ -105,7 +106,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                         penalty.off = Math.abs(cell[offAxis] - currentElem[offAxis]);
                         penalty.main = Math.abs(cell[mainAxis] - mainEdge);
                         return penalty;
-                    }).filter((c) => {console.log(c); return c.valid}).sort((c1, c2) => {
+                    }).filter((c) => c.valid).sort((c1, c2) => {
                         return c1.off === c2.off ? c1.main - c2.main : c1.off - c2.off;
                     });
                     if (cellPenalties.length > 0) {
@@ -122,7 +123,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         const { viewerId, emit } = this.props.interactions;
         const { selectedCellIdx } = this.state;
         if (selectedCellIdx !== prevState.selectedCellIdx) {
-            emit<GridLayoutEvent>('Grid.DidSelectCell', { viewerId, selectedCellIdx });
+            emit<GridLayoutEvent>('Grid.DidSelectCell', { viewerId, selectedCellIdx, prevSelectedCellIdx: prevState.selectedCellIdx });
         }
     }
 
@@ -188,7 +189,7 @@ const styles = (theme: Theme) => createStyles({
     frameSelected: {
         ...theme.vars.framed.selected,
     },
-    
+
     cell: {
         textAlign: 'left',
         borderTopStyle: theme.vars.slot.borderStyle,
