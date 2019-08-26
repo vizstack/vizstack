@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["esnext", "dom"],
+    "strict": true,
+    "outDir": "./dist",
+    
+    "jsx": "preserve",
+    "declaration": true,
+    "sourceMap": true,
+    
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    
+    "noEmitOnError": true
+  },
+  "include": [
+    "src/**/*"
+  ]
+}

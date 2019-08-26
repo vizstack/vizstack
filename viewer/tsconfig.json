@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "rootDirs": ["src", "stories"],
+    "outDir": "./dist",
+    "target": "es6",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["esnext", "dom"],
+    "strict": true,
+    "types": ["jest"],
+    
+    "jsx": "react",
+    "declaration": true,
+    "sourceMap": true,
+    
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    
+    "noEmitOnError": true
+  },
+  "include": [
+    "src/**/*.ts", "src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules", "dist"
+  ]
+}
