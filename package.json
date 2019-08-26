@@ -14,5 +14,6 @@
     "format": "npm-run-all jsformat pyformat",
     "jsformat": "prettier --config ./.prettierrc --write \"{schema,viewer,bindings/typescript}/src/**/*.{js,jsx,ts,tsx}\"",
     "pyformat": "yapf -r -i -e \"venv/*,node_modules/*\" bindings/python/**/*.py"
-  }
+  },
+  "dependencies": {}
 }
