@@ -19,14 +19,13 @@ describe('View Assemblers declarative bindings', () => {
     });
 
     test('Primitive basic (Text)', () => {
-        const viz = Text('hello', 'token');
+        const viz = Text('hello');
         const schema = assemble(viz, getFragmentId);
         expect(schema.fragments).toMatchObject({
             root: {
                 type: 'TextPrimitive',
                 contents: {
                     text: 'hello',
-                    variant: 'token',
                 },
             },
         });

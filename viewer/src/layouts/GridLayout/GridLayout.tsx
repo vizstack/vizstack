@@ -139,7 +139,10 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         return (
             <div
                 className={clsx({
-                    [classes.container]: true,
+                    [classes.frame]: true,
+                    [classes.frameLowlight]: light === 'lowlight',
+                    [classes.frameHighlight]: light === 'highlight',
+                    [classes.frameSelected]: light === 'selected',
                 })}
                 {...mouseHandlers}
             >
@@ -148,7 +151,6 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                         key={`${idx}-${fragmentId}`}
                         className={clsx({
                             [classes.cell]: true,
-                            [classes.cellSelected]: light === 'selected' && selectedCellIdx === idx,
                         })}
                         style={{
                             gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -168,28 +170,34 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
 }
 
 const styles = (theme: Theme) => createStyles({
-    container: {
+    frame: {
         display: 'inline-grid',
         verticalAlign: 'middle',
-        gridGap: `${theme.scale(16)}px`, // Need px.
+        gridGap: `${theme.vars.slot.spacing}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
-        ...theme.vars.fragmentContainer,
+        ...theme.vars.framed.normal,
     },
-    compactGrid: {
-        gridGap: `${theme.scale(16)}px`, // Need px.
+    frameHighlight: {
+        ...theme.vars.framed.highlight,
     },
-    containerHovered: {
-        borderColor: theme.palette.primary.light,
+    frameLowlight: {
+        ...theme.vars.framed.lowlight,
     },
+    frameSelected: {
+        ...theme.vars.framed.selected,
+    },
+    
     cell: {
         textAlign: 'left',
-        ...theme.vars.fragmentContainer,
-        borderColor: 'rgba(255, 0, 0, 0)',
-    },
-    cellSelected: {
-        borderColor: theme.palette.primary.light,
+        borderTopStyle: theme.vars.slot.borderStyle,
+        borderTopColor: theme.vars.slot.borderColor,
+        borderTopWidth: theme.vars.slot.borderWidth,
+        borderLeftStyle: theme.vars.slot.borderStyle,
+        borderLeftColor: theme.vars.slot.borderColor,
+        borderLeftWidth: theme.vars.slot.borderWidth,
+        padding: theme.vars.slot.padding,
     },
 });
 

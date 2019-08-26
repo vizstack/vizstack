@@ -4,8 +4,7 @@
  * general-purpose variables as well as domain-specific (semantically meaningful) variables.
  */
 import { createMuiTheme } from '@material-ui/core/styles';
-import 'typeface-roboto-mono';
-import 'typeface-ubuntu-mono';
+import { LightTheme } from './themes';
 
 type Color = string;
 type Color5 = { l2: Color; l1: Color; base: Color; d1: Color; d2: Color };
@@ -13,8 +12,7 @@ type Color7 = { l3: Color; d3: Color } & Color5;
 
 const general: {
     color: {
-        white: Color;
-        grey: Color7;
+        gray: Color7;
         blue: Color5;
         teal: Color5;
         green: Color5;
@@ -24,16 +22,9 @@ const general: {
     // prettier-ignore
     scale: (value: 0 | 1 | 2 | 4 | 6 | 8 | 10 | 12 | 14 | 16 |24 | 32 | 48 | 64 | 96 | 128 | 192
         | 256 | 384 | 512 | 640 | 768 | 1024 | 1280 | 1536 | 1792 | 2048) => number;
-    fonts: {
-        RobotoMono: string,
-        UbuntuMono: string,
-        sans: string,
-        monospace: string,
-    };
 } = {
     color: {
-        white: '#FFFFFF',
-        grey: {
+        gray: {
             l3: '#F8F9FA',
             l2: '#F1F3F5',
             l1: '#E9ECEE',
@@ -79,31 +70,13 @@ const general: {
         },
     },
     scale: (value) => value,
-    fonts: {
-        RobotoMono: '"Roboto Mono", monospace',
-        UbuntuMono: '"Ubuntu Mono", monospace',
-        sans: '"Ubuntu Mono", sans-serif',
-        monospace: '"Roboto Mono", monospace',
-    }
 };
 
 // =================================================================================================
 
 const specific = {
     vars: {
-        fragmentContainer: {
-            borderStyle: 'solid',
-            borderWidth: general.scale(1),
-            borderRadius: general.scale(2),
-            borderColor: general.color.grey.l2,
-        },
-        selectable: {
-            normal: general.color.grey.l2,
-            highlight: general.color.blue.l1,
-            lowlight: general.color.grey.d1,
-            selected: general.color.blue.base,
-        },
-        
+        ...LightTheme,
     }
 };
 

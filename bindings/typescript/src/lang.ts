@@ -1,12 +1,12 @@
 import JSON5 from 'json5';
 
 import { FragmentAssembler } from './fragment-assembler';
-import { Text, Sequence, KeyValue, Switch } from './assemblers';
+import { Token, Sequence, KeyValue, Switch } from './assemblers';
 
 export function getLanguageDefault(obj: any): FragmentAssembler {
     if (obj !== Object(obj)) {
         // Primitive like number, string, or symbol.
-        return Text(typeof obj === 'string' ? `"${obj}"` : `${obj}`, 'token');
+        return Token(typeof obj === 'string' ? `"${obj}"` : `${obj}`);
     } else if (Array.isArray(obj)) {
         return SwitchSequence(obj, `Array[${obj.length}]`, `Array[${obj.length}] [`, ']');
     } else if (obj instanceof Set) {

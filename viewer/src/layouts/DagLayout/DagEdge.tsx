@@ -100,7 +100,7 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
 const styles = (theme: Theme) => createStyles({
     edge: {
         fill: 'none',
-        stroke: theme.vars.selectable.normal,
+        // stroke: theme.vars.selectable.normal,
         strokeWidth: 2.5,
         opacity: 1,
         markerEnd: 'url(#arrow-normal)',
@@ -111,26 +111,26 @@ const styles = (theme: Theme) => createStyles({
         strokeWidth: 12,
     },
     edgeHighlight: {
-        stroke: theme.vars.selectable.highlight,
+        // stroke: theme.vars.selectable.highlight,
         strokeWidth: 3.5,
         markerEnd: 'url(#arrow-highlight)',
         opacity: 1,
     },
     edgeLowlight: {
-        stroke: theme.vars.selectable.lowlight,
+        // stroke: theme.vars.selectable.lowlight,
         markerEnd: 'url(#arrow-lowlight)',
         opacity: 0.5,
     },
     edgeSelected: {
-        stroke: theme.vars.selectable.selected,
+        // stroke: theme.vars.selectable.selected,
         strokeWidth: 3.5,
         markerEnd: 'url(#arrow-selected)',
     },
     edgeLabel: {
         opacity: 1,
         textAlign: 'right',
-        fontFamily: theme.fonts.monospace,
-        fontWeight: theme.typography.fontWeightMedium,
+        // fontFamily: theme.fonts.monospace,
+        // fontWeight: theme.typography.fontWeightMedium,
         fontSize: '7pt',
         userSelect: 'none',
     },

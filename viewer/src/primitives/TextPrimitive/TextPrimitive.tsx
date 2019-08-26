@@ -6,127 +6,64 @@ import defaultTheme from '../../theme';
 
 import { TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
-import { ViewerId } from '../../interaction';
 
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type TextPrimitiveProps = FragmentProps<TextPrimitiveFragment>;
 
-type TextPrimitiveState = {
-    textSize: 'small' | 'medium' | 'large',
-};
+type TextPrimitiveState = {};
 
-export type TextPrimitiveHandle = {
-    textSize: 'small' | 'medium' | 'large';
-    doResize: (size: 'small' | 'medium' | 'large') => void;
-};
+export type TextPrimitiveHandle = {};
 
-type TextDidResizeEvent = {
-    topic: 'Text.DidResize',
-    message: {
-        viewerId: ViewerId,
-        textSize: 'small' | 'medium' | 'large',
-    },
-};
-
-export type TextPrimitiveEvent =
-    | TextDidResizeEvent;
+export type TextPrimitiveEvent = {};
 
 class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalProps, TextPrimitiveState> {
     static defaultProps: Partial<TextPrimitiveProps> = {
-        color: 'default',
-        variant: 'plain',
+        variant: 'body',
+        emphasis: 'normal',
     };
 
     constructor(props: TextPrimitiveProps & InternalProps) {
         super(props);
-        this.state = {
-            textSize: 'medium',
-        };
+        this.state = {};
     }
 
     public getHandle(): TextPrimitiveHandle {
-        const { textSize } = this.state;
-        return {
-            textSize,
-            doResize: (size) => {
-                this.setState({ textSize: size });
-            },
-        };
+        return {};
     }
 
-    componentDidUpdate(prevProps: any, prevState: TextPrimitiveState): void {
-        const { viewerId, emit } = this.props.interactions;
-        const { textSize } = this.state;
-        if (textSize !== prevState.textSize) {
-            emit<TextPrimitiveEvent>('Text.DidResize', { viewerId, textSize });
-        }
-    }
+    componentDidUpdate(prevProps: any, prevState: TextPrimitiveState): void {}
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, text, color, variant, interactions, light } = this.props;
+        const { classes, text, variant, emphasis, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
-        const { textSize } = this.state;
 
         const split = text.split('\n');
-        const lines = split.map((text, i) =>
-            i < split.length - 1 ? (
-                <span key={i}>
-                    {text}
-                    <br />
-                </span>
-            ) : (
-                <span key={i}>{text}</span>
-            ),
-        );
+        const lines = split.map((text, i) => (
+            <span key={i}>
+                {text}
+                {i < split.length - 1 ? <br /> : null}
+            </span>
+        ));
         const names = clsx({
-            [classes.text]: true,
+            [classes.container]: true,
+            [classes.containerLowlight]: light === 'lowlight',
+            [classes.containerHighlight]: light === 'highlight',
+            [classes.containerSelected]: light === 'selected',
 
-            [classes.small]: textSize === 'small',
-            [classes.medium]: textSize === 'medium',
-            [classes.large]: textSize === 'large',
+            [classes.emphasisNormal]: emphasis === 'normal',
+            [classes.emphasisLess]: emphasis === 'less',
+            [classes.emphasisMore]: emphasis === 'more',
 
-            [classes.sansSerif]: variant === 'plain',
-            [classes.monospace]: variant === 'token',
-            [classes.framed]: variant === 'token',
-            [classes.invisible]: color === 'invisible',
-
-            [classes.defaultPlain]: variant === 'plain' && color === 'default',
-            [classes.primaryPlain]: variant === 'plain' && color === 'primary',
-            [classes.secondaryPlain]: variant === 'plain' && color === 'secondary',
-            [classes.errorPlain]: variant === 'plain' && color === 'error',
-
-            [classes.defaultToken]: variant === 'token' && color === 'default',
-            [classes.primaryToken]: variant === 'token' && color === 'primary',
-            [classes.secondaryToken]: variant === 'token' && color === 'secondary',
-            [classes.errorToken]: variant === 'token' && color === 'error',
-
-            [classes.defaultTokenHighlight]:
-                variant === 'token' && color === 'default' && light === 'highlight',
-            [classes.primaryTokenHighlight]:
-                variant === 'token' && color === 'primary' && light === 'highlight',
-            [classes.secondaryTokenHighlight]:
-                variant === 'token' && color === 'secondary' && light === 'highlight',
-            [classes.errorTokenHighlight]:
-                variant === 'token' && color === 'error' && light === 'highlight',
-
-            [classes.defaultTokenSelected]:
-                variant === 'token' && color === 'default' && light === 'selected',
-            [classes.primaryTokenSelected]:
-                variant === 'token' && color === 'primary' && light === 'selected',
-            [classes.secondaryTokenSelected]:
-                variant === 'token' && color === 'secondary' && light === 'selected',
-            [classes.errorTokenSelected]:
-                variant === 'token' && color === 'error' && light === 'selected',
+            [classes.variantBody]: variant === 'body',
+            [classes.variantCaption]: variant === 'caption',
+            [classes.variantSubheading]: variant === 'subheading',
+            [classes.variantHeading]: variant === 'heading',
         });
-        return variant === 'token' ? (
-            <div className={names} {...mouseHandlers}>
-                {lines}
-            </div>
-        ) : (
+        return (
             <span className={names} {...mouseHandlers}>
                 {lines}
             </span>
@@ -135,104 +72,35 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
 }
 
 const styles = (theme: Theme) => createStyles({
-    text: {
+    container: {
         textAlign: 'left',
         overflow: 'hidden',
         width: 'fit-content',
-        color: theme.palette.text.primary,
+        backgroundColor: theme.vars.unframed.normal.backgroundColor,
+        borderBottomStyle: theme.vars.unframed.normal.borderStyle,
+        borderBottomWidth: theme.vars.unframed.normal.borderWidth,
+        borderBottomColor: theme.vars.unframed.normal.borderColor,
+    },
+    containerHighlight: {
+        borderBottomColor: theme.vars.unframed.highlight.borderColor,
+    },
+    containerLowlight: {
+        // ...theme.vars.unframed.lowlight,
+    },
+    containerSelected: {
+        borderBottomColor: theme.vars.unframed.selected.borderColor,
     },
 
-    // Font sizes.
-    small: {
-        fontSize: theme.scale(12),
-    },
-    medium: {
-        fontSize: theme.scale(14),
-    },
-    large: {
-        fontSize: theme.scale(16),
-    },
+    emphasisNormal: { color: theme.vars.emphasis.normal },
+    emphasisLess: { color: theme.vars.emphasis.less },
+    emphasisMore: { color: theme.vars.emphasis.more },
 
-    // Font styles.
-    sansSerif: {
-        fontFamily: theme.fonts.sans,
-    },
-    monospace: {
-        fontFamily: theme.fonts.monospace,
-        fontSize: 'small',  // Need to adjust for difference.
-    },
-    framed: {
-        padding: `${theme.scale(1)}px ${theme.scale(2)}px`,
-        borderRadius: theme.shape.borderRadius,
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        wordWrap: 'break-word',
-    },
-    invisible: {
-        visibility: 'hidden',
-    },
+    variantBody: { ...theme.vars.text.body },
+    variantCaption: { ...theme.vars.text.caption },
+    variantSubheading: { ...theme.vars.text.subheading },
+    variantHeading: { ...theme.vars.text.heading },
 
-    // Sans-serif styles.
-    defaultPlain: {
-        color: theme.color.grey.d3,
-    },
-    primaryPlain: {
-        color: theme.palette.primary.main,
-    },
-    secondaryPlain: {
-        color: theme.palette.secondary.main,
-    },
-    errorPlain: {
-        color: theme.palette.error.main,
-    },
-
-    // Monospace styles.
-    defaultToken: {
-        backgroundColor: theme.color.grey.l2,
-        color: theme.color.grey.d2,
-    },
-    primaryToken: {
-        backgroundColor: theme.palette.primary.main,
-        color: theme.palette.primary.contrastText,
-    },
-    secondaryToken: {
-        backgroundColor: theme.palette.secondary.main,
-        color: theme.palette.secondary.contrastText,
-    },
-    errorToken: {
-        backgroundColor: theme.palette.error.main,
-        color: theme.palette.error.contrastText,
-    },
-
-    // Highlighted monospace styles
-    // TODO: choose colors for these styles
-    defaultTokenHighlight: {
-        backgroundColor: theme.palette.primary.light,
-    },
-    primaryTokenHighlight: {
-        backgroundColor: theme.palette.primary.light,
-    },
-    secondaryTokenHighlight: {
-        backgroundColor: theme.palette.secondary.light,
-    },
-    errorTokenHighlight: {
-        backgroundColor: theme.palette.error.light,
-    },
-
-    // Selected monospace styles
-    // TODO: choose colors for these styles
-    defaultTokenSelected: {
-        backgroundColor: theme.palette.primary.light,
-    },
-    primaryTokenSelected: {
-        backgroundColor: theme.palette.primary.light,
-    },
-    secondaryTokenSelected: {
-        backgroundColor: theme.palette.secondary.light,
-    },
-    errorTokenSelected: {
-        backgroundColor: theme.palette.error.light,
-    },
+    // TODO: Add light.
 });
 
 type InternalProps = WithStyles<typeof styles>;

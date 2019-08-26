@@ -2,11 +2,11 @@ import { FragmentId, ImagePrimitiveFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 class ImagePrimitiveFragmentAssembler extends FragmentAssembler {
-    private _filePath: string;
+    private _location: string;
 
-    constructor(filePath: string) {
+    constructor(location: string) {
         super();
-        this._filePath = filePath;
+        this._location = location;
     }
 
     public assemble(
@@ -16,7 +16,7 @@ class ImagePrimitiveFragmentAssembler extends FragmentAssembler {
             {
                 type: 'ImagePrimitive',
                 contents: {
-                    filePath: this._filePath,
+                    location: this._location,
                 },
                 meta: this._meta,
             },
@@ -25,8 +25,8 @@ class ImagePrimitiveFragmentAssembler extends FragmentAssembler {
     }
 }
 
-export function Image(filePath: string) {
-    return new ImagePrimitiveFragmentAssembler(filePath);
+export function Image(location: string) {
+    return new ImagePrimitiveFragmentAssembler(location);
 }
 
 export interface Image extends ReturnType<typeof Image> {}

@@ -6,6 +6,8 @@ import { linkTo } from '@storybook/addon-links';
 import { Viewer, InteractionManager, InteractionProvider } from '../src'
 import {
     Text,
+    Token,
+    Icon,
     Image,
     Flow,
     Switch,
@@ -15,7 +17,7 @@ import {
 } from '@vizstack/js';
 
 const kTextSingleShort = (
-    "Hello, world!"
+    "Vizstack"
 );
 
 const kTextSingleLong = (
@@ -47,75 +49,140 @@ const kTextMultiNarrowDeep = (
 );
 
 storiesOf('Text (Primitive)', module)
-    .add('plain single short', () => (
+    .add('single short', () => (
         <Viewer view={
             Text(kTextSingleShort)
         }/>
     ))
-    .add('plain single long', () => (
+    .add('single long', () => (
         <Viewer view={
             Text(kTextSingleLong)
         }/>
     ))
-    .add('plain multi narrow', () => (
+    .add('multi narrow', () => (
         <Viewer view={
             Text(kTextMultiNarrow)
         }/>
     ))
-    .add('plain multi wide', () => (
+    .add('multi wide', () => (
         <Viewer view={
             Text(kTextMultiWide)
         }/>
     ))
-    .add('token single short', () => (
+    .add('variants', () => (
         <Viewer view={
-            Text(kTextSingleShort, "token")
+            Flow(
+                Text(kTextSingleShort, "caption"),
+                Text(kTextSingleShort, "body"),
+                Text(kTextSingleShort, "subheading"),
+                Text(kTextSingleShort, "heading"),
+            )
         }/>
     ))
-    .add('token single long', () => (
+    .add('emphasis', () => (
         <Viewer view={
-            Text(kTextSingleLong, "token")
+            Flow(
+                Text(kTextSingleShort, undefined, "less"),
+                Text(kTextSingleShort, undefined, "normal"),
+                Text(kTextSingleShort, undefined, "more"),
+            )
         }/>
     ))
-    .add('token multi narrow', () => (
-        <Viewer view={
-            Text(kTextMultiNarrow, "token")
-        }/>
-    ))
-    .add('token multi wide', () => (
-        <Viewer view={
-            Text(kTextMultiWide, "token")
-        }/>
-    ))
-    .add('interactive plain single short', () => (
+    .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
                 Text(kTextSingleShort)
             } />
         </InteractionProvider>
     ))
-    .add('interactive plain multi narrow', () => (
+    .add('interactive multi narrow', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
                 Text(kTextMultiNarrow)
             } />
         </InteractionProvider>
+    ));
+
+storiesOf('Token (Primitive)', module)
+    .add('single short', () => (
+        <Viewer view={
+            Token(kTextSingleShort)
+        }/>
     ))
-    .add('interactive token single short', () => (
+    .add('single long', () => (
+        <Viewer view={
+            Token(kTextSingleLong)
+        }/>
+    ))
+    .add('multi narrow', () => (
+        <Viewer view={
+            Token(kTextMultiNarrow)
+        }/>
+    ))
+    .add('multi wide', () => (
+        <Viewer view={
+            Token(kTextMultiWide)
+        }/>
+    ))
+    .add('colors', () => (
+        <Viewer view={
+            Flow(
+                Token("Hello", "gray"),
+                Token("Hello", "brown"),
+                Token("Hello", "purple"),
+                Token("Hello", "blue"),
+                Token("Hello", "green"),
+                Token("Hello", "yellow"),
+                Token("Hello", "orange"),
+                Token("Hello", "red"),
+                Token("Hello", "pink"),
+            )
+        }/>
+    ))
+    .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
-                Text(kTextSingleShort, "token")
+                Token(kTextSingleShort)
             } />
         </InteractionProvider>
     ))
-    .add('interactive token multi narrow', () => (
+    .add('interactive multi narrow', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
-                Text(kTextMultiNarrow, "token")
+                Token(kTextMultiNarrow)
             } />
         </InteractionProvider>
     ));
 
+storiesOf('Icon (Primitive)', module)
+    .add('basic', () => (
+        <Viewer view={
+            Flow(
+                Icon('add_circle'),
+                Icon('info'),
+                Icon('label'),
+                Icon('bookmark'),
+                Icon('alarm')
+            )
+        }/>
+    ))
+    .add('emphasis', () => (
+        <Viewer view={
+            Flow(
+                Icon('add_circle', "less"),
+                Icon('add_circle', "normal"),
+                Icon('add_circle', "more"),
+            )
+        }/>
+    ))
+    .add('with text', () => (
+        <Viewer view={
+            Flow(
+                Icon('add_circle'),
+                Text(kTextSingleShort),
+            )
+        }/>
+    ));
 
 storiesOf('Flow (Layout)', module)
     .add('inline inline inline', () => (
@@ -131,7 +198,7 @@ storiesOf('Flow (Layout)', module)
         <Viewer view={
             Flow(
                 Text(kTextSingleShort),
-                Text(kTextMultiNarrow, "token"),
+                Token(kTextMultiNarrow),
                 Text(kTextSingleShort),
             )
         }/>
@@ -139,18 +206,18 @@ storiesOf('Flow (Layout)', module)
     .add('block inline block', () => (
         <Viewer view={
             Flow(
-                Text(kTextSingleShort, "token"),
+                Token(kTextSingleShort),
                 Text(kTextMultiNarrow),
-                Text(kTextSingleShort, "token"),
+                Token(kTextSingleShort),
             )
         }/>
     ))
     .add('block block block', () => (
         <Viewer view={
             Flow(
-                Text(kTextSingleShort, "token"),
-                Text(kTextMultiNarrow, "token"),
-                Text(kTextSingleShort, "token"),
+                Token(kTextSingleShort),
+                Token(kTextMultiNarrow),
+                Token(kTextSingleShort),
             )
         }/>
     ))
@@ -159,7 +226,7 @@ storiesOf('Flow (Layout)', module)
             <Viewer view={
                 Flow(
                     Text(kTextSingleShort),
-                    Text(kTextMultiNarrow, "token"),
+                    Token(kTextMultiNarrow),
                     Text(kTextSingleShort),
                 )
             } />

@@ -118,32 +118,21 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         return (
             <div
                 className={clsx({
-                    [classes.root]: true,
+                    [classes.frame]: true,
+                    [classes.frameLowlight]: light === 'lowlight',
+                    [classes.frameHighlight]: light === 'highlight',
+                    [classes.frameSelected]: light === 'selected',
                 })}
                 {...mouseHandlers}
             >
-                <div
-                    className={clsx({
-                        [classes.motif]: true,
-                    })}
-                >
-                    {startMotif}
-                </div>
+                <div className={classes.motif}>{startMotif}</div>
                 {entries.map(({ key, value }, idx) => (
-                        <div
-                            className={clsx({
-                                [classes.entry]: true,
-                            })}
-                        >
-                            <div
-                                className={clsx({
-                                    [classes.cell]: true,
-                                    [classes.cellSelected]:
-                                        light === 'selected' &&
-                                        selectedEntryIdx === idx &&
-                                        selectedType === 'key',
-                                })}
-                            >
+                        <div className={clsx({
+                            [classes.entry]: true,
+                            [classes.spacing]: idx < entries.length - 1,
+                        })}>
+                            <div className={classes.indices}>{idx}</div>
+                            <div className={classes.slot}>
                                 <Viewer
                                     ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
                                     key={`k${idx}`}
@@ -151,16 +140,9 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                     fragmentId={key}
                                 />
                             </div>
-                            <span>{separator}</span>
+                            <span className={classes.separator}>{separator}</span>
                             <div
-                                className={clsx({
-                                    [classes.cell]: true,
-                                    [classes.cellSelected]:
-                                        light === 'selected' &&
-                                        selectedEntryIdx === idx &&
-                                        selectedType === 'value',
-                                })}
-                            >
+                                className={classes.slot}>
                                 <Viewer
                                     ref={(viewer) => this._registerViewer(viewer!, idx, 'value')}
                                     key={`v${idx}`}
@@ -170,39 +152,59 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                             </div>
                         </div>
                     ))}
-                <div
-                    className={clsx({
-                        [classes.motif]: true,
-                    })}
-                >
-                    {endMotif}
-                </div>
+                <div className={classes.motif}>{endMotif}</div>
             </div>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    root: {
-        display: 'inline-block',
-        ...theme.vars.fragmentContainer,
+    frame: {
+        display: 'inline-flex',
+        flexDirection: 'column',
         whiteSpace: 'nowrap',
+        ...theme.vars.framed.normal,
     },
+    frameHighlight: {
+        ...theme.vars.framed.highlight,
+    },
+    frameLowlight: {
+        ...theme.vars.framed.lowlight,
+    },
+    frameSelected: {
+        ...theme.vars.framed.selected,
+    },
+
     entry: {
-        display: 'block',
+        display: 'flex',
+        flexDirection: 'row',
     },
-    cell: {
-        margin: theme.scale(16),
-        ...theme.vars.fragmentContainer,
-        borderColor: 'rgba(255, 0, 0, 0)',
+    indices: {
         display: 'inline-block',
+        borderRightColor: theme.vars.slot.borderColor,
+        borderRightStyle: theme.vars.slot.borderStyle,
+        borderRightWidth: theme.vars.slot.borderWidth,
+        paddingRight: theme.vars.slot.padding,
+        marginRight: theme.vars.slot.spacing,
+        textAlign: 'right',
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
+    },
+    spacing: {
+        marginBottom: theme.vars.slot.padding,
+    },
+    separator: {
+        display: 'inline-block',
+        marginLeft: theme.vars.slot.spacing,
+        marginRight: theme.vars.slot.spacing,
+    },
+    slot: {
+        display: 'inline-block',
+        // paddingTop: theme.vars.slot.padding,
+        // paddingBottom: theme.vars.slot.padding,
     },
     motif: {
-        margin: theme.scale(16),
         display: 'block',
-    },
-    cellSelected: {
-        borderColor: theme.palette.primary.light,
     },
 });
 

@@ -630,7 +630,7 @@ const styles = (theme: Theme) => createStyles({
         fill: theme.color.blue.l1,
     },
     arrowLowlight: {
-        fill: theme.color.grey.d1,
+        fill: theme.color.gray.d1,
     },
     arrowSelected: {
         fill: theme.color.blue.d2,

@@ -7,6 +7,8 @@ import { FragmentAssembler, assemble } from '@vizstack/js';
 
 // Primitives components
 import TextPrimitive from '../primitives/TextPrimitive';
+import TokenPrimitive from '../primitives/TokenPrimitive';
+import IconPrimitive from '../primitives/IconPrimitive';
 import ImagePrimitive from '../primitives/ImagePrimitive';
 
 // Layout components
@@ -227,6 +229,14 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             case 'TextPrimitive': {
                 return <TextPrimitive {...props} />;
+            }
+
+            case 'TokenPrimitive': {
+                return <TokenPrimitive {...props} />;
+            }
+
+            case 'IconPrimitive': {
+                return <IconPrimitive {...props} />;
             }
 
             case 'ImagePrimitive': {

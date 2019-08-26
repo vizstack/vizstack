@@ -6,7 +6,7 @@ import defaultTheme from '../../theme';
 
 import { ImagePrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
-import { ViewerId } from '../../interaction';
+
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type ImagePrimitiveProps = FragmentProps<ImagePrimitiveFragment>;
@@ -28,14 +28,13 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalP
         return {};
     }
 
-    componentDidUpdate(prevProps: any, prevState: ImagePrimitiveState) {
-    }
+    componentDidUpdate(prevProps: any, prevState: ImagePrimitiveState) {}
 
     /**
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, filePath, interactions, light } = this.props;
+        const { classes, location, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
 
         return (
@@ -44,7 +43,7 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalP
                     [classes.image]: true,
                     [classes.imageHighlight]: light === 'highlight',
                 })}
-                src={filePath}
+                src={location}
                 onError={(e: any) => {
                     e.target.onerror = null;
                     e.target.src = './img-not-found.png';
@@ -59,7 +58,6 @@ const styles = (theme: Theme) => createStyles({
     image: {
         marginLeft: theme.scale(8),
         marginRight: theme.scale(8),
-        ...theme.vars.fragmentContainer,
         borderColor: 'transparent',
     },
 

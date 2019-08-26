@@ -111,7 +111,6 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
 
 const styles = (theme: Theme) => createStyles({
     container: {
-        ...theme.vars.fragmentContainer,
         padding: theme.scale(4),
 
         // Wrap the switch to its contents, allowing it to fit in flow layouts.

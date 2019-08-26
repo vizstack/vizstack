@@ -98,12 +98,15 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
                 {...mouseHandlers}
             >
                 {elements.map((fragmentId, idx) => (
-                    <Viewer
-                        ref={(viewer) => this._registerViewer(viewer!, idx)}
-                        key={`${idx}-${fragmentId}`}
-                        {...passdown}
-                        fragmentId={fragmentId}
-                    />
+                    <React.Fragment>
+                        <Viewer
+                            ref={(viewer) => this._registerViewer(viewer!, idx)}
+                            key={`${idx}-${fragmentId}`}
+                            {...passdown}
+                            fragmentId={fragmentId}
+                        />
+                        {idx < elements.length - 1 ? <span className={classes.spacer}/> : null}
+                    </React.Fragment>
                 ))}
             </div>
         );
@@ -112,11 +115,13 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
 
 const styles = (theme: Theme) => createStyles({
     root: {
-        ...theme.vars.fragmentContainer,
         borderColor: 'transparent',
     },
     hovered: {
         borderColor: theme.palette.primary.light,
+    },
+    spacer: {
+        marginRight: theme.vars.slot.spacing,
     },
 });
 

@@ -100,7 +100,10 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         return (
             <div
                 className={clsx({
-                    [classes.root]: true,
+                    [classes.frame]: true,
+                    [classes.frameLowlight]: light === 'lowlight',
+                    [classes.frameHighlight]: light === 'highlight',
+                    [classes.frameSelected]: light === 'selected',
                 })}
                 {...mouseHandlers}
             >
@@ -117,18 +120,24 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                     <div
                         className={clsx({
                             [classes.cell]: true,
+                            [classes.spacing]: idx < elements.length - 1,
                             [classes.horizontal]: orientation === 'horizontal',
                             [classes.vertical]: orientation === 'vertical',
                             [classes.cellSelected]: light === 'selected' && selectedElementIdx === idx,
                         })}
                         key={idx}
                     >
-                        <Viewer
-                            ref={(viewer) => this._registerViewer(viewer!, idx)}
-                            key={`${idx}-${fragmentId}`}
-                            {...passdown}
-                            fragmentId={fragmentId}
-                        />
+                        <div className={classes.slot}> 
+                            <Viewer
+                                ref={(viewer) => this._registerViewer(viewer!, idx)}
+                                key={`${idx}-${fragmentId}`}
+                                {...passdown}
+                                fragmentId={fragmentId}
+                            />
+                        </div>
+                        <div className={classes.indices}>
+                            {idx}
+                        </div>
                     </div>
                 ))}
                 <div
@@ -146,18 +155,43 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
 }
 
 const styles = (theme: Theme) => createStyles({
-    root: {
+    frame: {
         display: 'inline-block',
-        ...theme.vars.fragmentContainer,
         whiteSpace: 'nowrap',
+        ...theme.vars.framed.normal,
     },
+    frameHighlight: {
+        ...theme.vars.framed.highlight,
+    },
+    frameLowlight: {
+        ...theme.vars.framed.lowlight,
+    },
+    frameSelected: {
+        ...theme.vars.framed.selected,
+    },
+
     cell: {
-        margin: theme.scale(16),
-        ...theme.vars.fragmentContainer,
-        borderColor: 'rgba(255, 0, 0, 0)',
+        
+    },
+    slot: {
+        paddingLeft: theme.vars.slot.padding,
+        paddingRight: theme.vars.slot.padding,
+    },
+    spacing: {
+        marginRight: theme.vars.slot.spacing,
     },
     motif: {
-        margin: theme.scale(16),
+        
+    },
+    indices: {
+        borderTopColor: theme.vars.slot.borderColor,
+        borderTopStyle: theme.vars.slot.borderStyle,
+        borderTopWidth: theme.vars.slot.borderWidth,
+        paddingLeft: theme.vars.slot.padding,
+        paddingRight: theme.vars.slot.padding,
+        textAlign: 'left',
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
     },
     horizontal: {
         display: 'inline-block',
