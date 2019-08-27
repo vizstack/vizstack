@@ -40,6 +40,7 @@
     "@types/storybook__addon-info": "^4.1.2",
     "@types/storybook__react": "^4.0.2",
     "babel-loader": "^8.0.6",
+    "copyfiles": "^2.1.1",
     "jest": "^24.9.0",
     "react-docgen-typescript-loader": "^3.1.1",
     "react-test-renderer": "^16.9.0",
@@ -54,7 +55,7 @@
   "scripts": {
     "start": "npm run start-storybook",
     "test": "jest",
-    "build": "tsc",
+    "build": "tsc && copyfiles -u 1 ./**/*.css ./**/*.woff2 dist/",
     "clean": "rimraf dist/*",
     "repl": "ts-node",
     "start-storybook": "start-storybook -p 6006",
