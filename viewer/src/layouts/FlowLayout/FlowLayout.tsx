@@ -31,6 +31,7 @@ type FlowDidSelectElementEvent = {
     topic: 'Flow.DidSelectElement',
     message: {
         viewerId: ViewerId,
+        prevSelectedElementIdx: number,
         selectedElementIdx: number,
     },
 };
@@ -77,7 +78,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         const { viewerId, emit } = this.props.interactions;
         const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emit<FlowLayoutEvent>('Flow.DidSelectElement', { viewerId, selectedElementIdx });
+            emit<FlowLayoutEvent>('Flow.DidSelectElement', { viewerId, selectedElementIdx, prevSelectedElementIdx: prevState.selectedElementIdx });
         }
     }
 

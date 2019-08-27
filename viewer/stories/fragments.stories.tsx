@@ -88,6 +88,11 @@ storiesOf('Text (Primitive)', module)
             )
         }/>
     ))
+    .add('newline', () => (
+        <Viewer view={
+            Text(`${kTextSingleShort}\n${kTextSingleShort}`)
+        } />
+    ))
     .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
@@ -388,6 +393,28 @@ storiesOf('Grid (Layout)', module)
             )
         }/>
     ))
+    .add('nested', () => (
+        <Viewer view={
+            Grid(
+                `AB
+                 CD`,
+                {
+                    A: Grid(
+                        `AB
+                         CD`,
+                        {
+                            A: Text("A"),
+                            B: Text("B"),
+                            C: Text("C"),
+                            D: Text("D"),
+                        }),
+                    B: Text("B"),
+                    C: Text(kTextSingleShort),
+                    D: Text(kTextSingleShort),
+                }
+            )
+        }/>
+    ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
@@ -398,6 +425,30 @@ storiesOf('Grid (Layout)', module)
                         A: Text(kTextSingleShort),
                         B: Text(kTextMultiNarrow),
                         C: Text(kTextSingleShort),
+                    }
+                )
+            }/>
+        </InteractionProvider>
+    ))
+    .add('interactive (nested)', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Grid(
+                    `AB
+                    CD`,
+                    {
+                        A: Grid(
+                            `AB
+                            CD`,
+                            {
+                                A: Text("A"),
+                                B: Text("B"),
+                                C: Text("C"),
+                                D: Text("D"),
+                            }),
+                        B: Text("B"),
+                        C: Text(kTextSingleShort),
+                        D: Text(kTextSingleShort),
                     }
                 )
             }/>
