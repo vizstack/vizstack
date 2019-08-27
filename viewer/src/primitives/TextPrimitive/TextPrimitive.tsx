@@ -6,6 +6,7 @@ import defaultTheme from '../../theme';
 
 import { TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
+import Frame from '../../Frame';
 
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
@@ -42,31 +43,28 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
         const { mouseHandlers } = interactions;
 
         const split = text.split('\n');
-        const lines = split.map((text, i) => (
-            <span key={i}>
-                {text}
-                {i < split.length - 1 ? <br /> : null}
-            </span>
-        ));
-        const names = clsx({
-            [classes.container]: true,
-            [classes.containerLowlight]: light === 'lowlight',
-            [classes.containerHighlight]: light === 'highlight',
-            [classes.containerSelected]: light === 'selected',
-
-            [classes.emphasisNormal]: emphasis === 'normal',
-            [classes.emphasisLess]: emphasis === 'less',
-            [classes.emphasisMore]: emphasis === 'more',
-
-            [classes.variantBody]: variant === 'body',
-            [classes.variantCaption]: variant === 'caption',
-            [classes.variantSubheading]: variant === 'subheading',
-            [classes.variantHeading]: variant === 'heading',
-        });
         return (
-            <span className={names} {...mouseHandlers}>
-                {lines}
-            </span>
+            <Frame component='span' style='unframed' light={light} mouseHandlers={mouseHandlers}>
+                <span className={clsx({
+                    [classes.container]: true,
+
+                    [classes.emphasisNormal]: emphasis === 'normal',
+                    [classes.emphasisLess]: emphasis === 'less',
+                    [classes.emphasisMore]: emphasis === 'more',
+
+                    [classes.variantBody]: variant === 'body',
+                    [classes.variantCaption]: variant === 'caption',
+                    [classes.variantSubheading]: variant === 'subheading',
+                    [classes.variantHeading]: variant === 'heading',
+                })}>
+                    {split.map((text, i) => (
+                        <span key={i}>
+                            {text}
+                            {i < split.length - 1 ? <br /> : null}
+                        </span>
+                    ))}
+                </span>
+            </Frame>
         );
     }
 }
@@ -76,19 +74,6 @@ const styles = (theme: Theme) => createStyles({
         textAlign: 'left',
         overflow: 'hidden',
         width: 'fit-content',
-        backgroundColor: theme.vars.unframed.normal.backgroundColor,
-        borderBottomStyle: theme.vars.unframed.normal.borderStyle,
-        borderBottomWidth: theme.vars.unframed.normal.borderWidth,
-        borderBottomColor: theme.vars.unframed.normal.borderColor,
-    },
-    containerHighlight: {
-        borderBottomColor: theme.vars.unframed.highlight.borderColor,
-    },
-    containerLowlight: {
-        // ...theme.vars.unframed.lowlight,
-    },
-    containerSelected: {
-        borderBottomColor: theme.vars.unframed.selected.borderColor,
     },
 
     emphasisNormal: { color: theme.vars.emphasis.normal },
@@ -99,8 +84,6 @@ const styles = (theme: Theme) => createStyles({
     variantCaption: { ...theme.vars.text.caption },
     variantSubheading: { ...theme.vars.text.subheading },
     variantHeading: { ...theme.vars.text.heading },
-
-    // TODO: Add light.
 });
 
 type InternalProps = WithStyles<typeof styles>;

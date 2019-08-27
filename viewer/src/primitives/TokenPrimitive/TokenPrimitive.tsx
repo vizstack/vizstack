@@ -6,6 +6,7 @@ import defaultTheme from '../../theme';
 
 import { TokenPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer/index';
+import Frame from '../../Frame';
 
 
 /* This pure dumb component renders visualization for a text string that represents a token. */
@@ -41,29 +42,28 @@ class TokenPrimitive extends React.PureComponent<TokenPrimitiveProps & InternalP
         const { mouseHandlers } = interactions;
 
         const split = text.split('\n');
-        const lines = split.map((text, i) => (
-            <span key={i}>
-                {text}
-                {i < split.length - 1 ? <br /> : null}
-            </span>
-        ));
-        const names = clsx({
-            [classes.token]: true,
-            [classes.gray]: color === 'gray',
-            [classes.brown]: color === 'brown',
-            [classes.purple]: color === 'purple',
-            [classes.blue]: color === 'blue',
-            [classes.green]: color === 'green',
-            [classes.yellow]: color === 'yellow',
-            [classes.orange]: color === 'orange',
-            [classes.red]: color === 'red',
-            [classes.pink]: color === 'pink',
-        });
-
         return (
-            <div className={names} {...mouseHandlers}>
-                {lines}
-            </div>
+            <Frame component='div' style='unframed' light={light} mouseHandlers={mouseHandlers}>
+                <div className={clsx({
+                    [classes.token]: true,
+                    [classes.gray]: color === 'gray',
+                    [classes.brown]: color === 'brown',
+                    [classes.purple]: color === 'purple',
+                    [classes.blue]: color === 'blue',
+                    [classes.green]: color === 'green',
+                    [classes.yellow]: color === 'yellow',
+                    [classes.orange]: color === 'orange',
+                    [classes.red]: color === 'red',
+                    [classes.pink]: color === 'pink',
+                })}>
+                    {split.map((text, i) => (
+                        <span key={i}>
+                            {text}
+                            {i < split.length - 1 ? <br /> : null}
+                        </span>
+                    ))}
+                </div>
+            </Frame>
         );;
     }
 }
@@ -71,15 +71,12 @@ class TokenPrimitive extends React.PureComponent<TokenPrimitiveProps & InternalP
 const styles = (theme: Theme) => createStyles({
     token: {
         textAlign: 'left',
-        verticalAlign: 'middle',
         wordWrap: 'break-word',
+        // overflow: 'hidden',
+        // width: 'fit-content',
 
-        display: 'inline-block',
-        overflow: 'hidden',
-        width: 'fit-content',
         padding: `${theme.scale(2)}px ${theme.scale(4)}px`,
         borderRadius: theme.scale(2),
-
         color: theme.vars.emphasis.normal,
         ...theme.vars.text.body,
     },
@@ -93,8 +90,6 @@ const styles = (theme: Theme) => createStyles({
     orange: { backgroundColor: theme.vars.fills.orange },
     red: { backgroundColor: theme.vars.fills.red },
     pink: { backgroundColor: theme.vars.fills.pink },
-
-    // TODO: Add light.
 });
 
 type InternalProps = WithStyles<typeof styles>;

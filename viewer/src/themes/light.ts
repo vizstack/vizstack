@@ -33,16 +33,16 @@ export default {
     unframed: {
         normal: {
             backgroundColor: 'transparent',
-            borderStyle: 'solid' as any,
-            borderWidth: '3px',
-            borderColor: 'transparent',
+            borderBottomStyle: 'solid' as any,
+            borderBottomWidth: '3px',
+            borderBottomColor: 'transparent',
         },
         lowlight: {},
         highlight: {
-            borderColor: 'rgb(30, 167, 253)',
+            borderBottomColor: 'rgb(30, 167, 253)',
         },
         selected: {
-            borderColor: 'rgb(2, 122, 197)',
+            borderBottomColor: 'rgb(2, 122, 197)',
         },
     },
     slot: {

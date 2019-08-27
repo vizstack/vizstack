@@ -7,6 +7,7 @@ import defaultTheme from '../../theme';
 import { GridLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 /**
  * This pure dumb component renders visualization for a 2D grid of elements.
@@ -138,58 +139,40 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         const { selectedCellIdx } = this.state;
 
         return (
-            <div
-                className={clsx({
-                    [classes.frame]: true,
-                    [classes.frameLowlight]: light === 'lowlight',
-                    [classes.frameHighlight]: light === 'highlight',
-                    [classes.frameSelected]: light === 'selected',
-                })}
-                {...mouseHandlers}
-            >
-                {cells.map(({ fragmentId, col, row, width, height }, idx) => (
-                    <div
-                        key={`${idx}-${fragmentId}`}
-                        className={clsx({
-                            [classes.cell]: true,
-                        })}
-                        style={{
-                            gridColumn: `${col + 1} / ${col + 1 + width}`,
-                            gridRow: `${row + 1} / ${row + 1 + height}`,
-                        }}
-                    >
-                        <Viewer
-                            ref={(viewer) => this._registerViewer(viewer!, idx)}
-                            {...passdown}
-                            fragmentId={fragmentId}
-                        />
-                    </div>
-                ))}
-            </div>
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
+                <div className={classes.grid}>
+                    {cells.map(({ fragmentId, col, row, width, height }, idx) => (
+                        <div
+                            key={`${idx}-${fragmentId}`}
+                            className={clsx({
+                                [classes.cell]: true,
+                            })}
+                            style={{
+                                gridColumn: `${col + 1} / ${col + 1 + width}`,
+                                gridRow: `${row + 1} / ${row + 1 + height}`,
+                            }}
+                        >
+                            <Viewer
+                                ref={(viewer) => this._registerViewer(viewer!, idx)}
+                                {...passdown}
+                                fragmentId={fragmentId}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    frame: {
-        display: 'inline-grid',
-        verticalAlign: 'middle',
+    grid: {
+        display: 'flex-grid',
         gridGap: `${theme.vars.slot.spacing}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
-        ...theme.vars.framed.normal,
     },
-    frameHighlight: {
-        ...theme.vars.framed.highlight,
-    },
-    frameLowlight: {
-        ...theme.vars.framed.lowlight,
-    },
-    frameSelected: {
-        ...theme.vars.framed.selected,
-    },
-
     cell: {
         textAlign: 'left',
         borderTopStyle: theme.vars.slot.borderStyle,

@@ -7,6 +7,7 @@ import defaultTheme from '../../theme';
 import { FlowLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -88,16 +89,12 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, elements, passdown, interactions } = this.props;
+        const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
+        const { elements } = this.props;
 
         return (
-            <div
-                className={clsx({
-                    [classes.root]: true,
-                })}
-                {...mouseHandlers}
-            >
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 {elements.map((fragmentId, idx) => (
                     <React.Fragment>
                         <Viewer
@@ -109,18 +106,12 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
                         {idx < elements.length - 1 ? <span className={classes.spacer}/> : null}
                     </React.Fragment>
                 ))}
-            </div>
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    root: {
-        borderColor: 'transparent',
-    },
-    hovered: {
-        borderColor: theme.palette.primary.light,
-    },
     spacer: {
         marginRight: theme.vars.slot.spacing,
     },

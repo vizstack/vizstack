@@ -7,6 +7,7 @@ import defaultTheme from '../../theme';
 import { SwitchLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 /* This pure dumb component renders visualization for a stack of elements that can be switched
  * between. */
@@ -90,35 +91,18 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         const fragmentId = modes[selectedModeIdx];
 
         return (
-            <div
-                className={clsx({
-                    [classes.container]: true,
-                    [classes.containerHovered]: light === 'highlight',
-                })}
-                {...mouseHandlers}
-            >
-                <div key={fragmentId}>
-                    <Viewer
-                        ref={(viewer) => this._registerViewer(viewer!)}
-                        key={fragmentId}
-                        {...passdown}
-                        fragmentId={fragmentId} />
-                </div>
-            </div>
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
+                <Viewer
+                    ref={(viewer) => this._registerViewer(viewer!)}
+                    key={fragmentId}
+                    {...passdown}
+                    fragmentId={fragmentId} />
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    container: {
-        padding: theme.scale(4),
-
-        // Wrap the switch to its contents, allowing it to fit in flow layouts.
-        display: 'inline-block', 
-    },
-    containerHovered: {
-        borderColor: theme.palette.primary.light,
-    },
 });
 
 type InternalProps = WithStyles<typeof styles>;

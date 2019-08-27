@@ -1,9 +1,9 @@
 import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
-import Icon from '@material-ui/core/Icon';
+
 import './font.css';
-// import 'material-design-icons-iconfont/dist/material-design-icons.css';
+import Frame from '../../Frame';
 
 import defaultTheme from '../../theme';
 
@@ -41,7 +41,7 @@ class IconPrimitive extends React.PureComponent<IconPrimitiveProps & InternalPro
         const { mouseHandlers } = interactions;
 
         return (
-            <div className={classes.container}>
+            <Frame component='span' style='unframed' light={light} mouseHandlers={mouseHandlers}>
                 <i
                     className={clsx({
                         [classes.icon]: true,
@@ -49,23 +49,19 @@ class IconPrimitive extends React.PureComponent<IconPrimitiveProps & InternalPro
                         [classes.emphasisLess]: emphasis === 'less',
                         [classes.emphasisMore]: emphasis === 'more',
                     })}
-                    {...mouseHandlers}
                 >
                     {// "add_circle" is an anomaly which requires "_outline" as a suffix
-                        `${name}${name === 'add_circle' ? '_outline' : ''}`}
+                    `${name}${name === 'add_circle' ? '_outline' : ''}`}
                 </i>
-            </div> 
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    container: {
-        display: 'inline-block',
-        verticalAlign: 'middle',
-    },
     icon: {
         ...theme.vars.icon,
+        verticalAlign: 'middle',
         fontFamily: 'Material Icons Outlined',
         'font-weight': 'normal',
         'font-style': 'normal',
