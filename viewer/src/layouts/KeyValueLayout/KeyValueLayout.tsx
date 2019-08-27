@@ -7,6 +7,7 @@ import defaultTheme from '../../theme';
 import { KeyValueLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -118,65 +119,48 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         const { selectedEntryIdx, selectedEntryType: selectedType } = this.state;
 
         return (
-            <div
-                className={clsx({
-                    [classes.frame]: true,
-                    [classes.frameLowlight]: light === 'lowlight',
-                    [classes.frameHighlight]: light === 'highlight',
-                    [classes.frameSelected]: light === 'selected',
-                })}
-                {...mouseHandlers}
-            >
-                <div className={classes.motif}>{startMotif}</div>
-                {entries.map(({ key, value }, idx) => (
-                        <div className={clsx({
-                            [classes.entry]: true,
-                            [classes.spacing]: idx < entries.length - 1,
-                        })}>
-                            <div className={classes.indices}>{idx}</div>
-                            <div className={classes.slot}>
-                                <Viewer
-                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
-                                    key={`k${idx}`}
-                                    {...passdown}
-                                    fragmentId={key}
-                                />
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
+                <div className={classes.container}>
+                    <div className={classes.motif}>{startMotif}</div>
+                    {entries.map(({ key, value }, idx) => (
+                            <div className={clsx({
+                                [classes.entry]: true,
+                                [classes.spacing]: idx < entries.length - 1,
+                            })}>
+                                <div className={classes.indices}>{idx}</div>
+                                <div className={classes.slot}>
+                                    <Viewer
+                                        ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
+                                        key={`k${idx}`}
+                                        {...passdown}
+                                        fragmentId={key}
+                                    />
+                                </div>
+                                <span className={classes.separator}>{separator}</span>
+                                <div
+                                    className={classes.slot}>
+                                    <Viewer
+                                        ref={(viewer) => this._registerViewer(viewer!, idx, 'value')}
+                                        key={`v${idx}`}
+                                        {...passdown}
+                                        fragmentId={value}
+                                    />
+                                </div>
                             </div>
-                            <span className={classes.separator}>{separator}</span>
-                            <div
-                                className={classes.slot}>
-                                <Viewer
-                                    ref={(viewer) => this._registerViewer(viewer!, idx, 'value')}
-                                    key={`v${idx}`}
-                                    {...passdown}
-                                    fragmentId={value}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                <div className={classes.motif}>{endMotif}</div>
-            </div>
+                        ))}
+                    <div className={classes.motif}>{endMotif}</div>
+                </div>
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    frame: {
-        display: 'inline-flex',
+    container: {
+        display: 'flex',
         flexDirection: 'column',
         whiteSpace: 'nowrap',
-        ...theme.vars.framed.normal,
     },
-    frameHighlight: {
-        ...theme.vars.framed.highlight,
-    },
-    frameLowlight: {
-        ...theme.vars.framed.lowlight,
-    },
-    frameSelected: {
-        ...theme.vars.framed.selected,
-    },
-
     entry: {
         display: 'flex',
         flexDirection: 'row',

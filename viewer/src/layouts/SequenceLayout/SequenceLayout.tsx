@@ -7,6 +7,7 @@ import defaultTheme from '../../theme';
 import { SequenceLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 /**
  * This pure dumb component renders visualization for a 1D sequence of elements.
@@ -99,15 +100,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         const { selectedElementIdx } = this.state;
 
         return (
-            <div
-                className={clsx({
-                    [classes.frame]: true,
-                    [classes.frameLowlight]: light === 'lowlight',
-                    [classes.frameHighlight]: light === 'highlight',
-                    [classes.frameSelected]: light === 'selected',
-                })}
-                {...mouseHandlers}
-            >
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <div
                     className={clsx({
                         [classes.motif]: true,
@@ -120,7 +113,6 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                 {elements.map((fragmentId, idx) => (
                     <div
                         className={clsx({
-                            [classes.cell]: true,
                             [classes.spacing]: idx < elements.length - 1,
                             [classes.horizontal]: orientation === 'horizontal',
                             [classes.vertical]: orientation === 'vertical',
@@ -149,30 +141,12 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                 >
                     {endMotif}
                 </div>
-            </div>
+            </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
-    frame: {
-        display: 'inline-block',
-        whiteSpace: 'nowrap',
-        ...theme.vars.framed.normal,
-    },
-    frameHighlight: {
-        ...theme.vars.framed.highlight,
-    },
-    frameLowlight: {
-        ...theme.vars.framed.lowlight,
-    },
-    frameSelected: {
-        ...theme.vars.framed.selected,
-    },
-
-    cell: {
-
-    },
     slot: {
         paddingLeft: theme.vars.slot.padding,
         paddingRight: theme.vars.slot.padding,
