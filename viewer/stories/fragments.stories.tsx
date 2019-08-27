@@ -163,28 +163,36 @@ storiesOf('Icon (Primitive)', module)
     .add('basic', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle'),
-                Icon('info'),
+                Icon('account_circle'),
+                Icon('announcement'),
                 Icon('label'),
                 Icon('bookmark'),
-                Icon('alarm')
+                Icon('alarm'),
+                Icon('delete'),
             )
         }/>
     ))
     .add('emphasis', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle', "less"),
-                Icon('add_circle', "normal"),
-                Icon('add_circle', "more"),
+                Icon('account_circle', "less"),
+                Icon('account_circle', "normal"),
+                Icon('account_circle', "more"),
             )
         }/>
     ))
     .add('with text', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle'),
+                Icon('account_circle'),
                 Text(kTextSingleShort),
+            )
+        }/>
+    ))
+    .add('add_circle', () => (
+        <Viewer view={
+            Flow(
+                Icon('add_circle'),
             )
         }/>
     ));

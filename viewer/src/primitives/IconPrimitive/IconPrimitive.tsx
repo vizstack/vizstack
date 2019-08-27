@@ -2,7 +2,8 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import Icon from '@material-ui/core/Icon';
-import 'material-icons';  // TODO: Replace with better solution.
+import './font.css';
+// import 'material-design-icons-iconfont/dist/material-design-icons.css';
 
 import defaultTheme from '../../theme';
 
@@ -41,18 +42,18 @@ class IconPrimitive extends React.PureComponent<IconPrimitiveProps & InternalPro
 
         return (
             <div className={classes.container}>
-                <Icon
+                <i
                     className={clsx({
                         [classes.icon]: true,
                         [classes.emphasisNormal]: emphasis === 'normal',
                         [classes.emphasisLess]: emphasis === 'less',
                         [classes.emphasisMore]: emphasis === 'more',
                     })}
-                    
                     {...mouseHandlers}
                 >
-                    {`${name}_outlined`}
-                </Icon>
+                    {// "add_circle" is an anomaly which requires "_outline" as a suffix
+                        `${name}${name === 'add_circle' ? '_outline' : ''}`}
+                </i>
             </div> 
         );
     }
@@ -65,6 +66,11 @@ const styles = (theme: Theme) => createStyles({
     },
     icon: {
         ...theme.vars.icon,
+        fontFamily: 'Material Icons Outlined',
+        'font-weight': 'normal',
+        'font-style': 'normal',
+        '-moz-font-feature-settings': 'liga',
+        '-moz-osx-font-smoothing': 'grayscale',
     },
 
     emphasisNormal: { color: theme.vars.emphasis.normal },
