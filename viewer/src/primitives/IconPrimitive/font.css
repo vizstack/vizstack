@@ -1,0 +1,9 @@
+/* This font face, and the material-outlined.woff2 file in this same folder, were pulled from 
+https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|Material+Icons+Two+Tone|Material+Icons+Round|Material+Icons+Sharp */
+
+@font-face {
+    font-family: 'Material Icons Outlined';
+    font-style: normal;
+    font-weight: 400;
+    src: url(material-outlined.woff2) format('woff2');
+  }

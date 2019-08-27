@@ -11,7 +11,7 @@ export function withinBounds(bounds: GridBounds, row: number, col: number): bool
 }
 
 export function parseGridString(str: string): Record<string, GridCell> {
-    const rows = (str.split('\n')
+    const rows = (str.split(/[\n,|]+/)
         .map((row) => row.replace(/\s/g, ''))
         .filter((row) => row.length > 0));
     if (!rows || !rows.every((row) => row.length === rows[0].length)) {

@@ -88,6 +88,11 @@ storiesOf('Text (Primitive)', module)
             )
         }/>
     ))
+    .add('newline', () => (
+        <Viewer view={
+            Text(`${kTextSingleShort}\n${kTextSingleShort}`)
+        } />
+    ))
     .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
@@ -158,28 +163,36 @@ storiesOf('Icon (Primitive)', module)
     .add('basic', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle'),
-                Icon('info'),
+                Icon('account_circle'),
+                Icon('announcement'),
                 Icon('label'),
                 Icon('bookmark'),
-                Icon('alarm')
+                Icon('alarm'),
+                Icon('delete'),
             )
         }/>
     ))
     .add('emphasis', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle', "less"),
-                Icon('add_circle', "normal"),
-                Icon('add_circle', "more"),
+                Icon('account_circle', "less"),
+                Icon('account_circle', "normal"),
+                Icon('account_circle', "more"),
             )
         }/>
     ))
     .add('with text', () => (
         <Viewer view={
             Flow(
-                Icon('add_circle'),
+                Icon('account_circle'),
                 Text(kTextSingleShort),
+            )
+        }/>
+    ))
+    .add('add_circle', () => (
+        <Viewer view={
+            Flow(
+                Icon('add_circle'),
             )
         }/>
     ));
@@ -388,6 +401,42 @@ storiesOf('Grid (Layout)', module)
             )
         }/>
     ))
+    .add('nested', () => (
+        <Viewer view={
+            Grid(
+                `AB
+                 CD`,
+                {
+                    A: Grid(
+                        `AB
+                         CD`,
+                        {
+                            A: Text("A"),
+                            B: Text("B"),
+                            C: Text("C"),
+                            D: Text("D"),
+                        }),
+                    B: Text("B"),
+                    C: Text(kTextSingleShort),
+                    D: Text(kTextSingleShort),
+                }
+            )
+        }/>
+    ))
+    .add('newlines and bars', () => (
+        <Viewer view={
+            Grid(
+                `AAB|CDD\nEEE`,
+                {
+                    A: Text(kTextSingleShort),
+                    B: Text("B"),
+                    C: Text("C"),
+                    D: Text(kTextSingleShort),
+                    E: Text(kTextSingleShort),
+                }
+            )
+        }/>
+    ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
@@ -398,6 +447,30 @@ storiesOf('Grid (Layout)', module)
                         A: Text(kTextSingleShort),
                         B: Text(kTextMultiNarrow),
                         C: Text(kTextSingleShort),
+                    }
+                )
+            }/>
+        </InteractionProvider>
+    ))
+    .add('interactive (nested)', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Grid(
+                    `AB
+                    CD`,
+                    {
+                        A: Grid(
+                            `AB
+                            CD`,
+                            {
+                                A: Text("A"),
+                                B: Text("B"),
+                                C: Text("C"),
+                                D: Text("D"),
+                            }),
+                        B: Text("B"),
+                        C: Text(kTextSingleShort),
+                        D: Text(kTextSingleShort),
                     }
                 )
             }/>

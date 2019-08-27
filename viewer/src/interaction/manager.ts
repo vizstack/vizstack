@@ -280,6 +280,7 @@ export class InteractionManager {
                 all.viewerId(global.selected).forEach((viewer) => {
                     viewer.appearance.doSetLight('normal');
                 });
+                global.prevSelected = global.selected;
                 global.selected = message.viewerId;
                 all.viewerId(global.selected).forEach((viewer) => {
                     viewer.appearance.doSetLight('selected');
@@ -295,6 +296,33 @@ export class InteractionManager {
                 global.selected = null;
             }
         });
+        this.on('Viewer.DidChangeLight', (all, message, global) => {
+            if (message.viewerId === global.selected && message.light === 'selected') {
+                all.viewerId(message.viewerId).forEach((viewer) => {
+                    if (viewer.type === 'GridLayout') {
+                        all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'FlowLayout') {
+                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'SequenceLayout') {
+                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'KeyValueLayout') {
+                        all.viewerId(viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType])
+                           .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                });
+            }
+            if (message.viewerId === global.prevSelected && message.light !== 'selected') {
+                all.filter((viewer) => viewer.parentId === global.prevSelected && viewer.appearance.light === 'highlight').forEach((viewer) => {
+                    viewer.appearance.doSetLight('normal');
+                })
+            }
+        })
     }
 
     private _useKeyboardDefaults() {
@@ -303,6 +331,7 @@ export class InteractionManager {
                 if (message.key === 'Escape') {
                     if (viewer.parentId) {
                         viewer.appearance.doSetLight('normal');
+                        global.prevSelected = global.selected;
                         global.selected = viewer.parentId;
                         all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                     }
@@ -317,6 +346,7 @@ export class InteractionManager {
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
+                            global.prevSelected = global.selected;
                             global.selected = viewer.state.mode;
                             all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                         }
@@ -330,6 +360,7 @@ export class InteractionManager {
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
+                            global.prevSelected = global.selected;
                             global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
                             all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                         }
@@ -349,6 +380,7 @@ export class InteractionManager {
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
+                            global.prevSelected = global.selected;
                             global.selected = viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType];
                             all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                         }
@@ -362,6 +394,7 @@ export class InteractionManager {
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
+                            global.prevSelected = global.selected;
                             global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
                             all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                         }
@@ -381,6 +414,7 @@ export class InteractionManager {
                         }
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
+                            global.prevSelected = global.selected;
                             global.selected = viewer.state.cells[viewer.state.selectedCellIdx];
                             all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
                         }
@@ -391,24 +425,40 @@ export class InteractionManager {
         this.on('Grid.DidSelectCell', (all, message, global) => {
             if (global.selected === message.viewerId) {
                 all.viewerId(message.viewerId).forEach((grid: any) => {  // TODO: correct typing here
-                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(grid.state.cells[message.selectedCellIdx]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx])
+                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(grid.state.cells[message.selectedCellIdx])
+                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
                 })
             }
         });
         this.on('Sequence.DidSelectElement', (all, message, global) => {
             if (global.selected === message.viewerId) {
                 all.viewerId(message.viewerId).forEach((sequence: any) => {  // TODO: correct typing here
-                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(sequence.state.elements[message.selectedElementIdx]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx])
+                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(sequence.state.elements[message.selectedElementIdx])
+                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                })
+            }
+        });
+        this.on('Flow.DidSelectElement', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((flow: any) => {  // TODO: correct typing here
+                    all.viewerId(flow.state.elements[message.prevSelectedElementIdx])
+                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(flow.state.elements[message.selectedElementIdx])
+                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
                 })
             }
         });
         this.on('KeyValue.DidSelectEntry', (all, message, global) => {
             if (global.selected === message.viewerId) {
                 all.viewerId(message.viewerId).forEach((kv: any) => {  // TODO: correct typing here
-                    all.viewerId(kv.state.entries[message.prevSelectedEntryIdx][message.prevSelectedEntryType]).forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(kv.state.entries[message.selectedEntryIdx][message.selectedEntryType]).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                    all.viewerId(kv.state.entries[message.prevSelectedEntryIdx][message.prevSelectedEntryType])
+                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(kv.state.entries[message.selectedEntryIdx][message.selectedEntryType])
+                       .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
                 })
             }
         });
