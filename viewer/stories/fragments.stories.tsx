@@ -423,6 +423,20 @@ storiesOf('Grid (Layout)', module)
             )
         }/>
     ))
+    .add('newlines and bars', () => (
+        <Viewer view={
+            Grid(
+                `AAB|CDD\nEEE`,
+                {
+                    A: Text(kTextSingleShort),
+                    B: Text("B"),
+                    C: Text("C"),
+                    D: Text(kTextSingleShort),
+                    E: Text(kTextSingleShort),
+                }
+            )
+        }/>
+    ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
