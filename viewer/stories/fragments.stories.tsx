@@ -195,6 +195,16 @@ storiesOf('Icon (Primitive)', module)
                 Icon('add_circle'),
             )
         }/>
+    ))
+    .add('interactive', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Flow(
+                    Icon('account_circle'),
+                    Text(kTextSingleShort),
+                )
+            }/>
+        </InteractionProvider>
     ));
 
 storiesOf('Flow (Layout)', module)

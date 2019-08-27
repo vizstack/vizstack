@@ -32,6 +32,9 @@ class Frame extends React.PureComponent<FrameProps & InternalProps, FrameState> 
         return (
             <Component
                 className={clsx({
+                    [classes.divComponent]: Component === 'div',
+                    [classes.spanComponent]: Component === 'span',
+
                     [classes.framed]: style === 'framed',
                     [classes.framedLowlight]: style === 'framed' && light === 'lowlight',
                     [classes.framedHighlight]: style === 'framed' && light === 'highlight',
@@ -54,16 +57,15 @@ const styles = (theme: Theme) => createStyles({
     divComponent: {
         display: 'inline-block',  // Can be placed in flow.
         verticalAlign: 'middle',  // Vertically centered in flow.
-        // display: 'inline-flex',
-        whiteSpace: 'nowrap',
         overflow: 'hidden',
+        whiteSpace: 'nowrap',
         width: 'fit-content',
         
     },
     spanComponent: {
+        verticalAlign: 'middle',  // Vertically centered in flow.
         overflow: 'hidden',
         width: 'fit-content',
-        verticalAlign: 'middle',  // Vertically centered in flow.
     },
     framed: {
         ...theme.vars.framed.normal,
