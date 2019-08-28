@@ -4,6 +4,8 @@ import {
     Fragment,
     FragmentId,
     TextPrimitiveFragment,
+    TokenPrimitiveFragment,
+    IconPrimitiveFragment,
     ImagePrimitiveFragment,
     SwitchLayoutFragment,
     GridLayoutFragment,
@@ -13,6 +15,8 @@ import {
     DagLayoutFragment,
 } from '@vizstack/schema';
 import { TextPrimitiveHandle } from '../primitives/TextPrimitive';
+import { TokenPrimitiveHandle } from '../primitives/TokenPrimitive';
+import { IconPrimitiveHandle } from '../primitives/IconPrimitive';
 import { ImagePrimitiveHandle } from '../primitives/ImagePrimitive';
 import { FlowLayoutHandle } from '../layouts/FlowLayout';
 import { SwitchLayoutHandle } from '../layouts/SwitchLayout';
@@ -49,6 +53,16 @@ type FragmentSpecificInfo<T extends FragmentType> =
         contents: TextPrimitiveFragment['contents'],
         state: TextPrimitiveHandle,
     } :
+    T extends 'TokenPrimitive' ? {
+        type: T,
+        contents: TokenPrimitiveFragment['contents'],
+        state: TokenPrimitiveHandle,
+    } : 
+    T extends 'IconPrimitive' ? {
+        type: T,
+        contents: IconPrimitiveFragment['contents'],
+        state: IconPrimitiveHandle,
+    } : 
     T extends "ImagePrimitive" ? {
         type: T,
         contents: ImagePrimitiveFragment['contents'],
@@ -252,6 +266,66 @@ export class InteractionManager {
         if (useKeyboardDefaults) {
             this._useKeyboardDefaults();
         }
+
+        if (useMouseDefaults || useKeyboardDefaults) {
+            this._useLayoutHighlights();
+        }
+    }
+
+    private _useLayoutHighlights() {
+        this.on('Viewer.DidChangeLight', (all, message, global) => {
+            if (message.viewerId === global.selected && message.light === 'selected') {
+                all.viewerId(message.viewerId).forEach((viewer) => {
+                    if (viewer.type === 'GridLayout') {
+                        all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'FlowLayout') {
+                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'SequenceLayout') {
+                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
+                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.type === 'KeyValueLayout') {
+                        all.viewerId(viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType])
+                           .forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
+                    if (viewer.parentId) {
+                        all.viewerId(viewer.parentId).forEach((parent) => {
+                            if (parent.type === 'GridLayout') {
+                                parent.state.doSelectCell(parent.state.cells.findIndex((childId) => childId === viewer.viewerId));
+                            }
+                            if (parent.type === 'FlowLayout') {
+                                parent.state.doSelectElement(parent.state.elements.findIndex((childId) => childId === viewer.viewerId));
+                            }
+                            if (parent.type === 'SequenceLayout') {
+                                parent.state.doSelectElement(parent.state.elements.findIndex((childId) => childId === viewer.viewerId));
+                            }
+                            if (parent.type === 'KeyValueLayout') {
+                                parent.state.doSelectEntry(parent.state.entries.findIndex(({key, value}) => {
+                                    if (key === viewer.viewerId) {
+                                        parent.state.doSelectKey();
+                                        return true;
+                                    }
+                                    if (value === viewer.viewerId) {
+                                        parent.state.doSelectValue();
+                                        return true;
+                                    }
+                                    return false;
+                                }));
+                            }
+                        });
+                    }
+                });
+            }
+            if (message.viewerId === global.prevSelected && message.light !== 'selected') {
+                all.filter((viewer) => viewer.parentId === global.prevSelected && viewer.appearance.light === 'highlight').forEach((viewer) => {
+                    viewer.appearance.doSetLight('normal');
+                })
+            }
+        });
     }
 
     private _useMouseDefaults() {
@@ -296,33 +370,6 @@ export class InteractionManager {
                 global.selected = null;
             }
         });
-        this.on('Viewer.DidChangeLight', (all, message, global) => {
-            if (message.viewerId === global.selected && message.light === 'selected') {
-                all.viewerId(message.viewerId).forEach((viewer) => {
-                    if (viewer.type === 'GridLayout') {
-                        all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
-                    }
-                    if (viewer.type === 'FlowLayout') {
-                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
-                    }
-                    if (viewer.type === 'SequenceLayout') {
-                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
-                    }
-                    if (viewer.type === 'KeyValueLayout') {
-                        all.viewerId(viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType])
-                           .forEach((child) => child.appearance.doSetLight('highlight'));
-                    }
-                });
-            }
-            if (message.viewerId === global.prevSelected && message.light !== 'selected') {
-                all.filter((viewer) => viewer.parentId === global.prevSelected && viewer.appearance.light === 'highlight').forEach((viewer) => {
-                    viewer.appearance.doSetLight('normal');
-                })
-            }
-        })
     }
 
     private _useKeyboardDefaults() {
