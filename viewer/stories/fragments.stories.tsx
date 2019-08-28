@@ -129,20 +129,23 @@ storiesOf('Token (Primitive)', module)
             Token(kTextMultiWide)
         }/>
     ))
-    .add('colors', () => (
-        <Viewer view={
-            Flow(
-                Token("Hello", "gray"),
-                Token("Hello", "brown"),
-                Token("Hello", "purple"),
-                Token("Hello", "blue"),
-                Token("Hello", "green"),
-                Token("Hello", "yellow"),
-                Token("Hello", "orange"),
-                Token("Hello", "red"),
-                Token("Hello", "pink"),
-            )
-        }/>
+    .add('interactive colors', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Flow(
+                    Token("Hello", "gray"),
+                    Token("Hello", "brown"),
+                    Token("Hello", "purple"),
+                    Token("Hello", "blue"),
+                    Token("Hello", "green"),
+                    Token("Hello", "yellow"),
+                    Token("Hello", "orange"),
+                    Token("Hello", "red"),
+                    Token("Hello", "pink"),
+                )
+            }/>
+        </InteractionProvider>
+        
     ))
     .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
@@ -166,7 +169,6 @@ storiesOf('Icon (Primitive)', module)
                 Icon('account_circle'),
                 Icon('announcement'),
                 Icon('label'),
-                Icon('bookmark'),
                 Icon('alarm'),
                 Icon('delete'),
             )
@@ -189,7 +191,7 @@ storiesOf('Icon (Primitive)', module)
             )
         }/>
     ))
-    .add('add_circle', () => (
+    .add('special cases', () => (
         <Viewer view={
             Flow(
                 Icon('add_circle'),
@@ -298,10 +300,23 @@ storiesOf('Switch (Layout)', module)
     ));
 
 storiesOf('Sequence (Layout)', module)
-    .add('basic', () => (
+    .add('basic horizontal', () => (
         <Viewer view={
             Sequence(
-                [Text("Software"), Text("visualization"), Text("rocks!")]
+                [Text("Software"), Text("visualization"), Text("rocks!")],
+                "horizontal",
+                '[',
+                ']',
+            )
+        }/>
+    ))
+    .add('basic vertical', () => (
+        <Viewer view={
+            Sequence(
+                [Text("Software"), Text("visualization"), Text("rocks!")],
+                "vertical",
+                '[',
+                ']',
             )
         }/>
     ))
@@ -433,10 +448,10 @@ storiesOf('Grid (Layout)', module)
             )
         }/>
     ))
-    .add('newlines and bars', () => (
+    .add('newlines (\\n and |)', () => (
         <Viewer view={
             Grid(
-                `AAB|CDD\nEEE`,
+                `AAB\nCDD|EEE`,
                 {
                     A: Text(kTextSingleShort),
                     B: Text("B"),
@@ -465,24 +480,17 @@ storiesOf('Grid (Layout)', module)
     .add('interactive (nested)', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
-                Grid(
-                    `AB
-                    CD`,
-                    {
-                        A: Grid(
-                            `AB
-                            CD`,
-                            {
-                                A: Text("A"),
-                                B: Text("B"),
-                                C: Text("C"),
-                                D: Text("D"),
-                            }),
-                        B: Text("B"),
-                        C: Text(kTextSingleShort),
-                        D: Text(kTextSingleShort),
-                    }
-                )
+                Grid('AB|CD',{
+                    A: Grid('AB|CD', {
+                            A: Text("A"),
+                            B: Text("B"),
+                            C: Text("C"),
+                            D: Text("D"),
+                        }),
+                    B: Text("B"),
+                    C: Text(kTextSingleShort),
+                    D: Text(kTextSingleShort),
+                })
             }/>
         </InteractionProvider>
     ));

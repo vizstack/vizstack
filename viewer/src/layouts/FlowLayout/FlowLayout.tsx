@@ -43,9 +43,14 @@ export type FlowLayoutEvent =
 class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, FlowLayoutState> {
 
     private _childViewers: Viewer[] = [];
+    private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
-    private _registerViewer(viewer: Viewer, idx: number) {
-        this._childViewers[idx] = viewer;
+    private _getChildViewerCallback(idx: number) {
+        const key = `${idx}`;
+        if(!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => this._childViewers[idx] = viewer;
+        }
+        return this._childViewerCallbacks[key];
     }
 
     constructor(props: FlowLayoutProps & InternalProps) {
@@ -53,6 +58,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         this.state = {
             selectedElementIdx: 0,
         };
+        this._getChildViewerCallback.bind(this);
     }
 
     public getHandle(): FlowLayoutHandle {
@@ -96,9 +102,9 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 {elements.map((fragmentId, idx) => (
-                    <React.Fragment>
+                    <React.Fragment key={`${idx}-${fragmentId}`}>
                         <Viewer
-                            ref={(viewer) => this._registerViewer(viewer!, idx)}
+                            ref={this._getChildViewerCallback(idx)}
                             key={`${idx}-${fragmentId}`}
                             {...passdown}
                             fragmentId={fragmentId}

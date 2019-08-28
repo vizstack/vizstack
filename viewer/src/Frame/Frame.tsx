@@ -55,17 +55,19 @@ class Frame extends React.PureComponent<FrameProps & InternalProps, FrameState> 
 
 const styles = (theme: Theme) => createStyles({
     divComponent: {
-        display: 'inline-block',  // Can be placed in flow.
-        verticalAlign: 'middle',  // Vertically centered in flow.
-        overflow: 'hidden',
-        whiteSpace: 'nowrap',
-        width: 'fit-content',
-        
+        // Allow placement in flow.
+        display: 'inline-block',  
+        // Vertically centered in flow.
+        verticalAlign: 'middle',  
+        // If parent too small, allow v/h scroll bars.
+        overflow: 'auto',  
+        // As wide as possible within the parent, but no wider than the content actually needs. By
+        // default, divs will take up whole width of parent, even for content that is smaller.
+        width: 'fit-content',  
     },
     spanComponent: {
         verticalAlign: 'middle',  // Vertically centered in flow.
-        overflow: 'hidden',
-        width: 'fit-content',
+        overflow: 'auto',
     },
     framed: {
         ...theme.vars.framed.normal,

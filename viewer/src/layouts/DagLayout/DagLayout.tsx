@@ -187,12 +187,18 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             highlightedEdges: [],
             selectedNodeId: `${Object.keys(this.props.nodes)[0]}`,
         };
+        this._getChildViewerCallback.bind(this);
     }
 
     private _childViewers: Record<string, Viewer> = {};  // DagNodeId -> Viewer
+    private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
-    private _registerViewer(viewer: Viewer, nodeId: DagNodeId) {
-        this._childViewers[nodeId] = viewer;
+    private _getChildViewerCallback(nodeId: DagNodeId) {
+        const key = `${nodeId}`;
+        if(!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => this._childViewers[nodeId] = viewer;
+        }
+        return this._childViewerCallbacks[key];
     }
 
     public getHandle(): DagLayoutHandle {
@@ -574,7 +580,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             mouseHandlers={buildNodeMouseHandlers(id)}
                                         >
                                             <Viewer
-                                                ref={(viewer) => this._registerViewer(viewer!, id)}
+                                                ref={this._getChildViewerCallback(id)}
                                                 {...passdown}
                                                 fragmentId={fragmentId}
                                             />

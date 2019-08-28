@@ -52,10 +52,17 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     };
 
     private _childViewers: { key?: Viewer, value?: Viewer }[] = [];
+    private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
-    private _registerViewer(viewer: Viewer, idx: number, type: 'key' | 'value') {
-        if(!this._childViewers[idx]) this._childViewers[idx] = {};
-        this._childViewers[idx][type] = viewer;
+    private _getChildViewerCallback(idx: number, type: 'key' | 'value') {
+        const key = `${idx}-${type}`;
+        if(!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => {
+                if(!this._childViewers[idx]) this._childViewers[idx] = {};
+                 this._childViewers[idx][type] = viewer;
+            }
+        }
+        return this._childViewerCallbacks[key];
     }
 
     constructor(props: KeyValueLayoutProps & InternalProps) {
@@ -64,6 +71,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
             selectedEntryIdx: 0,
             selectedEntryType: 'key',
         };
+        this._getChildViewerCallback.bind(this);
     }
 
     public getHandle(): KeyValueLayoutHandle {
@@ -116,7 +124,6 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
         const { entries, separator, startMotif, endMotif } = this.props;
-        const { selectedEntryIdx, selectedEntryType: selectedType } = this.state;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
@@ -130,7 +137,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                 <div className={classes.indices}>{idx}</div>
                                 <div className={classes.slot}>
                                     <Viewer
-                                        ref={(viewer) => this._registerViewer(viewer!, idx, 'key')}
+                                        ref={this._getChildViewerCallback(idx, 'key')}
                                         key={`k${idx}`}
                                         {...passdown}
                                         fragmentId={key}
@@ -140,7 +147,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                                 <div
                                     className={classes.slot}>
                                     <Viewer
-                                        ref={(viewer) => this._registerViewer(viewer!, idx, 'value')}
+                                        ref={this._getChildViewerCallback(idx, 'value')}
                                         key={`v${idx}`}
                                         {...passdown}
                                         fragmentId={value}
@@ -186,8 +193,6 @@ const styles = (theme: Theme) => createStyles({
     },
     slot: {
         display: 'inline-block',
-        // paddingTop: theme.vars.slot.padding,
-        // paddingBottom: theme.vars.slot.padding,
     },
     motif: {
         display: 'block',
