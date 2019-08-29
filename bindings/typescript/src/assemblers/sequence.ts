@@ -1,23 +1,28 @@
 import { FragmentId, SequenceLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
+type SequenceLayoutConfig = {
+    orientation?: 'horizontal' | 'vertical',
+    startMotif?: string,
+    endMotif?: string,
+    showLabels?: boolean;
+};
+
 class SequenceLayoutFragmentAssembler extends FragmentAssembler {
     private _elements: any[] = [];
     private _orientation?: 'horizontal' | 'vertical';
     private _startMotif?: string;
     private _endMotif?: string;
+    private _showLabels?: boolean;
 
     constructor(
         elements?: any[],
-        orientation?: 'horizontal' | 'vertical',
-        startMotif?: string,
-        endMotif?: string,
+        config: SequenceLayoutConfig = {},
     ) {
         super();
         if (elements) this._elements = elements;
-        this._orientation = orientation;
-        this._startMotif = startMotif;
-        this._endMotif = endMotif;
+        this.config(config);
+
     }
 
     public item(item: any) {
@@ -28,6 +33,14 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
     public items(...items: any) {
         this._elements.push(...items);
         return this;
+    }
+
+    public config(config: SequenceLayoutConfig) {
+        const { orientation, startMotif, endMotif, showLabels } = config;
+        if(orientation !== undefined) this._orientation = orientation;
+        if(startMotif !== undefined) this._startMotif = startMotif;
+        if(endMotif !== undefined) this._endMotif = endMotif;
+        if(showLabels !== undefined) this._showLabels = showLabels;
     }
 
     public assemble(
@@ -41,6 +54,7 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
                     orientation: this._orientation,
                     startMotif: this._startMotif,
                     endMotif: this._endMotif,
+                    showLabels: this._showLabels,
                 },
                 meta: this._meta,
             },
@@ -51,11 +65,9 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
 
 export function Sequence(
     elements?: any[],
-    orientation?: 'horizontal' | 'vertical',
-    startMotif?: string,
-    endMotif?: string,
+    config: SequenceLayoutConfig = {},
 ) {
-    return new SequenceLayoutFragmentAssembler(elements, orientation, startMotif, endMotif);
+    return new SequenceLayoutFragmentAssembler(elements, config);
 }
 
 export interface Sequence extends ReturnType<typeof Sequence> {}

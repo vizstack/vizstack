@@ -1,6 +1,7 @@
 import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import { createSelector } from 'reselect';
 
 import defaultTheme from '../../theme';
 
@@ -8,6 +9,7 @@ import { GridLayoutFragment } from '@vizstack/schema';
 import { Viewer, FragmentProps } from '../../Viewer';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
+
 
 /**
  * This pure dumb component renders visualization for a 2D grid of elements.
@@ -140,17 +142,29 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, cells, passdown, interactions, light } = this.props;
+        const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
+        const { cells, rowHeight, colWidth, showLabels } = this.props;
+
+        const maxRow = cells.reduce((max, { row, height }) => Math.max(max, row + height), -1);
+        const maxCol = cells.reduce((max, { col, width }) => Math.max(max, col + width), -1);
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
-                <div className={classes.grid}>
+                <div className={clsx({
+                    [classes.grid]: true,
+                    [classes.equalColumns]: colWidth === 'equal',
+                    [classes.equalRows]: rowHeight === 'equal',
+                })}>
                     {cells.map(({ fragmentId, col, row, width, height }, idx) => (
                         <div
                             key={`${idx}-${fragmentId}`}
                             className={clsx({
                                 [classes.cell]: true,
+                                [classes.edgeTop]: row === 0,
+                                [classes.edgeBottom]: row + height === maxRow,
+                                [classes.edgeLeft]: col === 0,
+                                [classes.edgeRight]: col + width === maxCol,
                             })}
                             style={{
                                 gridColumn: `${col + 1} / ${col + 1 + width}`,
@@ -173,20 +187,41 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
 const styles = (theme: Theme) => createStyles({
     grid: {
         display: 'grid',
-        gridGap: `${theme.vars.slot.spacing}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',
         gridAutoRows: 'max-content',
     },
+    equalRows: {
+        gridAutoRows: '1fr',
+    },
+    equalColumns: {
+        gridAutoColumns: '1fr',
+    },
     cell: {
+        flexGrow: 1,
         textAlign: 'left',
-        borderTopStyle: theme.vars.slot.borderStyle,
-        borderTopColor: theme.vars.slot.borderColor,
-        borderTopWidth: theme.vars.slot.borderWidth,
+        padding: theme.vars.slot.spacing / 2,
+        
         borderLeftStyle: theme.vars.slot.borderStyle,
         borderLeftColor: theme.vars.slot.borderColor,
         borderLeftWidth: theme.vars.slot.borderWidth,
-        padding: theme.vars.slot.padding,
+        borderTopStyle: theme.vars.slot.borderStyle,
+        borderTopColor: theme.vars.slot.borderColor,
+        borderTopWidth: theme.vars.slot.borderWidth,
+    },
+    edgeLeft: {
+        borderLeft: 'none',
+        paddingLeft: theme.vars.slot.padding,
+    },
+    edgeRight: {
+        paddingRight: theme.vars.slot.padding,
+    },
+    edgeTop: {
+        borderTop: 'none',
+        paddingTop: theme.vars.slot.padding,
+    },
+    edgeBottom: {
+        paddingBottom: theme.vars.slot.padding,
     },
 });
 

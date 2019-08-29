@@ -228,6 +228,15 @@ storiesOf('Flow (Layout)', module)
             )
         }/>
     ))
+    .add('inline block inline (mismatched baseline)', () => (
+        <Viewer view={
+            Flow(
+                Text(kTextSingleShort),
+                Token("Hello\nworld!"),
+                Text(kTextSingleShort),
+            )
+        }/>
+    ))
     .add('block inline block', () => (
         <Viewer view={
             Flow(
@@ -304,9 +313,7 @@ storiesOf('Sequence (Layout)', module)
         <Viewer view={
             Sequence(
                 [Text("Software"), Text("visualization"), Text("rocks!")],
-                "horizontal",
-                '[',
-                ']',
+                { orientation:'horizontal', startMotif:'MySequence[3] [', endMotif:']'},
             )
         }/>
     ))
@@ -314,9 +321,7 @@ storiesOf('Sequence (Layout)', module)
         <Viewer view={
             Sequence(
                 [Text("Software"), Text("visualization"), Text("rocks!")],
-                "vertical",
-                '[',
-                ']',
+                { orientation:'vertical', startMotif:'MySequence[3] [', endMotif:']'},
             )
         }/>
     ))
@@ -334,6 +339,18 @@ storiesOf('Sequence (Layout)', module)
             )
         }/>
     ))
+    .add('no labels', () => (
+        <Viewer view={
+            Sequence(
+                [Text(kTextSingleShort),
+                 Sequence(
+                     [Text(kTextSingleShort), Text(kTextSingleShort)], { orientation: 'vertical' }
+                 ),
+                 Text(kTextSingleShort)],
+                { showLabels: false }
+            )
+        }/>
+    ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
@@ -345,17 +362,54 @@ storiesOf('Sequence (Layout)', module)
     ));
 
 storiesOf('Grid (Layout)', module)
-    .add('basic', () => (
+    .add('newlines (\\n and |)', () => (
         <Viewer view={
-            Grid(
-                `AAB
-                 CDD`,
+            Grid('AAB\nCDD|EEE',
                 {
                     A: Text(kTextSingleShort),
                     B: Text("B"),
                     C: Text("C"),
                     D: Text(kTextSingleShort),
+                    E: Text(kTextSingleShort),
                 }
+            )
+        }/>
+    ))
+    .add('empty cells', () => (
+        <Viewer view={
+            Grid('A.B|CDE',
+                {
+                    A: Text("A"),
+                    B: Text("B"),
+                    C: Text("C"),
+                    D: Text("D"),
+                    E: Text("E"),
+                }
+            )
+        }/>
+    ))
+    .add('equal row/col', () => (
+        <Viewer view={
+            Grid('AB|CD',
+                {
+                    A: Text("AAA"),
+                    B: Text("B"),
+                    C: Text("C"),
+                    D: Text("D\nD"),
+                }, { rowHeight: 'equal', colWidth: 'equal' }
+            )
+        }/>
+    ))
+    .add('no labels', () => (
+        <Viewer view={
+            Grid('A.B|C.D',
+                {
+                    A: Text("A"),
+                    B: Text("B"),
+                    C: Text("C"),
+                    D: Text("D"),
+                },
+                { showLabels: false },
             )
         }/>
     ))
@@ -412,62 +466,25 @@ storiesOf('Grid (Layout)', module)
             )
         }/>
     ))
-    .add('empty cells', () => (
-        <Viewer view={
-            Grid(
-                `A.B
-                 C.D`,
-                {
-                    A: Text("A"),
-                    B: Text("B"),
-                    C: Text("C"),
-                    D: Text("D"),
-                }
-            )
-        }/>
-    ))
     .add('nested', () => (
         <Viewer view={
-            Grid(
-                `AB
-                 CD`,
-                {
-                    A: Grid(
-                        `AB
-                         CD`,
-                        {
-                            A: Text("A"),
-                            B: Text("B"),
-                            C: Text("C"),
-                            D: Text("D"),
-                        }),
-                    B: Text("B"),
-                    C: Text(kTextSingleShort),
-                    D: Text(kTextSingleShort),
-                }
-            )
-        }/>
-    ))
-    .add('newlines (\\n and |)', () => (
-        <Viewer view={
-            Grid(
-                `AAB\nCDD|EEE`,
-                {
-                    A: Text(kTextSingleShort),
-                    B: Text("B"),
-                    C: Text("C"),
-                    D: Text(kTextSingleShort),
-                    E: Text(kTextSingleShort),
-                }
-            )
+            Grid('AB|CD',{
+                A: Grid('AB|CD', {
+                        A: Text(kTextSingleShort),
+                        B: Text(kTextSingleShort),
+                        C: Text(kTextSingleShort),
+                        D: Text(kTextSingleShort),
+                    }),
+                B: Text(kTextSingleShort),
+                C: Text(kTextSingleShort),
+                D: Text(kTextSingleShort),
+            })
         }/>
     ))
     .add('interactive', () => (
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
-                Grid(
-                    `AAAB
-                     .CCB`,
+                Grid('AAB|CCB',
                     {
                         A: Text(kTextSingleShort),
                         B: Text(kTextMultiNarrow),
@@ -482,12 +499,12 @@ storiesOf('Grid (Layout)', module)
             <Viewer view={
                 Grid('AB|CD',{
                     A: Grid('AB|CD', {
-                            A: Text("A"),
-                            B: Text("B"),
-                            C: Text("C"),
-                            D: Text("D"),
+                            A: Text(kTextSingleShort),
+                            B: Text(kTextSingleShort),
+                            C: Text(kTextSingleShort),
+                            D: Text(kTextSingleShort),
                         }),
-                    B: Text("B"),
+                    B: Text(kTextSingleShort),
                     C: Text(kTextSingleShort),
                     D: Text(kTextSingleShort),
                 })
@@ -499,64 +516,91 @@ storiesOf('KeyValue (Layout)', module)
     .add('basic', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('Egg yolks'), value: Text('6 yolks')},
-                {key: Text('White sugar'), value: Text('6 tbsp')},
-                {key: Text('Heavy cream'), value: Text('2 1/2 cups')},
-                {key: Text('Vanilla extract'), value: Text('1/2 tsp')},
-            ])
+                [Text('Egg yolks'), Text('6 yolks')],
+                [Text('White sugar'), Text('6 tbsp')],
+                [Text('Heavy cream'), Text('2 1/2 cups')],
+                [Text('Vanilla extract'), Text('1/2 tsp')],
+            ], { startMotif: 'MyKeyValue[4] {', endMotif: '}'})
         }/>
     ))
     .add('long list', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('First day'), value: Text('A partridge in a pear tree')},
-                {key: Text('Second day'), value: Text('Two turtle doves')},
-                {key: Text('Third day'), value: Text('Three French hens')},
-                {key: Text('Fourth day'), value: Text('Four calling birds')},
-                {key: Text('Fifth day'), value: Text('Five golden rings')},
-                {key: Text('Sixth day'), value: Text('Six geese a-laying')},
-                {key: Text('Seventh day'), value: Text('Seven swans a-swimming')},
-                {key: Text('Eighth day'), value: Text('Eight maids a-milking')},
-                {key: Text('Ninth day'), value: Text('Nine ladies dancing')},
-                {key: Text('Tenth day'), value: Text('Ten lords a-leaping')},
-                {key: Text('Eleventh day'), value: Text('Eleven pipers piping')},
-                {key: Text('Twelfth day'), value: Text('Twelve drummers drumming')},
+                [Text('First day'), Text('A partridge in a pear tree')],
+                [Text('Second day'), Text('Two turtle doves')],
+                [Text('Third day'), Text('Three French hens')],
+                [Text('Fourth day'), Text('Four calling birds')],
+                [Text('Fifth day'), Text('Five golden rings')],
+                [Text('Sixth day'), Text('Six geese a-laying')],
+                [Text('Seventh day'), Text('Seven swans a-swimming')],
+                [Text('Eighth day'), Text('Eight maids a-milking')],
+                [Text('Ninth day'), Text('Nine ladies dancing')],
+                [Text('Tenth day'), Text('Ten lords a-leaping')],
+                [Text('Eleventh day'), Text('Eleven pipers piping')],
+                [Text('Twelfth day'), Text('Twelve drummers drumming')],
             ])
         }/>
     ))
     .add('wide key', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('One'), value: Text('Uno')},
-                {key: Text(kTextSingleLong), value: Text('Dos')},
-                {key: Text('Three'), value: Text('Tres')},
+                [Text('One'), Text('Uno')],
+                [Text(kTextSingleLong), Text('Dos')],
+                [Text('Three'), Text('Tres')],
             ])
         }/>
     ))
     .add('wide value', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('One'), value: Text('Uno')},
-                {key: Text('Two'), value: Text(kTextSingleLong)},
-                {key: Text('Three'), value: Text('Tres')},
+                [Text('One'), Text('Uno')],
+                [Text('Two'), Text(kTextSingleLong)],
+                [Text('Three'), Text('Tres')],
             ])
         }/>
     ))
     .add('tall key', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('One'), value: Text('Uno')},
-                {key: Text(kTextMultiNarrowDeep), value: Text('Dos')},
-                {key: Text('Three'), value: Text('Tres')},
+                [Text('One'), Text('Uno')],
+                [Text(kTextMultiNarrowDeep), Text('Dos')],
+                [Text('Three'), Text('Tres')],
             ])
         }/>
     ))
     .add('tall value', () => (
         <Viewer view={
             KeyValue([
-                {key: Text('One'), value: Text('Uno')},
-                {key: Text('Two'), value: Text(kTextMultiNarrowDeep)},
-                {key: Text('Three'), value: Text('Tres')},
+                [Text('One'), Text('Uno')],
+                [Text('Two'), Text(kTextMultiNarrowDeep)],
+                [Text('Three'), Text('Tres')],
+            ])
+        }/>
+    ))
+    .add('align separators', () => (
+        <Viewer view={
+            KeyValue([
+                [Text('One'), Text('Uno')],
+                [Text('Two'), Text('Dos')],
+                [Text('Three'), Text('Tres')],
+            ], { alignSeparators: true })
+        }/>
+    ))
+    .add('no labels', () => (
+        <Viewer view={
+            KeyValue([
+                [Text('One'), Text('Uno')],
+                [Text('Two'), Text('Dos')],
+                [Text('Three'), Text('Tres')],
+            ], { showLabels: false })
+        }/>
+    ))
+    .add('nested', () => (
+        <Viewer view={
+            KeyValue([
+                [Token('One'), Text('Uno')],
+                [Flow(Text('Two')), Flow(Text('Dos'))],
+                [Text('Three'), Sequence([Token('Tres'), Token('3'), Token('Three')])],
             ])
         }/>
     ))
@@ -564,10 +608,10 @@ storiesOf('KeyValue (Layout)', module)
         <InteractionProvider manager={new InteractionManager()}>
             <Viewer view={
                 KeyValue([
-                    {key: Text('Egg yolks'), value: Text('6 yolks')},
-                    {key: Text('White sugar'), value: Text('6 tbsp')},
-                    {key: Text('Heavy cream'), value: Text('2 1/2 cups')},
-                    {key: Text('Vanilla extract'), value: Text('1/2 tsp')},
+                    [Text('Egg yolks'), Text('6 yolks')],
+                    [Text('White sugar'), Text('6 tbsp')],
+                    [Text('Heavy cream'), Text('2 1/2 cups')],
+                    [Text('Vanilla extract'), Text('1/2 tsp')],
                 ])
             }/>
         </InteractionProvider>

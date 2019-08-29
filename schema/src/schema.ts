@@ -49,7 +49,6 @@ export type TextPrimitiveFragment = {
         text: string;
         variant?: 'caption' | 'body' | 'subheading' | 'heading';
         emphasis?: 'normal' | 'less' | 'more';
-        
     };
     meta: FragmentMeta;
 };
@@ -64,7 +63,7 @@ export type TokenPrimitiveFragment = {
     meta: FragmentMeta;
 };
 
-/** `IconPrimitive` is an icon from the Material UI collection (listed at https://material-ui.com/components/material-icons/). Icons should be referenced like "AddCircle" and "ArrowForward", and suffixes are not allowed (no "Outlined", "Rounded", etc).  */
+/** `IconPrimitive` is an icon from the Material UI collection (listed at https://material.io/resources/icons/?style=outline). Icons should be referenced like "add_circle" and "arrow_forward", and suffixes are not allowed (no "outlined", "rounded", etc).  */
 export type IconPrimitiveFragment = {
     type: 'IconPrimitive';
     contents: {
@@ -111,6 +110,7 @@ export type SwitchLayoutFragment = {
     type: 'SwitchLayout';
     contents: {
         modes: FragmentId[];
+        showLabels?: boolean;
     };
     meta: FragmentMeta;
 };
@@ -127,6 +127,9 @@ export type GridLayoutFragment = {
             width: number;
             height: number;
         }[];
+        rowHeight?: 'fit' | 'equal';
+        colWidth?: 'fit' | 'equal';
+        showLabels?: boolean,
     };
     meta: FragmentMeta;
 };
@@ -139,6 +142,7 @@ export type SequenceLayoutFragment = {
         orientation?: 'horizontal' | 'vertical';
         startMotif?: string;
         endMotif?: string;
+        showLabels?: boolean;
     };
     meta: FragmentMeta;
 };
@@ -151,6 +155,8 @@ export type KeyValueLayoutFragment = {
         separator?: string;
         startMotif?: string;
         endMotif?: string;
+        alignSeparators?: boolean;
+        showLabels?: boolean;
     };
     meta: FragmentMeta;
 };

@@ -49,6 +49,8 @@ export type KeyValueLayoutEvent =
 class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalProps, KeyValueLayoutState> {
     static defaultProps: Partial<KeyValueLayoutProps> = {
         separator: ':',
+        alignSeparators: false,
+        showLabels: true,
     };
 
     private _childViewers: { key?: Viewer, value?: Viewer }[] = [];
@@ -123,39 +125,66 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     render() {
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
-        const { entries, separator, startMotif, endMotif } = this.props;
+        const { entries, separator, startMotif, endMotif, alignSeparators, showLabels } = this.props;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <div className={classes.container}>
-                    <div className={classes.motif}>{startMotif}</div>
-                    {entries.map(({ key, value }, idx) => (
-                            <div className={clsx({
-                                [classes.entry]: true,
-                                [classes.spacing]: idx < entries.length - 1,
-                            })}>
-                                <div className={classes.indices}>{idx}</div>
-                                <div className={classes.slot}>
-                                    <Viewer
-                                        ref={this._getChildViewerCallback(idx, 'key')}
-                                        key={`k${idx}`}
-                                        {...passdown}
-                                        fragmentId={key}
-                                    />
-                                </div>
-                                <span className={classes.separator}>{separator}</span>
-                                <div
-                                    className={classes.slot}>
-                                    <Viewer
-                                        ref={this._getChildViewerCallback(idx, 'value')}
-                                        key={`v${idx}`}
-                                        {...passdown}
-                                        fragmentId={value}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    <div className={classes.motif}>{endMotif}</div>
+                    <div className={clsx(classes.motif, classes.motifStart)}>{startMotif}</div>
+                    <div className={classes.entries}>
+                    {entries.map(({ key, value }, idx: number) => {
+                            // <div className={clsx({
+                            //     [classes.entry]: true,
+                            //     [classes.spacing]: idx < entries.length - 1,
+                            // })}>
+                            const ViewerKey = (
+                                <Viewer
+                                    ref={this._getChildViewerCallback(idx, 'key')}
+                                    key={`k${idx}`}
+                                    {...passdown}
+                                    fragmentId={key}
+                                />
+                            );
+                            const ViewerValue = (
+                                <Viewer
+                                    ref={this._getChildViewerCallback(idx, 'value')}
+                                    key={`v${idx}`}
+                                    {...passdown}
+                                    fragmentId={value}
+                                />
+                            );
+                            const gridRow = `${idx + 1} / ${idx + 2}`;
+
+                            return (
+                                <React.Fragment key={idx}>
+                                    <div className={clsx({
+                                        [classes.border]: true,
+                                        [classes.label]: showLabels,
+                                    })}
+                                        style={{ gridColumn: `1 / 2`, gridRow }}
+                                    >{showLabels ? idx : null}</div>
+                                    {alignSeparators ? (
+                                        <React.Fragment>
+                                        <div className={classes.slot}
+                                            style={{ gridColumn: `2 / 3`, gridRow }}>{ViewerKey}</div>
+                                        <div className={classes.separator}
+                                            style={{ gridColumn: `3 / 4`, gridRow }}>{separator}</div>
+                                        <div className={classes.slot}
+                                            style={{ gridColumn: `4 / 5`, gridRow }}>{ViewerValue}</div>
+                                        </React.Fragment>
+                                    ) : (
+                                        <div style={{ gridColumn: `2 / 3`, gridRow }}>
+                                            <div className={classes.slot}>{ViewerKey}</div>
+                                            <div className={clsx(classes.separator, classes.spacingAround)}>{separator}</div>
+                                            <div className={classes.slot}>{ViewerValue}</div>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            );
+                            // </div>
+                                })}
+                    </div>
+                    <div className={clsx(classes.motif, classes.motifEnd)}>{endMotif}</div>
                 </div>
             </Frame>
         );
@@ -168,34 +197,44 @@ const styles = (theme: Theme) => createStyles({
         flexDirection: 'column',
         whiteSpace: 'nowrap',
     },
-    entry: {
-        display: 'flex',
-        flexDirection: 'row',
+    entries: {
+        display: 'grid',
+        gridRowGap: theme.vars.slot.padding,
+        gridColumnGap: theme.vars.slot.spacing,
     },
-    indices: {
-        display: 'inline-block',
+    border: {
         borderRightColor: theme.vars.slot.borderColor,
         borderRightStyle: theme.vars.slot.borderStyle,
         borderRightWidth: theme.vars.slot.borderWidth,
+    },
+    label: {
         paddingRight: theme.vars.slot.padding,
-        marginRight: theme.vars.slot.spacing,
         textAlign: 'right',
         ...theme.vars.text.caption,
         color: theme.vars.emphasis.less,
     },
-    spacing: {
-        marginBottom: theme.vars.slot.padding,
-    },
-    separator: {
-        display: 'inline-block',
-        marginLeft: theme.vars.slot.spacing,
-        marginRight: theme.vars.slot.spacing,
-    },
     slot: {
         display: 'inline-block',
     },
+    separator: {
+        display: 'inline-block',
+        ...theme.vars.text.body,
+        color: theme.vars.emphasis.less,
+    },
+    spacingAround: {
+        marginLeft: theme.vars.slot.spacing,
+        marginRight: theme.vars.slot.spacing,
+    },
     motif: {
         display: 'block',
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
+    },
+    motifStart: {
+        textAlign: 'right',
+    },
+    motifEnd: {
+        textAlign: 'left',
     },
 });
 

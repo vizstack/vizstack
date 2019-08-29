@@ -58,11 +58,24 @@ export function parseGridString(str: string): Record<string, GridCell> {
     }));
 }
 
+type GridLayoutConfig = {
+    rowHeight?: 'fit' | 'equal',
+    colWidth?: 'fit' | 'equal',
+    showLabels?: boolean,
+};
+
 class GridLayoutFragmentAssembler extends FragmentAssembler {
     private _cells: Record<string, GridCell> = {};
     private _items: Record<string, any> = {};
+    private _rowHeight?: 'fit' | 'equal';
+    private _colWidth?: 'fit' | 'equal';
+    private _showLabels?: boolean;
 
-    constructor(cells?: string | (GridCell & { name: string })[], items?: Record<string, any>) {
+    constructor(
+        cells?: string | (GridCell & { name: string })[],
+        items?: Record<string, any>,
+        config: GridLayoutConfig = {},
+    ) {
         super();
         if (cells) {
             if (typeof cells === 'string') {
@@ -76,9 +89,8 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
             }
         }
 
-        if (items) {
-            this._items = items;
-        }
+        if (items) this._items = items;
+        this.config(config);
     }
 
     public cell(name: string, row: number, col: number, height: number, width: number) {
@@ -89,6 +101,13 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
     public item(name: string, item: any) {
         this._items[name] = item;
         return this;
+    }
+
+    public config(config: GridLayoutConfig) {
+        const { rowHeight, colWidth, showLabels } = config;
+        if(rowHeight !== undefined) this._rowHeight = rowHeight;
+        if(colWidth !== undefined) this._colWidth = colWidth;
+        if(showLabels !== undefined) this._showLabels = showLabels;
     }
 
     public assemble(getId: (obj: any, name: string) => FragmentId): [GridLayoutFragment, any[]] {
@@ -103,6 +122,9 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
                         fragmentId: getId(this._items[name], name),
                         ...cell,
                     })),
+                    rowHeight: this._rowHeight,
+                    colWidth: this._colWidth,
+                    showLabels: this._showLabels,
                 },
                 meta: this._meta,
             },
@@ -135,8 +157,9 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
 export function Grid(
     cells?: string | (GridCell & { name: string })[],
     items?: Record<string, any>,
+    config: GridLayoutConfig = {},
 ) {
-    return new GridLayoutFragmentAssembler(cells, items);
+    return new GridLayoutFragmentAssembler(cells, items, config);
 }
 
 export interface Grid extends ReturnType<typeof Grid> {}

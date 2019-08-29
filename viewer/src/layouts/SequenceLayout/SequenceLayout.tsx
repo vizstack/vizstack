@@ -45,6 +45,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
 
     static defaultProps: Partial<SequenceLayoutProps> = {
         orientation: 'horizontal',
+        showLabels: true,
     };
 
     private _childViewers: Viewer[] = [];
@@ -102,53 +103,57 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
     render() {
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
-        const { elements, orientation, startMotif, endMotif } = this.props;
+        const { elements, orientation, startMotif, endMotif, showLabels } = this.props;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <div className={classes.container}>
-                <div
-                    className={clsx({
-                        [classes.motif]: true,
-                        [classes.horizontal]: orientation === 'horizontal',
-                        [classes.vertical]: orientation === 'vertical',
-                    })}
-                    key='startMotif'
-                >
-                    {startMotif}
-                </div>
-                {elements.map((fragmentId, idx) => (
-                    <div
-                        className={clsx({
-                            [classes.spacing]: idx < elements.length - 1,
-                            [classes.horizontal]: orientation === 'horizontal',
-                            [classes.vertical]: orientation === 'vertical',
-                        })}
-                        key={idx}
-                    >
-                        <div className={classes.slot}>
-                            <Viewer
-                                ref={this._getChildViewerCallback(idx)}
-                                key={`${idx}-${fragmentId}`}
-                                {...passdown}
-                                fragmentId={fragmentId}
-                            />
-                        </div>
-                        <div className={classes.indices}>
-                            {idx}
-                        </div>
+                    <div className={clsx(classes.motif, classes.motifStart)} key='startMotif'>
+                        {startMotif}
                     </div>
-                ))}
-                <div
-                    className={clsx({
-                        [classes.motif]: true,
-                        [classes.horizontal]: orientation === 'horizontal',
-                        [classes.vertical]: orientation === 'vertical',
-                    })}
-                    key='endMotif'
-                >
-                    {endMotif}
+                <div className={classes.elements}>
+                {elements.map((fragmentId, idx) => {
+                    const ViewerElement = (
+                        <Viewer
+                            ref={this._getChildViewerCallback(idx)}
+                            key={`${idx}-${fragmentId}`}
+                            {...passdown}
+                            fragmentId={fragmentId}
+                        />
+                    );
+                    const gridPos = `${idx + 1} / ${idx + 2}`;
+
+                    return orientation === 'horizontal' ? (
+                        <React.Fragment key={idx}>
+                            <div className={clsx({
+                                [classes.borderHorizontal]: true,
+                                [classes.labelHorizontal]: showLabels,
+                            })}
+                                style={{ gridColumn: gridPos, gridRow: '2 / 3' }}
+                            >{showLabels ? idx : null}</div>
+                            {/* Draw slot after so it is on top, covering border if needed. */}
+                            <div className={classes.slotHorizontal}
+                            style={{ gridColumn: gridPos, gridRow: '1 / 2' }}
+                            >{ViewerElement}</div>
+                        </React.Fragment>
+                    ) : (
+                        <React.Fragment key={idx}>
+                            <div className={clsx({
+                                [classes.borderVertical]: true,
+                                [classes.labelVertical]: showLabels,
+                            })}
+                                style={{ gridColumn: '1 / 2', gridRow: gridPos }}
+                            >{showLabels ? idx : null}</div>
+                            <div className={classes.slotVertical}
+                                style={{ gridColumn: '2 / 3', gridRow: gridPos }}
+                            >{ViewerElement}</div>
+                        </React.Fragment>
+                    );
+                })}
                 </div>
+                    <div className={clsx(classes.motif, classes.motifEnd)} key='endMotif'>
+                        {endMotif}
+                    </div>
                 </div>
             </Frame>
         );
@@ -157,34 +162,56 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
 
 const styles = (theme: Theme) => createStyles({
     container: {
-        // All elements in a sequences must fall on single line.
+        display: 'flex',
+        flexDirection: 'column',
         whiteSpace: 'nowrap',
     },
-    slot: {
+    motif: {
+        display: 'block',
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
+    },
+    motifStart: {
+        textAlign: 'right',
+    },
+    motifEnd: {
+        textAlign: 'left',
+    },
+    elements: {
+        display: 'grid',
+        gridRowGap: theme.vars.slot.padding,
+        gridColumnGap: theme.vars.slot.spacing,
+    },
+    slotHorizontal: {
         paddingLeft: theme.vars.slot.padding,
         paddingRight: theme.vars.slot.padding,
+        alignSelf: 'end',
     },
-    spacing: {
-        marginRight: theme.vars.slot.spacing,
-    },
-    motif: {
-
-    },
-    indices: {
+    borderHorizontal: {
         borderTopColor: theme.vars.slot.borderColor,
         borderTopStyle: theme.vars.slot.borderStyle,
         borderTopWidth: theme.vars.slot.borderWidth,
+    },
+    labelHorizontal: {
         paddingLeft: theme.vars.slot.padding,
         paddingRight: theme.vars.slot.padding,
         textAlign: 'left',
         ...theme.vars.text.caption,
         color: theme.vars.emphasis.less,
     },
-    horizontal: {
-        display: 'inline-block',
+    slotVertical: {
+        alignSelf: 'start',
     },
-    vertical: {
-        display: 'block',
+    borderVertical: {
+        borderRightColor: theme.vars.slot.borderColor,
+        borderRightStyle: theme.vars.slot.borderStyle,
+        borderRightWidth: theme.vars.slot.borderWidth,
+    },
+    labelVertical: {
+        paddingRight: theme.vars.slot.padding,
+        textAlign: 'right',
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
     },
 });
 

@@ -13,7 +13,7 @@ export function getLanguageDefault(obj: any): FragmentAssembler {
         return SwitchSequence(Array.from(obj), `Set[${obj.size}]`, `Set[${obj.size}] {`, '}');
     } else if (obj instanceof Map) {
         return SwitchKeyValue(
-            Array.from(obj.entries()).map(([key, value]) => ({ key, value })),
+            Array.from(obj.entries()),
             `Map[${obj.size}]`,
             `Map[${obj.size}] {`,
             '}',
@@ -21,14 +21,14 @@ export function getLanguageDefault(obj: any): FragmentAssembler {
     } else if (typeof obj === 'function') {
         const { args, defaults } = getFunctionArgs(obj);
         return SwitchKeyValue(
-            args.map((arg, idx) => ({ key: arg, value: defaults[idx] })),
+            args.map((arg, idx) => [arg, defaults[idx]]),
             obj.name ? `Function[${obj.name}]` : `Function`,
             obj.name ? `Function[${obj.name}] (` : `Function (`,
             ')',
         );
     } else {
         return SwitchKeyValue(
-            Object.entries(obj).map(([key, value]) => ({ key, value })),
+            Object.entries(obj),
             `Object[${Object.keys(obj).length}]`,
             `Object[${Object.keys(obj).length}] {`,
             '}',
@@ -65,12 +65,10 @@ function getFunctionArgs(func: any) {
 const kCompactNum = 5;
 
 function SwitchSequence(elements: any[], summary: string, startMotif?: string, endMotif?: string) {
-    const fullMode = Sequence(elements, 'horizontal', startMotif, endMotif);
+    const fullMode = Sequence(elements, {orientation:'horizontal', startMotif, endMotif});
     const compactMode = Sequence(
         elements.slice(0, kCompactNum),
-        'horizontal',
-        startMotif,
-        '... ' + endMotif,
+        {orientation: 'horizontal', startMotif, endMotif: '... ' + endMotif }
     );
     const summaryMode = summary;
     if (elements.length <= kCompactNum) {
@@ -85,13 +83,13 @@ function SwitchSequence(elements: any[], summary: string, startMotif?: string, e
 }
 
 function SwitchKeyValue(
-    entries: { key: any; value: any }[],
+    entries: [any, any][],
     summary: string,
     startMotif?: string,
     endMotif?: string,
 ) {
-    const fullMode = KeyValue(entries, ':', startMotif, endMotif);
-    const compactMode = KeyValue(entries.slice(0, kCompactNum), ':', startMotif, '... ' + endMotif);
+    const fullMode = KeyValue(entries, {separator:':', startMotif, endMotif});
+    const compactMode = KeyValue(entries.slice(0, kCompactNum), {separator:':', startMotif, endMotif:'... ' + endMotif});
     const summaryMode = summary;
     if (entries.length <= kCompactNum) {
         return Switch(['full', 'summary'], { full: fullMode, summary: summaryMode });

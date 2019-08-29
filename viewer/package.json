@@ -17,6 +17,7 @@
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
     "react-measure": "^2.3.0",
+    "reselect": "^4.0.0",
     "seamless-immutable": "^7.1.4",
     "webcola": "^3.4.0",
     "webfontloader": "^1.6.28"

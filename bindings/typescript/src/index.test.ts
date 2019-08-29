@@ -35,12 +35,12 @@ describe('View Assemblers declarative bindings', () => {
         const viz = Image('mypath.jpg');
         const schema = assemble(viz, getFragmentId);
         expect(schema.fragments).toMatchObject({
-            root: { type: 'ImagePrimitive', contents: { filePath: 'mypath.jpg' } },
+            root: { type: 'ImagePrimitive', contents: { location: 'mypath.jpg' } },
         });
     });
 
     test('Layout basic (Sequence)', () => {
-        const viz = Sequence([Text('hello'), Text('there')], 'vertical', '[', ']');
+        const viz = Sequence([Text('hello'), Text('there')], {orientation:'vertical', startMotif:'[', endMotif:']'});
         const schema = assemble(viz, getFragmentId);
         expect(schema.fragments).toMatchObject({
             root: {
@@ -143,14 +143,14 @@ describe('Language-specific defaults', () => {
     test('JS primitive (number)', () => {
         const schema = assemble(123, getFragmentId);
         expect(schema.fragments).toMatchObject({
-            root: { type: 'TextPrimitive', contents: { text: '123' } },
+            root: { type: 'TokenPrimitive', contents: { text: '123' } },
         });
     });
 
     test('JS primitive (string)', () => {
         const schema = assemble('123', getFragmentId);
         expect(schema.fragments).toMatchObject({
-            root: { type: 'TextPrimitive', contents: { text: '"123"' } },
+            root: { type: 'TokenPrimitive', contents: { text: '"123"' } },
         });
     });
 
@@ -165,9 +165,9 @@ describe('Language-specific defaults', () => {
                 type: 'SequenceLayout',
                 contents: { elements: ['root-full-0', 'root-full-1'] },
             },
-            'root-full-0': { type: 'TextPrimitive', contents: { text: '"hello"' } },
-            'root-full-1': { type: 'TextPrimitive', contents: { text: '"there"' } },
-            'root-summary': { type: 'TextPrimitive' },
+            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
+            'root-full-1': { type: 'TokenPrimitive', contents: { text: '"there"' } },
+            'root-summary': { type: 'TokenPrimitive' },
         });
     });
 
@@ -183,8 +183,8 @@ describe('Language-specific defaults', () => {
                 type: 'SequenceLayout',
                 contents: { elements: ['root-full-0', 'root-full-0'] },
             },
-            'root-full-0': { type: 'TextPrimitive', contents: { text: '"hello"' } },
-            'root-summary': { type: 'TextPrimitive' },
+            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
+            'root-summary': { type: 'TokenPrimitive' },
         });
     });
 
@@ -201,8 +201,8 @@ describe('Language-specific defaults', () => {
                 type: 'SequenceLayout',
                 contents: { elements: ['root-full-0', 'root'] },
             },
-            'root-full-0': { type: 'TextPrimitive', contents: { text: '"hello"' } },
-            'root-summary': { type: 'TextPrimitive' },
+            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
+            'root-summary': { type: 'TokenPrimitive' },
         });
     });
 
@@ -216,7 +216,7 @@ describe('Language-specific defaults', () => {
                 contents: { modes: ['root-full', 'root-summary'] },
             },
             'root-full': { type: 'KeyValueLayout' },
-            'root-summary': { type: 'TextPrimitive' },
+            'root-summary': { type: 'TokenPrimitive' },
         });
     });
 });

@@ -37,6 +37,10 @@ export type SwitchLayoutEvent =
 
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
     
+    static defaultProps: Partial<SwitchLayoutProps> = {
+        showLabels: true,
+    };
+
     private _childViewer?: Viewer;
     private _childViewerCallback = (viewer: Viewer) => this._childViewer = viewer;
 
@@ -86,25 +90,60 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
      * sequence (e.g. "{" for sets).
      */
     render() {
-        const { classes, modes, passdown, interactions, light } = this.props;
+        const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
+        const { modes, showLabels } = this.props;
         const { selectedModeIdx } = this.state;
 
         const fragmentId = modes[selectedModeIdx];
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
-                <Viewer
-                    ref={this._getChildViewerCallback()}
-                    key={fragmentId}
-                    {...passdown}
-                    fragmentId={fragmentId} />
+                <div className={classes.slot}>
+                    <Viewer
+                        ref={this._getChildViewerCallback()}
+                        key={fragmentId}
+                        {...passdown}
+                        fragmentId={fragmentId} />
+                </div>
+                <div className={classes.border}>
+                    <div className={classes.indicator}>
+                        {modes.map((_, idx) => idx === selectedModeIdx ? "\u25CF" : "\u25CB")}
+                    </div>
+                    {showLabels ? <div className={classes.label}>{selectedModeIdx}</div> : null}
+                </div>
+                
             </Frame>
         );
     }
 }
 
 const styles = (theme: Theme) => createStyles({
+    slot: {
+        paddingLeft: theme.vars.slot.padding,
+        paddingRight: theme.vars.slot.padding,
+        paddingBottom: theme.vars.slot.padding,
+        verticalAlign: 'bottom',
+    },
+    border: {
+        borderTopColor: theme.vars.slot.borderColor,
+        borderTopStyle: theme.vars.slot.borderStyle,
+        borderTopWidth: theme.vars.slot.borderWidth,
+    },
+    indicator: {
+        display: 'inline-block',
+        float: 'left',
+        paddingLeft: theme.vars.slot.padding,
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
+    },
+    label: {
+        display: 'inline-block',
+        float: 'right',
+        paddingRight: theme.vars.slot.padding,
+        ...theme.vars.text.caption,
+        color: theme.vars.emphasis.less,
+    },    
 });
 
 type InternalProps = WithStyles<typeof styles>;
