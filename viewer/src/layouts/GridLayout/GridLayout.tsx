@@ -41,9 +41,14 @@ export type GridLayoutEvent =
 class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, GridLayoutState> {
 
     private _childViewers: Viewer[] = [];
+    private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
-    private _registerViewer(viewer: Viewer, idx: number) {
-        this._childViewers[idx] = viewer;
+    private _getChildViewerCallback(idx: number) {
+        const key = `${idx}`;
+        if(!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => this._childViewers[idx] = viewer;
+        }
+        return this._childViewerCallbacks[key];
     }
 
     constructor(props: GridLayoutProps & InternalProps) {
@@ -51,6 +56,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
         this.state = {
             selectedCellIdx: 0,
         };
+        this._getChildViewerCallback.bind(this);
     }
 
     public getHandle(): GridLayoutHandle {
@@ -136,7 +142,6 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
     render() {
         const { classes, cells, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
-        const { selectedCellIdx } = this.state;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
@@ -153,7 +158,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
                             }}
                         >
                             <Viewer
-                                ref={(viewer) => this._registerViewer(viewer!, idx)}
+                                ref={this._getChildViewerCallback(idx)}
                                 {...passdown}
                                 fragmentId={fragmentId}
                             />
@@ -167,7 +172,7 @@ class GridLayout extends React.PureComponent<GridLayoutProps & InternalProps, Gr
 
 const styles = (theme: Theme) => createStyles({
     grid: {
-        display: 'flex-grid',
+        display: 'grid',
         gridGap: `${theme.vars.slot.spacing}px`, // Need px.
         justifyContent: 'start',
         gridAutoColumns: 'max-content',

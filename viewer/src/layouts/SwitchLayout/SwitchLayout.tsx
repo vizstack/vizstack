@@ -38,9 +38,10 @@ export type SwitchLayoutEvent =
 class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
     
     private _childViewer?: Viewer;
+    private _childViewerCallback = (viewer: Viewer) => this._childViewer = viewer;
 
-    private _registerViewer(viewer: Viewer) {
-        this._childViewer = viewer;
+    private _getChildViewerCallback() {
+        return this._childViewerCallback;
     }
 
     constructor(props: SwitchLayoutProps & InternalProps) {
@@ -48,6 +49,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         this.state = {
             selectedModeIdx: 0,
         };
+        this._childViewerCallback.bind(this);
     }
 
     public getHandle(): SwitchLayoutHandle {
@@ -93,7 +95,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <Viewer
-                    ref={(viewer) => this._registerViewer(viewer!)}
+                    ref={this._getChildViewerCallback()}
                     key={fragmentId}
                     {...passdown}
                     fragmentId={fragmentId} />

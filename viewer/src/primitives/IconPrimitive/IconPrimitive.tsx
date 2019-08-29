@@ -79,8 +79,6 @@ const styles = (theme: Theme) => createStyles({
     emphasisNormal: { color: theme.vars.emphasis.normal },
     emphasisLess: { color: theme.vars.emphasis.less },
     emphasisMore: { color: theme.vars.emphasis.more },
-
-    // TODO: Add light.
 });
 
 type InternalProps = WithStyles<typeof styles>;

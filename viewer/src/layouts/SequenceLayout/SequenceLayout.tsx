@@ -48,9 +48,14 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
     };
 
     private _childViewers: Viewer[] = [];
+    private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
-    private _registerViewer(viewer: Viewer, idx: number) {
-        this._childViewers[idx] = viewer;
+    private _getChildViewerCallback(idx: number) {
+        const key = `${idx}`;
+        if(!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => this._childViewers[idx] = viewer;
+        }
+        return this._childViewerCallbacks[key];
     }
 
     constructor(props: SequenceLayoutProps & InternalProps) {
@@ -58,6 +63,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         this.state = {
             selectedElementIdx: 0,
         };
+        this._getChildViewerCallback.bind(this);
     }
 
     public getHandle(): SequenceLayoutHandle {
@@ -97,16 +103,17 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
         const { elements, orientation, startMotif, endMotif } = this.props;
-        const { selectedElementIdx } = this.state;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
+                <div className={classes.container}>
                 <div
                     className={clsx({
                         [classes.motif]: true,
                         [classes.horizontal]: orientation === 'horizontal',
                         [classes.vertical]: orientation === 'vertical',
                     })}
+                    key='startMotif'
                 >
                     {startMotif}
                 </div>
@@ -121,7 +128,7 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                     >
                         <div className={classes.slot}>
                             <Viewer
-                                ref={(viewer) => this._registerViewer(viewer!, idx)}
+                                ref={this._getChildViewerCallback(idx)}
                                 key={`${idx}-${fragmentId}`}
                                 {...passdown}
                                 fragmentId={fragmentId}
@@ -138,8 +145,10 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
                         [classes.horizontal]: orientation === 'horizontal',
                         [classes.vertical]: orientation === 'vertical',
                     })}
+                    key='endMotif'
                 >
                     {endMotif}
+                </div>
                 </div>
             </Frame>
         );
@@ -147,6 +156,10 @@ class SequenceLayout extends React.PureComponent<SequenceLayoutProps & InternalP
 }
 
 const styles = (theme: Theme) => createStyles({
+    container: {
+        // All elements in a sequences must fall on single line.
+        whiteSpace: 'nowrap',
+    },
     slot: {
         paddingLeft: theme.vars.slot.padding,
         paddingRight: theme.vars.slot.padding,
@@ -172,9 +185,6 @@ const styles = (theme: Theme) => createStyles({
     },
     vertical: {
         display: 'block',
-    },
-    rootSelected: {
-        borderColor: theme.palette.primary.light,
     },
 });
 
