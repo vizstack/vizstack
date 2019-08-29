@@ -292,6 +292,9 @@ export class InteractionManager {
                         all.viewerId(viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType])
                            .forEach((child) => child.appearance.doSetLight('highlight'));
                     }
+                    if (viewer.type === 'SwitchLayout') {
+                        all.viewerId(viewer.state.mode).forEach((child) => child.appearance.doSetLight('highlight'));
+                    }
                     if (viewer.parentId) {
                         all.viewerId(viewer.parentId).forEach((parent) => {
                             if (parent.type === 'GridLayout') {
@@ -357,10 +360,10 @@ export class InteractionManager {
                 global.prevSelected = global.selected;
                 global.selected = message.viewerId;
                 all.viewerId(global.selected).forEach((viewer) => {
-                    viewer.appearance.doSetLight('selected');
-                    if (viewer.type === 'SwitchLayout') {
+                    if (viewer.type === 'SwitchLayout' && viewer.appearance.light === 'selected') {
                         viewer.state.doIncrementMode();
                     }
+                    viewer.appearance.doSetLight('selected');
                 });
             }
             else {
