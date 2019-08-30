@@ -7,10 +7,7 @@ class IconPrimitiveFragmentAssembler extends FragmentAssembler {
     private _name: string;
     private _emphasis?: EmphasisType;
 
-    constructor(
-        name: string,
-        emphasis?: EmphasisType,
-    ) {
+    constructor(name: string, emphasis?: EmphasisType) {
         super();
         this._name = name;
         this._emphasis = emphasis;
@@ -31,10 +28,7 @@ class IconPrimitiveFragmentAssembler extends FragmentAssembler {
     }
 }
 
-export function Icon(
-    name: string,
-    emphasis?: EmphasisType,
-) {
+export function Icon(name: string, emphasis?: EmphasisType) {
     return new IconPrimitiveFragmentAssembler(name, emphasis);
 }
 

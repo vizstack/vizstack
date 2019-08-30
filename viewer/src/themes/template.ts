@@ -1,5 +1,3 @@
-
-
 export default {
     framed: {
         normal: {
@@ -10,15 +8,9 @@ export default {
             borderBottom: '1px solid black',
             borderRadius: '0 0 0 2px',
         },
-        lowlight: {
-
-        },
-        highlight: {
-
-        },
-        selected: {
-
-        },
+        lowlight: {},
+        highlight: {},
+        selected: {},
     },
     unframed: {
         normal: {
@@ -28,15 +20,9 @@ export default {
             borderColor: 'black',
             borderRadius: '0 0 0 2px',
         },
-        lowlight: {
-
-        },
-        highlight: {
-
-        },
-        selected: {
-
-        },
+        lowlight: {},
+        highlight: {},
+        selected: {},
     },
     slot: {
         borderStyle: 'solid',
@@ -45,47 +31,47 @@ export default {
         padding: 4,
     },
     emphasis: {
-        normal: "",
-        less: "",
-        more: "",
+        normal: '',
+        less: '',
+        more: '',
     },
     fills: {
-        gray: "",
-        brown: "",
-        purple: "",
-        blue: "",
-        green: "",
-        yellow: "",
-        orange: "",
-        red: "",
-        pink: "",
+        gray: '',
+        brown: '',
+        purple: '',
+        blue: '',
+        green: '',
+        yellow: '',
+        orange: '',
+        red: '',
+        pink: '',
     },
     text: {
         caption: {
-            fontFamily: "",
+            fontFamily: '',
             fontSize: 10,
             fontWeight: 300,
         },
         body: {
-            fontFamily: "",
+            fontFamily: '',
             fontSize: 14,
             fontWeight: 300,
         },
         subheading: {
-            fontFamily: "",
+            fontFamily: '',
             fontSize: 14,
             fontWeight: 600,
         },
         heading: {
-            fontFamily: "",
+            fontFamily: '',
             fontSize: 16,
             fontWeight: 600,
         },
     },
     code: {
         body: {
-            fontFamily: "",
+            fontFamily: '',
             fontSize: 12,
         },
-    }
+    },
 };

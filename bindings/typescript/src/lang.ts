@@ -65,11 +65,12 @@ function getFunctionArgs(func: any) {
 const kCompactNum = 5;
 
 function SwitchSequence(elements: any[], summary: string, startMotif?: string, endMotif?: string) {
-    const fullMode = Sequence(elements, {orientation:'horizontal', startMotif, endMotif});
-    const compactMode = Sequence(
-        elements.slice(0, kCompactNum),
-        {orientation: 'horizontal', startMotif, endMotif: '... ' + endMotif }
-    );
+    const fullMode = Sequence(elements, { orientation: 'horizontal', startMotif, endMotif });
+    const compactMode = Sequence(elements.slice(0, kCompactNum), {
+        orientation: 'horizontal',
+        startMotif,
+        endMotif: '... ' + endMotif,
+    });
     const summaryMode = summary;
     if (elements.length <= kCompactNum) {
         return Switch(['full', 'summary'], { full: fullMode, summary: summaryMode });
@@ -88,8 +89,12 @@ function SwitchKeyValue(
     startMotif?: string,
     endMotif?: string,
 ) {
-    const fullMode = KeyValue(entries, {separator:':', startMotif, endMotif});
-    const compactMode = KeyValue(entries.slice(0, kCompactNum), {separator:':', startMotif, endMotif:'... ' + endMotif});
+    const fullMode = KeyValue(entries, { separator: ':', startMotif, endMotif });
+    const compactMode = KeyValue(entries.slice(0, kCompactNum), {
+        separator: ':',
+        startMotif,
+        endMotif: '... ' + endMotif,
+    });
     const summaryMode = summary;
     if (entries.length <= kCompactNum) {
         return Switch(['full', 'summary'], { full: fullMode, summary: summaryMode });

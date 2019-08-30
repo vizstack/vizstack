@@ -10,24 +10,24 @@ import { line, curveBasis, curveLinear } from 'd3';
  */
 type DagEdgeProps = {
     /** Edge point coordinates. */
-    points: { x: number, y: number }[],
+    points: { x: number; y: number }[];
 
     /** Line style. */
-    shape?: 'curve' | 'line',
+    shape?: 'curve' | 'line';
 
     /** Line color palette. */
-    color?: 'normal' | 'highlight' | 'lowlight' | 'selected',
+    color?: 'normal' | 'highlight' | 'lowlight' | 'selected';
 
     /** Text string to display on edge. */
-    label?: string,
+    label?: string;
 
     /** Mouse event handlers which should be spread on the node. */
     mouseHandlers: {
-        onClick?: (e: React.SyntheticEvent) => void,
-        onDoubleClick?: (e: React.SyntheticEvent) => void,
-        onMouseOver?: (e: React.SyntheticEvent) => void,
-        onMouseOut?: (e: React.SyntheticEvent) => void,
-    },
+        onClick?: (e: React.SyntheticEvent) => void;
+        onDoubleClick?: (e: React.SyntheticEvent) => void;
+        onMouseOver?: (e: React.SyntheticEvent) => void;
+        onMouseOut?: (e: React.SyntheticEvent) => void;
+    };
 };
 
 class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
@@ -97,53 +97,54 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    edge: {
-        fill: 'none',
-        // stroke: theme.vars.selectable.normal,
-        strokeWidth: 2.5,
-        opacity: 1,
-        markerEnd: 'url(#arrow-normal)',
-    },
-    hotspot: {
-        fill: 'none',
-        stroke: 'transparent',
-        strokeWidth: 12,
-    },
-    edgeHighlight: {
-        // stroke: theme.vars.selectable.highlight,
-        strokeWidth: 3.5,
-        markerEnd: 'url(#arrow-highlight)',
-        opacity: 1,
-    },
-    edgeLowlight: {
-        // stroke: theme.vars.selectable.lowlight,
-        markerEnd: 'url(#arrow-lowlight)',
-        opacity: 0.5,
-    },
-    edgeSelected: {
-        // stroke: theme.vars.selectable.selected,
-        strokeWidth: 3.5,
-        markerEnd: 'url(#arrow-selected)',
-    },
-    edgeLabel: {
-        opacity: 1,
-        textAlign: 'right',
-        // fontFamily: theme.fonts.monospace,
-        // fontWeight: theme.typography.fontWeightMedium,
-        fontSize: '7pt',
-        userSelect: 'none',
-    },
-    edgeLabelHighlight: {
-        opacity: 1,
-    },
-    edgeLabelLowlight: {
-        opacity: 0.5,
-    },
-    edgeLabelSelected: {
-        opacity: 1,
-    },
-});
+const styles = (theme: Theme) =>
+    createStyles({
+        edge: {
+            fill: 'none',
+            // stroke: theme.vars.selectable.normal,
+            strokeWidth: 2.5,
+            opacity: 1,
+            markerEnd: 'url(#arrow-normal)',
+        },
+        hotspot: {
+            fill: 'none',
+            stroke: 'transparent',
+            strokeWidth: 12,
+        },
+        edgeHighlight: {
+            // stroke: theme.vars.selectable.highlight,
+            strokeWidth: 3.5,
+            markerEnd: 'url(#arrow-highlight)',
+            opacity: 1,
+        },
+        edgeLowlight: {
+            // stroke: theme.vars.selectable.lowlight,
+            markerEnd: 'url(#arrow-lowlight)',
+            opacity: 0.5,
+        },
+        edgeSelected: {
+            // stroke: theme.vars.selectable.selected,
+            strokeWidth: 3.5,
+            markerEnd: 'url(#arrow-selected)',
+        },
+        edgeLabel: {
+            opacity: 1,
+            textAlign: 'right',
+            // fontFamily: theme.fonts.monospace,
+            // fontWeight: theme.typography.fontWeightMedium,
+            fontSize: '7pt',
+            userSelect: 'none',
+        },
+        edgeLabelHighlight: {
+            opacity: 1,
+        },
+        edgeLabelLowlight: {
+            opacity: 0.5,
+        },
+        edgeLabelSelected: {
+            opacity: 1,
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 

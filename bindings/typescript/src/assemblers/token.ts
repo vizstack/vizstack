@@ -7,16 +7,15 @@ class TokenPrimitiveFragmentAssembler extends FragmentAssembler {
     private _text: string;
     private _color?: ColorType;
 
-    constructor(
-        text: string,
-        color?: ColorType,
-    ) {
+    constructor(text: string, color?: ColorType) {
         super();
         this._text = text;
         this._color = color;
     }
 
-    public assemble(getId: (obj: any, name: string) => FragmentId): [TokenPrimitiveFragment, any[]] {
+    public assemble(
+        getId: (obj: any, name: string) => FragmentId,
+    ): [TokenPrimitiveFragment, any[]] {
         return [
             {
                 type: 'TokenPrimitive',
@@ -31,10 +30,7 @@ class TokenPrimitiveFragmentAssembler extends FragmentAssembler {
     }
 }
 
-export function Token(
-    text: string,
-    color?: ColorType,
-) {
+export function Token(text: string, color?: ColorType) {
     return new TokenPrimitiveFragmentAssembler(text, color);
 }
 

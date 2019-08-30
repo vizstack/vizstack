@@ -58,7 +58,16 @@ export type TokenPrimitiveFragment = {
     type: 'TokenPrimitive';
     contents: {
         text: string;
-        color?: 'gray' | 'brown' | 'purple' | 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'pink';        
+        color?:
+            | 'gray'
+            | 'brown'
+            | 'purple'
+            | 'blue'
+            | 'green'
+            | 'yellow'
+            | 'orange'
+            | 'red'
+            | 'pink';
     };
     meta: FragmentMeta;
 };
@@ -129,7 +138,7 @@ export type GridLayoutFragment = {
         }[];
         rowHeight?: 'fit' | 'equal';
         colWidth?: 'fit' | 'equal';
-        showLabels?: boolean,
+        showLabels?: boolean;
     };
     meta: FragmentMeta;
 };

@@ -40,7 +40,11 @@ describe('View Assemblers declarative bindings', () => {
     });
 
     test('Layout basic (Sequence)', () => {
-        const viz = Sequence([Text('hello'), Text('there')], {orientation:'vertical', startMotif:'[', endMotif:']'});
+        const viz = Sequence([Text('hello'), Text('there')], {
+            orientation: 'vertical',
+            startMotif: '[',
+            endMotif: ']',
+        });
         const schema = assemble(viz, getFragmentId);
         expect(schema.fragments).toMatchObject({
             root: {
@@ -87,34 +91,34 @@ describe('View Assemblers declarative bindings', () => {
         const dag = Dag();
         dag.node('parent', {});
         dag.item('parent', 'hello');
-        dag.node('child', {'parent': 'parent'});
+        dag.node('child', { parent: 'parent' });
         dag.item('child', 'there');
         expect(assemble(dag, getFragmentId).fragments).toMatchObject({
-            'root': {
-                'type': 'DagLayout',
-                'contents': {
-                    'nodes': {
-                        'parent': {
-                            'children': ['child']
-                        }
-                    }
-                }
+            root: {
+                type: 'DagLayout',
+                contents: {
+                    nodes: {
+                        parent: {
+                            children: ['child'],
+                        },
+                    },
+                },
             },
         });
-        dag.node('child', {'parent': null});
+        dag.node('child', { parent: null });
         expect(assemble(dag, getFragmentId).fragments).toMatchObject({
-            'root': {
-                'type': 'DagLayout',
-                'contents': {
-                    'nodes': {
-                        'parent': {
-                            'children': []
-                        }
-                    }
-                }
+            root: {
+                type: 'DagLayout',
+                contents: {
+                    nodes: {
+                        parent: {
+                            children: [],
+                        },
+                    },
+                },
             },
         });
-    })
+    });
 });
 
 describe('Custom Views defined by user', () => {

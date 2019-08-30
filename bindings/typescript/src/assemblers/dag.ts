@@ -35,14 +35,13 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
         const { parent, alignWith } = config;
         if (parent !== undefined) {
             // If the node already had a parent, remove it from its list of children
-            if(this._parents[name]) {
+            if (this._parents[name]) {
                 const idx = this._children[this._parents[name]].indexOf(name);
                 this._children[this._parents[name]].splice(idx);
             }
             if (parent === null) {
                 delete this._parents[name];
-            }
-            else {
+            } else {
                 this._parents[name] = parent;
                 if (!this._children[parent]) this._children[parent] = [];
                 this._children[parent].push(name);

@@ -14,7 +14,6 @@ import layout, { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 
-
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
@@ -26,52 +25,52 @@ type DagLayoutProps = FragmentProps<DagLayoutFragment>;
 type DagLayoutState = {
     /** Whether the graph needs to be re-layout. This should only be possible after all the node
      * sizes have been populated. */
-    shouldLayout: boolean,
+    shouldLayout: boolean;
 
     /** Nodes and Edges after populated with size and position information. */
     nodes: {
-        [nodeId: string]: any,  // DagNodeId -> ...
-    },
+        [nodeId: string]: any; // DagNodeId -> ...
+    };
     edges: {
-        [edgeId: string]: any,  // DagEdgeId -> ...
-    },
+        [edgeId: string]: any; // DagEdgeId -> ...
+    };
 
     /** Z-axis arrangement of graph elements after layout, sorted by ascending z-order. */
-    ordering: Array<{ type: 'node', id: DagNodeId } | { type: 'edge', id: DagEdgeId }>,
+    ordering: Array<{ type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId }>;
 
     /** Size of the graph determined by the layout engine. */
     size: {
-        width: number,
-        height: number,
-    },
+        width: number;
+        height: number;
+    };
 
     /** Whether each node is expanded. */
     expansion: {
-        [nodeId: string]: boolean,  // DagNodeId -> ...
-    },
-    
+        [nodeId: string]: boolean; // DagNodeId -> ...
+    };
+
     /** Which edges and nodes should be highlighted. */
     // TODO: Make into object, with more than highlight state.
-    highlightedEdges: Array<DagEdgeId>,
-    highlightedNodes: Array<DagNodeId>,
+    highlightedEdges: Array<DagEdgeId>;
+    highlightedNodes: Array<DagNodeId>;
 
     /** Which node or edge is selected */
-    selectedNodeId: DagNodeId,
+    selectedNodeId: DagNodeId;
 };
 
 export type DagLayoutHandle = {
-    nodes: Record<string, ViewerId>,  // DagNodeId -> ...
-    selectedNodeId: DagNodeId,
-    doSelectNode: (nodeId: DagNodeId) => void,
-    doSelectNeighborNode: (direction: 'north' | 'south' | 'east' | 'west') => void,
+    nodes: Record<string, ViewerId>; // DagNodeId -> ...
+    selectedNodeId: DagNodeId;
+    doSelectNode: (nodeId: DagNodeId) => void;
+    doSelectNeighborNode: (direction: 'north' | 'south' | 'east' | 'west') => void;
 };
 
 type DagDidSelectElementEvent = {
-    topic: 'Dag.DidSelectNode',
+    topic: 'Dag.DidSelectNode';
     message: {
-        viewerId: ViewerId,
-        selectedNodeId: DagNodeId,
-    },
+        viewerId: ViewerId;
+        selectedNodeId: DagNodeId;
+    };
 };
 
 type DagNodeDidMouseEvent = {
@@ -79,13 +78,13 @@ type DagNodeDidMouseEvent = {
         | 'Dag.NodeDidMouseOver'
         | 'Dag.NodeDidMouseOut'
         | 'Dag.NodeDidClick'
-        | 'Dag.NodeDidDoubleClick',
+        | 'Dag.NodeDidDoubleClick';
     message: {
-        viewerId: ViewerId,
-        nodeId: DagNodeId,
-        nodeExpanded: boolean,
-        nodeViewerId: ViewerId,
-    },
+        viewerId: ViewerId;
+        nodeId: DagNodeId;
+        nodeExpanded: boolean;
+        nodeViewerId: ViewerId;
+    };
 };
 
 type DagEdgeDidMouseEvent = {
@@ -93,38 +92,37 @@ type DagEdgeDidMouseEvent = {
         | 'Dag.EdgeDidMouseOver'
         | 'Dag.EdgeDidMouseOut'
         | 'Dag.EdgeDidClick'
-        | 'Dag.EdgeDidDoubleClick',
+        | 'Dag.EdgeDidDoubleClick';
     message: {
-        viewerId: ViewerId,
-        edgeId: DagEdgeId,
-    },
+        viewerId: ViewerId;
+        edgeId: DagEdgeId;
+    };
 };
 
-
 type DagNodeDidChangeLightEvent = {
-    topic: 'Dag.NodeDidChangeLight'
+    topic: 'Dag.NodeDidChangeLight';
     message: {
-        viewerId: ViewerId,
-        nodeId: DagNodeId,
-        light: 'normal' | 'highlight' | 'lowlight' | 'selected',
-    },
+        viewerId: ViewerId;
+        nodeId: DagNodeId;
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
+    };
 };
 
 type DagEdgeDidChangeLightEvent = {
-    topic: 'Dag.EdgeDidChangeLight'
+    topic: 'Dag.EdgeDidChangeLight';
     message: {
-        viewerId: ViewerId,
-        edgeId: DagEdgeId,
-        light: 'normal' | 'highlight' | 'lowlight' | 'selected',
-    },
+        viewerId: ViewerId;
+        edgeId: DagEdgeId;
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
+    };
 };
 
 type DagNodeDidResizeEvent = {
-    topic: 'Dag.NodeDidExpand' | 'Dag.NodeDidCollapse',
+    topic: 'Dag.NodeDidExpand' | 'Dag.NodeDidCollapse';
     message: {
-        viewerId: ViewerId,
-        nodeId: DagNodeId,
-    },
+        viewerId: ViewerId;
+        nodeId: DagNodeId;
+    };
 };
 
 export type DagLayoutEvent =
@@ -136,7 +134,7 @@ export type DagLayoutEvent =
     | DagNodeDidResizeEvent;
 
 class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayoutState> {
-    // Initial layout: 
+    // Initial layout:
     //     constructor(): Initialize state from props.
     //     render(): Render invisibly the unlayouted nodes.
     //     componentDidMount(): Since unlayouted nodes have been mounted, their size population
@@ -161,7 +159,9 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     ports: node.ports,
                     width: kNodeInitialWidth, // Allow space for `Viewer` to be rendered.
                     height: undefined, // Needs to be populated.
-                    x: 0, y: 0, z: 0,  // Default values.
+                    x: 0,
+                    y: 0,
+                    z: 0, // Default values.
                 },
             ]),
             edges: obj2obj(this.props.edges, (edgeId, edge) => [
@@ -190,27 +190,23 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         this._getChildViewerCallback.bind(this);
     }
 
-    private _childViewers: Record<string, Viewer> = {};  // DagNodeId -> Viewer
+    private _childViewers: Record<string, Viewer> = {}; // DagNodeId -> Viewer
     private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
     private _getChildViewerCallback(nodeId: DagNodeId) {
         const key = `${nodeId}`;
-        if(!this._childViewerCallbacks[key]) {
-            this._childViewerCallbacks[key] = (viewer) => this._childViewers[nodeId] = viewer;
+        if (!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => (this._childViewers[nodeId] = viewer);
         }
         return this._childViewerCallbacks[key];
     }
 
     public getHandle(): DagLayoutHandle {
         return {
-            nodes: {},  // this._childViewers.mapValue((viewer) => viewer.viewerId)
-            selectedNodeId: "herro",            
-            doSelectNode: (nodeId) => {
-                
-            },
-            doSelectNeighborNode: (direction) => {
-
-            },
+            nodes: {}, // this._childViewers.mapValue((viewer) => viewer.viewerId)
+            selectedNodeId: 'herro',
+            doSelectNode: (nodeId) => {},
+            doSelectNeighborNode: (direction) => {},
             // doSetLightNode: (light) => this.setState({ }),
             // doSetLightEdge: (light) => this.setState({ }),
             // doExpandNode: (nodeId) => null,
@@ -220,8 +216,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     componentDidMount() {
         // At this point, the unlayouted nodes.
         console.debug('DagLayout -- componentDidMount(): mounted');
-
-        
 
         // // Find leaves
         // Object.entries(this.props.nodes)
@@ -407,12 +401,14 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             return;
         }
 
-        this.setState((state) => _.merge({}, state, {
-            shouldLayout: true,
-            nodes: {
-                [nodeId]: { width, height }
-            },
-        }));
+        this.setState((state) =>
+            _.merge({}, state, {
+                shouldLayout: true,
+                nodes: {
+                    [nodeId]: { width, height },
+                },
+            }),
+        );
     }
 
     /**
@@ -437,7 +433,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     nodes: arr2obj(nodes, (node) => [node.id, node]),
                     edges: arr2obj(edges, (edge) => [edge.id, edge]),
                     ordering: elements.map((elem) => ({
-                        type: "points" in elem ? 'edge' : 'node',
+                        type: 'points' in elem ? 'edge' : 'node',
                         id: elem.id,
                     })),
                     size: { width, height },
@@ -481,8 +477,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             const message = {
                 viewerId,
                 nodeId,
-                nodeExpanded: true,  // TODO
-                nodeViewerId: "herro",  // TODO
+                nodeExpanded: true, // TODO
+                nodeViewerId: 'herro', // TODO
             };
             return {
                 onClick: (e: React.SyntheticEvent) => {
@@ -573,7 +569,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             }
                                             isVisible={isVisible}
                                             isHighlighted={this.state.highlightedNodes.includes(id)}
-                                            
                                             onResize={(width: number, height: number) =>
                                                 this._onNodeResize(id, width, height)
                                             }
@@ -615,35 +610,37 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    frame: {
-        flex: 1, // expand to fill frame vertical
-        display: 'flex',
-        flexDirection: 'row',
-        justifyContent: 'center', // along main axis (horizontal)
-        alignItems: 'stretch', // along cross axis (vertical)
-        overflow: 'hidden',
-    },
-    graph: {
-        flex: 'auto', // makes graph fill remaining space so sidebar is on side
-        overflow: 'auto',
-        textAlign: 'left', // so SVG doesn't move
-    },
-    arrowNormal: {
-        fill: theme.color.blue.base,
-    },
-    arrowHighlight: {
-        fill: theme.color.blue.l1,
-    },
-    arrowLowlight: {
-        fill: theme.color.gray.d1,
-    },
-    arrowSelected: {
-        fill: theme.color.blue.d2,
-    },
-});
+const styles = (theme: Theme) =>
+    createStyles({
+        frame: {
+            flex: 1, // expand to fill frame vertical
+            display: 'flex',
+            flexDirection: 'row',
+            justifyContent: 'center', // along main axis (horizontal)
+            alignItems: 'stretch', // along cross axis (vertical)
+            overflow: 'hidden',
+        },
+        graph: {
+            flex: 'auto', // makes graph fill remaining space so sidebar is on side
+            overflow: 'auto',
+            textAlign: 'left', // so SVG doesn't move
+        },
+        arrowNormal: {
+            fill: theme.color.blue.base,
+        },
+        arrowHighlight: {
+            fill: theme.color.blue.l1,
+        },
+        arrowLowlight: {
+            fill: theme.color.gray.d1,
+        },
+        arrowSelected: {
+            fill: theme.color.blue.d2,
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(DagLayout) as React.ComponentClass<DagLayoutProps>;
-
+export default withStyles(styles, { defaultTheme })(DagLayout) as React.ComponentClass<
+    DagLayoutProps
+>;

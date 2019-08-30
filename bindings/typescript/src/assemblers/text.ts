@@ -9,11 +9,7 @@ class TextPrimitiveFragmentAssembler extends FragmentAssembler {
     private _variant?: VariantType;
     private _emphasis?: EmphasisType;
 
-    constructor(
-        text: string,
-        variant?: VariantType,
-        emphasis?: EmphasisType,
-    ) {
+    constructor(text: string, variant?: VariantType, emphasis?: EmphasisType) {
         super();
         this._text = text;
         this._variant = variant;
@@ -36,11 +32,7 @@ class TextPrimitiveFragmentAssembler extends FragmentAssembler {
     }
 }
 
-export function Text(
-    text: string,
-    variant?: VariantType,
-    emphasis?: EmphasisType,
-) {
+export function Text(text: string, variant?: VariantType, emphasis?: EmphasisType) {
     return new TextPrimitiveFragmentAssembler(text, variant, emphasis);
 }
 

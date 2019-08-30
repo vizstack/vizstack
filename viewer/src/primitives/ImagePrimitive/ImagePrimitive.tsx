@@ -7,7 +7,6 @@ import defaultTheme from '../../theme';
 import { ImagePrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
 
-
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type ImagePrimitiveProps = FragmentProps<ImagePrimitiveFragment>;
 
@@ -17,8 +16,10 @@ export type ImagePrimitiveHandle = {};
 
 export type ImagePrimitiveEvent = {};
 
-class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalProps, ImagePrimitiveState> {
-
+class ImagePrimitive extends React.PureComponent<
+    ImagePrimitiveProps & InternalProps,
+    ImagePrimitiveState
+> {
     constructor(props: ImagePrimitiveProps & InternalProps) {
         super(props);
         this.state = {};
@@ -54,18 +55,21 @@ class ImagePrimitive extends React.PureComponent<ImagePrimitiveProps & InternalP
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    image: {
-        marginLeft: theme.scale(8),
-        marginRight: theme.scale(8),
-        borderColor: 'transparent',
-    },
+const styles = (theme: Theme) =>
+    createStyles({
+        image: {
+            marginLeft: theme.scale(8),
+            marginRight: theme.scale(8),
+            borderColor: 'transparent',
+        },
 
-    imageHighlight: {
-        borderColor: theme.palette.primary.light,
-    },
-});
+        imageHighlight: {
+            borderColor: theme.palette.primary.light,
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(ImagePrimitive) as React.ComponentClass<ImagePrimitiveProps>;
+export default withStyles(styles, { defaultTheme })(ImagePrimitive) as React.ComponentClass<
+    ImagePrimitiveProps
+>;

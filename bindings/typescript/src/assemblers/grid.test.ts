@@ -26,7 +26,6 @@ describe('parseGridString()', () => {
             B: { row: 0, col: 2, height: 2, width: 1 },
             C: { row: 1, col: 0, height: 1, width: 1 },
             D: { row: 1, col: 1, height: 1, width: 1 },
-            
         });
     });
     test('parses offset cells', () => {

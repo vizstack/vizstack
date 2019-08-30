@@ -8,7 +8,6 @@ import { TextPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer';
 import Frame from '../../Frame';
 
-
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type TextPrimitiveProps = FragmentProps<TextPrimitiveFragment>;
 
@@ -18,7 +17,10 @@ export type TextPrimitiveHandle = {};
 
 export type TextPrimitiveEvent = {};
 
-class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalProps, TextPrimitiveState> {
+class TextPrimitive extends React.PureComponent<
+    TextPrimitiveProps & InternalProps,
+    TextPrimitiveState
+> {
     static defaultProps: Partial<TextPrimitiveProps> = {
         variant: 'body',
         emphasis: 'normal',
@@ -45,18 +47,20 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
         const split = text.split('\n');
         return (
             <Frame component='span' style='unframed' light={light} mouseHandlers={mouseHandlers}>
-                <span className={clsx({
-                    [classes.container]: true,
+                <span
+                    className={clsx({
+                        [classes.container]: true,
 
-                    [classes.emphasisNormal]: emphasis === 'normal',
-                    [classes.emphasisLess]: emphasis === 'less',
-                    [classes.emphasisMore]: emphasis === 'more',
+                        [classes.emphasisNormal]: emphasis === 'normal',
+                        [classes.emphasisLess]: emphasis === 'less',
+                        [classes.emphasisMore]: emphasis === 'more',
 
-                    [classes.variantBody]: variant === 'body',
-                    [classes.variantCaption]: variant === 'caption',
-                    [classes.variantSubheading]: variant === 'subheading',
-                    [classes.variantHeading]: variant === 'heading',
-                })}>
+                        [classes.variantBody]: variant === 'body',
+                        [classes.variantCaption]: variant === 'caption',
+                        [classes.variantSubheading]: variant === 'subheading',
+                        [classes.variantHeading]: variant === 'heading',
+                    })}
+                >
                     {split.map((text, i) => (
                         <span key={i}>
                             {text}
@@ -69,23 +73,26 @@ class TextPrimitive extends React.PureComponent<TextPrimitiveProps & InternalPro
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    container: {
-        textAlign: 'left',
-        overflow: 'hidden',
-        width: 'fit-content',
-    },
+const styles = (theme: Theme) =>
+    createStyles({
+        container: {
+            textAlign: 'left',
+            overflow: 'hidden',
+            width: 'fit-content',
+        },
 
-    emphasisNormal: { color: theme.vars.emphasis.normal },
-    emphasisLess: { color: theme.vars.emphasis.less },
-    emphasisMore: { color: theme.vars.emphasis.more },
+        emphasisNormal: { color: theme.vars.emphasis.normal },
+        emphasisLess: { color: theme.vars.emphasis.less },
+        emphasisMore: { color: theme.vars.emphasis.more },
 
-    variantBody: { ...theme.vars.text.body },
-    variantCaption: { ...theme.vars.text.caption },
-    variantSubheading: { ...theme.vars.text.subheading },
-    variantHeading: { ...theme.vars.text.heading },
-});
+        variantBody: { ...theme.vars.text.body },
+        variantCaption: { ...theme.vars.text.caption },
+        variantSubheading: { ...theme.vars.text.subheading },
+        variantHeading: { ...theme.vars.text.heading },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(TextPrimitive) as React.ComponentClass<TextPrimitiveProps>;
+export default withStyles(styles, { defaultTheme })(TextPrimitive) as React.ComponentClass<
+    TextPrimitiveProps
+>;

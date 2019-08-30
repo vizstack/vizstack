@@ -11,55 +11,55 @@ import { arr2obj, obj2obj } from '../../utils/data-utils';
 export type NodeId = string;
 export type NodeIn = {
     /** String ID unique among all nodes in a graph. */
-    id: NodeId,
+    id: NodeId;
 
     /** IDs of nodes that are strictly contained within this node. */
-    children: Array<NodeId>,
+    children: Array<NodeId>;
 
     /** Direction in which the immediate children of this node will be arranged. */
-    flowDirection?: 'north' | 'south' | 'east' | 'west',
+    flowDirection?: 'north' | 'south' | 'east' | 'west';
 
     /** Whether to ensure that all immediate children of this node are strictly aligned along the
      *  axis of the flow direction. */
-    alignChildren?: boolean,
+    alignChildren?: boolean;
 
     /** Named points on node boundaries that serve as the source/destination of edges. */
     ports?: {
         [name: string]: {
             /** Absolute location of side on which port resides. */
-            side: 'north' | 'south' | 'east' | 'west',
+            side: 'north' | 'south' | 'east' | 'west';
 
             /** Order of port on its specified side. If undefined, any order will work. */
-            order?: number,
-        },
-    },
+            order?: number;
+        };
+    };
 
     /** Size dimensions of leaf nodes with fixed sizes; parent node dimensions will be populated. */
-    width?: number,
-    height?: number,
+    width?: number;
+    height?: number;
 };
 export type NodeOut = NodeIn & {
-    flowDirection: 'north' | 'south' | 'east' | 'west',
-    alignChildren: boolean,
+    flowDirection: 'north' | 'south' | 'east' | 'west';
+    alignChildren: boolean;
     ports?: {
         [name: string]: {
-            side: 'north' | 'south' | 'east' | 'west',
-            order: number,
+            side: 'north' | 'south' | 'east' | 'west';
+            order: number;
 
             /** Port coordinates populated by layout engine. */
-            x: number,
-            y: number,
-        },
-    },
+            x: number;
+            y: number;
+        };
+    };
 
     /** Size dimensions populated by layout engine. */
-    width: number,
-    height: number,
+    width: number;
+    height: number;
 
     /** Layout coordinates populated by layout engine. */
-    x: number,
-    y: number,
-    z: number,
+    x: number;
+    y: number;
+    z: number;
 };
 
 // TODO: Expansion, caching + identity fn
@@ -67,20 +67,20 @@ export type NodeOut = NodeIn & {
 export type EdgeId = string;
 export type EdgeIn = {
     /** String ID unique among all edges in a graph. */
-    id: EdgeId,
+    id: EdgeId;
 
     /** IDs of nodes that an edge starts and ends at. */
-    startId: NodeId,
-    endId: NodeId,
+    startId: NodeId;
+    endId: NodeId;
 
     /** Name of ports to connect to. If undefined, any side will work. */
-    startPort?: string,
-    endPort?: string,
+    startPort?: string;
+    endPort?: string;
 };
 export type EdgeOut = EdgeIn & {
     /** Layout coordinates populated by layout engine. */
-    points: { x: number, y: number }[],
-    z: number,
+    points: { x: number; y: number }[];
+    z: number;
 };
 
 /**
@@ -95,12 +95,12 @@ export default function layout(
     edges: EdgeIn[],
     callback: (width: number, height: number, nodes: NodeOut[], edges: EdgeOut[]) => void,
     config: {
-        alignments?: Array<Array<NodeId>>,
-        flowDirection?: 'north' | 'south' | 'east' | 'west',
-        alignChildren?: boolean,
-        flowSpacing?: number,
-        nodeMargin?: number,
-        edgeMargin?: number,
+        alignments?: Array<Array<NodeId>>;
+        flowDirection?: 'north' | 'south' | 'east' | 'west';
+        alignChildren?: boolean;
+        flowSpacing?: number;
+        nodeMargin?: number;
+        edgeMargin?: number;
     } = {},
 ) {
     // =============================================================================================
@@ -129,7 +129,10 @@ export default function layout(
     // Build lookup tables and record useful info by traversing the entire graph's node component
     // hierarchy (not edges, but containment relations).
     type NodeIdx = number;
-    const nodeIdxLookup: { [nodeId: string]: NodeIdx } = arr2obj(nodes, (node, idx) => [node.id, idx]);
+    const nodeIdxLookup: { [nodeId: string]: NodeIdx } = arr2obj(nodes, (node, idx) => [
+        node.id,
+        idx,
+    ]);
     const parentIdLookup: { [nodeId: string]: NodeId } = {};
     let numLeafNodes = 0;
     function traverseNode(nodeId: NodeId, processed: Set<NodeId>) {
@@ -159,11 +162,11 @@ export default function layout(
     // The "real" elements relate to actual user-defined elements.
     // The "fake" elements relate to elements inserted by this code for the sake of layout.
     let graph: {
-        vertices: Vertex[],
-        links: Link[],
-        constraints: Constraint[],
-        groups: Group[],
-        ports: Vertex[],
+        vertices: Vertex[];
+        links: Link[];
+        constraints: Constraint[];
+        groups: Group[];
+        ports: Vertex[];
     } = {
         vertices: [],
         links: [],
@@ -202,14 +205,14 @@ export default function layout(
         nodeId: NodeId,
     ):
         | {
-              type: 'vertex',
-              idx: VertexIdx,
-              obj: Vertex,
+              type: 'vertex';
+              idx: VertexIdx;
+              obj: Vertex;
           }
         | {
-              type: 'group',
-              idx: GroupIdx,
-              obj: Group,
+              type: 'group';
+              idx: GroupIdx;
+              obj: Group;
           }
         | null {
         if (vertexIdxLookup[nodeId] !== undefined) {
@@ -242,8 +245,8 @@ export default function layout(
         endIdx: VertexIdx,
         flowDirection: 'north' | 'south' | 'east' | 'west' = kFlowDirection,
         kwargs: {
-            gap?: number,
-            equality?: boolean,
+            gap?: number;
+            equality?: boolean;
         } = {},
     ): void {
         const key = `${startIdx}-${flowDirection}->${endIdx}`;
@@ -252,7 +255,7 @@ export default function layout(
 
         // Note: Negative gaps were found NOT to work, even on simple cases of 2 nodes. Instead,
         // we must reverse the left and right terms in the constraint inequality.
-        let options: { axis: 'x' | 'y', left: number, right: number };
+        let options: { axis: 'x' | 'y'; left: number; right: number };
         switch (flowDirection) {
             case 'west':
                 options = { axis: 'x', left: endIdx, right: startIdx };
@@ -304,7 +307,7 @@ export default function layout(
             const { vertexIdx: childVertexIdx, groupIdx: childGroupIdx } = processNode(
                 childId,
                 processed,
-            ) as any;  // TODO: What is accepted pattern?
+            ) as any; // TODO: What is accepted pattern?
 
             // Update `Group` according to whether child is leaf or group.
             if (childGroupIdx !== undefined) {
@@ -321,7 +324,9 @@ export default function layout(
         processed[nodeId] = { groupIdx };
         return processed[nodeId];
     }
-    const processCache: { [nodeId: string]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx } } = {};
+    const processCache: {
+        [nodeId: string]: { vertexIdx: VertexIdx } | { groupIdx: GroupIdx };
+    } = {};
     nodes.forEach((node) => processNode(node.id, processCache));
 
     function findLeafDescendants(startId: NodeId): NodeId[] {
@@ -408,9 +413,9 @@ export default function layout(
         .avoidOverlaps(true)
         .handleDisconnected(true)
         .nodes(graph.vertices)
-        .links(graph.links as any)  // TODO: Hack
+        .links(graph.links as any) // TODO: Hack
         .constraints(graph.constraints)
-        .groups(graph.groups as any)  // TODO: Hack
+        .groups(graph.groups as any) // TODO: Hack
         .groupCompactness(1e-5) // TODO: Choose
         .linkDistance(kFlowSpacing)
         .convergenceThreshold(1e-3) // TODO: Choose
@@ -427,15 +432,15 @@ export default function layout(
 
     // After layout, there are several changes in the `Vertex` and `Group`  objects.
     type VertexPopulated = Vertex & {
-        index: number,
-        bounds: cola.Rectangle,
+        index: number;
+        bounds: cola.Rectangle;
     };
     type GroupPopulated = Group & {
-        index: number,
-        bounds: cola.Rectangle,
-        leaves: VertexPopulated[],
-        groups: GroupPopulated[],
-        children?: number[],
+        index: number;
+        bounds: cola.Rectangle;
+        leaves: VertexPopulated[];
+        groups: GroupPopulated[];
+        children?: number[];
     };
 
     // Step 2: Retarget to ports.
@@ -471,10 +476,10 @@ export default function layout(
         const node: NodeIn = nodes[nodeIdxLookup[nodeId]];
         if (node.ports === undefined) return;
         const portsBySide: {
-            north: string[],
-            south: string[],
-            east: string[],
-            west: string[],
+            north: string[];
+            south: string[];
+            east: string[];
+            west: string[];
         } = {
             north: [],
             south: [],
@@ -585,11 +590,11 @@ export default function layout(
     // ---------------------------------------
 
     type Dims = {
-        x: number,
-        y: number,
-        z: number,
-        width: number,
-        height: number,
+        x: number;
+        y: number;
+        z: number;
+        width: number;
+        height: number;
     };
 
     function getGroupDims(nodeId: NodeId): Dims {
@@ -616,7 +621,10 @@ export default function layout(
     }
 
     // @ts-ignore
-    let minX: number | undefined, minY: number | undefined, maxX: number | undefined, maxY: number | undefined;
+    let minX: number | undefined,
+        minY: number | undefined,
+        maxX: number | undefined,
+        maxY: number | undefined;
     const nodeDimsLookup: { [nodeId: string]: Dims } = {};
     for (let node of nodes) {
         const { id } = node;
@@ -634,7 +642,7 @@ export default function layout(
         maxX = maxX === undefined ? dims.x + dims.width : Math.max(maxX, dims.x + dims.width);
         maxY = maxY === undefined ? dims.y + dims.height : Math.max(maxY, dims.y + dims.height);
     }
-    
+
     if (minX === undefined || minY === undefined || maxX === undefined || maxY === undefined) {
         console.error('Cannot calculate one of minX, minY, maxX, maxY for graph.');
         return;
@@ -669,7 +677,7 @@ export default function layout(
             const start: Dims = nodeDimsLookup[startId];
             const end: Dims = nodeDimsLookup[endId];
             let points = paths[i].map((point) => ({ x: point.x - minX!, y: point.y - minY! }));
-            function getDelta(side: "north" | "south" | "east" | "west") {
+            function getDelta(side: 'north' | 'south' | 'east' | 'west') {
                 switch (side) {
                     default:
                     case 'south':
@@ -734,43 +742,43 @@ export function findLowestCommonAncestor(
 // =================================================================================================
 
 type Vertex = {
-    width: number,
-    height: number,
-    x?: number,
-    y?: number,
-    bounds?: cola.Rectangle,
-    index?: number,
+    width: number;
+    height: number;
+    x?: number;
+    y?: number;
+    bounds?: cola.Rectangle;
+    index?: number;
 };
 
 type Group = {
-    leaves: number[], // Idxs of vertices directly within group.
-    groups: number[], // Idxs of other groups nested within group.
-    padding?: number, // Interior padding of group.
+    leaves: number[]; // Idxs of vertices directly within group.
+    groups: number[]; // Idxs of other groups nested within group.
+    padding?: number; // Interior padding of group.
 };
 
 type Link = {
     // Idx of vertex in input array, or inlined `Vertex`/`Group` objects.
-    source: number | Vertex | Group,
-    target: number | Vertex | Group,
+    source: number | Vertex | Group;
+    target: number | Vertex | Group;
 };
 
 type SeparationConstraint = {
     // nodes[left][axis] + gap <= nodes[right][axis]
-    type: 'separation',
-    axis: 'x' | 'y',
-    left: number, // Idx of vertex in input array.
-    right: number, // Idx of vertex in input array.
-    gap: number, // Separation between boundaries of vertices.
-    equality?: boolean, // Whether to enforce equality.
+    type: 'separation';
+    axis: 'x' | 'y';
+    left: number; // Idx of vertex in input array.
+    right: number; // Idx of vertex in input array.
+    gap: number; // Separation between boundaries of vertices.
+    equality?: boolean; // Whether to enforce equality.
 };
 
 type AlignConstraint = {
-    type: 'alignment',
-    axis: 'x' | 'y',
+    type: 'alignment';
+    axis: 'x' | 'y';
     offsets: {
-        node: number, // Idx of vertex in input array.
-        offset: number, // Offset from alignment axis (in px).
-    }[],
+        node: number; // Idx of vertex in input array.
+        offset: number; // Offset from alignment axis (in px).
+    }[];
 };
 
 type Constraint = SeparationConstraint | AlignConstraint;

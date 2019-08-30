@@ -27,21 +27,21 @@ import {
     InteractionContextValue,
     ViewerDidMouseEvent,
     ViewerDidChangeLightEvent,
- } from '../interaction';
+} from '../interaction';
 
 // TODO: Add way for user to confine selection to a particular root `Viewer` and its descendants.
 
 // All props that a `Viewer` receives.
 type ViewerProps = {
     /** Specification of View's root fragment and sub-fragments. */
-    view: View,
+    view: View;
 
     /** Unique `FragmentId` for the `Fragment` to be rendered by this `Viewer` at the current
      * level of nesting. */
-    fragmentId: FragmentId,
+    fragmentId: FragmentId;
 
     /** Unique `ViewerId` for the parent `Viewer`, if one exists. */
-    parentId?: ViewerId,
+    parentId?: ViewerId;
 };
 
 // Props that are passed from one `Viewer` to the next sub-`Viewer`.
@@ -50,33 +50,33 @@ type ViewerPassdownProps = Pick<ViewerProps, 'view' | 'parentId'>;
 // Props that enable a Fragment component to respond to interactions.
 type FragmentInteractionProps = {
     /** The `ViewerId` of the `Viewer` rendering this component. */
-    viewerId: ViewerId,
+    viewerId: ViewerId;
 
     /** Publishes an event to the `InteractionManager`. */
-    emit: InteractionContextValue['emit'],  
-    
+    emit: InteractionContextValue['emit'];
+
     /** Mouse handlers to place on React component that will trigger the general "Viewer.Did[*]"
      * events. */
     mouseHandlers: {
-        onClick: (e: React.SyntheticEvent) => void,
-        onDoubleClick: (e: React.SyntheticEvent) => void,
-        onMouseOver: (e: React.SyntheticEvent) => void,
-        onMouseOut: (e: React.SyntheticEvent) => void,
-    },
+        onClick: (e: React.SyntheticEvent) => void;
+        onDoubleClick: (e: React.SyntheticEvent) => void;
+        onMouseOver: (e: React.SyntheticEvent) => void;
+        onMouseOut: (e: React.SyntheticEvent) => void;
+    };
 };
 
 export type FragmentProps<T extends Fragment> = {
-    interactions: FragmentInteractionProps,
-    passdown: ViewerPassdownProps,
-    light: 'normal' | 'highlight' | 'lowlight' | 'selected',
+    interactions: FragmentInteractionProps;
+    passdown: ViewerPassdownProps;
+    light: 'normal' | 'highlight' | 'lowlight' | 'selected';
 } & T['contents'];
 
 type ViewerState = {
     /** Whether the `Viewer` should show its `Fragment` if doing so would create a cycle. */
-    bypassedCycle: boolean,
+    bypassedCycle: boolean;
 
     /** How pronounced the `Viewer` appears as a result of interactions. */
-    light: 'normal' | 'highlight' | 'lowlight' | 'selected',
+    light: 'normal' | 'highlight' | 'lowlight' | 'selected';
 };
 
 class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
@@ -85,7 +85,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
     /** Unique `ViewerId` correponding to this `Viewer`. */
     public viewerId: ViewerId;
-    
+
     /** Ref to the `Fragment` component that this `Viewer` renders. The specific component used
      * is determined at runtime, so the `any` workaround is needed. */
     private _childFragmentRef = React.createRef<any>();
@@ -177,11 +177,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
         if (this._isCycle() && !bypassedCycle) {
             // TODO: once we can compile and test stuff, make this button pretty
-            return (
-                <Button onClick={() => this.setState({bypassedCycle: true})}>
-                    ...
-                </Button>
-            )
+            return <Button onClick={() => this.setState({ bypassedCycle: true })}>...</Button>;
         }
 
         const passdown: ViewerPassdownProps = {
@@ -209,7 +205,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
                     e.stopPropagation();
                     emit<ViewerDidMouseEvent>('Viewer.DidMouseOut', { viewerId });
                 },
-            }
+            },
         };
 
         const props: any = {
@@ -223,7 +219,6 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
         // The `Viewer` is the component that knows how to dispatch on fragment type to render
         // different primitive and layout components.
         switch (fragment.type) {
-
             // =====================================================================================
             // Primitives
 
@@ -245,7 +240,7 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 
             // =====================================================================================
             // Layouts
-            
+
             case 'FlowLayout': {
                 return <FlowLayout {...props} />;
             }
@@ -271,7 +266,11 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
             }
 
             default: {
-                console.error(`Unknown Fragment type "${(fragment as any).type}" passed to Viewer ${this.viewerId}`);
+                console.error(
+                    `Unknown Fragment type "${(fragment as any).type}" passed to Viewer ${
+                        this.viewerId
+                    }`,
+                );
                 return null;
             }
         }
@@ -279,19 +278,19 @@ class Viewer extends React.PureComponent<ViewerProps, ViewerState> {
 }
 
 type ViewerRootProps = {
-    view: View | FragmentAssembler,
-    fragmentId?: FragmentId,
+    view: View | FragmentAssembler;
+    fragmentId?: FragmentId;
 };
 
 /**
  * A `Viewer` is used to render a `View`, conforming to the schema in `@vizstack/schema`, which has
  * been constructed manually or produced through language bindings. For convenience, it is
- * possible to pass the `@vizstack/js` bindings directly to the `Viewer`. 
+ * possible to pass the `@vizstack/js` bindings directly to the `Viewer`.
  * @example
  * ```
  * // JS-bindings input
  * <Viewer view={Text('Hello, world!')} />
- * 
+ *
  * // Schema input
  * <Viewer view={{
  *     rootId: 'root',
@@ -309,9 +308,7 @@ class ViewerRoot extends React.PureComponent<ViewerRootProps> {
     render() {
         const { view, fragmentId } = this.props;
         const schematized: View = view instanceof FragmentAssembler ? assemble(view) : view;
-        return (
-            <Viewer view={schematized} fragmentId={fragmentId || schematized.rootId}/>
-        )
+        return <Viewer view={schematized} fragmentId={fragmentId || schematized.rootId} />;
     }
 }
 

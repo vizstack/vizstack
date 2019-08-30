@@ -18,51 +18,53 @@ import Frame from '../../Frame';
 type KeyValueLayoutProps = FragmentProps<KeyValueLayoutFragment>;
 
 type KeyValueLayoutState = {
-    selectedEntryIdx: number,
-    selectedEntryType: 'key' | 'value',
+    selectedEntryIdx: number;
+    selectedEntryType: 'key' | 'value';
 };
 
 export type KeyValueLayoutHandle = {
-    entries: { key: ViewerId, value: ViewerId }[]
-    selectedEntryIdx: number,
-    selectedEntryType: 'key' | 'value',
-    doSelectEntry: (idx: number) => void,
-    doIncrementEntry: (delta?: number) => void,
-    doSelectKey: () => void,
-    doSelectValue: () => void,
+    entries: { key: ViewerId; value: ViewerId }[];
+    selectedEntryIdx: number;
+    selectedEntryType: 'key' | 'value';
+    doSelectEntry: (idx: number) => void;
+    doIncrementEntry: (delta?: number) => void;
+    doSelectKey: () => void;
+    doSelectValue: () => void;
 };
 
 type KeyValueDidSelectEntryEvent = {
-    topic: 'KeyValue.DidSelectEntry',
+    topic: 'KeyValue.DidSelectEntry';
     message: {
-        viewerId: ViewerId,
-        selectedEntryIdx: number,
-        selectedEntryType: 'key' | 'value',
-        prevSelectedEntryIdx: number,
-        prevSelectedEntryType: 'key' | 'value',
-    },
+        viewerId: ViewerId;
+        selectedEntryIdx: number;
+        selectedEntryType: 'key' | 'value';
+        prevSelectedEntryIdx: number;
+        prevSelectedEntryType: 'key' | 'value';
+    };
 };
 
-export type KeyValueLayoutEvent =
-    | KeyValueDidSelectEntryEvent;
+export type KeyValueLayoutEvent = KeyValueDidSelectEntryEvent;
 
-class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalProps, KeyValueLayoutState> {
+class KeyValueLayout extends React.PureComponent<
+    KeyValueLayoutProps & InternalProps,
+    KeyValueLayoutState
+> {
     static defaultProps: Partial<KeyValueLayoutProps> = {
         separator: ':',
         alignSeparators: false,
         showLabels: true,
     };
 
-    private _childViewers: { key?: Viewer, value?: Viewer }[] = [];
+    private _childViewers: { key?: Viewer; value?: Viewer }[] = [];
     private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
     private _getChildViewerCallback(idx: number, type: 'key' | 'value') {
         const key = `${idx}-${type}`;
-        if(!this._childViewerCallbacks[key]) {
+        if (!this._childViewerCallbacks[key]) {
             this._childViewerCallbacks[key] = (viewer) => {
-                if(!this._childViewers[idx]) this._childViewers[idx] = {};
-                 this._childViewers[idx][type] = viewer;
-            }
+                if (!this._childViewers[idx]) this._childViewers[idx] = {};
+                this._childViewers[idx][type] = viewer;
+            };
         }
         return this._childViewerCallbacks[key];
     }
@@ -93,7 +95,7 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
                 this.setState((state) => {
                     let entryIdx = state.selectedEntryIdx + delta;
                     // Ensure wrapping to valid array index.
-                    entryIdx = (entryIdx % entries.length + entries.length) % entries.length;
+                    entryIdx = ((entryIdx % entries.length) + entries.length) % entries.length;
                     return { selectedEntryIdx: entryIdx };
                 });
             },
@@ -106,13 +108,22 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
         };
     }
 
-    componentDidUpdate(prevProps: KeyValueLayoutProps & InternalProps, prevState: KeyValueLayoutState) {
+    componentDidUpdate(
+        prevProps: KeyValueLayoutProps & InternalProps,
+        prevState: KeyValueLayoutState,
+    ) {
         const { viewerId, emit } = this.props.interactions;
         const { selectedEntryIdx, selectedEntryType } = this.state;
-        if (selectedEntryIdx !== prevState.selectedEntryIdx ||
-            selectedEntryType !== prevState.selectedEntryType) {
+        if (
+            selectedEntryIdx !== prevState.selectedEntryIdx ||
+            selectedEntryType !== prevState.selectedEntryType
+        ) {
             emit<KeyValueLayoutEvent>('KeyValue.DidSelectEntry', {
-                viewerId, selectedEntryIdx, selectedEntryType, prevSelectedEntryIdx: prevState.selectedEntryIdx, prevSelectedEntryType: prevState.selectedEntryType,
+                viewerId,
+                selectedEntryIdx,
+                selectedEntryType,
+                prevSelectedEntryIdx: prevState.selectedEntryIdx,
+                prevSelectedEntryType: prevState.selectedEntryType,
             });
         }
     }
@@ -125,18 +136,21 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     render() {
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
-        const { entries, separator, startMotif, endMotif, alignSeparators, showLabels } = this.props;
+        const {
+            entries,
+            separator,
+            startMotif,
+            endMotif,
+            alignSeparators,
+            showLabels,
+        } = this.props;
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <div className={classes.container}>
                     <div className={clsx(classes.motif, classes.motifStart)}>{startMotif}</div>
                     <div className={classes.entries}>
-                    {entries.map(({ key, value }, idx: number) => {
-                            // <div className={clsx({
-                            //     [classes.entry]: true,
-                            //     [classes.spacing]: idx < entries.length - 1,
-                            // })}>
+                        {entries.map(({ key, value }, idx: number) => {
                             const ViewerKey = (
                                 <Viewer
                                     ref={this._getChildViewerCallback(idx, 'key')}
@@ -157,32 +171,54 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
 
                             return (
                                 <React.Fragment key={idx}>
-                                    <div className={clsx({
-                                        [classes.border]: true,
-                                        [classes.label]: showLabels,
-                                    })}
+                                    <div
+                                        className={clsx({
+                                            [classes.border]: true,
+                                            [classes.label]: showLabels,
+                                        })}
                                         style={{ gridColumn: `1 / 2`, gridRow }}
-                                    >{showLabels ? idx : null}</div>
+                                    >
+                                        {showLabels ? idx : null}
+                                    </div>
                                     {alignSeparators ? (
                                         <React.Fragment>
-                                        <div className={classes.slot}
-                                            style={{ gridColumn: `2 / 3`, gridRow }}>{ViewerKey}</div>
-                                        <div className={classes.separator}
-                                            style={{ gridColumn: `3 / 4`, gridRow }}>{separator}</div>
-                                        <div className={classes.slot}
-                                            style={{ gridColumn: `4 / 5`, gridRow }}>{ViewerValue}</div>
+                                            <div
+                                                className={classes.slot}
+                                                style={{ gridColumn: `2 / 3`, gridRow }}
+                                            >
+                                                {ViewerKey}
+                                            </div>
+                                            <div
+                                                className={classes.separator}
+                                                style={{ gridColumn: `3 / 4`, gridRow }}
+                                            >
+                                                {separator}
+                                            </div>
+                                            <div
+                                                className={classes.slot}
+                                                style={{ gridColumn: `4 / 5`, gridRow }}
+                                            >
+                                                {ViewerValue}
+                                            </div>
                                         </React.Fragment>
                                     ) : (
                                         <div style={{ gridColumn: `2 / 3`, gridRow }}>
                                             <div className={classes.slot}>{ViewerKey}</div>
-                                            <div className={clsx(classes.separator, classes.spacingAround)}>{separator}</div>
+                                            <div
+                                                className={clsx(
+                                                    classes.separator,
+                                                    classes.spacingAround,
+                                                )}
+                                            >
+                                                {separator}
+                                            </div>
                                             <div className={classes.slot}>{ViewerValue}</div>
                                         </div>
                                     )}
                                 </React.Fragment>
                             );
                             // </div>
-                                })}
+                        })}
                     </div>
                     <div className={clsx(classes.motif, classes.motifEnd)}>{endMotif}</div>
                 </div>
@@ -191,53 +227,56 @@ class KeyValueLayout extends React.PureComponent<KeyValueLayoutProps & InternalP
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        whiteSpace: 'nowrap',
-    },
-    entries: {
-        display: 'grid',
-        gridRowGap: theme.vars.slot.padding,
-        gridColumnGap: theme.vars.slot.spacing,
-    },
-    border: {
-        borderRightColor: theme.vars.slot.borderColor,
-        borderRightStyle: theme.vars.slot.borderStyle,
-        borderRightWidth: theme.vars.slot.borderWidth,
-    },
-    label: {
-        paddingRight: theme.vars.slot.padding,
-        textAlign: 'right',
-        ...theme.vars.text.caption,
-        color: theme.vars.emphasis.less,
-    },
-    slot: {
-        display: 'inline-block',
-    },
-    separator: {
-        display: 'inline-block',
-        ...theme.vars.text.body,
-        color: theme.vars.emphasis.less,
-    },
-    spacingAround: {
-        marginLeft: theme.vars.slot.spacing,
-        marginRight: theme.vars.slot.spacing,
-    },
-    motif: {
-        display: 'block',
-        ...theme.vars.text.caption,
-        color: theme.vars.emphasis.less,
-    },
-    motifStart: {
-        textAlign: 'right',
-    },
-    motifEnd: {
-        textAlign: 'left',
-    },
-});
+const styles = (theme: Theme) =>
+    createStyles({
+        container: {
+            display: 'flex',
+            flexDirection: 'column',
+            whiteSpace: 'nowrap',
+        },
+        entries: {
+            display: 'grid',
+            gridRowGap: theme.vars.slot.padding,
+            gridColumnGap: theme.vars.slot.spacing,
+        },
+        border: {
+            borderRightColor: theme.vars.slot.borderColor,
+            borderRightStyle: theme.vars.slot.borderStyle,
+            borderRightWidth: theme.vars.slot.borderWidth,
+        },
+        label: {
+            paddingRight: theme.vars.slot.padding,
+            textAlign: 'right',
+            ...theme.vars.text.caption,
+            color: theme.vars.emphasis.less,
+        },
+        slot: {
+            display: 'inline-block',
+        },
+        separator: {
+            display: 'inline-block',
+            ...theme.vars.text.body,
+            color: theme.vars.emphasis.less,
+        },
+        spacingAround: {
+            marginLeft: theme.vars.slot.spacing,
+            marginRight: theme.vars.slot.spacing,
+        },
+        motif: {
+            display: 'block',
+            ...theme.vars.text.caption,
+            color: theme.vars.emphasis.less,
+        },
+        motifStart: {
+            textAlign: 'right',
+        },
+        motifEnd: {
+            textAlign: 'left',
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(KeyValueLayout) as React.ComponentClass<KeyValueLayoutProps>;
+export default withStyles(styles, { defaultTheme })(KeyValueLayout) as React.ComponentClass<
+    KeyValueLayoutProps
+>;

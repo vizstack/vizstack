@@ -34,71 +34,80 @@ type FragmentType = Fragment['type'];
 /** Enables reading and interacting with a `Viewer`'s state, along with its corresponding
  * `Fragment`'s contents and metadata. '*/
 export type ViewerHandle<T extends FragmentType = FragmentType> = {
-    viewerId: ViewerId,
-    parentId?: ViewerId,
-    fragmentId: FragmentId,
-    meta: Fragment['meta'],
+    viewerId: ViewerId;
+    parentId?: ViewerId;
+    fragmentId: FragmentId;
+    meta: Fragment['meta'];
     appearance: {
-        light: 'normal' | 'highlight' | 'lowlight' | 'selected',
-        doSetLight: (light: 'normal' | 'highlight' | 'lowlight' | 'selected') => void,
-    },
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
+        doSetLight: (light: 'normal' | 'highlight' | 'lowlight' | 'selected') => void;
+    };
 } & FragmentSpecificInfo<T>;
 
 // In order to perform type inference properly, Typescript needs a discriminated union
 // to have its descriminant (i.e. `type` field) at the top level. This is why we unpack
 // the `Fragment` into the `ViewerHandle` as opposed to nesting it within another property.
-type FragmentSpecificInfo<T extends FragmentType> = 
-    T extends "TextPrimitive" ? {
-        type: T,
-        contents: TextPrimitiveFragment['contents'],
-        state: TextPrimitiveHandle,
-    } :
-    T extends 'TokenPrimitive' ? {
-        type: T,
-        contents: TokenPrimitiveFragment['contents'],
-        state: TokenPrimitiveHandle,
-    } : 
-    T extends 'IconPrimitive' ? {
-        type: T,
-        contents: IconPrimitiveFragment['contents'],
-        state: IconPrimitiveHandle,
-    } : 
-    T extends "ImagePrimitive" ? {
-        type: T,
-        contents: ImagePrimitiveFragment['contents'],
-        state: ImagePrimitiveHandle,
-    } :
-    T extends "FlowLayout" ? {
-        type: T,
-        contents: FlowLayoutFragment['contents'],
-        state: FlowLayoutHandle,
-    } :
-    T extends "SwitchLayout" ? {
-        type: T,
-        contents: SwitchLayoutFragment['contents'],
-        state: SwitchLayoutHandle,
-    } :
-    T extends "GridLayout" ? {
-        type: T,
-        contents: GridLayoutFragment['contents'],
-        state: GridLayoutHandle,
-    } :
-    T extends "SequenceLayout" ? {
-        type: T,
-        contents: SequenceLayoutFragment['contents'],
-        state: SequenceLayoutHandle,
-    } :
-    T extends "KeyValueLayout" ? {
-        type: T,
-        contents: KeyValueLayoutFragment['contents'],
-        state: KeyValueLayoutHandle,
-    } :
-    T extends "DagLayout" ? {
-        type: T,
-        contents: DagLayoutFragment['contents'],
-        state: DagLayoutHandle,
-    } :
-    never;
+type FragmentSpecificInfo<T extends FragmentType> = T extends 'TextPrimitive'
+    ? {
+          type: T;
+          contents: TextPrimitiveFragment['contents'];
+          state: TextPrimitiveHandle;
+      }
+    : T extends 'TokenPrimitive'
+    ? {
+          type: T;
+          contents: TokenPrimitiveFragment['contents'];
+          state: TokenPrimitiveHandle;
+      }
+    : T extends 'IconPrimitive'
+    ? {
+          type: T;
+          contents: IconPrimitiveFragment['contents'];
+          state: IconPrimitiveHandle;
+      }
+    : T extends 'ImagePrimitive'
+    ? {
+          type: T;
+          contents: ImagePrimitiveFragment['contents'];
+          state: ImagePrimitiveHandle;
+      }
+    : T extends 'FlowLayout'
+    ? {
+          type: T;
+          contents: FlowLayoutFragment['contents'];
+          state: FlowLayoutHandle;
+      }
+    : T extends 'SwitchLayout'
+    ? {
+          type: T;
+          contents: SwitchLayoutFragment['contents'];
+          state: SwitchLayoutHandle;
+      }
+    : T extends 'GridLayout'
+    ? {
+          type: T;
+          contents: GridLayoutFragment['contents'];
+          state: GridLayoutHandle;
+      }
+    : T extends 'SequenceLayout'
+    ? {
+          type: T;
+          contents: SequenceLayoutFragment['contents'];
+          state: SequenceLayoutHandle;
+      }
+    : T extends 'KeyValueLayout'
+    ? {
+          type: T;
+          contents: KeyValueLayoutFragment['contents'];
+          state: KeyValueLayoutHandle;
+      }
+    : T extends 'DagLayout'
+    ? {
+          type: T;
+          contents: DagLayoutFragment['contents'];
+          state: DagLayoutHandle;
+      }
+    : never;
 
 /** Enables reading and interacting with a `Viewer`'s `Fragment`-specific state and properties. */
 export type FragmentHandle = ViewerHandle['state'];
@@ -123,16 +132,16 @@ class ViewerSelector<T extends FragmentType = FragmentType> {
 
     /**
      * Keep only `Viewer`s rendering `Fragment`s with any of the specified `FragmentId`s.
-     * @param ids 
+     * @param ids
      */
     public fragmentId(...ids: FragmentId[]): ViewerSelector<T> {
         return this.filter((viewer) => ids.includes(viewer.fragmentId));
     }
 
-   /**
-    * Keep only `Viewer`s rendering `Fragment`s belonging to any of the specified types.
-    * @param types 
-    */
+    /**
+     * Keep only `Viewer`s rendering `Fragment`s belonging to any of the specified types.
+     * @param types
+     */
     public type<U extends T>(...types: U[]): ViewerSelector<U> {
         function fn(viewer: ViewerHandle<T>): viewer is ViewerHandle<U> {
             return types.includes(viewer.type as any);
@@ -149,9 +158,9 @@ class ViewerSelector<T extends FragmentType = FragmentType> {
      */
     public meta(...metas: [string, ((value: any) => boolean) | any][]): ViewerSelector<T> {
         return this.filter((viewer) => {
-            for(let [key, value] of metas) {
-                if(key in viewer.meta) {
-                    if(value instanceof Function) {
+            for (let [key, value] of metas) {
+                if (key in viewer.meta) {
+                    if (value instanceof Function) {
                         return value(viewer.meta[key]);
                     } else {
                         return value === viewer.meta[key];
@@ -170,14 +179,14 @@ class ViewerSelector<T extends FragmentType = FragmentType> {
      * @param fn
      */
     public map<U extends FragmentType>(
-        fn: (viewer: ViewerHandle<T>) => ViewerHandle<U>
+        fn: (viewer: ViewerHandle<T>) => ViewerHandle<U>,
     ): ViewerSelector<U> {
         return new ViewerSelector<U>(this._selected.map(fn));
     }
 
     /**
      * Filter the set of `ViewerHandle`s using a predicate function.
-     * @param fn 
+     * @param fn
      */
     public filter(fn: (viewer: ViewerHandle<T>) => boolean): ViewerSelector<T> {
         return new ViewerSelector<T>(this._selected.filter(fn));
@@ -193,8 +202,8 @@ class ViewerSelector<T extends FragmentType = FragmentType> {
 }
 
 type Event = {
-    topic: string,
-    message: Record<string, any>,
+    topic: string;
+    message: Record<string, any>;
 };
 
 /* The type of function which is called when an `Event` is emitted to an `InteractionManager`. */
@@ -206,24 +215,23 @@ type EventHandler<E extends Event = Event> = (
 
 /** Configuration object used to define how user interactions should be handled by the `Viewer`s
  * and/or the external application. This `InteractionManager` adopts a Pub/Sub model for attaching
- * event handlers to different topics (i.e. channels for messages). By using `ViewerSelector`s and 
+ * event handlers to different topics (i.e. channels for messages). By using `ViewerSelector`s and
  * `ViewerHandle`s, it is possible to target specific `Viewer`s to query and manipulate. */
 export class InteractionManager {
-
     // Maps a topic to the `EventHandler` functions that should fire when a message is emitted.
     private _handlers: { [topic: string]: EventHandler[] } = {};
-    
+
     // Maps a `ViewerId` to a factory for its `ViewerHandle`. The factory will always produce a
     // valid `ViewerHandle` since its corresponding `Viewer` will have been mounted (as well as
     // the `Fragment` it renders).
     private _viewers: { [viewerId: string]: () => ViewerHandle } = {};
-    
+
     // Global state that can be accessed by `EventHandler` functions.
     private _global: Record<string, any> = {};
-    
+
     // Queue of `Event`s that have been emitted but whose handlers have not yet been executed.
     private _eventQueue: Array<Event> = [];
-    
+
     // Whether the `InteractionManager` is currently executing the handlers for any event.
     private _isProcessingEvent: boolean = false;
 
@@ -260,7 +268,9 @@ export class InteractionManager {
                 this.emit('KeyUp', { key: e.key });
             });
         } else {
-            console.warn(`Keyboard interactions needs 'domElement' to attach listeners to, instead got: ${domElement}`);
+            console.warn(
+                `Keyboard interactions needs 'domElement' to attach listeners to, instead got: ${domElement}`,
+            );
         }
 
         if (useKeyboardDefaults) {
@@ -277,56 +287,82 @@ export class InteractionManager {
             if (message.viewerId === global.selected && message.light === 'selected') {
                 all.viewerId(message.viewerId).forEach((viewer) => {
                     if (viewer.type === 'GridLayout') {
-                        all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                        all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx]).forEach(
+                            (child) => child.appearance.doSetLight('highlight'),
+                        );
                     }
                     if (viewer.type === 'FlowLayout') {
-                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                        all.viewerId(
+                            viewer.state.elements[viewer.state.selectedElementIdx],
+                        ).forEach((child) => child.appearance.doSetLight('highlight'));
                     }
                     if (viewer.type === 'SequenceLayout') {
-                        all.viewerId(viewer.state.elements[viewer.state.selectedElementIdx])
-                            .forEach((child) => child.appearance.doSetLight('highlight'));
+                        all.viewerId(
+                            viewer.state.elements[viewer.state.selectedElementIdx],
+                        ).forEach((child) => child.appearance.doSetLight('highlight'));
                     }
                     if (viewer.type === 'KeyValueLayout') {
-                        all.viewerId(viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType])
-                           .forEach((child) => child.appearance.doSetLight('highlight'));
+                        all.viewerId(
+                            viewer.state.entries[viewer.state.selectedEntryIdx][
+                                viewer.state.selectedEntryType
+                            ],
+                        ).forEach((child) => child.appearance.doSetLight('highlight'));
                     }
                     if (viewer.type === 'SwitchLayout') {
-                        all.viewerId(viewer.state.mode).forEach((child) => child.appearance.doSetLight('highlight'));
+                        all.viewerId(viewer.state.mode).forEach((child) =>
+                            child.appearance.doSetLight('highlight'),
+                        );
                     }
                     if (viewer.parentId) {
                         all.viewerId(viewer.parentId).forEach((parent) => {
                             if (parent.type === 'GridLayout') {
-                                parent.state.doSelectCell(parent.state.cells.findIndex((childId) => childId === viewer.viewerId));
+                                parent.state.doSelectCell(
+                                    parent.state.cells.findIndex(
+                                        (childId) => childId === viewer.viewerId,
+                                    ),
+                                );
                             }
                             if (parent.type === 'FlowLayout') {
-                                parent.state.doSelectElement(parent.state.elements.findIndex((childId) => childId === viewer.viewerId));
+                                parent.state.doSelectElement(
+                                    parent.state.elements.findIndex(
+                                        (childId) => childId === viewer.viewerId,
+                                    ),
+                                );
                             }
                             if (parent.type === 'SequenceLayout') {
-                                parent.state.doSelectElement(parent.state.elements.findIndex((childId) => childId === viewer.viewerId));
+                                parent.state.doSelectElement(
+                                    parent.state.elements.findIndex(
+                                        (childId) => childId === viewer.viewerId,
+                                    ),
+                                );
                             }
                             if (parent.type === 'KeyValueLayout') {
-                                parent.state.doSelectEntry(parent.state.entries.findIndex(({key, value}) => {
-                                    if (key === viewer.viewerId) {
-                                        parent.state.doSelectKey();
-                                        return true;
-                                    }
-                                    if (value === viewer.viewerId) {
-                                        parent.state.doSelectValue();
-                                        return true;
-                                    }
-                                    return false;
-                                }));
+                                parent.state.doSelectEntry(
+                                    parent.state.entries.findIndex(({ key, value }) => {
+                                        if (key === viewer.viewerId) {
+                                            parent.state.doSelectKey();
+                                            return true;
+                                        }
+                                        if (value === viewer.viewerId) {
+                                            parent.state.doSelectValue();
+                                            return true;
+                                        }
+                                        return false;
+                                    }),
+                                );
                             }
                         });
                     }
                 });
             }
             if (message.viewerId === global.prevSelected && message.light !== 'selected') {
-                all.filter((viewer) => viewer.parentId === global.prevSelected && viewer.appearance.light === 'highlight').forEach((viewer) => {
+                all.filter(
+                    (viewer) =>
+                        viewer.parentId === global.prevSelected &&
+                        viewer.appearance.light === 'highlight',
+                ).forEach((viewer) => {
                     viewer.appearance.doSetLight('normal');
-                })
+                });
             }
         });
     }
@@ -365,8 +401,7 @@ export class InteractionManager {
                     }
                     viewer.appearance.doSetLight('selected');
                 });
-            }
-            else {
+            } else {
                 all.viewerId(global.selected).forEach((viewer) => {
                     viewer.appearance.doSetLight('highlight');
                 });
@@ -383,7 +418,9 @@ export class InteractionManager {
                         viewer.appearance.doSetLight('normal');
                         global.prevSelected = global.selected;
                         global.selected = viewer.parentId;
-                        all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                        all.viewerId(global.selected).forEach((viewer) =>
+                            viewer.appearance.doSetLight('selected'),
+                        );
                     }
                 }
                 switch (viewer.type) {
@@ -398,7 +435,9 @@ export class InteractionManager {
                             viewer.appearance.doSetLight('normal');
                             global.prevSelected = global.selected;
                             global.selected = viewer.state.mode;
-                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                            all.viewerId(global.selected).forEach((viewer) =>
+                                viewer.appearance.doSetLight('selected'),
+                            );
                         }
                         break;
                     case 'SequenceLayout':
@@ -411,8 +450,11 @@ export class InteractionManager {
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
                             global.prevSelected = global.selected;
-                            global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
-                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                            global.selected =
+                                viewer.state.elements[viewer.state.selectedElementIdx];
+                            all.viewerId(global.selected).forEach((viewer) =>
+                                viewer.appearance.doSetLight('selected'),
+                            );
                         }
                         break;
                     case 'KeyValueLayout':
@@ -431,8 +473,13 @@ export class InteractionManager {
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
                             global.prevSelected = global.selected;
-                            global.selected = viewer.state.entries[viewer.state.selectedEntryIdx][viewer.state.selectedEntryType];
-                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                            global.selected =
+                                viewer.state.entries[viewer.state.selectedEntryIdx][
+                                    viewer.state.selectedEntryType
+                                ];
+                            all.viewerId(global.selected).forEach((viewer) =>
+                                viewer.appearance.doSetLight('selected'),
+                            );
                         }
                         break;
                     case 'FlowLayout':
@@ -445,8 +492,11 @@ export class InteractionManager {
                         if (message.key === 'Enter') {
                             viewer.appearance.doSetLight('normal');
                             global.prevSelected = global.selected;
-                            global.selected = viewer.state.elements[viewer.state.selectedElementIdx];
-                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                            global.selected =
+                                viewer.state.elements[viewer.state.selectedElementIdx];
+                            all.viewerId(global.selected).forEach((viewer) =>
+                                viewer.appearance.doSetLight('selected'),
+                            );
                         }
                         break;
                     case 'GridLayout':
@@ -466,7 +516,9 @@ export class InteractionManager {
                             viewer.appearance.doSetLight('normal');
                             global.prevSelected = global.selected;
                             global.selected = viewer.state.cells[viewer.state.selectedCellIdx];
-                            all.viewerId(global.selected).forEach((viewer) => viewer.appearance.doSetLight('selected'));
+                            all.viewerId(global.selected).forEach((viewer) =>
+                                viewer.appearance.doSetLight('selected'),
+                            );
                         }
                         break;
                 }
@@ -474,42 +526,56 @@ export class InteractionManager {
         });
         this.on('Grid.DidSelectCell', (all, message, global) => {
             if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((grid: any) => {  // TODO: correct typing here
-                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx])
-                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(grid.state.cells[message.selectedCellIdx])
-                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
-                })
+                all.viewerId(message.viewerId).forEach((grid: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx]).forEach((viewer) =>
+                        viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(grid.state.cells[message.selectedCellIdx]).forEach((viewer) =>
+                        viewer.appearance.doSetLight('highlight'),
+                    );
+                });
             }
         });
         this.on('Sequence.DidSelectElement', (all, message, global) => {
             if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((sequence: any) => {  // TODO: correct typing here
-                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx])
-                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(sequence.state.elements[message.selectedElementIdx])
-                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
-                })
+                all.viewerId(message.viewerId).forEach((sequence: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(sequence.state.elements[message.selectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('highlight'),
+                    );
+                });
             }
         });
         this.on('Flow.DidSelectElement', (all, message, global) => {
             if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((flow: any) => {  // TODO: correct typing here
-                    all.viewerId(flow.state.elements[message.prevSelectedElementIdx])
-                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(flow.state.elements[message.selectedElementIdx])
-                        .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
-                })
+                all.viewerId(message.viewerId).forEach((flow: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(flow.state.elements[message.prevSelectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(flow.state.elements[message.selectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('highlight'),
+                    );
+                });
             }
         });
         this.on('KeyValue.DidSelectEntry', (all, message, global) => {
             if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((kv: any) => {  // TODO: correct typing here
-                    all.viewerId(kv.state.entries[message.prevSelectedEntryIdx][message.prevSelectedEntryType])
-                       .forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(kv.state.entries[message.selectedEntryIdx][message.selectedEntryType])
-                       .forEach((viewer) => viewer.appearance.doSetLight('highlight'));
-                })
+                all.viewerId(message.viewerId).forEach((kv: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(
+                        kv.state.entries[message.prevSelectedEntryIdx][
+                            message.prevSelectedEntryType
+                        ],
+                    ).forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(
+                        kv.state.entries[message.selectedEntryIdx][message.selectedEntryType],
+                    ).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
+                });
             }
         });
     }
@@ -519,7 +585,7 @@ export class InteractionManager {
     private _processNextEvent() {
         this._isProcessingEvent = true;
         const curr = this._eventQueue.shift();
-        if(!curr) {
+        if (!curr) {
             this._isProcessingEvent = false;
             return;
         }

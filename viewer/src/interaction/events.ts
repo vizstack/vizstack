@@ -1,8 +1,7 @@
 /* This file exports the `Event` type, `Event` subtypes which are shared across `Viewer`s, and
  * `getViewerMouseFunctions()`, which allows `Viewer` components to publish mouse-related events. */
 
- import { ViewerId } from './manager';
-
+import { ViewerId } from './manager';
 
 export type ViewerDidMouseOverEvent = {
     topic: 'Viewer.DidMouseOver';
@@ -33,7 +32,7 @@ export type ViewerDidMouseEvent =
 export type ViewerDidChangeLightEvent = {
     topic: 'Viewer.DidChangeLight';
     message: {
-        viewerId: ViewerId,
-        light: 'normal' | 'highlight' | 'lowlight' | 'selected',
+        viewerId: ViewerId;
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
     };
 };

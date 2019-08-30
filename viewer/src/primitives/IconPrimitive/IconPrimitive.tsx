@@ -10,7 +10,6 @@ import defaultTheme from '../../theme';
 import { IconPrimitiveFragment } from '@vizstack/schema';
 import { FragmentProps } from '../../Viewer/index';
 
-
 /* This pure dumb component renders visualization for a text string that represents a token. */
 type IconPrimitiveProps = FragmentProps<IconPrimitiveFragment>;
 
@@ -20,8 +19,10 @@ export type IconPrimitiveHandle = {};
 
 export type IconPrimitiveEvent = {};
 
-class IconPrimitive extends React.PureComponent<IconPrimitiveProps & InternalProps, IconPrimitiveState> {
-
+class IconPrimitive extends React.PureComponent<
+    IconPrimitiveProps & InternalProps,
+    IconPrimitiveState
+> {
     constructor(props: IconPrimitiveProps & InternalProps) {
         super(props);
         this.state = {};
@@ -58,29 +59,32 @@ class IconPrimitive extends React.PureComponent<IconPrimitiveProps & InternalPro
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    icon: {
-        ...theme.vars.icon,
-        verticalAlign: 'middle',
-        fontFamily: 'Material Icons Outlined',
-        'font-weight': 'normal',
-        'font-style': 'normal',
-        // 'line-height': 1,
-        'letter-spacing': 'normal',
-        'text-transform': 'none',
-        'display': 'inline-block',
-        'white-space': 'nowrap',
-        'word-wrap': 'normal',
-        'direction': 'ltr',
-        '-moz-font-feature-settings': 'liga',
-        '-moz-osx-font-smoothing': 'grayscale',
-    },
+const styles = (theme: Theme) =>
+    createStyles({
+        icon: {
+            ...theme.vars.icon,
+            verticalAlign: 'middle',
+            fontFamily: 'Material Icons Outlined',
+            'font-weight': 'normal',
+            'font-style': 'normal',
+            // 'line-height': 1,
+            'letter-spacing': 'normal',
+            'text-transform': 'none',
+            display: 'inline-block',
+            'white-space': 'nowrap',
+            'word-wrap': 'normal',
+            direction: 'ltr',
+            '-moz-font-feature-settings': 'liga',
+            '-moz-osx-font-smoothing': 'grayscale',
+        },
 
-    emphasisNormal: { color: theme.vars.emphasis.normal },
-    emphasisLess: { color: theme.vars.emphasis.less },
-    emphasisMore: { color: theme.vars.emphasis.more },
-});
+        emphasisNormal: { color: theme.vars.emphasis.normal },
+        emphasisLess: { color: theme.vars.emphasis.less },
+        emphasisMore: { color: theme.vars.emphasis.more },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(IconPrimitive) as React.ComponentClass<IconPrimitiveProps>;
+export default withStyles(styles, { defaultTheme })(IconPrimitive) as React.ComponentClass<
+    IconPrimitiveProps
+>;

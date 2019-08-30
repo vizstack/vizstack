@@ -18,37 +18,35 @@ import Frame from '../../Frame';
 type FlowLayoutProps = FragmentProps<FlowLayoutFragment>;
 
 type FlowLayoutState = {
-    selectedElementIdx: number,
+    selectedElementIdx: number;
 };
 
 export type FlowLayoutHandle = {
-    elements: ViewerId[],
-    selectedElementIdx: number,
-    doSelectElement: (idx: number) => void,
-    doIncrementElement: (delta?: number) => void,
+    elements: ViewerId[];
+    selectedElementIdx: number;
+    doSelectElement: (idx: number) => void;
+    doIncrementElement: (delta?: number) => void;
 };
 
 type FlowDidSelectElementEvent = {
-    topic: 'Flow.DidSelectElement',
+    topic: 'Flow.DidSelectElement';
     message: {
-        viewerId: ViewerId,
-        prevSelectedElementIdx: number,
-        selectedElementIdx: number,
-    },
+        viewerId: ViewerId;
+        prevSelectedElementIdx: number;
+        selectedElementIdx: number;
+    };
 };
 
-export type FlowLayoutEvent = 
-    | FlowDidSelectElementEvent;
+export type FlowLayoutEvent = FlowDidSelectElementEvent;
 
 class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, FlowLayoutState> {
-
     private _childViewers: Viewer[] = [];
     private _childViewerCallbacks: Record<string, (viewer: Viewer) => void> = {};
 
     private _getChildViewerCallback(idx: number) {
         const key = `${idx}`;
-        if(!this._childViewerCallbacks[key]) {
-            this._childViewerCallbacks[key] = (viewer) => this._childViewers[idx] = viewer;
+        if (!this._childViewerCallbacks[key]) {
+            this._childViewerCallbacks[key] = (viewer) => (this._childViewers[idx] = viewer);
         }
         return this._childViewerCallbacks[key];
     }
@@ -74,7 +72,8 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
                 this.setState((state) => {
                     let elementIdx = state.selectedElementIdx + delta;
                     // Ensure wrapping to valid array index.
-                    elementIdx = (elementIdx % elements.length + elements.length) % elements.length;
+                    elementIdx =
+                        ((elementIdx % elements.length) + elements.length) % elements.length;
                     return { selectedElementIdx: elementIdx };
                 });
             },
@@ -85,7 +84,11 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
         const { viewerId, emit } = this.props.interactions;
         const { selectedElementIdx } = this.state;
         if (selectedElementIdx !== prevState.selectedElementIdx) {
-            emit<FlowLayoutEvent>('Flow.DidSelectElement', { viewerId, selectedElementIdx, prevSelectedElementIdx: prevState.selectedElementIdx });
+            emit<FlowLayoutEvent>('Flow.DidSelectElement', {
+                viewerId,
+                selectedElementIdx,
+                prevSelectedElementIdx: prevState.selectedElementIdx,
+            });
         }
     }
 
@@ -109,7 +112,7 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
                             {...passdown}
                             fragmentId={fragmentId}
                         />
-                        {idx < elements.length - 1 ? <span className={classes.spacer}/> : null}
+                        {idx < elements.length - 1 ? <span className={classes.spacer} /> : null}
                     </React.Fragment>
                 ))}
             </Frame>
@@ -117,12 +120,15 @@ class FlowLayout extends React.PureComponent<FlowLayoutProps & InternalProps, Fl
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    spacer: {
-        marginRight: theme.vars.slot.spacing,
-    },
-});
+const styles = (theme: Theme) =>
+    createStyles({
+        spacer: {
+            marginRight: theme.vars.slot.spacing,
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(FlowLayout) as React.ComponentClass<FlowLayoutProps>;
+export default withStyles(styles, { defaultTheme })(FlowLayout) as React.ComponentClass<
+    FlowLayoutProps
+>;

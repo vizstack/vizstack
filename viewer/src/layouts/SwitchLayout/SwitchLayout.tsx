@@ -14,35 +14,36 @@ import Frame from '../../Frame';
 type SwitchLayoutProps = FragmentProps<SwitchLayoutFragment>;
 
 type SwitchLayoutState = {
-    selectedModeIdx: number,
+    selectedModeIdx: number;
 };
 
 export type SwitchLayoutHandle = {
-    mode: ViewerId,
-    selectedModeIdx: number,
-    doSelectMode: (idx: number) => void,
-    doIncrementMode: (delta?: number) => void,
+    mode: ViewerId;
+    selectedModeIdx: number;
+    doSelectMode: (idx: number) => void;
+    doIncrementMode: (delta?: number) => void;
 };
 
 type SwitchDidSelectModeEvent = {
-    topic: 'Switch.DidSelectMode',
+    topic: 'Switch.DidSelectMode';
     message: {
-        viewerId: ViewerId,
-        selectedModeIdx: number,
-    },
+        viewerId: ViewerId;
+        selectedModeIdx: number;
+    };
 };
 
-export type SwitchLayoutEvent =
-    | SwitchDidSelectModeEvent;
+export type SwitchLayoutEvent = SwitchDidSelectModeEvent;
 
-class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps, SwitchLayoutState> {
-    
+class SwitchLayout extends React.PureComponent<
+    SwitchLayoutProps & InternalProps,
+    SwitchLayoutState
+> {
     static defaultProps: Partial<SwitchLayoutProps> = {
         showLabels: true,
     };
 
     private _childViewer?: Viewer;
-    private _childViewerCallback = (viewer: Viewer) => this._childViewer = viewer;
+    private _childViewerCallback = (viewer: Viewer) => (this._childViewer = viewer);
 
     private _getChildViewerCallback() {
         return this._childViewerCallback;
@@ -69,7 +70,7 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                 this.setState((state) => {
                     let modeIdx = state.selectedModeIdx + delta;
                     // Ensure wrapping to valid array index.
-                    modeIdx = (modeIdx % modes.length + modes.length) % modes.length;
+                    modeIdx = ((modeIdx % modes.length) + modes.length) % modes.length;
                     return { selectedModeIdx: modeIdx };
                 });
             },
@@ -104,48 +105,51 @@ class SwitchLayout extends React.PureComponent<SwitchLayoutProps & InternalProps
                         ref={this._getChildViewerCallback()}
                         key={fragmentId}
                         {...passdown}
-                        fragmentId={fragmentId} />
+                        fragmentId={fragmentId}
+                    />
                 </div>
                 <div className={classes.border}>
                     <div className={classes.indicator}>
-                        {modes.map((_, idx) => idx === selectedModeIdx ? "\u25CF" : "\u25CB")}
+                        {modes.map((_, idx) => (idx === selectedModeIdx ? '\u25CF' : '\u25CB'))}
                     </div>
                     {showLabels ? <div className={classes.label}>{selectedModeIdx}</div> : null}
                 </div>
-                
             </Frame>
         );
     }
 }
 
-const styles = (theme: Theme) => createStyles({
-    slot: {
-        paddingLeft: theme.vars.slot.padding,
-        paddingRight: theme.vars.slot.padding,
-        paddingBottom: theme.vars.slot.padding,
-        verticalAlign: 'bottom',
-    },
-    border: {
-        borderTopColor: theme.vars.slot.borderColor,
-        borderTopStyle: theme.vars.slot.borderStyle,
-        borderTopWidth: theme.vars.slot.borderWidth,
-    },
-    indicator: {
-        display: 'inline-block',
-        float: 'left',
-        paddingLeft: theme.vars.slot.padding,
-        ...theme.vars.text.caption,
-        color: theme.vars.emphasis.less,
-    },
-    label: {
-        display: 'inline-block',
-        float: 'right',
-        paddingRight: theme.vars.slot.padding,
-        ...theme.vars.text.caption,
-        color: theme.vars.emphasis.less,
-    },    
-});
+const styles = (theme: Theme) =>
+    createStyles({
+        slot: {
+            paddingLeft: theme.vars.slot.padding,
+            paddingRight: theme.vars.slot.padding,
+            paddingBottom: theme.vars.slot.padding,
+            verticalAlign: 'bottom',
+        },
+        border: {
+            borderTopColor: theme.vars.slot.borderColor,
+            borderTopStyle: theme.vars.slot.borderStyle,
+            borderTopWidth: theme.vars.slot.borderWidth,
+        },
+        indicator: {
+            display: 'inline-block',
+            float: 'left',
+            paddingLeft: theme.vars.slot.padding,
+            ...theme.vars.text.caption,
+            color: theme.vars.emphasis.less,
+        },
+        label: {
+            display: 'inline-block',
+            float: 'right',
+            paddingRight: theme.vars.slot.padding,
+            ...theme.vars.text.caption,
+            color: theme.vars.emphasis.less,
+        },
+    });
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles, { defaultTheme })(SwitchLayout) as React.ComponentClass<SwitchLayoutProps>;
+export default withStyles(styles, { defaultTheme })(SwitchLayout) as React.ComponentClass<
+    SwitchLayoutProps
+>;

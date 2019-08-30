@@ -19,7 +19,7 @@ export default {
             border: '1.25px solid rgb(237, 237, 236)',
             borderLeftWidth: '3px',
             borderRadius: '0 0 8px 0',
-            padding: '4px 4px'
+            padding: '4px 4px',
         },
         lowlight: {},
         highlight: {
@@ -50,7 +50,7 @@ export default {
         borderWidth: 2,
         borderColor: 'rgb(237, 237, 236)',
         padding: 4,
-        spacing: 8, 
+        spacing: 8,
     },
     emphasis: {
         normal: 'rgb(55, 53, 47)',
@@ -98,5 +98,5 @@ export default {
             fontFamily: fonts.RobotoMono,
             fontSize: 12,
         },
-    }
+    },
 };

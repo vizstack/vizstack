@@ -44,7 +44,7 @@ export function obj2arr<A, B>(
  */
 export function arr2obj<A, B>(
     arr: Array<A>,
-    transform: (x: A, i: number) => [string, B]
+    transform: (x: A, i: number) => [string, B],
 ): Record<string, B> {
     return pairs2obj(arr.map((x, i) => transform(x, i)).filter((pair) => pair !== undefined));
 }
@@ -55,13 +55,14 @@ export function arr2obj<A, B>(
  *     pairs2obj(pairs);
  *     >> { 1: 1, 2: 2 }
  */
-export function pairs2obj<T>(
-    pairs: Array<[string, T]>
-): Record<string, T> {
-    return pairs.reduce((obj, [k, v]) => {
-        obj[k] = v;
-        return obj;
-    }, {} as Record<string, T>);
+export function pairs2obj<T>(pairs: Array<[string, T]>): Record<string, T> {
+    return pairs.reduce(
+        (obj, [k, v]) => {
+            obj[k] = v;
+            return obj;
+        },
+        {} as Record<string, T>,
+    );
 }
 
 /**

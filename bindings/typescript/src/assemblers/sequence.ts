@@ -2,9 +2,9 @@ import { FragmentId, SequenceLayoutFragment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 
 type SequenceLayoutConfig = {
-    orientation?: 'horizontal' | 'vertical',
-    startMotif?: string,
-    endMotif?: string,
+    orientation?: 'horizontal' | 'vertical';
+    startMotif?: string;
+    endMotif?: string;
     showLabels?: boolean;
 };
 
@@ -15,14 +15,10 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
     private _endMotif?: string;
     private _showLabels?: boolean;
 
-    constructor(
-        elements?: any[],
-        config: SequenceLayoutConfig = {},
-    ) {
+    constructor(elements?: any[], config: SequenceLayoutConfig = {}) {
         super();
         if (elements) this._elements = elements;
         this.config(config);
-
     }
 
     public item(item: any) {
@@ -37,10 +33,10 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
 
     public config(config: SequenceLayoutConfig) {
         const { orientation, startMotif, endMotif, showLabels } = config;
-        if(orientation !== undefined) this._orientation = orientation;
-        if(startMotif !== undefined) this._startMotif = startMotif;
-        if(endMotif !== undefined) this._endMotif = endMotif;
-        if(showLabels !== undefined) this._showLabels = showLabels;
+        if (orientation !== undefined) this._orientation = orientation;
+        if (startMotif !== undefined) this._startMotif = startMotif;
+        if (endMotif !== undefined) this._endMotif = endMotif;
+        if (showLabels !== undefined) this._showLabels = showLabels;
     }
 
     public assemble(
@@ -63,10 +59,7 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
     }
 }
 
-export function Sequence(
-    elements?: any[],
-    config: SequenceLayoutConfig = {},
-) {
+export function Sequence(elements?: any[], config: SequenceLayoutConfig = {}) {
     return new SequenceLayoutFragmentAssembler(elements, config);
 }
 

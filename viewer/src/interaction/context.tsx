@@ -16,8 +16,8 @@ export const InteractionContext = React.createContext<InteractionContextValue>({
 });
 
 type InteractionProviderProps = {
-    manager: InteractionManager,
-    children?: React.ReactNode,
+    manager: InteractionManager;
+    children?: React.ReactNode;
 };
 
 export class InteractionProvider extends React.PureComponent<InteractionProviderProps> {
