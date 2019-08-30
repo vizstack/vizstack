@@ -288,30 +288,43 @@ export class InteractionManager {
                 all.viewerId(message.viewerId).forEach((viewer) => {
                     if (viewer.type === 'GridLayout') {
                         all.viewerId(viewer.state.cells[viewer.state.selectedCellIdx]).forEach(
-                            (child) => child.appearance.doSetLight('highlight'),
+                            (child) => {
+                                global.selectedChild = child.viewerId;
+                                child.appearance.doSetLight('highlight');
+                            }
                         );
                     }
                     if (viewer.type === 'FlowLayout') {
                         all.viewerId(
                             viewer.state.elements[viewer.state.selectedElementIdx],
-                        ).forEach((child) => child.appearance.doSetLight('highlight'));
+                        ).forEach((child) => {
+                            global.selectedChild = child.viewerId;
+                            child.appearance.doSetLight('highlight');
+                        });
                     }
                     if (viewer.type === 'SequenceLayout') {
                         all.viewerId(
                             viewer.state.elements[viewer.state.selectedElementIdx],
-                        ).forEach((child) => child.appearance.doSetLight('highlight'));
+                        ).forEach((child) => {
+                            global.selectedChild = child.viewerId;
+                            child.appearance.doSetLight('highlight');
+                        });
                     }
                     if (viewer.type === 'KeyValueLayout') {
                         all.viewerId(
                             viewer.state.entries[viewer.state.selectedEntryIdx][
                                 viewer.state.selectedEntryType
                             ],
-                        ).forEach((child) => child.appearance.doSetLight('highlight'));
+                        ).forEach((child) => {
+                            global.selectedChild = child.viewerId;
+                            child.appearance.doSetLight('highlight');
+                        });
                     }
                     if (viewer.type === 'SwitchLayout') {
-                        all.viewerId(viewer.state.mode).forEach((child) =>
-                            child.appearance.doSetLight('highlight'),
-                        );
+                        all.viewerId(viewer.state.mode).forEach((child) => {
+                            global.selectedChild = child.viewerId;
+                            child.appearance.doSetLight('highlight');
+                        });
                     }
                     if (viewer.parentId) {
                         all.viewerId(viewer.parentId).forEach((parent) => {
@@ -365,24 +378,78 @@ export class InteractionManager {
                 });
             }
         });
+        this.on('Grid.DidSelectCell', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((grid: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx]).forEach((viewer) =>
+                        viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(grid.state.cells[message.selectedCellIdx]).forEach((viewer) => {
+                        global.selectedChild = viewer.viewerId;
+                        viewer.appearance.doSetLight('highlight');
+                    });
+                });
+            }
+        });
+        this.on('Sequence.DidSelectElement', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((sequence: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(sequence.state.elements[message.selectedElementIdx]).forEach((viewer) => {
+                        global.selectedChild = viewer.viewerId;
+                        viewer.appearance.doSetLight('highlight');
+                    });
+                });
+            }
+        });
+        this.on('Flow.DidSelectElement', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((flow: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(flow.state.elements[message.prevSelectedElementIdx]).forEach(
+                        (viewer) => viewer.appearance.doSetLight('normal'),
+                    );
+                    all.viewerId(flow.state.elements[message.selectedElementIdx]).forEach((viewer) => {
+                        global.selectedChild = viewer.viewerId;
+                        viewer.appearance.doSetLight('highlight');
+                    });
+                });
+            }
+        });
+        this.on('KeyValue.DidSelectEntry', (all, message, global) => {
+            if (global.selected === message.viewerId) {
+                all.viewerId(message.viewerId).forEach((kv: any) => {
+                    // TODO: correct typing here
+                    all.viewerId(
+                        kv.state.entries[message.prevSelectedEntryIdx][
+                            message.prevSelectedEntryType
+                        ],
+                    ).forEach((viewer) => viewer.appearance.doSetLight('normal'));
+                    all.viewerId(
+                        kv.state.entries[message.selectedEntryIdx][message.selectedEntryType],
+                    ).forEach((viewer) => {
+                        global.selectedChild = viewer.viewerId;
+                        viewer.appearance.doSetLight('highlight');
+                    });
+                });
+            }
+        });
     }
 
     private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
-            if (global.hovered !== global.selected) {
-                all.viewerId(global.hovered).forEach((viewer) => {
-                    viewer.appearance.doSetLight('normal');
-                });
-            }
-            global.hovered = message.viewerId;
-            if (global.hovered !== global.selected) {
-                all.viewerId(global.hovered).forEach((viewer) => {
+            if (message.viewerId !== global.selected) {
+                all.viewerId(message.viewerId).forEach((viewer) => {
                     viewer.appearance.doSetLight('highlight');
                 });
             }
         });
         this.on('Viewer.DidMouseOut', (all, message, global) => {
-            if (message.viewerId !== global.selected) {
+            if (message.viewerId !== global.selected && message.viewerId !== global.selectedChild) {
                 all.viewerId(message.viewerId).forEach((viewer) => {
                     viewer.appearance.doSetLight('normal');
                 });
@@ -523,60 +590,6 @@ export class InteractionManager {
                         break;
                 }
             });
-        });
-        this.on('Grid.DidSelectCell', (all, message, global) => {
-            if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((grid: any) => {
-                    // TODO: correct typing here
-                    all.viewerId(grid.state.cells[message.prevSelectedCellIdx]).forEach((viewer) =>
-                        viewer.appearance.doSetLight('normal'),
-                    );
-                    all.viewerId(grid.state.cells[message.selectedCellIdx]).forEach((viewer) =>
-                        viewer.appearance.doSetLight('highlight'),
-                    );
-                });
-            }
-        });
-        this.on('Sequence.DidSelectElement', (all, message, global) => {
-            if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((sequence: any) => {
-                    // TODO: correct typing here
-                    all.viewerId(sequence.state.elements[message.prevSelectedElementIdx]).forEach(
-                        (viewer) => viewer.appearance.doSetLight('normal'),
-                    );
-                    all.viewerId(sequence.state.elements[message.selectedElementIdx]).forEach(
-                        (viewer) => viewer.appearance.doSetLight('highlight'),
-                    );
-                });
-            }
-        });
-        this.on('Flow.DidSelectElement', (all, message, global) => {
-            if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((flow: any) => {
-                    // TODO: correct typing here
-                    all.viewerId(flow.state.elements[message.prevSelectedElementIdx]).forEach(
-                        (viewer) => viewer.appearance.doSetLight('normal'),
-                    );
-                    all.viewerId(flow.state.elements[message.selectedElementIdx]).forEach(
-                        (viewer) => viewer.appearance.doSetLight('highlight'),
-                    );
-                });
-            }
-        });
-        this.on('KeyValue.DidSelectEntry', (all, message, global) => {
-            if (global.selected === message.viewerId) {
-                all.viewerId(message.viewerId).forEach((kv: any) => {
-                    // TODO: correct typing here
-                    all.viewerId(
-                        kv.state.entries[message.prevSelectedEntryIdx][
-                            message.prevSelectedEntryType
-                        ],
-                    ).forEach((viewer) => viewer.appearance.doSetLight('normal'));
-                    all.viewerId(
-                        kv.state.entries[message.selectedEntryIdx][message.selectedEntryType],
-                    ).forEach((viewer) => viewer.appearance.doSetLight('highlight'));
-                });
-            }
         });
     }
 
