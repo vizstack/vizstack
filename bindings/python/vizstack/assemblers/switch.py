@@ -5,53 +5,44 @@ from vizstack.schema import JsonType, View, Fragment
 
 
 class Switch(FragmentAssembler):
-    """
 
-    """
-
-    _DEFAULT_ITEM = object()
+    _NONE_SPECIFIED = object()
+    _show_labels: Optional[bool] = None
 
     def __init__(self,
                  modes: Optional[List[str]] = None,
-                 items: Optional[Dict[str, Any]] = None) -> None:
+                 items: Optional[Dict[str, Any]] = None,
+                 show_labels: Optional[bool] = None) -> None:
         """
 
         Args:
-            modes: An optional list of mode names. The order of the names is the order through which they will be
-                cycled.
+            modes: An optional list of mode names. The order of the names is the order through which
+                they will be cycled.
             items: An optional mapping of mode names to items.
+            show_labels: Whether to show the labels.
         """
         super(Switch, self).__init__()
         self._modes: List[str] = []
-        if modes is not None:
-            for mode in modes:
-                self.mode(mode)
+        if modes is not None: self._modes = modes
         self._items: Dict[str, Any] = dict()
         if items is not None:
             for mode, item in items.items():
-                self.item(item, mode)
+                self.item(mode, item)
+        self.config(show_labels=show_labels)
 
-    def mode(self, mode_name: str, index: Optional[int] = None, item=_DEFAULT_ITEM):
-        """Adds a new mode to the list of modes.
-
-        Args:
-            mode_name: The name of the new mode.
-            index: An optional index at which to insert the new mode; if `None`, the mode is inserted at the end.
-            item: An optional item to show in the new mode.
-
-        Returns:
-
-        """
-        if index is not None:
-            self._modes.insert(index, mode_name)
-        else:
-            self._modes.append(mode_name)
-        if item is not Switch._DEFAULT_ITEM:
-            self.item(item, mode_name)
+    def mode(self, name: str, item=_NONE_SPECIFIED):
+        """Adds a new mode to the existing modes."""
+        self._modes.append(name)
+        if item is not Switch._NONE_SPECIFIED:
+            self.item(name, item)
         return self
 
-    def item(self, item: Any, mode_name: str):
-        self._items[mode_name] = item
+    def item(self, name: str, item: Any):
+        self._items[name] = item
+        return self
+
+    def config(self, show_labels: Optional[bool] = None):
+        if show_labels is not None: self._show_labels = show_labels
         return self
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
@@ -60,7 +51,8 @@ class Switch(FragmentAssembler):
         return {
             'type': 'SwitchLayout',
             'contents': {
-                'modes': [get_id(self._items[mode_name], mode_name) for mode_name in self._modes],
+                'modes': [get_id(self._items[name], str(name)) for name in self._modes],
+                'showLabels': self._show_labels,
             },
             'meta': self._meta,
         }, [self._items[mode] for mode in self._modes]

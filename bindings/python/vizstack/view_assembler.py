@@ -1,4 +1,4 @@
-from typing import Any, Optional, Callable, NoReturn, Dict, List, Set
+from typing import Any, Optional, Dict, List
 from hashlib import md5
 from base64 import b64encode
 from vizstack.schema import FragmentId, View, Fragment
@@ -106,7 +106,9 @@ class ViewAssembler:
             stack.extend(refs)
 
         for frag_id, frag in fragments.items():
-            assert frag, 'Object assigned a FragmentId was not returned as a ref: {}'.format(frag_id)
+            assert frag, 'Object assigned a FragmentId was not returned as a ref: {}'.format(
+                frag_id
+            )
 
         return {
             'rootId': ViewAssembler._ROOT_ID,

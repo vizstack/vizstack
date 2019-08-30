@@ -2,11 +2,11 @@ from vizstack.view_assembler import ViewAssembler
 from typing import Any, Union, Dict
 from vizstack.schema import Fragment, View
 
-
 __all__ = ['hash_ids', 'match_object']
 
 
 def _hash_fragments(raw_fragments):
+
     def hash_id(raw_id):
         s = raw_id.split('-')[0]
         for n in raw_id.split('-')[1:]:
@@ -29,21 +29,27 @@ def _hash_fragments(raw_fragments):
                 contents['elements'] = [hash_id(raw_id) for raw_id in raw_contents['elements']]
             elif raw_type == 'DagLayout':
                 contents['nodes'] = {
-                    node_id: {**node, 'fragmentId': hash_id(node['fragmentId'])}
+                    node_id: {
+                        **node, 'fragmentId': hash_id(node['fragmentId'])
+                    }
                     for node_id, node in raw_contents['nodes'].items()
                 }
             elif raw_type == 'GridLayout':
                 contents['cells'] = {
-                    cell_id: {**cell, 'fragmentId': hash_id(cell['fragmentId'])}
+                    cell_id: {
+                        **cell, 'fragmentId': hash_id(cell['fragmentId'])
+                    }
                     for cell_id, cell in raw_contents['cells'].items()
                 }
             elif raw_type == 'SwitchLayout':
                 contents['modes'] = [hash_id(raw_id) for raw_id in raw_contents['modes']]
             elif raw_type == 'KeyValueLayout':
-                contents['entries'] = [{
-                    'key': hash_id(key),
-                    'value': hash_id(value),
-                } for key, value in raw_contents['entries'].items()]
+                contents['entries'] = [
+                    {
+                        'key': hash_id(key),
+                        'value': hash_id(value),
+                    } for key, value in raw_contents['entries'].items()
+                ]
             # Make no changes for non-layout types, since they have no FragmentIds in their contents
             fragment['contents'] = contents
 
@@ -54,11 +60,12 @@ def _hash_fragments(raw_fragments):
 
 
 def hash_ids(raw: Union[View, Dict[str, Fragment]]):
-    """Transforms all plaintext `FragmentId`s in either a `View` or `dict` of `Fragment`s into the hashed versions
-    that would have been produced in a call to `assemble()`.
+    """Transforms all plaintext `FragmentId`s in either a `View` or `dict` of `Fragment`s into the
+    hashed versions that would have been produced in a call to `assemble()`.
 
-    This allows one to write tests where the ground-truth uses human-readable `FragmentId`s; just pass the
-    human-readable version into `hash_ids()` before comparing to the output of `assemble()`.
+    This allows one to write tests where the ground-truth uses human-readable `FragmentId`s; just
+    pass the human-readable version into `hash_ids()` before comparing to the output of
+    `assemble()`.
 
     Args:
         raw:
@@ -67,10 +74,7 @@ def hash_ids(raw: Union[View, Dict[str, Fragment]]):
 
     """
     if 'rootId' in raw:
-        return {
-            'rootId': raw['rootId'],
-            'fragments': _hash_fragments(raw['fragments'])
-        }
+        return {'rootId': raw['rootId'], 'fragments': _hash_fragments(raw['fragments'])}
     else:
         return _hash_fragments(raw)
 
@@ -78,8 +82,9 @@ def hash_ids(raw: Union[View, Dict[str, Fragment]]):
 def match_object(given: Any, expected: Any) -> bool:
     """Replicates the behavior of `toMatchObject()` in Javascript.
 
-    If `expected` is a `dict`, then `given` must contain _at least_ all of the keys in `expected`, and `match_object`
-    must return `True` for each corresponding value. If `expected` is anything else, return `given == truth`.
+    If `expected` is a `dict`, then `given` must contain _at least_ all of the keys in `expected`,
+    and `match_object` must return `True` for each corresponding value. If `expected` is anything
+    else, return `given == truth`.
 
     Args:
         given:

@@ -7,11 +7,13 @@ FragmentMeta = Dict[str, JsonType]
 
 FragmentId = NewType('FragmentId', str)
 
-Fragment = TypedDict('Fragment', {
-    'type': str,
-    'contents': Dict[str, JsonType],
-    'meta': FragmentMeta,
-})
+Fragment = TypedDict(
+    'Fragment', {
+        'type': str,
+        'contents': Dict[str, JsonType],
+        'meta': FragmentMeta,
+    }
+)
 
 View = TypedDict('View', {
     'rootId': FragmentId,

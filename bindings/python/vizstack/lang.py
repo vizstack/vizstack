@@ -1,9 +1,8 @@
 from vizstack.fragment_assembler import FragmentAssembler
 from typing import Any, Optional, List, Dict
-from vizstack.assemblers import Text, KeyValue, Sequence, Switch
+from vizstack.assemblers import Token, KeyValue, Sequence, Switch
 import types
 import inspect
-
 
 __all__ = ['get_language_default']
 
@@ -11,81 +10,98 @@ __all__ = ['get_language_default']
 def get_language_default(obj: Any) -> FragmentAssembler:
     # Primitives: Token containing the value in full
     if isinstance(obj, (str, int, float, bool)) or obj is None:
-        fasm: FragmentAssembler = Text(str(obj) if not isinstance(obj, str) else '"{}"'.format(obj), variant='token')
+        return Token('"{}"'.format(obj) if isinstance(obj, str) else str(obj))
 
     # List: Sequence of the list elements
     elif isinstance(obj, list):
-        fasm = _SwitchSequence(
+        return _SwitchSequence(
             obj,
             start_motif='List[{}] ['.format(len(obj)),
             end_motif=']',
-            summary='List[{}]'.format(len(obj)))
+            summary='List[{}]'.format(len(obj))
+        )
+
     # Set: Sequence of the set items
     elif isinstance(obj, set):
-        fasm = _SwitchSequence(
+        return _SwitchSequence(
             list(obj),
             start_motif='Set[{}] {{'.format(len(obj)),
             end_motif='}',
-            summary='Set[{}]'.format(len(obj)))
+            summary='Set[{}]'.format(len(obj))
+        )
+
     # Tuple: Sequence of the tuple elements
     elif isinstance(obj, tuple):
-        fasm = _SwitchSequence(
+        return _SwitchSequence(
             list(obj),
             start_motif='Tuple[{}] ('.format(len(obj)),
             end_motif=')',
-            summary='Tuple[{}]'.format(len(obj)))
+            summary='Tuple[{}]'.format(len(obj))
+        )
+
     # Dict: KeyValue of the dict items
     elif isinstance(obj, dict):
-        fasm = _SwitchKeyValue(
+        return _SwitchKeyValue(
             obj,
             start_motif='Dict[{}] {{'.format(len(obj)),
             end_motif='}',
-            summary='Dict[{}]'.format(len(obj)))
+            summary='Dict[{}]'.format(len(obj))
+        )
+
     # Function: Sequence of positional arguments and the KeyValue of keyword arguments
     elif callable(obj):
         parameters = inspect.signature(obj).parameters.items()
         args = [param_name for param_name, param in parameters if param.default is inspect._empty]
         kwargs = {
-            param_name: param.default for param_name, param in parameters if param.default is not inspect._empty
+            param_name: param.default
+            for param_name, param in parameters
+            if param.default is not inspect._empty
         }
 
-        fasm = _SwitchSequence([
-            _SwitchSequence(
-                args,
-                start_motif='Positional Args [',
-                end_motif=']',
-                summary='Args',
-                initial_expansion_mode='compact'),
-            _SwitchKeyValue(
-                kwargs,
-                start_motif='Keyword Args {',
-                end_motif='}',
-                summary='Kwargs',
-                initial_expansion_mode='compact'),
-        ],
+        return _SwitchSequence(
+            [
+                _SwitchSequence(
+                    args,
+                    start_motif='Positional Args [',
+                    end_motif=']',
+                    summary='Args',
+                    initial_expansion_mode='compact'
+                ),
+                _SwitchKeyValue(
+                    kwargs,
+                    start_motif='Keyword Args {',
+                    end_motif='}',
+                    summary='Kwargs',
+                    initial_expansion_mode='compact'
+                ),
+            ],
             start_motif='Function[{}] ('.format(obj.__name__),
             end_motif=')',
             orientation='vertical',
-            summary='Function[{}]'.format(obj.__name__))
+            summary='Function[{}]'.format(obj.__name__)
+        )
+
     # Module: KeyValue of module contents
     elif inspect.ismodule(obj):
         attributes = dict()
         for attr in filter(lambda a: not a.startswith('__'), dir(obj)):
-            # There are some functions, like torch.Tensor.data, which exist just to throw errors. Testing these
-            # fields will throw the errors. We should consume them and keep moving if so.
+            # There are some functions, like torch.Tensor.data, which exist just to throw errors.
+            # Testing these fields will throw the errors. We should consume them and keep moving
+            # if so.
             try:
                 value: Any = getattr(obj, attr)
-                if not inspect.ismodule(
-                        value
-                ):  # Prevent recursing through many modules for no reason
+                if not inspect.ismodule(value):
+                    # Prevent recursing through many modules for no reason
                     attributes[attr] = getattr(obj, attr)
             except Exception:
                 continue
-        fasm = _SwitchKeyValue(
+        return _SwitchKeyValue(
             attributes,
             start_motif='Module[{}] {{'.format(obj.__name__),
             end_motif='}',
-            summary='Module[{}]'.format(obj.__name__))
+            summary='Module[{}]'.format(obj.__name__)
+        )
+
     # Class: KeyValue of functions and KeyValue of static fields
     elif inspect.isclass(obj):
         functions = dict()
@@ -107,7 +123,9 @@ def get_language_default(obj: Any) -> FragmentAssembler:
                     start_motif='Functions {',
                     end_motif='}',
                     summary='Functions',
-                    initial_expansion_mode='compact'))
+                    initial_expansion_mode='compact'
+                )
+            )
         if len(staticfields) > 0:
             contents.append(
                 _SwitchKeyValue(
@@ -115,13 +133,17 @@ def get_language_default(obj: Any) -> FragmentAssembler:
                     start_motif='Fields {',
                     end_motif='}',
                     summary='Fields',
-                    initial_expansion_mode='compact'))
-        fasm = _SwitchSequence(
+                    initial_expansion_mode='compact'
+                )
+            )
+        return _SwitchSequence(
             contents,
             start_motif='Class[{}] ('.format(obj.__name__),
             end_motif=')',
             summary='Class[{}]'.format(obj.__name__),
-            orientation='vertical')
+            orientation='vertical'
+        )
+
     # Object instance: KeyValue of all instance attributes
     else:
         instance_class = type(obj)
@@ -130,20 +152,20 @@ def get_language_default(obj: Any) -> FragmentAssembler:
         for attr in filter(lambda a: not a.startswith('__'), dir(obj)):
             value = getattr(obj, attr)
             try:
-                if not callable(value) and (attr not in instance_class_attrs
-                                 or getattr(instance_class, attr, None) != value):
+                if not callable(value) and (attr not in instance_class_attrs or
+                                            getattr(instance_class, attr, None) != value):
                     instance_fields[attr] = value
             except Exception:
-                # If some unexpected error occurs (as any object can override `getattr()` like Pytorch does,
-                # and raise any error), just skip over instead of crashing
+                # If some unexpected error occurs (as any object can override `getattr()` like
+                # Pytorch does, and raise any error), just skip over instead of crashing
                 continue
-        fasm = _SwitchKeyValue(
+        return _SwitchKeyValue(
             instance_fields,
-            item_separator='=',
+            separator='=',
             start_motif='Instance[{}] {{'.format(type(obj).__name__),
             end_motif='}',
-            summary='Instance[{}]'.format(type(obj).__name__))
-    return fasm
+            summary='Instance[{}]'.format(type(obj).__name__)
+        )
 
 
 _COMPACT_LEN = 3
@@ -155,8 +177,10 @@ def _SwitchSequence(
         end_motif: Optional[str] = None,
         orientation: str = 'horizontal',
         summary: Optional[str] = None,
-        initial_expansion_mode: Optional[str] = None) -> Switch:
-    """Returns a `Switch` which cycles through full, compact, and summary modes of a `Sequence` with the given elements.
+        initial_expansion_mode: Optional[str] = None
+) -> Switch:
+    """Returns a `Switch` which cycles through full, compact, and summary modes of a `Sequence` with
+    the given elements.
 
     Args:
         elements:
@@ -169,8 +193,15 @@ def _SwitchSequence(
     Returns:
 
     """
-    full_view = Sequence(elements, start_motif, end_motif, orientation)
-    compact_view = Sequence(elements[:_COMPACT_LEN], start_motif, end_motif, orientation)
+    full_view = Sequence(
+        elements, start_motif=start_motif, end_motif=end_motif, orientation=orientation
+    )
+    compact_view = Sequence(
+        elements[:_COMPACT_LEN],
+        start_motif=start_motif,
+        end_motif=end_motif,
+        orientation=orientation
+    )
     compact_view.item('...')
     summary_view = summary if summary is not None else 'sequence[{}]'.format(len(elements))
     # If the compact and full modes would be the same, exclude the compact mode
@@ -180,22 +211,25 @@ def _SwitchSequence(
     modes = ['full', 'compact', 'summary']
     # If an initial expansion mode is given, move it to the start of the list of modes
     if initial_expansion_mode is not None:
-        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes.index(initial_expansion_mode):]
+        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes
+                                                                    .index(initial_expansion_mode):]
     return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})
 
 
 def _SwitchKeyValue(
         key_value_mapping: Dict[Any, Any],
-        item_separator: str = ':',
+        separator: str = ':',
         start_motif: Optional[str] = None,
         end_motif: Optional[str] = None,
         summary: Optional[str] = None,
-        initial_expansion_mode: Optional[str] = None) -> Switch:
-    """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValue` with given items.
+        initial_expansion_mode: Optional[str] = None
+) -> Switch:
+    """Returns a `Switch` which cycles through full, compact, and summary modes of a `KeyValue` with
+    given items.
 
     Args:
         key_value_mapping:
-        item_separator:
+        separator:
         start_motif:
         end_motif:
         summary:
@@ -204,13 +238,15 @@ def _SwitchKeyValue(
     Returns:
 
     """
-    full_view = KeyValue(key_value_mapping, item_separator, start_motif, end_motif)
+    full_view = KeyValue(
+        key_value_mapping, separator=separator, start_motif=start_motif, end_motif=end_motif
+    )
     compact = dict()
     for i, (key, value) in enumerate(key_value_mapping.items()):
         if i >= _COMPACT_LEN:
             break
         compact[key] = value
-    compact_view = KeyValue(compact, item_separator, start_motif, '...')
+    compact_view = KeyValue(compact, separator=separator, start_motif=start_motif, end_motif='...')
     summary_view = summary if summary is not None else 'dict[{}]'.format(len(key_value_mapping))
     # If the compact and full modes would be the same, exclude the compact mode
     if len(key_value_mapping) <= _COMPACT_LEN:
@@ -219,5 +255,6 @@ def _SwitchKeyValue(
     modes = ['full', 'compact', 'summary']
     # If an initial expansion mode is given, move it to the start of the list of modes
     if initial_expansion_mode is not None:
-        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes.index(initial_expansion_mode):]
+        modes = modes[:modes.index(initial_expansion_mode)] + modes[modes
+                                                                    .index(initial_expansion_mode):]
     return Switch(modes, {'full': full_view, 'compact': compact_view, 'summary': summary_view})

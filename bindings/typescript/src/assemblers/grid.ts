@@ -16,7 +16,7 @@ export function parseGridString(str: string): Record<string, GridCell> {
         .map((row) => row.replace(/\s/g, ''))
         .filter((row) => row.length > 0);
     if (!rows || !rows.every((row) => row.length === rows[0].length)) {
-        throw new Error(`Specification string must be rectangular in shape, got rows: ${rows}`);
+        throw new Error(`Specification string must be rectangular, got rows: ${rows}`);
     }
     const grid: string[][] = rows.map((row) => row.split(''));
     const bounds: Record<string, GridBounds> = {};
@@ -62,6 +62,8 @@ type GridLayoutConfig = {
     showLabels?: boolean;
 };
 
+const kNoneSpecified = Symbol();
+
 class GridLayoutFragmentAssembler extends FragmentAssembler {
     private _cells: Record<string, GridCell> = {};
     private _items: Record<string, any> = {};
@@ -83,7 +85,7 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
                 // Cells already provided in structured format.
                 cells.forEach(({ name, ...cell }) => (this._cells[name] = cell));
             } else {
-                throw new Error(`Unknown format recieved for cells: ${cells}`);
+                throw new Error(`Unknown format received for cells: ${cells}`);
             }
         }
 
@@ -91,8 +93,16 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
         this.config(config);
     }
 
-    public cell(name: string, row: number, col: number, height: number, width: number) {
+    public cell(
+        name: string,
+        row: number,
+        col: number,
+        height: number,
+        width: number,
+        item: any = kNoneSpecified,
+    ) {
         this._cells[name] = { row, col, height, width };
+        if (item !== kNoneSpecified) this._items[name] = item;
         return this;
     }
 
@@ -106,6 +116,7 @@ class GridLayoutFragmentAssembler extends FragmentAssembler {
         if (rowHeight !== undefined) this._rowHeight = rowHeight;
         if (colWidth !== undefined) this._colWidth = colWidth;
         if (showLabels !== undefined) this._showLabels = showLabels;
+        return this;
     }
 
     public assemble(getId: (obj: any, name: string) => FragmentId): [GridLayoutFragment, any[]] {

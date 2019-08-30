@@ -5,6 +5,7 @@ __all__ = ['FragmentAssembler']
 
 
 class FragmentAssembler:
+
     def __init__(self) -> None:
         self._meta: FragmentMeta = {}
 

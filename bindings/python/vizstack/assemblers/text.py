@@ -3,8 +3,8 @@ from typing import Optional, Tuple, Dict, List, Any
 from typing_extensions import Literal
 from vizstack.schema import JsonType, View, Fragment
 
-Color = Literal['default', 'primary', 'secondary', 'error', 'invisible', None]
-Variant = Literal['plain', 'token', None]
+Variant = Literal['caption', 'body',  'subheading', 'heading', None]
+Emphasis = Literal['normal', 'less', 'more', None]
 
 
 class Text(FragmentAssembler):
@@ -14,26 +14,26 @@ class Text(FragmentAssembler):
 
     def __init__(self,
                  text: str,
-                 color: Color = None,
-                 variant: Variant = None) -> None:
+                 variant: Variant = None,
+                 emphasis: Emphasis = None,) -> None:
         """
         Args:
-            text: The text which should be rendered.
-            color: The color of the text; one of ('default' | 'primary' | 'secondary' | 'error' | 'invisible')
-            variant: The variant of the text; one of either "plain" or "token".
+            text: Text which should be rendered.
+            variant: Semantic role of text.
+            emphasis: Relative important of text.
         """
         super(Text, self).__init__()
         self._text: str = text
-        self._color: Color = color
         self._variant: Variant = variant
+        self._emphasis: Emphasis = emphasis
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'TextPrimitive',
             'contents': {
                 'text': self._text,
-                'color': self._color,
-                'variant': self._variant
+                'variant': self._variant,
+                'emphasis': self._emphasis,
             },
             'meta': self._meta,
         }, []

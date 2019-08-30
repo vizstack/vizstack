@@ -1,17 +1,18 @@
 from vizstack.fragment_assembler import FragmentAssembler
 from typing import Optional, Tuple, Dict, List, Any, Union
-from typing_extensions import TypedDict
+from typing_extensions import TypedDict, Literal
 from vizstack.schema import JsonType, View, Fragment
+import re
 
 
-Cell = TypedDict('Cell', {
+GridCell = TypedDict('GridCell', {
     'col': int,
     'row': int,
     'width': int,
     'height': int,
 })
 
-NamedCell = TypedDict('NamedCell', {
+GridCellNamed = TypedDict('GridCellNamed', {
     'col': int,
     'row': int,
     'width': int,
@@ -19,27 +20,78 @@ NamedCell = TypedDict('NamedCell', {
     'name': str,
 })
 
+GridBounds = TypedDict('GridBounds', {
+    'r': int,
+    'c': int,
+    'R': int,
+    'C': int,
+})
 
-# TODO: ensure no overlap of elements
+RowColSetting = Literal['fit', 'equal', None]
+
+
+def _within_bounds(bounds: GridBounds, row: int, col: int) -> bool:
+    return bounds['r'] <= row <= bounds['R'] and bounds['c'] <= col <= bounds['C']
+
+
+def _parse_grid_string(self, spec) -> Dict[str, GridCell]:
+    rows = re.split("\||\n", spec)
+    rows = ["".join(row.split()) for row in rows]
+    rows = [row for row in rows if len(row) > 0]
+    if len(rows) == 0 or not all(len(row) == len(rows[0]) for row in rows):
+        raise ValueError('Specification string must be rectangular, got rows: ' + str(rows))
+
+    bounds: Dict[str, GridBounds] = {}
+    for r in range(len(rows)):
+        for c in range(len(rows[0])):
+            char = rows[r][c]
+            if char in bounds:
+                # A previously encountered character must be within the greedily expanded bounds.
+                if _within_bounds(bounds[char], r, c): continue
+                raise ValueError('Specification string malformed for cell: ' + char)
+            else:
+                if char == '.': continue
+                # Create a new cell and greedily expand col-wise then row-wise while bounds keep
+                # fencing a contiguous rectangle of `char`.
+                R, C = r, c
+                while C + 1 < rows[0].length and rows[r][C + 1] == char:
+                    C += 1
+                while R + 1 < rows.length and all(rows[R + 1][i] == char for i in range(c, C + 1)):
+                    R += 1
+                bounds[char] = {'r': r, 'c': c, 'R': R, 'C': C}
+
+    return {name: {
+        'row': bound['r'],
+        'col': bound['c'],
+        'height': bound['R'] - bound['r'] + 1,
+        'width': bound['C'] - bound['c'] + 1,
+    } for name, bound in bounds.items()}
+
+
 class Grid(FragmentAssembler):
-    """
 
-   """
+    _NONE_SPECIFIED = object()
 
-    _DEFAULT_ITEM = object()
+    _row_height: RowColSetting = None
+    _col_width: RowColSetting = None
+    _show_labels: Optional[bool] = None
 
-    def __init__(self, cells: Optional[Union[str, List[NamedCell]]] = None, items: Optional[Dict[str, Any]] = None) -> \
+    def __init__(self,
+                 cells: Optional[Union[str, List[GridCellNamed]]] = None,
+                 items: Optional[Dict[str, Any]] = None,
+                 row_height: RowColSetting = None,
+                 col_width: RowColSetting = None,
+                 show_labels: Optional[bool] = None) -> \
             None:
         """
-
         Args:
-            cells: A string like "ABB\nACC\nACC", which specifies initial cell sizes and positions. The given example 
-                creates a cell "A" at (0,0) with dimensions 1x3, cell "B" at (1,0) with dimensions 2x1, and a cell 
-                "C" at position (1,1) with dimensions 2x2.
+            cells: A string like "ABB\nACC\nACC", which specifies initial cell sizes and positions.
+                The given example creates a cell "A" at (0,0) with dimensions 1x3, cell "B" at
+                (1,0) with dimensions 2x1, and a cell "C" at position (1,1) with dimensions 2x2.
             items: An optional mapping of cell names to items.
         """""
         super(Grid, self).__init__()
-        self._cells: Dict[str, Cell] = dict()
+        self._cells: Dict[str, GridCell] = dict()
         if isinstance(cells, list):
             for cell in cells:
                 self._cells[cell['name']] = {
@@ -49,57 +101,38 @@ class Grid(FragmentAssembler):
                     'height': cell['height'],
                 }
         elif isinstance(cells, str):
-            self._parse_grid_string(cells)
+            self._cells = _parse_grid_string(cells)
+        else:
+            raise ValueError('Unknown format received for cells:' + str(cells))
+
         self._items: Dict[str, Any] = dict()
         if items is not None:
-            for cell_name, item in items.items():
-                self.item(item, cell_name)
+            for name, item in items.items():
+                self.item(name, item)
 
-    def cell(self, cell_name: str, col: int, row: int, width: int, height: int, item=_DEFAULT_ITEM):
-        self._cells[cell_name] = {
+        self.config(row_height=row_height, col_width=col_width, show_labels=show_labels)
+
+    def cell(self, name: str, row: int, col: int, height: int, width: int, item=_NONE_SPECIFIED):
+        self._cells[name] = {
             'col': col,
             'row': row,
             'width': width,
             'height': height,
         }
-        if item is not Grid._DEFAULT_ITEM:
-            self.item(item, cell_name)
-        # TODO: assert non-overlapping
+        if item is not Grid._NONE_SPECIFIED:
+            self.item(item, name)
         return self
 
-    def item(self, item: Any, cell_name: str):
-        self._items[cell_name] = item
+    def item(self, name: str, item: Any):
+        self._items[name] = item
         return self
 
-    def _parse_grid_string(self, grid_string):
-        cell_bounds = dict()
-        row_len = None
-        for y, row in enumerate(grid_string.splitlines()):
-            if row_len is None:
-                row_len = len(row)
-            else:
-                # TODO: meaningful error here
-                assert len(row) == row_len
-            current_char = None
-            for x, c in enumerate(row):
-                if c not in cell_bounds:
-                    cell_bounds[c] = {
-                        'x': x, 'y': y, 'X': -1, 'Y': -1
-                    }
-                cell_bounds[c]['Y'] = y + 1
-                if current_char is None:
-                    current_char = c
-                elif current_char != c:
-                    cell_bounds[current_char]['X'] = x
-                    current_char = c
-                cell_bounds[current_char]['X'] = row_len
-        for cell_name, cell_bound in cell_bounds.items():
-            self._cells[cell_name] = {
-                'col': cell_bound['x'],
-                'row': cell_bound['y'],
-                'width': cell_bound['X'] - cell_bound['x'],
-                'height': cell_bound['Y'] - cell_bound['y'],
-            }
+    def config(self, row_height: RowColSetting = None,
+                 col_width: RowColSetting = None,
+                 show_labels: Optional[bool] = None):
+        if row_height is not None: self._row_height = row_height
+        if col_width is not None: self._col_width = col_width
+        if show_labels is not None: self._show_labels = show_labels
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         for cell_name in self._cells:
@@ -107,9 +140,11 @@ class Grid(FragmentAssembler):
         return {
                    'type': 'GridLayout',
                    'contents': {
-                       'cells': [{**cell, 'fragmentId': get_id(self._items[cell_name], cell_name)} for cell_name,
-                                                                                                       cell in
-                                 self._cells.items()],
+                       'cells': [{**cell, 'fragmentId': get_id(self._items[cell_name], cell_name)}
+                                 for cell_name, cell in self._cells.items()],
+                       'rowHeight': self._rowHeight,
+                       'colWidth': self._colWidth,
+                       'showLabels': self._showLabels,
                    },
                    'meta': self._meta,
                }, [self._items[cell_name] for cell_name in self._cells]

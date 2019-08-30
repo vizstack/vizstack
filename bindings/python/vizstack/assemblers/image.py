@@ -10,19 +10,20 @@ class Image(FragmentAssembler):
     A View which renders an image as read from a file.
     """
 
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, location: str) -> None:
         """
         Args:
-            file_path: The local path to the image file.
+            location: Either (1) absolute path to file on local filesystem or (2) a URL prefixed
+                "http://" or "https://".
         """
         super(Image, self).__init__()
-        self._file_path: str = file_path
+        self._location: str = location
 
     def assemble(self, get_id) -> Tuple[Fragment, List[Any]]:
         return {
             'type': 'ImagePrimitive',
             'contents': {
-                'filePath': self._file_path,
+                'location': self._location,
             },
             'meta': self._meta,
         }, []
