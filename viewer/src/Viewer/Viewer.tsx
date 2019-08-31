@@ -304,12 +304,11 @@ type ViewerRootProps = {
  *   }} />
  * ```
  */
-class ViewerRoot extends React.PureComponent<ViewerRootProps> {
-    render() {
-        const { view, fragmentId } = this.props;
-        const schematized: View = view instanceof FragmentAssembler ? assemble(view) : view;
-        return <Viewer view={schematized} fragmentId={fragmentId || schematized.rootId} />;
-    }
-}
+
+const ViewerRoot = React.forwardRef<Viewer, ViewerRootProps>((props, ref) => {
+    const { view, fragmentId } = props;
+    const schematized: View = view instanceof FragmentAssembler ? assemble(view) : view;
+    return <Viewer view={schematized} fragmentId={fragmentId || schematized.rootId} ref={ref} />;
+});
 
 export { Viewer, ViewerRoot };
