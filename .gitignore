@@ -44,7 +44,7 @@ ENV/
 # Python build
 python/build
 python/dist
-python/*.egg-info
+**/*.egg-info
 
 # Dependencies
 node_modules

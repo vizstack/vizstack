@@ -615,4 +615,11 @@ storiesOf('KeyValue (Layout)', module)
                 ])
             }/>
         </InteractionProvider>
+    ))
+    .add('interactive (empty)', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                KeyValue([])
+            }/>
+        </InteractionProvider>
     ));

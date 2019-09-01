@@ -81,10 +81,15 @@ class KeyValueLayout extends React.PureComponent<
     public getHandle(): KeyValueLayoutHandle {
         const { selectedEntryIdx, selectedEntryType } = this.state;
         return {
-            entries: this._childViewers.map(({ key, value }) => ({
+            // If there are no children, we should not return an empty list, since this will raise
+            // an exception if a user, in the interaction manager, tries to access 
+            // `entries[selectedEntryIdx][selectedEntryType]`. Instead, we put `{key, value}` object
+            // as the only entry so that the access does not throw an error but will return invalid
+            // Viewer IDs.
+            entries: this._childViewers.length > 0 ? this._childViewers.map(({ key, value }) => ({
                 key: key!.viewerId,
                 value: value!.viewerId,
-            })),
+            })) : [{key: '', value: ''}],
             selectedEntryIdx,
             selectedEntryType,
             doSelectEntry: (idx: number) => {
