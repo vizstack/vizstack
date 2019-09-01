@@ -36,6 +36,7 @@ class KeyValueLayoutFragmentAssembler extends FragmentAssembler {
         if (endMotif !== undefined) this._endMotif = endMotif;
         if (alignSeparators !== undefined) this._alignSeparators = alignSeparators;
         if (showLabels !== undefined) this._showLabels = showLabels;
+        return this;
     }
 
     public assemble(

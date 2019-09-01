@@ -37,6 +37,7 @@ class SequenceLayoutFragmentAssembler extends FragmentAssembler {
         if (startMotif !== undefined) this._startMotif = startMotif;
         if (endMotif !== undefined) this._endMotif = endMotif;
         if (showLabels !== undefined) this._showLabels = showLabels;
+        return this;
     }
 
     public assemble(

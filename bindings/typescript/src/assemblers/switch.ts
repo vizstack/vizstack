@@ -33,6 +33,7 @@ class SwitchLayoutFragmentAssembler extends FragmentAssembler {
     public config(config: SwitchLayoutConfig) {
         const { showLabels } = config;
         if (showLabels !== undefined) this._showLabels = showLabels;
+        return this;
     }
 
     public assemble(getId: (obj: any, name: string) => FragmentId): [SwitchLayoutFragment, any[]] {
