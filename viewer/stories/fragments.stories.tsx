@@ -48,6 +48,26 @@ const kTextMultiNarrowDeep = (
     dog.`
 );
 
+storiesOf('Integration', module)
+    .add('interactive employee data structure', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Sequence([
+                    Text("Johnny Appleseed", 'heading'),
+                    Text("Joined on 9/1/2018", 'body', 'less'),
+                    KeyValue([
+                        [Text("status"), Token("active", 'green')],
+                        [Text("employeeId"), Text("12345678")],
+                        [Text("dateOfBirth"), Flow(Text('Oct'), Text('22'), Text('1986'))],
+                        [Text("pastJobs"), Sequence([
+                            Text("Software Engineer"), Text("UX Designer"), Text("AI Researcher")
+                        ])]
+                    ], { showLabels: false })
+                ], { orientation: 'vertical', showLabels: false })
+            } />
+        </InteractionProvider>
+    ));
+
 storiesOf('Text (Primitive)', module)
     .add('single short', () => (
         <Viewer view={
