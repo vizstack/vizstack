@@ -14,13 +14,15 @@
     "cuid": "^2.1.6",
     "d3": "^5.11.0",
     "lodash": "^4.17.15",
-    "react": "^16.9.0",
-    "react-dom": "^16.9.0",
     "react-measure": "^2.3.0",
     "reselect": "^4.0.0",
     "seamless-immutable": "^7.1.4",
     "webcola": "^3.4.0",
     "webfontloader": "^1.6.28"
+  },
+  "peerDependencies": {
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0"
   },
   "devDependencies": {
     "@babel/core": "^7.5.5",
@@ -43,6 +45,8 @@
     "babel-loader": "^8.0.6",
     "copyfiles": "^2.1.1",
     "jest": "^24.9.0",
+    "react": "^16.9.0",
+    "react-dom": "^16.9.0",
     "react-docgen-typescript-loader": "^3.1.1",
     "react-test-renderer": "^16.9.0",
     "rimraf": "^2.7.1",
