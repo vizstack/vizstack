@@ -67,11 +67,11 @@ class ViewAssembler:
         return ViewAssembler._hash_fragment_id('{}-{}'.format(parent_id, slot))
 
     @staticmethod
-    def _remove_null(frag: Fragment) -> Fragment:
-        """Modifies a `Fragment` in-place, removing any top-level keys whose values are `None`.
+    def _remove_null_contents(frag: Fragment) -> Fragment:
+        """Modifies a `Fragment` in-place, removing any top-level content keys whose values are `None`.
 
-        The `Fragment` schema calls for any non-specified value to be undefined in the `Fragment`
-        dict, but the `FragmentAssembler`s map non-specified values to `None`.
+        The `Fragment` schema calls for any non-specified value in "contents" to be undefined, but the 
+        `FragmentAssembler`s map non-specified values to `None`.
 
         Args:
             frag: A `Fragment` whose `None`-valued keys should be deleted.
@@ -79,9 +79,9 @@ class ViewAssembler:
         Returns:
             `frag` modified in-place to have no `None`-valued keys.
         """
-        for key in list(frag.keys()):
-            if (frag[key] is None):
-                del frag[key]
+        for key in list(frag['contents'].keys()):
+            if frag['contents'][key] is None:
+                del frag['contents'][key]
         return frag
 
     @staticmethod
@@ -120,7 +120,8 @@ class ViewAssembler:
                 return created_id
 
             frag, refs = fasm.assemble(get_id)
-            fragments[frag_id] = ViewAssembler._remove_null(frag)
+            fragments[frag_id] = ViewAssembler._remove_null_contents(frag)
+            print(fragments[frag_id])
             stack.extend(refs)
 
         for frag_id, frag in fragments.items():
