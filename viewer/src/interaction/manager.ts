@@ -442,6 +442,7 @@ export class InteractionManager {
 
     private _useMouseDefaults() {
         this.on('Viewer.DidMouseOver', (all, message, global) => {
+            global.hovered = message.viewerId;
             if (message.viewerId !== global.selected) {
                 all.viewerId(message.viewerId).forEach((viewer) => {
                     viewer.appearance.doSetLight('highlight');
@@ -449,6 +450,9 @@ export class InteractionManager {
             }
         });
         this.on('Viewer.DidMouseOut', (all, message, global) => {
+            if (global.hovered === message.viewerId) {
+                global.hovered = undefined;
+            }
             if (message.viewerId !== global.selected && message.viewerId !== global.selectedChild) {
                 all.viewerId(message.viewerId).forEach((viewer) => {
                     viewer.appearance.doSetLight('normal');
