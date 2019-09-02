@@ -3,35 +3,45 @@ import JSON5 from 'json5';
 import { FragmentAssembler } from './fragment-assembler';
 import { Token, Sequence, KeyValue, Switch } from './assemblers';
 
+const kMinShownLength = 10;
+
 export function getLanguageDefault(obj: any): FragmentAssembler {
     if (obj !== Object(obj)) {
         // Primitive like number, string, or symbol.
         return Token(typeof obj === 'string' ? `"${obj}"` : `${obj}`);
     } else if (Array.isArray(obj)) {
-        return SwitchSequence(obj, `Array[${obj.length}]`, `Array[${obj.length}] [`, ']');
+        return Sequence(obj, {
+            orientation: 'horizontal', 
+            startMotif: `${obj.length < kMinShownLength ? '' : `[${obj.length}] `}[`, 
+            endMotif: ']',
+        });
     } else if (obj instanceof Set) {
-        return SwitchSequence(Array.from(obj), `Set[${obj.size}]`, `Set[${obj.size}] {`, '}');
+        return Sequence(Array.from(obj), {
+            orientation: 'horizontal',
+            startMotif: `${obj.size < kMinShownLength ? '' : `[${obj.size}] `}{`,
+            endMotif: '}',
+        });
     } else if (obj instanceof Map) {
-        return SwitchKeyValue(
-            Array.from(obj.entries()),
-            `Map[${obj.size}]`,
-            `Map[${obj.size}] {`,
-            '}',
+        return KeyValue(
+            Array.from(obj.entries()), {
+                startMotif: `${obj.size < kMinShownLength ? '' : `[${obj.size}] `}{`,
+                endMotif: '}',
+            }
         );
     } else if (typeof obj === 'function') {
         const { args, defaults } = getFunctionArgs(obj);
-        return SwitchKeyValue(
-            args.map((arg, idx) => [arg, defaults[idx]]),
-            obj.name ? `Function[${obj.name}]` : `Function`,
-            obj.name ? `Function[${obj.name}] (` : `Function (`,
-            ')',
+        return KeyValue(
+            args.map((arg, idx) => [arg, defaults[idx]]), {
+                startMotif: obj.name ? `${obj.name} (` : `Function (`,
+                endMotif: ')',
+            }
         );
     } else {
-        return SwitchKeyValue(
-            Object.entries(obj),
-            `Object[${Object.keys(obj).length}]`,
-            `Object[${Object.keys(obj).length}] {`,
-            '}',
+        return KeyValue(
+            Object.entries(obj), {
+                startMotif: `${Object.keys(obj).length < kMinShownLength ? '' : `[${Object.keys(obj).length}] `}{`,
+                endMotif: '}',
+            }
         );
     }
 }
