@@ -143,6 +143,7 @@ const styles = (theme: Theme) =>
             display: 'inline-block',
             float: 'right',
             paddingRight: theme.vars.slot.padding,
+            paddingBottom: theme.vars.slot.padding,
             ...theme.vars.text.caption,
             color: theme.vars.emphasis.less,
         },

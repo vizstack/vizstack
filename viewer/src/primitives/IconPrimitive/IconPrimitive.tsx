@@ -63,7 +63,7 @@ const styles = (theme: Theme) =>
     createStyles({
         icon: {
             ...theme.vars.icon,
-            verticalAlign: 'middle',
+            verticalAlign: 'bottom',
             fontFamily: 'Material Icons Outlined',
             'font-weight': 'normal',
             'font-style': 'normal',

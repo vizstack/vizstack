@@ -19,7 +19,6 @@ export default {
             border: '1.25px solid rgb(237, 237, 236)',
             borderLeftWidth: '3px',
             borderRadius: '0 0 8px 0',
-            padding: '4px 4px',
         },
         lowlight: {},
         highlight: {
@@ -36,6 +35,7 @@ export default {
             borderBottomStyle: 'solid' as any,
             borderBottomWidth: '3px',
             borderBottomColor: 'transparent',
+            marginRight: '4px',
         },
         lowlight: {},
         highlight: {
@@ -91,7 +91,7 @@ export default {
         },
     },
     icon: {
-        fontSize: 18,
+        fontSize: 16,
     },
     code: {
         body: {

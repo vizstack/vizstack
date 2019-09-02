@@ -198,7 +198,6 @@ const styles = (theme: Theme) =>
         },
         elements: {
             display: 'grid',
-            gridRowGap: theme.vars.slot.padding,
             gridColumnGap: theme.vars.slot.spacing,
         },
         slotHorizontal: {
