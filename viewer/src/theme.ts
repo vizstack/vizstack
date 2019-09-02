@@ -12,6 +12,8 @@ type Color7 = { l3: Color; d3: Color } & Color5;
 
 const general: {
     color: {
+        white: Color;
+        black: Color;
         gray: Color7;
         blue: Color5;
         teal: Color5;
@@ -24,6 +26,8 @@ const general: {
         | 256 | 384 | 512 | 640 | 768 | 1024 | 1280 | 1536 | 1792 | 2048) => number;
 } = {
     color: {
+        white: '#FFFFFF',
+        black: '#000000',
         gray: {
             l3: '#F8F9FA',
             l2: '#F1F3F5',
