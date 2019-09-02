@@ -121,7 +121,6 @@ class ViewAssembler:
 
             frag, refs = fasm.assemble(get_id)
             fragments[frag_id] = ViewAssembler._remove_null_contents(frag)
-            print(fragments[frag_id])
             stack.extend(refs)
 
         for frag_id, frag in fragments.items():
