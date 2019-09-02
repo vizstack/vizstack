@@ -67,6 +67,24 @@ class ViewAssembler:
         return ViewAssembler._hash_fragment_id('{}-{}'.format(parent_id, slot))
 
     @staticmethod
+    def _remove_null(frag: Fragment) -> Fragment:
+        """Modifies a `Fragment` in-place, removing any top-level keys whose values are `None`.
+
+        The `Fragment` schema calls for any non-specified value to be undefined in the `Fragment`
+        dict, but the `FragmentAssembler`s map non-specified values to `None`.
+
+        Args:
+            frag: A `Fragment` whose `None`-valued keys should be deleted.
+
+        Returns:
+            `frag` modified in-place to have no `None`-valued keys.
+        """
+        for key in list(frag.keys()):
+            if (frag[key] is None):
+                del frag[key]
+        return frag
+
+    @staticmethod
     def assemble(obj: Any) -> View:
         # Since Python `dict`s cannot use unhashable types (e.g., lists) as keys, we have to use the id of the
         # object instead. This requires us to reference each object in a `list` that will persist throughout the
@@ -102,7 +120,7 @@ class ViewAssembler:
                 return created_id
 
             frag, refs = fasm.assemble(get_id)
-            fragments[frag_id] = frag
+            fragments[frag_id] = ViewAssembler._remove_null(frag)
             stack.extend(refs)
 
         for frag_id, frag in fragments.items():
