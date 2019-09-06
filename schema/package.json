@@ -1,6 +1,6 @@
 {
   "name": "@vizstack/schema",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "Vizstack Core schema of visualization data structures.",
   "repository": "https://github.com/vizstack/vizstack",
   "license": "MIT",
