@@ -161,17 +161,12 @@ describe('Language-specific defaults', () => {
     test('JS composite (Array)', () => {
         const schema = assemble(['hello', 'there'], getFragmentId);
         expect(schema.fragments).toMatchObject({
-            root: {
-                type: 'SwitchLayout',
-                contents: { modes: ['root-full', 'root-summary'] },
-            },
-            'root-full': {
+            'root': {
                 type: 'SequenceLayout',
-                contents: { elements: ['root-full-0', 'root-full-1'] },
+                contents: { elements: ['root-0', 'root-1'] },
             },
-            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
-            'root-full-1': { type: 'TokenPrimitive', contents: { text: '"there"' } },
-            'root-summary': { type: 'TokenPrimitive' },
+            'root-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
+            'root-1': { type: 'TokenPrimitive', contents: { text: '"there"' } },
         });
     });
 
@@ -180,15 +175,10 @@ describe('Language-specific defaults', () => {
         const schema = assemble([text, text], getFragmentId);
         expect(schema.fragments).toMatchObject({
             root: {
-                type: 'SwitchLayout',
-                contents: { modes: ['root-full', 'root-summary'] },
-            },
-            'root-full': {
                 type: 'SequenceLayout',
-                contents: { elements: ['root-full-0', 'root-full-0'] },
+                contents: { elements: ['root-0', 'root-0'] },
             },
-            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
-            'root-summary': { type: 'TokenPrimitive' },
+            'root-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
         });
     });
 
@@ -198,15 +188,10 @@ describe('Language-specific defaults', () => {
         const schema = assemble(arr, getFragmentId);
         expect(schema.fragments).toMatchObject({
             root: {
-                type: 'SwitchLayout',
-                contents: { modes: ['root-full', 'root-summary'] },
-            },
-            'root-full': {
                 type: 'SequenceLayout',
-                contents: { elements: ['root-full-0', 'root'] },
+                contents: { elements: ['root-0', 'root'] },
             },
-            'root-full-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
-            'root-summary': { type: 'TokenPrimitive' },
+            'root-0': { type: 'TokenPrimitive', contents: { text: '"hello"' } },
         });
     });
 
@@ -215,12 +200,7 @@ describe('Language-specific defaults', () => {
         const obj = new MyClass();
         const schema = assemble(obj, getFragmentId);
         expect(schema.fragments).toMatchObject({
-            root: {
-                type: 'SwitchLayout',
-                contents: { modes: ['root-full', 'root-summary'] },
-            },
-            'root-full': { type: 'KeyValueLayout' },
-            'root-summary': { type: 'TokenPrimitive' },
+            root: { type: 'KeyValueLayout' },
         });
     });
 });

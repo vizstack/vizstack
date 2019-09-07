@@ -1,12 +1,13 @@
 {
   "name": "@vizstack/js",
-  "version": "1.0.0",
+  "version": "0.1.1",
   "description": "Vizstack Core bindings for Javascript and Typescript.",
   "repository": "https://github.com/vizstack/vizstack",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
+    "@vizstack/schema": "^0.1.1",
     "cuid": "^2.1.6",
     "js-md5": "^0.7.3",
     "json5": "^2.1.0",
