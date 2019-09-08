@@ -10,5 +10,4 @@ setup(
     install_requires=['cuid', 'mypy_extensions', 'typing_extensions'],
     description="Generate Vizstack visualizations of Python programs.",
     url='https://github.com/vizstack/vizstack',
-    download_url="https://github.com/vizstack/vizstack/archive/v_0_1_0.tar.gz",
 )
