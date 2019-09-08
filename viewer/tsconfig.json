@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "rootDirs": ["src", "stories"],
     "outDir": "./dist",
     "target": "es6",
-    "module": "commonjs",
+    "module": "es6",
     "moduleResolution": "node",
     "lib": ["esnext", "dom"],
     "strict": true,

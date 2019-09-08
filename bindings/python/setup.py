@@ -5,9 +5,9 @@ with open("README.md", "r") as fh:
 
 setup(
     name='vizstack-py',
-    version='0.1.1',
+    version='0.1.5',
     license='MIT',
-    packages=['vizstack'],
+    packages=['vizstack', 'vizstack.assemblers'],
     zip_safe=False,
     author='Ryan Holmdahl & Nikhil Bhattasali',
     author_email='vizstack@gmail.com',

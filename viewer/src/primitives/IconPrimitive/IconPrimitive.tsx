@@ -2,7 +2,6 @@ import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 
-import './font.css';
 import Frame from '../../Frame';
 
 import defaultTheme from '../../theme';

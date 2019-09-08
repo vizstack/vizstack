@@ -1,2 +1,2 @@
-export { default } from './Viewer';
+export { ViewerRoot } from './Viewer';
 export * from './Viewer';
