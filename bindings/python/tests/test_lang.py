@@ -39,57 +39,22 @@ def test_list_with_two_elements_should_produce_switch_layout_with_two_modes_and_
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout',
                     'contents': {
-                        'elements': ['root-full-0', 'root-full-1']
+                        'elements': ['root-0', 'root-1']
                     },
                 },
-                'root-full-0': {
+                'root-0': {
                     'type': 'TokenPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }
                 },
-                'root-full-1': {
+                'root-1': {
                     'type': 'TokenPrimitive',
                     'contents': {
                         'text': '123'
                     }
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
-                },
-            }
-        )
-    )
-
-
-def test_list_with_four_elements_should_produce_switch_layout_with_three_modes():
-    view = assemble(['hello', 123, 'world', 456])
-    assert match_object(
-        view['fragments'],
-        hash_ids(
-            {
-                'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-compact', 'root-summary']
-                    },
-                },
-                'root-full': {
-                    'type': 'SequenceLayout',
-                },
-                'root-compact': {
-                    'type': 'SequenceLayout',
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
@@ -103,25 +68,16 @@ def test_list_with_repeated_string_element_should_use_same_fragment_id():
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout',
                     'contents': {
-                        'elements': ['root-full-0', 'root-full-0']
+                        'elements': ['root-0', 'root-0']
                     },
                 },
-                'root-full-0': {
+                'root-0': {
                     'type': 'TokenPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
@@ -136,25 +92,16 @@ def test_list_with_repeated_text_element_should_use_same_fragment_id():
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout',
                     'contents': {
-                        'elements': ['root-full-0', 'root-full-0']
+                        'elements': ['root-0', 'root-0']
                     },
                 },
-                'root-full-0': {
+                'root-0': {
                     'type': 'TextPrimitive',
                     'contents': {
                         'text': 'hello'
                     }
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
@@ -170,25 +117,16 @@ def test_list_with_self_reference_should_use_fragment_id_of_switch_as_sequence_e
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout',
                     'contents': {
-                        'elements': ['root-full-0', 'root']
+                        'elements': ['root-0', 'root']
                     },
                 },
-                'root-full-0': {
+                'root-0': {
                     'type': 'TokenPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
@@ -207,16 +145,7 @@ def test_class_instance_without_custom_view_should_produce_default_view():
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'KeyValueLayout'
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
@@ -234,16 +163,7 @@ def test_class_without_custom_view_should_produce_default_view():
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout'
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )
