@@ -19,28 +19,28 @@
 // -------------------------------------------------------------------------------------------------
 // Subsection name.
 
-/* Stars are used for interface comments. These comments convey conceptual knowledge necessary for
+/** Stars are used for interface comments. These comments convey conceptual knowledge necessary for
  * a user of the API to know about. */
 
 // Slashes are used for implementation comments.
 
-/* Short description of constant. */
+/** Short description of constant. */
 const kConstant1 = 0;
 
-/* Short description of variable. */
+/** Short description of variable. */
 let variable1 = 0;
 
-/* Short description of variable/constant with multiple sentences. Use compressed interface-style
+/** Short description of variable/constant with multiple sentences. Use compressed interface-style
  * comments for variables/constants. */
 let variable2 = "hello";
 
-/* Variables/constants that are grouped should be PREFIXED with the group name, not suffixed. For
- * example, rather than "apple_color"/"banana_color"/"carrot_color" instead use
- * "color_apple"/"color_banana"/"color_carrot". This homogeneity makes it more apparent that the
+/** Variables/constants that are grouped should be PREFIXED with the group name, not suffixed. For
+ * example, rather than "appleColor"/"bananaColor"/"carrotColor" instead use
+ * "colorApple"/"colorBanana"/"colorCarrot". This homogeneity makes it more apparent that the
  * names are grouped. */
-let group1_variant1 = "a";
-let group1_variant2 = "b";
-let group1_variant3 = "c";
+let group1Variant1 = "a";
+let group1Variant2 = "b";
+let group1Variant3 = "c";
 
 /**
  * Short description of function.
@@ -49,8 +49,8 @@ let group1_variant3 = "c";
  * per inceptos himenaeos. Nam pretium ipsum ex, ac aliquet lectus ultrices a.
  * @param arg1
  *     Description of argument 1.
- * @param arg2 (optional)
- *     Description of optional argument 2. (default: 123)
+ * @param arg2
+ *     (optional) Description of optional argument 2. (default: 123)
  * @return
  *     Description of return 1.
  */
