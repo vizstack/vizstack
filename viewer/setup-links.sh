@@ -1,2 +1,2 @@
-npm link ../schema/
+npm link ../schema
 npm link ../bindings/typescript/

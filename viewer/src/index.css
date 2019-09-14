@@ -5,5 +5,5 @@ https://fonts.googleapis.com/css?family=Material+Icons|Material+Icons+Outlined|M
     font-family: 'Material Icons Outlined';
     font-style: normal;
     font-weight: 400;
-    src: url(material-outlined.woff2) format('woff2');
+    src: url(./files/material-outlined.woff2) format('woff2');
   }

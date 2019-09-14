@@ -50,16 +50,7 @@ def test_class_with_custom_view_should_not_use_custom_view():
         hash_ids(
             {
                 'root': {
-                    'type': 'SwitchLayout',
-                    'contents': {
-                        'modes': ['root-full', 'root-summary']
-                    },
-                },
-                'root-full': {
                     'type': 'SequenceLayout'
-                },
-                'root-summary': {
-                    'type': 'TokenPrimitive'
                 },
             }
         )

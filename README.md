@@ -3,4 +3,5 @@
 
 This is a work in progress. Come back soon for the public release!
  
-# DEMO AT: [https://vizstack.github.io/vizstack/docs](https://vizstack.github.io/vizstack/docs)
+## DEMO: [https://vizstack.github.io/vizstack/docs](https://vizstack.github.io/vizstack/docs)
+## BLOG: [https://github.com/vizstack/blog](https://github.com/vizstack/blog)

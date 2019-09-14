@@ -17,7 +17,7 @@ type DagNodeProps = {
     x: number;
     y: number;
     width: number;
-    height: number;
+    height?: number;
 
     /** Expansion state. */
     isExpanded: boolean;
@@ -33,7 +33,7 @@ type DagNodeProps = {
     };
 
     /** Whether the node should highlight if expanded and not invisible. */
-    isHighlighted: boolean;
+    light: 'lowlight' | 'normal' | 'highlight' | 'selected';
 
     /** Callback on component resize. */
     onResize: (width: number, height: number) => void;
@@ -43,6 +43,7 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
     static defaultProps: Partial<DagNodeProps> = {
         isInteractive: true,
         isVisible: true,
+        height: 0,  // is this correct?
     };
 
     render() {
@@ -55,7 +56,7 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
             children,
             isVisible,
             isInteractive,
-            isHighlighted,
+            light,
             isExpanded,
             mouseHandlers,
             onResize,
@@ -72,7 +73,7 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                     className={clsx({
                         [classes.nodeInvisible]: isVisible === false,
                         [classes.nodeExpanded]: isVisible !== false,
-                        [classes.nodeHighlighted]: isVisible !== false && isHighlighted,
+                        [classes.nodeHighlighted]: isVisible !== false && light == 'highlight',
                     })}
                     {...mouseHandlers}
                 />
