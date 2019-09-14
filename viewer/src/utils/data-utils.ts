@@ -22,6 +22,23 @@ export function obj2obj<A, B>(
 }
 
 /**
+ * Transform key-value pairs in a map into new key-value pairs, or `undefined` to omit.
+ *     let obj = { 1: 1, 2: 2, 3: 3 };
+ *     obj2obj(obj, (k, v, i) => [k, v * 2]);
+ *     >> { 1: 2, 2: 4, 3: 6 }
+ */
+export function map2obj<A, B, C>(
+    map: Map<A, B>,
+    transform: (k: A, v: B, i: number) => [string, C],
+): Record<string, C> {
+    return pairs2obj(
+        Array.from(map.entries())
+            .map(([k, v], i) => transform(k, v, i))
+            .filter((pair) => pair !== undefined),
+    );
+}
+
+/**
  * Transform key-value pairs in an object into elements of an array, or `undefined` to omit.
  *     let obj = { 1: 4, 2: 3, 3: 2 };
  *     obj2arr(obj, (k, v, i) => Number(k) + v);

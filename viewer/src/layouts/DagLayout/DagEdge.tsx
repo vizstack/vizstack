@@ -16,7 +16,7 @@ type DagEdgeProps = {
     shape?: 'curve' | 'line';
 
     /** Line color palette. */
-    color?: 'normal' | 'highlight' | 'lowlight' | 'selected';
+    light?: 'normal' | 'highlight' | 'lowlight' | 'selected';
 
     /** Text string to display on edge. */
     label?: string;
@@ -34,13 +34,13 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
     static defaultProps: Partial<DagEdgeProps> = {
         points: [],
         shape: 'line',
-        color: 'normal',
+        light: 'normal',
     };
 
     private _xlinkId = cuid();
 
     render() {
-        const { classes, points, shape, color, label, mouseHandlers } = this.props;
+        const { classes, points, shape, light, label, mouseHandlers } = this.props;
 
         if (!points) return null;
 
@@ -72,9 +72,9 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
                     pointerEvents='none'
                     className={clsx({
                         [classes.edge]: true,
-                        [classes.edgeHighlight]: color === 'highlight',
-                        [classes.edgeLowlight]: color === 'lowlight',
-                        [classes.edgeSelected]: color === 'selected',
+                        [classes.edgeHighlight]: light === 'highlight',
+                        [classes.edgeLowlight]: light === 'lowlight',
+                        [classes.edgeSelected]: light === 'selected',
                     })}
                 />
                 <text
@@ -83,9 +83,9 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
                     pointerEvents='none'
                     className={clsx({
                         [classes.edgeLabel]: true,
-                        [classes.edgeLabelHighlight]: color === 'highlight',
-                        [classes.edgeLabelLowlight]: color === 'lowlight',
-                        [classes.edgeLabelSelected]: color === 'selected',
+                        [classes.edgeLabelHighlight]: light === 'highlight',
+                        [classes.edgeLabelLowlight]: light === 'lowlight',
+                        [classes.edgeLabelSelected]: light === 'selected',
                     })}
                 >
                     <textPath xlinkHref={`#${this._xlinkId}`} startOffset='95%'>
