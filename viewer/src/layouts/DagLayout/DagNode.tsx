@@ -1,4 +1,5 @@
 import * as React from 'react';
+import ReactDOM from "react-dom";
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import Measure from 'react-measure';
@@ -7,6 +8,7 @@ import defaultTheme from '../../theme';
 
 /** The pixel width of the interactive border surrounding expansible/collapsible nodes. */
 const kBorderWidth = 8;
+const kMargin = 10;
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -47,6 +49,41 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
         isVisible: true,
     };
 
+    content: HTMLDivElement | undefined = undefined;
+    width: number = 0;
+    height: number = 0;
+
+    constructor(props: DagNodeProps & InternalProps) {
+        super(props);
+        this.setContentRef = this.setContentRef.bind(this);
+    }
+
+    updateSize() {
+        const { isInteractive, onResize } = this.props;
+        const DOMNode = ReactDOM.findDOMNode(this.content);
+        if (DOMNode) {
+            const width = (DOMNode as any).offsetWidth;
+            const height = (DOMNode as any).offsetHeight;
+            isInteractive
+                ? onResize(
+                        width + kBorderWidth * 2 + kMargin * 2,
+                        height + kBorderWidth * 2 + kMargin * 2,
+                    )
+                : onResize(width + kMargin * 2, height + kMargin * 2);
+            this.width = width;
+            this.height = height;
+        }
+    }
+    
+    componentDidUpdate() {
+        this.updateSize();
+    }
+
+    setContentRef(ref: HTMLDivElement) {
+        this.content = ref;
+        this.updateSize();
+    }
+
     render() {
         const {
             classes,
@@ -60,56 +97,65 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
             light,
             isExpanded,
             mouseHandlers,
-            onResize,
         } = this.props;
 
         // If the node is expanded, render an interactive rectangle
         if (isExpanded) {
             return (
-                <rect
-                    x={x}
-                    y={y}
-                    width={width}
-                    height={height}
-                    className={clsx({
-                        [classes.nodeInvisible]: isVisible === false,
-                        [classes.nodeExpanded]: isVisible !== false,
-                        [classes.nodeHighlighted]: isVisible !== false && light == 'highlight',
-                    })}
-                    {...mouseHandlers}
-                />
+                <g>
+                    <rect
+                        x={x - width / 2}
+                        y={y - height / 2}
+                        width={width}
+                        height={height}
+                        className={clsx({
+                            [classes.expandedOuterInvisible]: isVisible === false,
+                            [classes.expandedOuterVisible]: isVisible !== false,
+                        })}
+                        {...mouseHandlers}
+                    />
+                    <rect
+                        x={x - width / 2 + kBorderWidth}
+                        y={y - height / 2 + kBorderWidth}
+                        width={width - kBorderWidth * 2}
+                        height={height - kBorderWidth * 2}
+                        className={clsx({
+                            [classes.expandedInnerInvisible]: isVisible === false,
+                            [classes.expandedInnerVisible]: isVisible !== false,
+                        })}
+                    />
+                </g>
             );
         }
 
         // If not expanded, render the node, surrounded by an interactive border if `isInteractive`
         const foreignObjectPos = isInteractive
             ? {
-                  x: x - width / 2 + kBorderWidth,
-                  y: y - height / 2 + kBorderWidth,
-                  width: width - kBorderWidth * 2,
-                  height: height - kBorderWidth * 2,
+                  x: x - width / 2 + kBorderWidth + kMargin,
+                  y: y - height / 2 + kBorderWidth + kMargin,
+                  width: width - kBorderWidth * 2 - kMargin * 2,
+                  height: height - kBorderWidth * 2 - kMargin * 2,
               }
             : {
-                  x: x - width / 2,
-                  y: y - height / 2,
-                  width,
-                  height,
+                  x: x - width / 2 + kMargin,
+                  y: y - height / 2 + kMargin,
+                  width: width - kMargin * 2,
+                  height: height - kMargin * 2,
               };
 
         return (
             <g>
                 {isInteractive ? (
-                    <rect
-                        x={x}
-                        y={y}
-                        width={width}
-                        height={height}
-                        stroke={'black'}
-                        strokeOpacity={light === "highlight" ? 0.4 : 0.2}
-                        strokeWidth={kBorderWidth}
-                        fill={'none'}
-                        {...mouseHandlers}
-                    />
+                    <g>
+                        <rect
+                            x={x - width / 2 + kMargin}
+                            y={y - height / 2 + kMargin}
+                            width={width - kMargin * 2}
+                            height={height - kMargin * 2}
+                            fill={'black'}
+                            {...mouseHandlers}
+                        />
+                    </g>
                 ) : null}
                 <foreignObject
                     {...foreignObjectPos}
@@ -117,26 +163,9 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                         [classes.node]: true,
                     })}
                 >
-                    <Measure
-                        bounds
-                        onResize={(contentRect) => {
-                            const bounds = contentRect.bounds;
-                            if (bounds) {
-                                return isInteractive
-                                    ? onResize(
-                                          bounds.width + kBorderWidth * 2,
-                                          bounds.height + kBorderWidth * 2,
-                                      )
-                                    : onResize(bounds.width, bounds.height);
-                            }
-                        }}
-                    >
-                        {({ measureRef }) => (
-                            <div ref={measureRef} style={{ display: 'inline-block' }}>
-                                {children}
-                            </div>
-                        )}
-                    </Measure>
+                    <div ref={this.setContentRef} style={{ display: 'inline-block' }}>
+                        {children}
+                    </div>
                 </foreignObject>
             </g>
         );
@@ -162,18 +191,35 @@ const styles = (theme: Theme) =>
             // ].join(', '),
         },
 
+        expandedOuterInvisible: {
+
+        },
+
+        expandedOuterVisible: {
+            fill: 'black',
+        },
+
+        expandedInnerInvisible: {
+
+        },
+
+        expandedInnerVisible: {
+            fill: 'white',
+        },
+
         nodeInvisible: {
             fill: '#FFFFFF', // TODO: Change this.
-            fillOpacity: 0.1,
+            fillOpacity: 0.0,
         },
 
         nodeExpanded: {
-            fill: '#000000', // TODO: Change this.
-            fillOpacity: 0.1,
+            backgroundColor: 'transparent',
+            borderWidth: 4,
+            borderColor: 'black',
         },
 
         nodeHighlighted: {
-            fillOpacity: 0.2,
+            borderColor: 'blue',
         },
     });
 

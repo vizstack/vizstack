@@ -36,10 +36,6 @@ type CardinalDirection = 'north' | 'south' | 'east' | 'west';
 type DagLayoutProps = FragmentProps<DagLayoutFragment>;
 
 type DagLayoutState = {
-    /** Whether the graph needs to be re-layout. This should only be possible after all the node
-     * sizes have been populated. */
-    shouldLayout: boolean;
-
     /** Nodes and Edges after populated with size and position information. */
     nodes: Map<DagNodeId,
         NodeSchema & {
@@ -50,24 +46,6 @@ type DagLayoutState = {
             }
         }>;
     edges: Map<DagEdgeId, EdgeSchema>;
-
-    // nodes: {
-    //     [nodeId: string]: {
-    //         id: DagNodeId;
-    //         children: DagNode['children'];
-    //         flowDirection: DagNode['flowDirection'];
-    //         alignChildren: DagNode['alignChildren'];
-    //         ports: DagNode['ports'];
-    //         width: number;
-    //         height?: number; // undefined when it needs to still be populated for the first time
-    //         x: number;
-    //         y: number;
-    //         z: number;
-    //     }; // DagNodeId -> ...
-    // };
-    // edges: {
-    //     [edgeId: string]: any; // DagEdgeId -> ...
-    // };
 
     /** Z-axis arrangement of graph elements after layout, sorted by ascending z-order. */
     ordering: Array<{ type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId }>;
@@ -93,8 +71,6 @@ type DagLayoutState = {
 
     /** Which node or edge is selected */
     selectedNodeId: DagNodeId;
-
-    unsizedNodes: number;
 };
 
 export type DagLayoutHandle = {
@@ -104,8 +80,8 @@ export type DagLayoutHandle = {
     doSelectNeighborNode: (direction: 'north' | 'south' | 'east' | 'west') => void;
     doSetLightNode: (nodeId: DagNodeId, light: 'normal' | 'highlight' | 'lowlight' | 'selected') => void;
     doSetLightEdge: (edgeId: DagEdgeId, light: 'normal' | 'highlight' | 'lowlight' | 'selected') => void;
-    doExpandNode: (nodeId: DagNodeId) => void;
-    doCollapseNode: (nodeId: DagNodeId) => void;
+    doToggleNodeExpanded: (nodeId: DagNodeId) => void;
+    doSetNodeExpanded: (nodeId: DagNodeId, expanded: boolean) => void;
 };
 
 type DagDidSelectElementEvent = {
@@ -117,10 +93,6 @@ type DagDidSelectElementEvent = {
     };
 };
 
-// nodes can be selected
-// nodes + edges can have mouse events
-// 
-
 type DagNodeDidMouseEvent = {
     topic:
         | 'Dag.NodeDidMouseOver'
@@ -130,7 +102,6 @@ type DagNodeDidMouseEvent = {
     message: {
         viewerId: ViewerId;
         nodeId: DagNodeId;
-        nodeViewerId: ViewerId;
     };
 };
 
@@ -196,12 +167,11 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         alignChildren: false,
     };
 
+    resizes: number = 0;
+
     constructor(props: DagLayoutProps & InternalProps) {
         super(props);
-        
-        // TODO: Handle alignments.
         this.state = {
-            shouldLayout: false, // False so no layout until sizes all populated.
             nodes: new Map(Object.entries(this.props.nodes).map(([nodeId, node]) => [
                 nodeId,
                 {
@@ -210,7 +180,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                         width: kNodeInitialWidth,
                         height: kNodeInitialWidth,
                     },
-                    children: node.children as NodeId[],
                     ports: obj2obj(node.ports || {}, (name, port) => [
                         name,
                         {
@@ -252,7 +221,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 light: 'normal',
             }])),
             selectedNodeId: `${Object.keys(this.props.nodes)[0]}`,
-            unsizedNodes: Object.keys(this.props.nodes).length * 2,
         };
 
         // Traverse hierarchy to set flowDirection on each node based on closest ancestors.
@@ -284,7 +252,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     public getHandle(): DagLayoutHandle {
         const { selectedNodeId } = this.state;
         return {
-            nodes: map2obj(this._childViewers, (k, v) => [k, v.viewerId]),
+            nodes: map2obj(this._childViewers, (k, v) => v ? [k, v.viewerId] : undefined),
             selectedNodeId,
             doSelectNode: (nodeId) => this.setState({selectedNodeId: nodeId}),
             doSelectNeighborNode: (direction) => {
@@ -302,37 +270,44 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     light,
                 })
             })),
-            doExpandNode: (nodeId) => this.setState((state) => ({
+            doToggleNodeExpanded: (nodeId) => this.setState((state) => ({
                 nodeStates: new Map(state.nodeStates).set(nodeId, {
                     ...state.nodeStates.get(nodeId)!,
-                    expanded: true,
-                })
-            })),
-            doCollapseNode: (nodeId) => this.setState((state) => ({
+                    expanded: !state.nodeStates.get(nodeId)!.expanded,
+                }),
+            }), () => {
+                // Only trigger a layout if the node is now expanded. When expanding,
+                // none of the children change size, so their `_onNodeResize()` calls
+                // do not change the state and trigger a layout. The expanded node shows
+                // no viewer, so it never even calls `_onNodeResize()`;  we must instead
+                // layout here. On collapse, the collapsed node will change size and call
+                // `_onNodeResize()`, so we do not need to demand a layout here.
+                if (this.state.nodeStates.get(nodeId)!.expanded) {
+                    this._layoutGraph();
+                }
+            }),
+            doSetNodeExpanded: (nodeId, expanded) => this.setState((state) => ({
                 nodeStates: new Map(state.nodeStates).set(nodeId, {
                     ...state.nodeStates.get(nodeId)!,
-                    expanded: false,
-                })
-            })),
+                    expanded,
+                }),
+            }), () => {
+                if (this.state.nodeStates.get(nodeId)!.expanded) {
+                    this._layoutGraph();
+                }
+            }),
         };
     }
 
     componentDidMount() {
         // At this point, we have the sizes of the unlayouted nodes.
         console.debug('DagLayout -- componentDidMount(): mounted');
-
-        // this._layoutGraph();
     }
 
     shouldComponentUpdate(nextProps: any, nextState: DagLayoutState) {
         // Prevent component from re-rendering each time a dimension is populated/updated unless all
         // dimensions are populated.
-        // const shouldUpdate = Object.values(nextState.nodes)
-        //     .filter((node) => node.children.length === 0) // Only keep leaves.
-        //     .every((node) => node.height);
-        // console.log('DagLayout -- shouldComponentUpdate(): ', shouldUpdate);
-        // return shouldUpdate;
-        return nextState.unsizedNodes === 0;
+        return true;
     }
 
     componentDidUpdate(prevProps: any, prevState: DagLayoutState) {
@@ -341,6 +316,10 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         console.log('DagLayout -- componentDidUpdate()');
         const { viewerId, emit } = this.props.interactions;
         const { selectedNodeId } = this.state;
+        // if (this.hasMounted && didResize) {
+        //     console.log('didResize', this.state.nodes.get('parent')!.shape.width);
+        //     this._layoutGraph();
+        // }
         // TODO: fire events
         // if (selectedNodeId !== prevState.selectedNodeId) {
         //     emit<DagLayoutEvent>('Dag.DidSelectNode', { viewerId, selectedNodeId });
@@ -357,8 +336,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     _onNodeResize(nodeId: DagNodeId, width: number, height: number) {
         console.log(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height})`);
 
-        // Do not react to resizes beyond some tolerance, e.g. due to platform instabilities or
-        // trivial appearance changes.
         const prevWidth = this.state.nodes.get(nodeId)!.shape.width;
         const prevHeight = this.state.nodes.get(nodeId)!.shape.height;
         if (
@@ -370,14 +347,19 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             return;
         }
 
-        this.setState((state) => ({
-            unsizedNodes: Math.max(state.unsizedNodes - 1, 0),
-            nodes: new Map(state.nodes).set(nodeId, {
-                ...state.nodes.get(nodeId)!,
-                shape: { width, height },
-            })
-        }), () => {
-            if (this.state.unsizedNodes === 0) {
+        this.resizes += 1;
+
+        this.setState((state) => {
+            console.log(`resize added from ${nodeId}`)
+            return {
+                nodes: new Map(state.nodes).set(nodeId, {
+                    ...state.nodes.get(nodeId)!,
+                    shape: { width, height },
+                })
+            }
+        }, () => {
+            this.resizes -= 1;
+            if (this.resizes === 0) {
                 this._layoutGraph();
             }
         });
@@ -388,8 +370,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
      * @private
      */
     _layoutGraph() {
-        console.log("_layoutGraph", this.state.nodes);
-        const [nodes, edges] = fromSchema(Array.from(this.state.nodes.values()), Array.from(this.state.edges.values()));
+        console.log("_layoutGraph", this.state.nodes, this.state.nodeStates);
+        const [nodes, edges] = fromSchema(Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})), Array.from(this.state.edges.values()));
         const storage = new StructuredStorage(nodes, edges);
         const shownNodes: Node[] = [];
         const shownNodeIds: Set<NodeId> = new Set();
@@ -402,7 +384,10 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             if (this.state.nodeStates.get(u.id as DagNodeId)!.expanded) {
                 u.children.forEach((v) => traverse(v));
             }
-        };
+            else {
+                u.children = [];  // Hide children if not expanded.
+            }
+        }
         storage.roots().forEach((node) => traverse(node));
 
         const shownEdges = storage.edges().filter(({ source, target}) => shownNodeIds.has(source.id) && shownNodeIds.has(target.id));  // TODO: use edge flags for when compound collapsed
@@ -419,7 +404,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             },
             function*(storage, step) {
                 const elems = storage as StructuredStorage;
-                
+
                 yield* constrainNodes(elems, step);
 
                 // Edges use flow direction of least common ancestor.
@@ -456,7 +441,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     source.node.ports[source.port].location = portLocations[0];  // TODO: Remove this lol!
                     target.node.ports[target.port].location = portLocations[1];
                 };
-                
+
             },
             configForceElectrical,
         );
@@ -515,8 +500,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             const message = {
                 viewerId,
                 nodeId,
-                nodeExpanded: true, // TODO
-                nodeViewerId: 'herro', // TODO
             };
             return {
                 onClick: (e: React.SyntheticEvent) => {
@@ -603,7 +586,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             y={center ? center.y : 0}
                                             width={shape.width}
                                             height={shape.height}
-                                            isExpanded={children!.length !== 0}
+                                            isExpanded={nodeStates.get(id)!.expanded && this.props.nodes[id].children.length !== 0}
                                             isInteractive={
                                                 isInteractive !== false &&
                                                 this.props.nodes[id].children.length !== 0

@@ -166,7 +166,7 @@ storiesOf('Token (Primitive)', module)
                 )
             }/>
         </InteractionProvider>
-        
+
     ))
     .add('interactive single short', () => (
         <InteractionProvider manager={new InteractionManager()}>
@@ -655,4 +655,11 @@ storiesOf('Dag (Layout)', module)
         <Viewer view={
             Dag('east').node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
         }/>
+    ))
+    .add('interactive', () => (
+      <InteractionProvider manager={new InteractionManager()}>
+          <Viewer view={
+              Dag().node("hello", {parent: "parent"}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world").node("parent", {}, "parent")
+          }/>
+      </InteractionProvider>
     ))

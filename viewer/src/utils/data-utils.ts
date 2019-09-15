@@ -29,12 +29,12 @@ export function obj2obj<A, B>(
  */
 export function map2obj<A, B, C>(
     map: Map<A, B>,
-    transform: (k: A, v: B, i: number) => [string, C],
+    transform: (k: A, v: B, i: number) => [string, C] | undefined,
 ): Record<string, C> {
     return pairs2obj(
         Array.from(map.entries())
             .map(([k, v], i) => transform(k, v, i))
-            .filter((pair) => pair !== undefined),
+            .filter((pair): pair is [string, C] => pair !== undefined),
     );
 }
 
