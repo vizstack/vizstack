@@ -6,6 +6,8 @@ import { line, curveBasis, curveLinear } from 'd3';
 
 import defaultTheme from '../../theme';
 
+const kEdgeGap = 6;
+
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
  * based on prop values.
@@ -45,6 +47,18 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         const { classes, points, shape, light, label, mouseHandlers } = this.props;
 
         if (!points) return null;
+
+        // Bump end of line to make room for sharp arrowhead
+        if (points.length >= 2) {
+            const [p, q] = points.slice(points.length - 2);
+            const pq = { x : q.x - p.x, y: q.y - p.y };
+            const dist = Math.pow(pq.x * pq.x + pq.y * pq.y, 0.5);
+            console.log('EDGEEEEE', pq, dist, kEdgeGap);
+            if(dist > kEdgeGap) {
+                q.x -= pq.x / dist * kEdgeGap;
+                q.y -= pq.y / dist * kEdgeGap;
+            }
+        }
 
         // Create d3 path string
         let path = undefined;

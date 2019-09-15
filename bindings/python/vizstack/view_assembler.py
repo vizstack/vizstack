@@ -123,14 +123,12 @@ class ViewAssembler:
             fragments[frag_id] = ViewAssembler._remove_null_contents(frag)
             stack.extend(refs)
 
-        for frag_id, frag in fragments.items():
-            assert frag, 'Object assigned a FragmentId was not returned as a ref: {}'.format(
-                frag_id
-            )
+        for frag_id, frag in fragments.items():  # type: ignore
+            assert frag is not None, 'Object assigned a FragmentId was not returned as a ref: {}'.format(frag_id)
 
         return {
             'rootId': ViewAssembler._ROOT_ID,
-            'fragments': fragments,
+            'fragments': fragments,  # type: ignore
         }
 
 

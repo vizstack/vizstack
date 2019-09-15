@@ -18,7 +18,8 @@ import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, 
     forcePairwiseNodes,
     positionNoOverlap,
     positionChildren,
-    positionPorts
+    positionPorts,
+    constrainOffset,
 } from 'nodal';
 
 // TODO: Replace with Immmutable.js.
@@ -28,6 +29,9 @@ import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, 
  */
 const kNodeInitialWidth = 100000;
 const kNodeResizeTolerance = 5;
+const kFlowSpacing = 75;
+
+type CardinalDirection = 'north' | 'south' | 'east' | 'west';
 
 type DagLayoutProps = FragmentProps<DagLayoutFragment>;
 
@@ -37,7 +41,14 @@ type DagLayoutState = {
     shouldLayout: boolean;
 
     /** Nodes and Edges after populated with size and position information. */
-    nodes: Map<DagNodeId, NodeSchema & { shape: Required<NodeSchema>['shape']}>;
+    nodes: Map<DagNodeId,
+        NodeSchema & {
+            shape: Required<NodeSchema>['shape'],
+            meta: {
+                flowDirection?: CardinalDirection,
+                alignChildren?: boolean,
+            }
+        }>;
     edges: Map<DagEdgeId, EdgeSchema>;
 
     // nodes: {
@@ -180,11 +191,15 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     //     When existing dimensions changed, layout again.
     //     When expansion state changes (revealing new nodes), render invisibly the unlayouted
     //         nodes then perform a layout.
+    static defaultProps: Partial<DagLayoutProps> = {
+        flowDirection: 'south',
+        alignChildren: false,
+    };
 
     constructor(props: DagLayoutProps & InternalProps) {
         super(props);
-        type hi = EdgeSchema;
-        type h2 = DagNode;
+        
+        // TODO: Handle alignments.
         this.state = {
             shouldLayout: false, // False so no layout until sizes all populated.
             nodes: new Map(Object.entries(this.props.nodes).map(([nodeId, node]) => [
@@ -203,15 +218,28 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                             order: port.order,
                         }
                     ]),
+                    meta: {
+                        alignChildren: node.alignChildren,
+                        flowDirection: node.flowDirection,
+                    }
                 }
             ])),
-            edges: new Map(Object.entries(this.props.edges).map(([edgeId, edge]) => [
+            edges: new Map(Object.entries(this.props.edges).map(([edgeId, { source, target }]) => [
                 edgeId,
                 {
                     id: edgeId,
-                    source: { id: edge.startId as NodeId, port: edge.startPort },
-                    target: { id: edge.endId as NodeId, port: edge.endPort },
-
+                    source: {
+                        id: source.id as NodeId,
+                        port: source.port,
+                    },
+                    target: {
+                        id: target.id as NodeId,
+                        port: target.port,
+                    },
+                    meta: {
+                        isSourcePersistent: source.isPersistent,
+                        isTargetPersistent: target.isPersistent,
+                    }
                 }
             ])),
             bounds: { width: 0, height: 0, x: 0, X: 0, y: 0, Y: 0 },
@@ -226,6 +254,19 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             selectedNodeId: `${Object.keys(this.props.nodes)[0]}`,
             unsizedNodes: Object.keys(this.props.nodes).length * 2,
         };
+
+        // Traverse hierarchy to set flowDirection on each node based on closest ancestors.
+        const [nodes, edges] = fromSchema(
+            Array.from(this.state.nodes.values()),  Array.from(this.state.edges.values())
+        );
+        const storage = new StructuredStorage(nodes, edges);
+        const traverse = (u: Node, ancestorDirection: CardinalDirection) => {
+            const flowDirection = u.meta!.flowDirection || ancestorDirection;
+            u.meta!.flowDirection = flowDirection;
+            u.children.forEach((child) => traverse(child, flowDirection));
+        }
+        storage.roots().forEach((node) => traverse(node, this.props.flowDirection!));
+
         console.log('constructor', this.state.nodes)
         this._getChildViewerCallback.bind(this);
     }
@@ -361,21 +402,61 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             if (this.state.nodeStates.get(u.id as DagNodeId)!.expanded) {
                 u.children.forEach((v) => traverse(v));
             }
-        }
+        };
         storage.roots().forEach((node) => traverse(node));
-        
-        const shownEdges = storage.edges().filter(({ source, target}) => shownNodeIds.has(source.id) && shownNodeIds.has(target.id));  // TODO: use edge flags
+
+        const shownEdges = storage.edges().filter(({ source, target}) => shownNodeIds.has(source.id) && shownNodeIds.has(target.id));  // TODO: use edge flags for when compound collapsed
         shownEdges.forEach((edge) => ordering.push({ type: 'edge', id: edge.id as DagEdgeId }));
 
         const shownStorage = new StructuredStorage(shownNodes, shownEdges);
         const shortestPath = shownStorage.shortestPaths();
+        const graphFlowDirection = this.props.flowDirection!;
         const layout = new ForceConstraintLayout(
             shownStorage,
-            function*(elems) {
-                yield* modelSpringElectrical(elems as StructuredStorage, shortestPath, 100, 0.1);
+            function*(storage) {
+                const elems = storage as StructuredStorage;
+                yield* modelSpringElectrical(elems, shortestPath, 100, 0.1);
             },
-            function*(elems, step) {
-                yield* constrainNodes(elems as StructuredStorage, step);
+            function*(storage, step) {
+                const elems = storage as StructuredStorage;
+                
+                yield* constrainNodes(elems, step);
+
+                // Edges use flow direction of least common ancestor.
+                for(let { source, target } of elems.edges()) {
+                    const lca = elems.leastCommonAncestor(source.node, target.node);
+                    const flowDirection: CardinalDirection = lca ? lca.meta!.flowDirection : graphFlowDirection;
+                    let flowAxis: [number, number];
+                    let portLocations: [CardinalDirection, CardinalDirection];
+                    let offset: number;
+                    switch(flowDirection) {
+                        case 'east':
+                            flowAxis = [1, 0];
+                            portLocations = ['east', 'west'];
+                            offset = (source.node.shape.width + target.node.shape.width) / 2;
+                            break;
+                        case 'west':
+                            flowAxis = [-1, 0];
+                            portLocations = ['west', 'east'];
+                            offset = (source.node.shape.width + target.node.shape.width) / 2;
+                            break;
+                        case 'north':
+                            flowAxis = [0, -1];
+                            portLocations = ['north', 'south'];
+                            offset = (source.node.shape.height + target.node.shape.height) / 2;
+                            break;
+                        case 'south':
+                        default:
+                            flowAxis = [0, 1];
+                            portLocations = ['south', 'north'];
+                            offset = (source.node.shape.height + target.node.shape.height) / 2;
+                            break;
+                    }
+                    yield constrainOffset(source.node.center, target.node.center, '>=', kFlowSpacing + offset, flowAxis);
+                    source.node.ports[source.port].location = portLocations[0];  // TODO: Remove this lol!
+                    target.node.ports[target.port].location = portLocations[1];
+                };
+                
             },
             configForceElectrical,
         );
@@ -418,7 +499,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     key={id}
                     id={id}
                     viewBox='0 0 10 10'
-                    refX='6'
+                    refX='4'
                     refY='5'
                     markerUnits='strokeWidth'
                     markerWidth='4'

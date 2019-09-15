@@ -648,6 +648,11 @@ storiesOf('KeyValue (Layout)', module)
 storiesOf('Dag (Layout)', module)
     .add('basic', () => (
         <Viewer view={
-            Dag().node("hello", {}, ["h", "e", "r", "r", "o"]).node("world", {}, "world").edge("hello", "world")
+            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
+        }/>
+    ))
+    .add('flow direction', () => (
+        <Viewer view={
+            Dag('east').node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
         }/>
     ))

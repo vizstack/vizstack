@@ -50,7 +50,7 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
         if (alignWith) {
             if (typeof alignWith === 'string') {
                 this._alignments.push([name, alignWith]);
-            } else if (Array.isArray) {
+            } else if (Array.isArray(alignWith)) {
                 this._alignments.push([name, ...alignWith]);
             }
         }
@@ -76,12 +76,15 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
         return this;
     }
 
-    public edge(startNode: string, endNode: string, startPort?: string, endPort?: string) {
+    public edge(
+        source: string | DagEdgeConfig['source'],
+        target: string | DagEdgeConfig['target'],
+        label?: string,
+    ) {
         const edge: DagEdgeConfig = {
-            startId: startNode,
-            endId: endNode,
-            ...(startPort && { startPort }),
-            ...(endPort && { endPort }),
+            source: typeof source === 'string' ? { id: source } : source,
+            target: typeof target === 'string' ? { id: target } : target,
+            ...(label && { label }),
         };
         this._edges.push(edge);
         return this;
@@ -98,21 +101,23 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
             if (!(name in this._items)) throw new Error(`Node with no item: ${name}`);
         });
         // Ensure all edge start/end nodes and ports are valid.
-        this._edges.forEach(({ startId, endId, startPort, endPort }, idx) => {
-            if (!(startId in this._nodes)) {
-                throw new Error(`Edge starts at unknown node: ${startId}`);
-            } else if (startPort) {
-                const startPorts = this._nodes[startId].ports;
-                if (!startPorts || !(startPort in startPorts)) {
-                    throw new Error(`Edge starts at unknown port: ${startPort} (node ${startId})`);
+        this._edges.forEach(({ source, target, label }, idx) => {
+            const { id: sourceId, port: sourcePort  } = source;
+            const { id: targetId, port: targetPort  } = target;
+            if (!(sourceId in this._nodes)) {
+                throw new Error(`Edge starts at unknown node: ${sourceId}`);
+            } else if (sourcePort) {
+                const sourcePorts = this._nodes[sourceId].ports;
+                if (!sourcePorts || !(sourcePort in sourcePorts)) {
+                    throw new Error(`Edge starts at unknown port: ${sourcePort} (node ${sourceId})`);
                 }
             }
-            if (!(endId in this._nodes)) {
-                throw new Error(`Edge ends at unknown node: ${endId}`);
-            } else if (endPort) {
-                const endPorts = this._nodes[endId].ports;
-                if (!endPorts || !(endPort in endPorts)) {
-                    throw new Error(`Edge ends at unknown port: ${endPort} (node ${endId})`);
+            if (!(targetId in this._nodes)) {
+                throw new Error(`Edge ends at unknown node: ${targetId}`);
+            } else if (targetPort) {
+                const targetPorts = this._nodes[targetId].ports;
+                if (!targetPorts || !(targetPort in targetPorts)) {
+                    throw new Error(`Edge ends at unknown port: ${targetPort} (node ${targetId})`);
                 }
             }
         });

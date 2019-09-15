@@ -1,12 +1,12 @@
 from vizstack.fragment_assembler import FragmentAssembler
-from typing import Optional, Tuple, Dict, List, Any, Union
+from typing import Optional, Tuple, Dict, List, Any, Union, cast
 from typing_extensions import Literal, TypedDict
 from vizstack.schema import JsonType, View, Fragment
 from collections import defaultdict
 
 
 FlowDirection = Literal['north', 'south', 'east', 'west', None]
-Side = Literal['north', 'south', 'east', 'west']
+Side = Literal['north', 'south', 'east', 'west', None]
 
 Port = TypedDict('Port', {
     'side': Side,
@@ -24,11 +24,17 @@ Node = TypedDict('Node', {
     'ports': Dict[str, Port],
 }, total=False)
 
+Endpoint = TypedDict('Endpoint', {
+    'id': str,
+    'port': Optional[str],
+    'label': Optional[str],
+    'isPersistent': Optional[bool],
+}, total=False)
+
 Edge = TypedDict('Edge', {
-    'startId': str,
-    'endId': str,
-    'startPort': Optional[str],
-    'endPort': Optional[str],
+    'source': Endpoint,
+    'target': Endpoint,
+    'label': Optional[str],
 }, total=False)
 
 
@@ -75,7 +81,7 @@ class Dag(FragmentAssembler):
             'isVisible': is_visible,
         }.items():
             if var is not None or key not in self._nodes[node_id]:
-                self._nodes[node_id][key] = var
+                self._nodes[node_id][key] = var  # type: ignore
         if parent is not Dag._DEFAULT_PARENT:
             self._nodes[node_id]['parent'] = parent
         elif 'parent' not in self._nodes[node_id]:
@@ -91,27 +97,27 @@ class Dag(FragmentAssembler):
                 self.port(*port)
         return self
 
-    def port(self, node_id: str, port_name: str, side: Side, order: Optional[int] = None):
+    def port(self, node_id: str, port_name: str, side: Side = None, order: Optional[int] = None):
         if 'ports' not in self._nodes[node_id]:
             self._nodes[node_id]['ports'] = {}
-        self._nodes[node_id]['ports'][port_name] = {
-            'side': side,
-        }
+        self._nodes[node_id]['ports'][port_name] = {}
+        if side is not None:
+            self._nodes[node_id]['ports'][port_name]['side'] = side
         if order is not None:
             self._nodes[node_id]['ports'][port_name]['order'] = order
         return self
 
-    # TODO: remove "id" and "name" everywhere
-    def edge(self, start_node_id: str, end_node_id: str,
-             start_port: Optional[str] = None, end_port: Optional[str] = None):
+    def edge(self,
+        source: Union[str, Endpoint],
+        target: Union[str, Endpoint],
+        label: Optional[str] = None,
+    ):
         edge: Edge = {
-            'startId': start_node_id,
-            'endId': end_node_id,
+            'source': { 'id': source } if isinstance(source, str) else source,
+            'target': { 'id': target } if isinstance(target, str) else target,
         }
-        if start_port is not None:
-            edge['startPort'] = start_port
-        if end_port is not None:
-            edge['endPort'] = end_port
+        if label is not Node:
+            edge['label'] = label
         self._edges.append(edge)
         return self
 
@@ -128,18 +134,20 @@ class Dag(FragmentAssembler):
                 'parent'] in self._nodes, 'Parent node "{}" not found for child "{}".'.format(
                 self._nodes[node_id]['parent'], node_id)
         for edge in self._edges:
+            sourceId = edge['source']['id'] 
+            targetId = edge['target']['id']
             # All edges must connect real nodes
-            assert edge['startId'] in self._nodes, 'An edge starts at non-existent node "{}".'.format(edge['startId'])
-            assert edge['endId'] in self._nodes, 'An edge ends at non-existent node "{}".'.format(edge['endId'])
+            assert sourceId in self._nodes, 'An edge starts at non-existent node "{}".'.format(sourceId)
+            assert targetId in self._nodes, 'An edge ends at non-existent node "{}".'.format(targetId)
             # All edge ports must exist
-            if 'startPort' in edge:
-                assert edge['startPort'] in self._nodes[edge['startId']][
-                    'ports'], 'An edge starts at non-existent port "{}" on node "{}".'.format(edge['startPort'],
-                                                                                              edge['startId'])
-            if 'endPort' in edge:
-                assert edge['endPort'] in self._nodes[edge['endId']][
-                    'ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(edge['endPort'],
-                                                                                            edge['endId'])
+            if 'port' in edge['source']:
+                sourcePort = edge['source']['port']
+                assert sourcePort in self._nodes[sourceId][
+                    'ports'], 'An edge starts at non-existent port "{}" on node "{}".'.format(sourcePort, sourceId)
+            if 'port' in edge['target']:
+                targetPort = edge['target']['port']
+                assert targetPort in self._nodes[targetId][
+                    'ports'], 'An edge ends at non-existent port "{}" on node "{}".'.format(targetPort, targetId)
         return {
             'type': 'DagLayout',
             'contents': {

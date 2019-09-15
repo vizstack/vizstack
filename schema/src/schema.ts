@@ -189,10 +189,9 @@ export type DagNode = {
 };
 export type DagEdgeId = string & { readonly brand?: unique symbol };
 export type DagEdge = {
-    startId: DagNodeId;
-    endId: DagNodeId;
-    startPort?: string;
-    endPort?: string;
+    source: { id: DagNodeId, port?: string, label?: string, isPersistent?: boolean };
+    target: { id: DagNodeId, port?: string, label?: string, isPersistent?: boolean };
+    label?: string;
 };
 export type DagLayoutFragment = {
     type: 'DagLayout';

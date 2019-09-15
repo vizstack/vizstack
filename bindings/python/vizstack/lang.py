@@ -50,11 +50,11 @@ def get_language_default(obj: Any) -> FragmentAssembler:
     # Function: Sequence of positional arguments and the KeyValue of keyword arguments
     elif callable(obj):
         parameters = inspect.signature(obj).parameters.items()
-        args = [param_name for param_name, param in parameters if param.default is inspect._empty]
+        args = [param_name for param_name, param in parameters if param.default is inspect._empty] # type: ignore
         kwargs = {
             param_name: param.default
             for param_name, param in parameters
-            if param.default is not inspect._empty
+            if param.default is not inspect._empty  # type: ignore
         }
 
         return Sequence(

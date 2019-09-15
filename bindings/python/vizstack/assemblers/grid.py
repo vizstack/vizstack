@@ -34,7 +34,7 @@ def _within_bounds(bounds: GridBounds, row: int, col: int) -> bool:
     return bounds['r'] <= row <= bounds['R'] and bounds['c'] <= col <= bounds['C']
 
 
-def _parse_grid_string(self, spec) -> Dict[str, GridCell]:
+def _parse_grid_string(spec: str) -> Dict[str, GridCell]:
     rows = re.split("\||\n", spec)
     rows = ["".join(row.split()) for row in rows]
     rows = [row for row in rows if len(row) > 0]
@@ -54,9 +54,9 @@ def _parse_grid_string(self, spec) -> Dict[str, GridCell]:
                 # Create a new cell and greedily expand col-wise then row-wise while bounds keep
                 # fencing a contiguous rectangle of `char`.
                 R, C = r, c
-                while C + 1 < rows[0].length and rows[r][C + 1] == char:
+                while C + 1 < len(rows[0]) and rows[r][C + 1] == char:
                     C += 1
-                while R + 1 < rows.length and all(rows[R + 1][i] == char for i in range(c, C + 1)):
+                while R + 1 < len(rows) and all(rows[R + 1][i] == char for i in range(c, C + 1)):
                     R += 1
                 bounds[char] = {'r': r, 'c': c, 'R': R, 'C': C}
 
@@ -142,9 +142,9 @@ class Grid(FragmentAssembler):
                    'contents': {
                        'cells': [{**cell, 'fragmentId': get_id(self._items[cell_name], cell_name)}
                                  for cell_name, cell in self._cells.items()],
-                       'rowHeight': self._rowHeight,
-                       'colWidth': self._colWidth,
-                       'showLabels': self._showLabels,
+                       'rowHeight': self._row_height,
+                       'colWidth': self._col_width,
+                       'showLabels': self._show_labels,
                    },
                    'meta': self._meta,
                }, [self._items[cell_name] for cell_name in self._cells]
