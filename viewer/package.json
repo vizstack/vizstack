@@ -20,7 +20,6 @@
     "cuid": "^2.1.6",
     "d3": "^5.12.0",
     "lodash": "^4.17.15",
-    "react-measure": "^2.3.0",
     "reselect": "^4.0.0",
     "seamless-immutable": "^7.1.4",
     "typeface-roboto-mono": "0.0.75",

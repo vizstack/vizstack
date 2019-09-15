@@ -35,7 +35,6 @@ export default {
             borderBottomStyle: 'solid' as any,
             borderBottomWidth: '3px',
             borderBottomColor: 'transparent',
-            marginRight: '4px',
         },
         lowlight: {},
         highlight: {

@@ -647,7 +647,9 @@ storiesOf('KeyValue (Layout)', module)
 
 storiesOf('Dag (Layout)', module)
     .add('basic', () => (
-        <Viewer view={
-            Dag().node("hello", {}, ["h", "e", "r", "r", "o"]).node("world", {}, "world").edge("hello", "world")
-        }/>
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={
+                Dag().node("hello", {parent: "parent"}, ["h", "e", "r", "r", "o"]).node("world", {}, "world").edge("hello", "world").node("parent", {}, "parent")
+            }/>
+        </InteractionProvider>
     ))
