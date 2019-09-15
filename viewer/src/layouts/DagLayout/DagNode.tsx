@@ -3,6 +3,8 @@ import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import Measure from 'react-measure';
 
+import defaultTheme from '../../theme';
+
 /** The pixel width of the interactive border surrounding expansible/collapsible nodes. */
 const kBorderWidth = 8;
 
@@ -17,7 +19,7 @@ type DagNodeProps = {
     x: number;
     y: number;
     width: number;
-    height?: number;
+    height: number;
 
     /** Expansion state. */
     isExpanded: boolean;
@@ -43,7 +45,6 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
     static defaultProps: Partial<DagNodeProps> = {
         isInteractive: true,
         isVisible: true,
-        height: 0,  // is this correct?
     };
 
     render() {
@@ -83,14 +84,14 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
         // If not expanded, render the node, surrounded by an interactive border if `isInteractive`
         const foreignObjectPos = isInteractive
             ? {
-                  x: x + kBorderWidth,
-                  y: y + kBorderWidth,
+                  x: x - width / 2 + kBorderWidth,
+                  y: y - height / 2 + kBorderWidth,
                   width: width - kBorderWidth * 2,
                   height: height - kBorderWidth * 2,
               }
             : {
-                  x,
-                  y,
+                  x: x - width / 2,
+                  y: y - height / 2,
                   width,
                   height,
               };
@@ -104,7 +105,7 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                         width={width}
                         height={height}
                         stroke={'black'}
-                        strokeOpacity={isHighlighted ? 0.4 : 0.2}
+                        strokeOpacity={light === "highlight" ? 0.4 : 0.2}
                         strokeWidth={kBorderWidth}
                         fill={'none'}
                         {...mouseHandlers}
@@ -178,4 +179,4 @@ const styles = (theme: Theme) =>
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(DagNode) as React.ComponentClass<DagNodeProps>;
+export default withStyles(styles, { defaultTheme })(DagNode) as React.ComponentClass<DagNodeProps>;

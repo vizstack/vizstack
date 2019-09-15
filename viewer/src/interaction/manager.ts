@@ -479,6 +479,16 @@ export class InteractionManager {
                 global.selected = null;
             }
         });
+        this.on('Dag.DidNodeClick', (all, message, global) => {
+            all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
+                if (message.nodeExpanded) {
+                    dag.state.doCollapseNode(message.nodeId);
+                }
+                else {
+                    dag.state.doExpandNode(message.nodeId);
+                }
+            });
+        });
     }
 
     private _useKeyboardDefaults() {

@@ -4,6 +4,8 @@ import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/s
 import cuid from 'cuid';
 import { line, curveBasis, curveLinear } from 'd3';
 
+import defaultTheme from '../../theme';
+
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
  * based on prop values.
@@ -101,7 +103,7 @@ const styles = (theme: Theme) =>
     createStyles({
         edge: {
             fill: 'none',
-            // stroke: theme.vars.selectable.normal,
+            stroke: theme.color.blue.base,
             strokeWidth: 2.5,
             opacity: 1,
             markerEnd: 'url(#arrow-normal)',
@@ -148,4 +150,4 @@ const styles = (theme: Theme) =>
 
 type InternalProps = WithStyles<typeof styles>;
 
-export default withStyles(styles)(DagEdge) as React.ComponentClass<DagEdgeProps>;
+export default withStyles(styles, { defaultTheme })(DagEdge) as React.ComponentClass<DagEdgeProps>;

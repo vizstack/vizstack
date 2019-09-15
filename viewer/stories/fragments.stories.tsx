@@ -14,6 +14,7 @@ import {
     Sequence,
     Grid,
     KeyValue,
+    Dag,
 } from '@vizstack/js';
 
 const kTextSingleShort = (
@@ -643,3 +644,10 @@ storiesOf('KeyValue (Layout)', module)
             }/>
         </InteractionProvider>
     ));
+
+storiesOf('Dag (Layout)', module)
+    .add('basic', () => (
+        <Viewer view={
+            Dag().node("hello", {}, ["h", "e", "r", "r", "o"]).node("world", {}, "world").edge("hello", "world")
+        }/>
+    ))
