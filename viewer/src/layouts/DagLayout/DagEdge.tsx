@@ -44,12 +44,14 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
     private _xlinkId = cuid();
 
     render() {
-        const { classes, points, shape, light, label, mouseHandlers } = this.props;
+        const { classes, shape, light, label, mouseHandlers } = this.props;
+        let { points } = this.props;
 
         if (!points) return null;
 
         // Bump end of line to make room for sharp arrowhead
         if (points.length >= 2) {
+            points = points.map(({ x, y }) => ({ x , y }));
             const [p, q] = points.slice(points.length - 2);
             const pq = { x : q.x - p.x, y: q.y - p.y };
             const dist = Math.pow(pq.x * pq.x + pq.y * pq.y, 0.5);

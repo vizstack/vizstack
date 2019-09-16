@@ -1,1 +1,2 @@
-npm link ../../schema
+npm link
+npm link @vizstack/schema

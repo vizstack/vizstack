@@ -1,3 +1,4 @@
-npm link ../schema
-npm link ../bindings/typescript/
-npm link ../../nodal
+npm link
+npm link @vizstack/schema
+npm link @vizstack/js
+npm link nodal
