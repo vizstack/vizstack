@@ -22,6 +22,7 @@ import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, 
     positionChildren,
     positionPorts,
     constrainOffset,
+    constrainAngle,
     Vector,
 } from 'nodal';
 
@@ -715,13 +716,10 @@ function* modelSpringElectrical(
             const actualDistance = u.center.distanceTo(v.center);
             // const actualDistance = separation({ center: u.center, width: u.shape.width, height: u.shape.height}, { center: v.center, width: v.shape.width, height: v.shape.height});
 
-
-            if(elems.existsEdge(u, v, true)) {
+            if(elems.existsEdge(u, v, true) && actualDistance > idealLength) {
                 // Attractive force between edges if too far.
-                if(actualDistance > idealLength) {
-                    const delta = actualDistance - idealLength;
-                    yield forcePairwiseNodes(u, v, [-wu*delta, -wv*delta]);
-                }
+                const delta = actualDistance - idealLength;
+                yield forcePairwiseNodes(u, v, [-wu*delta, -wv*delta]);
             } else {
                 // Repulsive force between node pairs if too close.
                 if(actualDistance < idealDistance) {
@@ -729,6 +727,10 @@ function* modelSpringElectrical(
                     yield forcePairwiseNodes(u, v, [wu*delta, wv*delta]);
                 }
             }
+        }
+
+        for(let edge of elems.edges()) {
+            yield constrainAngle(edge.source.node.center, edge.target.node.center, -Math.PI/2, 3);
         }
     }
 }
