@@ -479,9 +479,20 @@ export class InteractionManager {
                 global.selected = null;
             }
         });
+        this.on('Dag.NodeDidMouseOver', (all, message) => {
+            all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
+                dag.state.doSetLightNode(message.nodeId, 'highlight');
+            })
+        });
+        this.on('Dag.NodeDidMouseOut', (all, message) => {
+            all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
+                dag.state.doSetLightNode(message.nodeId, 'normal');
+            })
+        });
         this.on('Dag.NodeDidClick', (all, message) => {
             all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
                 dag.state.doToggleNodeExpanded(message.nodeId);
+                dag.state.doSetLightNode(message.nodeId, 'normal');
             });
         });
     }
