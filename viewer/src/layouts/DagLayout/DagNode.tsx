@@ -9,6 +9,7 @@ import defaultTheme from '../../theme';
 /** The pixel width of the interactive border surrounding expansible/collapsible nodes. */
 const kBorderWidth = 8;
 const kMargin = 10;
+const kPadding = 5;
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -66,10 +67,10 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
             const height = (DOMNode as any).offsetHeight;
             isInteractive
                 ? onResize(
-                        width + kBorderWidth * 2 + kMargin * 2,
-                        height + kBorderWidth * 2 + kMargin * 2,
+                        width + kBorderWidth * 2,
+                        height + kBorderWidth * 2,
                     )
-                : onResize(width + kMargin * 2, height + kMargin * 2);
+                : onResize(width, height);
             this.width = width;
             this.height = height;
         }
@@ -102,60 +103,51 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
         // If the node is expanded, render an interactive rectangle
         if (isExpanded) {
             return (
-                <g>
-                    <rect
-                        x={x - width / 2}
-                        y={y - height / 2}
-                        width={width}
-                        height={height}
-                        className={clsx({
-                            [classes.expandedOuterInvisible]: isVisible === false,
-                            [classes.expandedOuterVisible]: isVisible !== false,
-                        })}
-                        {...mouseHandlers}
-                    />
-                    <rect
-                        x={x - width / 2 + kBorderWidth}
-                        y={y - height / 2 + kBorderWidth}
-                        width={width - kBorderWidth * 2}
-                        height={height - kBorderWidth * 2}
-                        className={clsx({
-                            [classes.expandedInnerInvisible]: isVisible === false,
-                            [classes.expandedInnerVisible]: isVisible !== false,
-                        })}
-                    />
-                </g>
+                <rect
+                    x={x - width / 2}
+                    y={y - height / 2}
+                    width={width}
+                    height={height}
+                    className={clsx({
+                        [classes.expandedInvisible]: isVisible === false,
+                        [classes.expandedVisible]: isVisible !== false,
+                        [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
+                    })}
+                    {...mouseHandlers}
+                />
             );
         }
 
         // If not expanded, render the node, surrounded by an interactive border if `isInteractive`
         const foreignObjectPos = isInteractive
             ? {
-                  x: x - width / 2 + kBorderWidth + kMargin,
-                  y: y - height / 2 + kBorderWidth + kMargin,
-                  width: width - kBorderWidth * 2 - kMargin * 2,
-                  height: height - kBorderWidth * 2 - kMargin * 2,
+                  x: x - width / 2 + kBorderWidth,
+                  y: y - height / 2 + kBorderWidth,
+                  width: width - kBorderWidth * 2,
+                  height: height - kBorderWidth * 2,
               }
             : {
-                  x: x - width / 2 + kMargin,
-                  y: y - height / 2 + kMargin,
-                  width: width - kMargin * 2,
-                  height: height - kMargin * 2,
+                  x: x - width / 2,
+                  y: y - height / 2,
+                  width: width,
+                  height: height,
               };
 
         return (
             <g>
                 {isInteractive ? (
-                    <g>
-                        <rect
-                            x={x - width / 2 + kMargin}
-                            y={y - height / 2 + kMargin}
-                            width={width - kMargin * 2}
-                            height={height - kMargin * 2}
-                            fill={'black'}
-                            {...mouseHandlers}
-                        />
-                    </g>
+                    <rect
+                        x={x - width / 2}
+                        y={y - height / 2}
+                        width={width}
+                        height={height}
+                        className={clsx({
+                            [classes.expandedInvisible]: isVisible === false,
+                            [classes.expandedVisible]: isVisible !== false,
+                            [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
+                        })}
+                        {...mouseHandlers}
+                    />
                 ) : null}
                 <foreignObject
                     {...foreignObjectPos}
@@ -191,20 +183,18 @@ const styles = (theme: Theme) =>
             // ].join(', '),
         },
 
-        expandedOuterInvisible: {
+        expandedInvisible: {
 
         },
 
-        expandedOuterVisible: {
-            fill: 'black',
+        expandedVisible: {
+            stroke: theme.vars.slot.borderColor,
+            strokeWidth: theme.vars.slot.borderWidth,
+            fill: 'transparent',
         },
 
-        expandedInnerInvisible: {
-
-        },
-
-        expandedInnerVisible: {
-            fill: 'white',
+        expandedHighlighted: {
+            stroke: theme.vars.framed.highlight.borderLeftColor,
         },
 
         nodeInvisible: {

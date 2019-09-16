@@ -457,10 +457,20 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
 
                 console.log('done', newNodes, newEdges);
 
+                const bounds = elems.bounds();
+                const padding = 10;
+
                 return {
                     nodes: newNodes,
                     edges: newEdges,
-                    bounds: elems.bounds(),
+                    bounds: {
+                        x: bounds.x - padding,
+                        y: bounds.y - padding,
+                        X: bounds.X + padding,
+                        Y: bounds.Y + padding,
+                        width: bounds.width + padding * 2,
+                        height: bounds.height + padding * 2,
+                    },
                     ordering,
                 }
             });
