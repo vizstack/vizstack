@@ -13,6 +13,7 @@ import DagEdgeComponent from './DagEdge';
 import layout, { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
+import Frame from '../../Frame';
 
 import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema, TrustRegionOptimizer,
     forcePairwiseNodes,
@@ -547,7 +548,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         }
 
         return (
-            <div className={classes.frame} {...mouseHandlers}>
+            <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 <div className={classes.graph}>
                     <svg
                         viewBox={bounds ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}` : undefined}
@@ -625,7 +626,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                         })}
                     </svg>
                 </div>
-            </div>
+            </Frame>
         );
     }
 }
