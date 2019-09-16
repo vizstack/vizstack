@@ -17,6 +17,7 @@ import Frame from '../../Frame';
 
 import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema, TrustRegionOptimizer,
     forcePairwiseNodes,
+    forceVector,
     positionNoOverlap,
     positionChildren,
     positionPorts,
@@ -402,7 +403,14 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             shownStorage,
             function*(storage) {
                 const elems = storage as StructuredStorage;
-                yield* modelSpringElectrical(elems, shortestPath, 100, 0.1);
+                yield* modelSpringElectrical(elems, shortestPath, 30, 0.1);
+                // for(let node of elems.nodes()) {
+                //     if(node.children.length === 0) {
+                //         yield forceVector(node, 10, [-1, 0])
+                //     } else {
+                //         yield forceVector(node, 10, [1, 0])
+                //     }
+                // }
             },
             function*(storage, step) {
                 const elems = storage as StructuredStorage;
