@@ -108,6 +108,8 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                     y={y - height / 2}
                     width={width}
                     height={height}
+                    rx={8}
+                    ry={8}
                     className={clsx({
                         [classes.expandedInvisible]: isVisible === false,
                         [classes.expandedVisible]: isVisible !== false,
@@ -141,6 +143,8 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                         y={y - height / 2}
                         width={width}
                         height={height}
+                        rx={8}
+                        ry={8}
                         className={clsx({
                             [classes.expandedInvisible]: isVisible === false,
                             [classes.expandedVisible]: isVisible !== false,
