@@ -16,6 +16,7 @@ import {
     KeyValue,
     Dag,
 } from '@vizstack/js';
+import compgraph from './compgraph';
 
 const kTextSingleShort = (
     "Vizstack"
@@ -663,3 +664,8 @@ storiesOf('Dag (Layout)', module)
           }/>
       </InteractionProvider>
     ))
+    .add('compgraph', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={JSON.parse(compgraph)}/>
+        </InteractionProvider>
+      ))

@@ -21,6 +21,7 @@ import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, 
     positionChildren,
     positionPorts,
     constrainOffset,
+    Vector,
 } from 'nodal';
 
 // TODO: Replace with Immmutable.js.
@@ -30,7 +31,7 @@ import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, 
  */
 const kNodeInitialWidth = 100000;
 const kNodeResizeTolerance = 5;
-const kFlowSpacing = 75;
+const kFlowSpacing = 30;
 
 type CardinalDirection = 'north' | 'south' | 'east' | 'west';
 
@@ -409,40 +410,41 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 yield* constrainNodes(elems, step);
 
                 // Edges use flow direction of least common ancestor.
-                for(let { source, target } of elems.edges()) {
-                    const lca = elems.leastCommonAncestor(source.node, target.node);
-                    const flowDirection: CardinalDirection = lca ? lca.meta!.flowDirection : graphFlowDirection;
-                    let flowAxis: [number, number];
-                    let portLocations: [CardinalDirection, CardinalDirection];
-                    let offset: number;
-                    switch(flowDirection) {
-                        case 'east':
-                            flowAxis = [1, 0];
-                            portLocations = ['east', 'west'];
-                            offset = (source.node.shape.width + target.node.shape.width) / 2;
-                            break;
-                        case 'west':
-                            flowAxis = [-1, 0];
-                            portLocations = ['west', 'east'];
-                            offset = (source.node.shape.width + target.node.shape.width) / 2;
-                            break;
-                        case 'north':
-                            flowAxis = [0, -1];
-                            portLocations = ['north', 'south'];
-                            offset = (source.node.shape.height + target.node.shape.height) / 2;
-                            break;
-                        case 'south':
-                        default:
-                            flowAxis = [0, 1];
-                            portLocations = ['south', 'north'];
-                            offset = (source.node.shape.height + target.node.shape.height) / 2;
-                            break;
-                    }
-                    yield constrainOffset(source.node.center, target.node.center, '>=', kFlowSpacing + offset, flowAxis);
-                    source.node.ports[source.port].location = portLocations[0];  // TODO: Remove this lol!
-                    target.node.ports[target.port].location = portLocations[1];
-                };
-
+                if (step > 20) {
+                    for(let { source, target } of elems.edges()) {
+                        const lca = elems.leastCommonAncestor(source.node, target.node);
+                        const flowDirection: CardinalDirection = lca ? lca.meta!.flowDirection : graphFlowDirection;
+                        let flowAxis: [number, number];
+                        let portLocations: [CardinalDirection, CardinalDirection];
+                        let offset: number;
+                        switch(flowDirection) {
+                            case 'east':
+                                flowAxis = [1, 0];
+                                portLocations = ['east', 'west'];
+                                offset = (source.node.shape.width + target.node.shape.width) / 2;
+                                break;
+                            case 'west':
+                                flowAxis = [-1, 0];
+                                portLocations = ['west', 'east'];
+                                offset = (source.node.shape.width + target.node.shape.width) / 2;
+                                break;
+                            case 'north':
+                                flowAxis = [0, -1];
+                                portLocations = ['north', 'south'];
+                                offset = (source.node.shape.height + target.node.shape.height) / 2;
+                                break;
+                            case 'south':
+                            default:
+                                flowAxis = [0, 1];
+                                portLocations = ['south', 'north'];
+                                offset = (source.node.shape.height + target.node.shape.height) / 2;
+                                break;
+                        }
+                        yield constrainOffset(source.node.center, target.node.center, '>=', kFlowSpacing + offset, flowAxis);
+                        source.node.ports[source.port].location = portLocations[0];  // TODO: Remove this lol!
+                        target.node.ports[target.port].location = portLocations[1];
+                    };
+                }
             },
             configForceElectrical,
         );
@@ -703,6 +705,9 @@ function* modelSpringElectrical(
             if(uvPath === undefined) continue; // Ignore disconnected components.
             const idealDistance = idealLength * uvPath;
             const actualDistance = u.center.distanceTo(v.center);
+            // const actualDistance = separation({ center: u.center, width: u.shape.width, height: u.shape.height}, { center: v.center, width: v.shape.width, height: v.shape.height});
+
+
             if(elems.existsEdge(u, v, true)) {
                 // Attractive force between edges if too far.
                 if(actualDistance > idealLength) {
@@ -723,7 +728,7 @@ function* modelSpringElectrical(
 function* constrainNodes(elems: StructuredStorage, step: number) {
     for (let u of elems.nodes()) {
         // Apply no-overlap to all siblings.
-        if(step > 15) {
+        if(step > 50) {
             for(let sibling of elems.siblings(u)) {
                 yield positionNoOverlap(u, sibling);
             }
@@ -734,6 +739,15 @@ function* constrainNodes(elems: StructuredStorage, step: number) {
 }
 
 const configForceElectrical = {
-    numSteps: 200, numConstraintIters: 5, numForceIters: 5,
+    numSteps: 500, numConstraintIters: 5, numForceIters: 5,
     forceOptimizer: new TrustRegionOptimizer({ lrInitial: 0.4, lrMax: 0.8, lrMin: 0.001 })
 };
+
+type Rect = { center: Vector, width: number, height: number };
+function separation(u: Rect, v: Rect): number {
+    const uv = (new Vector()).subVectors(v.center, u.center);
+    let distance = uv.length();
+    const uborder = uv.y * u.width > uv.x * u.height ? new Vector(uv.x / uv.y * u.width, u.height) : new Vector(u.width, uv.y / uv.x * u.height);
+    const vborder = uv.y * v.width > uv.x * v.height ? new Vector(uv.x / uv.y * v.width, v.height) : new Vector(v.width, uv.y / uv.x * v.height);
+    return distance - (uborder.length() + vborder.length()) / 2;
+}

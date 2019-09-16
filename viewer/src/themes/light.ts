@@ -70,7 +70,7 @@ export default {
     text: {
         caption: {
             fontFamily: fonts.UbuntuMono,
-            fontSize: 10,
+            fontSize: 11,
             fontWeight: 300,
         },
         body: {
