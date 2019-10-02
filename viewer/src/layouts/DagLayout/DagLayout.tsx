@@ -15,14 +15,13 @@ import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
 
-import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema, TrustRegionOptimizer,
-    forcePairwiseNodes,
-    forceVector,
-    positionNoOverlap,
-    positionChildren,
-    positionPorts,
-    constrainOffset,
-    constrainAngle,
+import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema,
+    nudgePair,
+    constrainNodePorts,
+    constrainNodeOffset,
+    constrainNodeChildren,
+    constrainNodeNonoverlap,
+    BasicOptimizer,
     Vector,
 } from 'nodal';
 
@@ -181,6 +180,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 {
                     id: nodeId,
                     shape: {
+                        type: 'rectangle',
                         width: kNodeInitialWidth,
                         height: kNodeInitialWidth,
                     },
@@ -228,7 +228,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         };
 
         // Traverse hierarchy to set flowDirection on each node based on closest ancestors.
-        const [nodes, edges] = fromSchema(
+        const {nodes, edges} = fromSchema(
             Array.from(this.state.nodes.values()),  Array.from(this.state.edges.values())
         );
         const storage = new StructuredStorage(nodes, edges);
@@ -358,7 +358,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             return {
                 nodes: new Map(state.nodes).set(nodeId, {
                     ...state.nodes.get(nodeId)!,
-                    shape: { width, height },
+                    shape: { type: 'rectangle', width, height },
                 })
             }
         }, () => {
@@ -375,7 +375,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
      */
     _layoutGraph() {
         console.log("_layoutGraph", this.state.nodes, this.state.nodeStates);
-        const [nodes, edges] = fromSchema(Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})), Array.from(this.state.edges.values()));
+        const {nodes, edges} = fromSchema(Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})), Array.from(this.state.edges.values()));
         const storage = new StructuredStorage(nodes, edges);
         const shownNodes: Node[] = [];
         const shownNodeIds: Set<NodeId> = new Set();
@@ -404,7 +404,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             shownStorage,
             function*(storage) {
                 const elems = storage as StructuredStorage;
-                yield* modelSpringElectrical(elems, shortestPath, 30, 0.1);
+                yield* forceSpringModel(elems, shortestPath, 20, 0);
                 // for(let node of elems.nodes()) {
                 //     if(node.children.length === 0) {
                 //         yield forceVector(node, 10, [-1, 0])
@@ -413,52 +413,19 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 //     }
                 // }
             },
-            function*(storage, step) {
-                const elems = storage as StructuredStorage;
+            function*(elems, step) {
+                yield* constrainNodes(elems as StructuredStorage, step);
 
-                yield* constrainNodes(elems, step);
-
-                // Edges use flow direction of least common ancestor.
-                if (step > 20) {
-                    for(let { source, target } of elems.edges()) {
-                        const lca = elems.leastCommonAncestor(source.node, target.node);
-                        const flowDirection: CardinalDirection = lca ? lca.meta!.flowDirection : graphFlowDirection;
-                        let flowAxis: [number, number];
-                        let portLocations: [CardinalDirection, CardinalDirection];
-                        let offset: number;
-                        switch(flowDirection) {
-                            case 'east':
-                                flowAxis = [1, 0];
-                                portLocations = ['east', 'west'];
-                                offset = (source.node.shape.width + target.node.shape.width) / 2;
-                                break;
-                            case 'west':
-                                flowAxis = [-1, 0];
-                                portLocations = ['west', 'east'];
-                                offset = (source.node.shape.width + target.node.shape.width) / 2;
-                                break;
-                            case 'north':
-                                flowAxis = [0, -1];
-                                portLocations = ['north', 'south'];
-                                offset = (source.node.shape.height + target.node.shape.height) / 2;
-                                break;
-                            case 'south':
-                            default:
-                                flowAxis = [0, 1];
-                                portLocations = ['south', 'north'];
-                                offset = (source.node.shape.height + target.node.shape.height) / 2;
-                                break;
-                        }
-                        yield constrainOffset(source.node.center, target.node.center, '>=', kFlowSpacing + offset, flowAxis);
-                        source.node.ports[source.port].location = portLocations[0];  // TODO: Remove this lol!
-                        target.node.ports[target.port].location = portLocations[1];
-                    };
+                if (step > 0) {
+                    for (let {source, target} of elems.edges()) {
+                        yield constrainNodeOffset(source.node, target.node, ">=", 30, [0, 1])
+                    }
                 }
             },
             configForceElectrical,
         );
         layout.onEnd((elems) => {
-            const [nodeSchemas, edgeSchemas] = toSchema(Array.from(elems.nodes()), Array.from(elems.edges()));
+            const {nodeSchemas, edgeSchemas} = toSchema(Array.from(elems.nodes()), Array.from(elems.edges()));
             this.setState((state) => {
                 // Merge layouted node/edge schema objects.
                 const newNodes = new Map(state.nodes);
@@ -688,7 +655,7 @@ export default withStyles(styles, { defaultTheme })(DagLayout) as React.Componen
 >;
 
 
-function* modelSpringElectrical(
+function* forceSpringModel(
     elems: StructuredStorage,
     shortestPath: (u: Node, v: Node) => number | undefined,
     idealLength: number,
@@ -700,7 +667,7 @@ function* modelSpringElectrical(
         // Compound nodes should pull children closer.
         if(u.children.length > 0) {
             for(let child of u.children) {
-                yield forcePairwiseNodes(u, child, -compactness*(u.center.distanceTo(child.center)));
+                yield nudgePair(u.center, child.center, -compactness*(u.center.distanceTo(child.center)));
             };
         }
         for(let v of elems.nodes()) {
@@ -713,24 +680,20 @@ function* modelSpringElectrical(
             const uvPath = shortestPath(u, v);
             if(uvPath === undefined) continue; // Ignore disconnected components.
             const idealDistance = idealLength * uvPath;
-            const actualDistance = u.center.distanceTo(v.center);
+            const axis = (new Vector()).subVectors(v.center, u.center);
+            const actualDistance = axis.length() > 0 ? u.shape.boundary(axis).distanceTo(v.shape.boundary(axis.negate())) : 0;
             // const actualDistance = separation({ center: u.center, width: u.shape.width, height: u.shape.height}, { center: v.center, width: v.shape.width, height: v.shape.height});
-
-            if(elems.existsEdge(u, v, true) && actualDistance > idealLength) {
+            if(elems.existsEdge(u, v, true) && actualDistance > idealDistance) {
                 // Attractive force between edges if too far.
-                const delta = actualDistance - idealLength;
-                yield forcePairwiseNodes(u, v, [-wu*delta, -wv*delta]);
-            } else {
+                const delta = actualDistance - idealDistance;
+                yield nudgePair(u.center, v.center, [-wu*delta, -wv*delta]);
+            } else if (!elems.hasAncestor(u, v)) {
                 // Repulsive force between node pairs if too close.
                 if(actualDistance < idealDistance) {
-                    const delta = idealDistance - actualDistance;
-                    yield forcePairwiseNodes(u, v, [wu*delta, wv*delta]);
+                    const delta = (idealDistance - actualDistance) / Math.pow(uvPath, 2);
+                    yield nudgePair(u.center, v.center, [wu*delta, wv*delta]);
                 }
             }
-        }
-
-        for(let edge of elems.edges()) {
-            yield constrainAngle(edge.source.node.center, edge.target.node.center, -Math.PI/2, 3);
         }
     }
 }
@@ -738,19 +701,20 @@ function* modelSpringElectrical(
 function* constrainNodes(elems: StructuredStorage, step: number) {
     for (let u of elems.nodes()) {
         // Apply no-overlap to all siblings.
-        if(step > 50) {
+        if(step > 300) {
             for(let sibling of elems.siblings(u)) {
-                yield positionNoOverlap(u, sibling);
+                yield constrainNodeNonoverlap(u, sibling);
             }
         }
-        yield positionChildren(u);
-        yield positionPorts(u);
+        yield constrainNodeChildren(u, 10);
+        // yield u.shape.constrainControl();
+        yield constrainNodePorts(u);
     }
 }
 
 const configForceElectrical = {
-    numSteps: 500, numConstraintIters: 5, numForceIters: 5,
-    forceOptimizer: new TrustRegionOptimizer({ lrInitial: 0.4, lrMax: 0.8, lrMin: 0.001 })
+    numSteps: 500, numConstraintIters: 5, numForceIters: 1,
+    forceOptimizer: new BasicOptimizer(0.5),
 };
 
 type Rect = { center: Vector, width: number, height: number };
