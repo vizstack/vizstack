@@ -1,6 +1,7 @@
 import * as React from 'react';
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
+import CircularProgress from '@material-ui/core/CircularProgress';
 import _ from 'lodash';
 
 import defaultTheme from '../../theme';
@@ -15,13 +16,7 @@ import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
 
-import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema,
-    nudgePair,
-    constrainNodePorts,
-    constrainNodeOffset,
-    constrainNodeChildren,
-    constrainNodeNonoverlap,
-    BasicOptimizer,
+import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema,
     Vector,
 } from 'nodal';
 
@@ -375,67 +370,34 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
      */
     _layoutGraph() {
         console.log("_layoutGraph", this.state.nodes, this.state.nodeStates);
-        const {nodes, edges} = fromSchema(Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})), Array.from(this.state.edges.values()));
-        const storage = new StructuredStorage(nodes, edges);
-        const shownNodes: Node[] = [];
-        const shownNodeIds: Set<NodeId> = new Set();
-        const ordering: DagLayoutState['ordering'] = [];
 
-        const traverse = (u: Node) => {
-            shownNodes.push(u);
-            shownNodeIds.add(u.id);
-            ordering.push({ type: 'node', id: u.id as DagNodeId });
-            if (this.state.nodeStates.get(u.id as DagNodeId)!.expanded) {
-                u.children.forEach((v) => traverse(v));
-            }
-            else {
-                u.children = [];  // Hide children if not expanded.
-            }
+        const nodeExpanded: any = {};
+        for (const [key, {expanded}] of this.state.nodeStates.entries()) {
+            nodeExpanded[key] = expanded;
         }
-        storage.roots().forEach((node) => traverse(node));
 
-        const shownEdges = storage.edges().filter(({ source, target}) => shownNodeIds.has(source.id) && shownNodeIds.has(target.id));  // TODO: use edge flags for when compound collapsed
-        shownEdges.forEach((edge) => ordering.push({ type: 'edge', id: edge.id as DagEdgeId }));
-
-        const shownStorage = new StructuredStorage(shownNodes, shownEdges);
-        const shortestPath = shownStorage.shortestPaths();
-        const graphFlowDirection = this.props.flowDirection!;
-        const layout = new ForceConstraintLayout(
-            shownStorage,
-            function*(storage) {
-                const elems = storage as StructuredStorage;
-                yield* forceSpringModel(elems, shortestPath, 20, 0);
-                // for(let node of elems.nodes()) {
-                //     if(node.children.length === 0) {
-                //         yield forceVector(node, 10, [-1, 0])
-                //     } else {
-                //         yield forceVector(node, 10, [1, 0])
-                //     }
-                // }
-            },
-            function*(elems, step) {
-                yield* constrainNodes(elems as StructuredStorage, step);
-
-                if (step > 0) {
-                    for (let {source, target} of elems.edges()) {
-                        yield constrainNodeOffset(source.node, target.node, ">=", 30, [0, 1])
-                    }
-                }
-            },
-            configForceElectrical,
-        );
-        layout.onEnd((elems) => {
-            const {nodeSchemas, edgeSchemas} = toSchema(Array.from(elems.nodes()), Array.from(elems.edges()));
+        const worker = new Worker('./worker.js', {type: 'module'});
+        worker.onmessage = (e) => {
+            const {nodeSchemas, edgeSchemas, bounds, ordering}: {
+                nodeSchemas: NodeSchema[], 
+                edgeSchemas: EdgeSchema[], 
+                bounds: {
+                    x: number;
+                    X: number;
+                    y: number;
+                    Y: number;
+                    width: number;
+                    height: number;
+                },
+                ordering: DagLayoutState['ordering'],
+            } = e.data;
             this.setState((state) => {
                 // Merge layouted node/edge schema objects.
                 const newNodes = new Map(state.nodes);
-                nodeSchemas.forEach((nodeSchema) => newNodes.set(nodeSchema.id as DagNodeId, nodeSchema as any));
+                nodeSchemas.forEach((nodeSchema) => newNodes.set(nodeSchema.id as any, nodeSchema as any));
                 const newEdges = new Map(state.edges);
-                edgeSchemas.forEach((edgeSchema) => newEdges.set(edgeSchema.id as DagEdgeId, edgeSchema as any));
+                edgeSchemas.forEach((edgeSchema) => newEdges.set(edgeSchema.id as any, edgeSchema));
 
-                console.log('done', newNodes, newEdges);
-
-                const bounds = elems.bounds();
                 const padding = 10;
 
                 return {
@@ -452,8 +414,13 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                     ordering,
                 }
             });
+        }
+        worker.postMessage({
+            nodeSchemas: Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})),
+            edgeSchemas: Array.from(this.state.edges.values()),
+            nodeExpanded: nodeExpanded,
+            graphFlowDirection: this.props.flowDirection,
         });
-        layout.start();
     }
 
     /**
@@ -537,6 +504,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
 
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
+                {bounds.width === 0 ? <CircularProgress /> : null}
                 <div className={classes.graph}>
                     <svg
                         viewBox={bounds ? `${bounds.x} ${bounds.y} ${bounds.width} ${bounds.height}` : undefined}
@@ -653,75 +621,3 @@ type InternalProps = WithStyles<typeof styles>;
 export default withStyles(styles, { defaultTheme })(DagLayout) as React.ComponentClass<
     DagLayoutProps
 >;
-
-
-function* forceSpringModel(
-    elems: StructuredStorage,
-    shortestPath: (u: Node, v: Node) => number | undefined,
-    idealLength: number,
-    compactness: number,
-) {
-    const visited: Set<Node> = new Set();
-    for(let u of elems.nodes()) {
-        visited.add(u);
-        // Compound nodes should pull children closer.
-        if(u.children.length > 0) {
-            for(let child of u.children) {
-                yield nudgePair(u.center, child.center, -compactness*(u.center.distanceTo(child.center)));
-            };
-        }
-        for(let v of elems.nodes()) {
-            if(visited.has(v)) continue;
-            if(u.fixed && v.fixed) continue;
-            const [wu, wv] = [u.fixed ? 0 : 1, v.fixed ? 0 : 1];
-
-            // Spring force. Attempt to reach ideal distance between all pairs,
-            // except unconnected pairs that are farther away than ideal.
-            const uvPath = shortestPath(u, v);
-            if(uvPath === undefined) continue; // Ignore disconnected components.
-            const idealDistance = idealLength * uvPath;
-            const axis = (new Vector()).subVectors(v.center, u.center);
-            const actualDistance = axis.length() > 0 ? u.shape.boundary(axis).distanceTo(v.shape.boundary(axis.negate())) : 0;
-            // const actualDistance = separation({ center: u.center, width: u.shape.width, height: u.shape.height}, { center: v.center, width: v.shape.width, height: v.shape.height});
-            if(elems.existsEdge(u, v, true) && actualDistance > idealDistance) {
-                // Attractive force between edges if too far.
-                const delta = actualDistance - idealDistance;
-                yield nudgePair(u.center, v.center, [-wu*delta, -wv*delta]);
-            } else if (!elems.hasAncestor(u, v)) {
-                // Repulsive force between node pairs if too close.
-                if(actualDistance < idealDistance) {
-                    const delta = (idealDistance - actualDistance) / Math.pow(uvPath, 2);
-                    yield nudgePair(u.center, v.center, [wu*delta, wv*delta]);
-                }
-            }
-        }
-    }
-}
-
-function* constrainNodes(elems: StructuredStorage, step: number) {
-    for (let u of elems.nodes()) {
-        // Apply no-overlap to all siblings.
-        if(step > 300) {
-            for(let sibling of elems.siblings(u)) {
-                yield constrainNodeNonoverlap(u, sibling);
-            }
-        }
-        yield constrainNodeChildren(u, 10);
-        // yield u.shape.constrainControl();
-        yield constrainNodePorts(u);
-    }
-}
-
-const configForceElectrical = {
-    numSteps: 500, numConstraintIters: 5, numForceIters: 1,
-    forceOptimizer: new BasicOptimizer(0.5),
-};
-
-type Rect = { center: Vector, width: number, height: number };
-function separation(u: Rect, v: Rect): number {
-    const uv = (new Vector()).subVectors(v.center, u.center);
-    let distance = uv.length();
-    const uborder = uv.y * u.width > uv.x * u.height ? new Vector(uv.x / uv.y * u.width, u.height) : new Vector(u.width, uv.y / uv.x * u.height);
-    const vborder = uv.y * v.width > uv.x * v.height ? new Vector(uv.x / uv.y * v.width, v.height) : new Vector(v.width, uv.y / uv.x * v.height);
-    return distance - (uborder.length() + vborder.length()) / 2;
-}
