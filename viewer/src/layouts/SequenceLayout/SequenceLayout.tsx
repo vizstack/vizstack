@@ -46,7 +46,7 @@ class SequenceLayout extends React.PureComponent<
 > {
     static defaultProps: Partial<SequenceLayoutProps> = {
         orientation: 'horizontal',
-        showLabels: true,
+        showLabels: false,
     };
 
     private _childViewers: Viewer[] = [];
@@ -182,12 +182,12 @@ const styles = (theme: Theme) =>
     createStyles({
         container: {
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: 'row',
             whiteSpace: 'nowrap',
         },
         motif: {
             display: 'block',
-            ...theme.vars.text.caption,
+            ...theme.vars.text.subheading,
             color: theme.vars.emphasis.less,
         },
         motifStart: {

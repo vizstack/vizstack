@@ -15,12 +15,14 @@ import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
 
-import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema, TrustRegionOptimizer,
+import { NodeId, EdgeId, NodeSchema, EdgeSchema, Node, Edge, StructuredStorage, ForceConstraintLayout, fromSchema, toSchema, TrustRegionOptimizer, Scheduler,
+    constant,
     forcePairwiseNodes,
     forceVector,
     positionNoOverlap,
     positionChildren,
     positionPorts,
+    positionAlignment,
     constrainOffset,
     constrainAngle,
     Vector,
@@ -338,8 +340,6 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
      * @private
      */
     _onNodeResize(nodeId: DagNodeId, width: number, height: number) {
-        console.log(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height})`);
-
         const prevWidth = this.state.nodes.get(nodeId)!.shape.width;
         const prevHeight = this.state.nodes.get(nodeId)!.shape.height;
         if (
@@ -350,6 +350,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         ) {
             return;
         }
+
+        console.log(`DagLayout -- _onNodeResize(${nodeId}, ${width}, ${height}, ${prevWidth}, ${prevHeight})`);
 
         this.resizes += 1;
 
@@ -404,7 +406,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             shownStorage,
             function*(storage) {
                 const elems = storage as StructuredStorage;
-                yield* modelSpringElectrical(elems, shortestPath, 30, 0.1);
+                yield* modelSpring(elems, shortestPath, 30, 0.1);
                 // for(let node of elems.nodes()) {
                 //     if(node.children.length === 0) {
                 //         yield forceVector(node, 10, [-1, 0])
@@ -454,6 +456,23 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                         target.node.ports[target.port].location = portLocations[1];
                     };
                 }
+
+                if(step >= 40 && step <= 60) {
+                    // for(let node of elems.nodes()) {
+                    //     if(node.children.length > 0) {
+                    //         const axis: [number, number] = node.meta!.flowDirection === "north" || node.meta!.flowDirection === "south" ? [0, 1] : [1, 0]; 
+                    //         yield positionAlignment(node.children, axis);
+                    //     }
+                    // }
+
+                    // const axis: [number, number] = graphFlowDirection === "north" || graphFlowDirection === "south" ? [0, 1] : [1, 0]; 
+                    // yield positionAlignment(Array.from(elems.roots()), axis);
+
+                    const axis: [number, number] = graphFlowDirection === "north" || graphFlowDirection === "south" ? [0, 1] : [1, 0]; 
+                    yield positionAlignment(Array.from(elems.nodes()), axis);
+                }
+
+                
             },
             configForceElectrical,
         );
@@ -469,6 +488,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 console.log('done', newNodes, newEdges);
 
                 const bounds = elems.bounds();
+                console.error(bounds.x, bounds.y, bounds.X, bounds.Y, bounds.width, bounds.height);
                 const padding = 10;
 
                 return {
@@ -688,7 +708,7 @@ export default withStyles(styles, { defaultTheme })(DagLayout) as React.Componen
 >;
 
 
-function* modelSpringElectrical(
+function* modelSpring(
     elems: StructuredStorage,
     shortestPath: (u: Node, v: Node) => number | undefined,
     idealLength: number,
@@ -729,9 +749,9 @@ function* modelSpringElectrical(
             }
         }
 
-        for(let edge of elems.edges()) {
-            yield constrainAngle(edge.source.node.center, edge.target.node.center, -Math.PI/2, 3);
-        }
+        // for(let edge of elems.edges()) {
+        //     yield constrainAngle(edge.source.node.center, edge.target.node.center, -Math.PI/2, 10);
+        // }
     }
 }
 
@@ -750,7 +770,7 @@ function* constrainNodes(elems: StructuredStorage, step: number) {
 
 const configForceElectrical = {
     numSteps: 500, numConstraintIters: 5, numForceIters: 5,
-    forceOptimizer: new TrustRegionOptimizer({ lrInitial: 0.4, lrMax: 0.8, lrMin: 0.001 })
+    forceOptimizer: new TrustRegionOptimizer({ lrInitial: 0.8, lrMax: 0.8, lrMin: 0.001, adaption: 0.99 })
 };
 
 type Rect = { center: Vector, width: number, height: number };

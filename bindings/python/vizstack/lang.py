@@ -1,6 +1,6 @@
 from vizstack.fragment_assembler import FragmentAssembler
 from typing import Any, Optional, List, Dict
-from vizstack.assemblers import Token, KeyValue, Sequence, Switch
+from vizstack.assemblers import Text, Token, KeyValue, Sequence, Switch
 import types
 import inspect
 
@@ -13,7 +13,7 @@ _MIN_SHOWN_LENGTH = 10
 def get_language_default(obj: Any) -> FragmentAssembler:
     # Primitives: Token containing the value in full
     if isinstance(obj, (str, int, float, bool)) or obj is None:
-        return Token('"{}"'.format(obj) if isinstance(obj, str) else str(obj))
+        return Text('"{}"'.format(obj) if isinstance(obj, str) else str(obj))
 
     # List: Sequence of the list elements
     elif isinstance(obj, list):

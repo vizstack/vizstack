@@ -55,7 +55,6 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
             const [p, q] = points.slice(points.length - 2);
             const pq = { x : q.x - p.x, y: q.y - p.y };
             const dist = Math.pow(pq.x * pq.x + pq.y * pq.y, 0.5);
-            console.log('EDGEEEEE', pq, dist, kEdgeGap);
             if(dist > kEdgeGap) {
                 q.x -= pq.x / dist * kEdgeGap;
                 q.y -= pq.y / dist * kEdgeGap;
@@ -77,13 +76,13 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         return (
             <g>
                 {/** Transparent hotspot captures mouse events in vicinity of the edge. */}
-                <path
+                {/* <path
                     d={path || undefined}
                     className={clsx({
                         [classes.hotspot]: true,
                     })}
                     {...mouseHandlers}
-                />
+                /> */}
                 <path
                     id={this._xlinkId}
                     d={path || undefined}
