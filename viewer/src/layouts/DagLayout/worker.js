@@ -3,6 +3,7 @@ import { StructuredStorage, ForceConstraintLayout, fromSchema, toSchema,
     constrainNodePorts,
     constrainNodeOffset,
     constrainNodeChildren,
+    constrainNodeAlignment,
     constrainNodeNonoverlap,
     BasicOptimizer,
     Vector,
@@ -70,7 +71,7 @@ const configForceElectrical = {
 };
 
 onmessage = (e) => {
-    const { nodeSchemas, edgeSchemas, nodeExpanded, graphFlowDirection } = e.data;
+    const { nodeSchemas, edgeSchemas, nodeExpanded, graphFlowDirection, alignments } = e.data;
     
     const {nodes, edges} = fromSchema(nodeSchemas, edgeSchemas);
     const storage = new StructuredStorage(nodes, edges);
@@ -95,6 +96,17 @@ onmessage = (e) => {
     const shownEdges = storage.edges().filter(({ source, target}) => shownNodeIds.has(source.id) && shownNodeIds.has(target.id));  // TODO: use edge flags for when compound collapsed
     shownEdges.forEach((edge) => ordering.push({ type: 'edge', id: edge.id }));
 
+    const setEdgeDirection = (e) => {
+        const lca = storage.leastCommonAncestor(e.source.node, e.target.node);
+        if (lca !== undefined) {
+            e.meta.flowDirection = lca.meta.flowDirection;
+        }
+        else {
+            e.meta.flowDirection = graphFlowDirection;
+        }
+    }
+    storage.edges().forEach((edge) => setEdgeDirection(edge));
+
     const shownStorage = new StructuredStorage(shownNodes, shownEdges);
     const shortestPath = shownStorage.shortestPaths();
     const layout = new ForceConstraintLayout(
@@ -107,8 +119,27 @@ onmessage = (e) => {
             yield* constrainNodes(elems, step);
 
             if (step > 0) {
-                for (let {source, target} of elems.edges()) {
-                    yield constrainNodeOffset(source.node, target.node, ">=", 30, [0, 1])
+                for (let {source, target, meta} of elems.edges()) {
+                    let axis;
+                    switch(meta.flowDirection) {
+                        case "north":
+                            axis = [0, -1];
+                            break;
+                        case "south":
+                            axis = [0, 1];
+                            break;
+                        case "west":
+                            axis = [-1, 0];
+                            break;
+                        case "east":
+                            axis = [1, 0];
+                            break;
+                    }
+                    yield constrainNodeOffset(source.node, target.node, ">=", 30, axis)
+                }
+                for (let alignment of alignments) {
+                    const shown = alignment.filter((nodeId) => shownNodeIds.has(nodeId)).map((nodeId) => elems.node(nodeId));
+                    yield constrainNodeAlignment(shown, [0, 1]);
                 }
             }
         },

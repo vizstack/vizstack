@@ -657,6 +657,11 @@ storiesOf('Dag (Layout)', module)
             Dag('east').node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
         }/>
     ))
+    .add('alignments', () => (
+        <Viewer view={
+            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").node("moon", {alignWith: ["hello", "world"]}, "moon").edge("hello", "world").edge("hello", "moon")
+        }/>
+    ))
     .add('interactive', () => (
       <InteractionProvider manager={new InteractionManager()}>
           <Viewer view={
