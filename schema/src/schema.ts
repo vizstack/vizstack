@@ -193,6 +193,10 @@ export type DagEdge = {
     target: { id: DagNodeId, port?: string, label?: string, isPersistent?: boolean };
     label?: string;
 };
+export type DagNodeAlignment = (
+    | { axis: 'x', justify?: 'north' | 'south' | 'center' } 
+    | { axis: 'y', justify?: 'east' | 'west' | 'center' }
+) & {nodes: DagNodeId[]}
 export type DagLayoutFragment = {
     type: 'DagLayout';
     contents: {
@@ -202,7 +206,7 @@ export type DagLayoutFragment = {
         edges: {
             [edgeId: string]: DagEdge; // edgeId: DagEdgeId
         };
-        alignments?: Array<Array<DagNodeId>>;
+        alignments?: Array<DagNodeAlignment>;
         flowDirection?: 'north' | 'south' | 'east' | 'west';
         alignChildren?: boolean;
     };

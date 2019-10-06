@@ -13,6 +13,12 @@ Port = TypedDict('Port', {
     'order': Optional[int],
 }, total=False)
 
+NodeAlignment = TypedDict('NodeAlignment', {
+    'axis': Literal['x', 'y'],
+    'justify': Literal['north', 'south', 'east', 'west', 'center', None],
+    'nodes': List[str],
+}, total=False)
+
 Node = TypedDict('Node', {
     'flowDirection': FlowDirection,
     'isExpanded': Optional[bool],
@@ -64,13 +70,13 @@ class Dag(FragmentAssembler):
         self._nodes: Dict[str, Node] = defaultdict(lambda: {})
         self._items: Dict[str, Any] = dict()
         self._edges: List[Edge] = []
-        self._alignments: List[List[str]] = []
+        self._alignments: List[NodeAlignment] = []
 
     def node(self, node_id: str,
              flow_direction: FlowDirection = None, align_children: Optional[bool] = None,
              is_expanded: Optional[bool] = None, is_interactive: Optional[bool] = None,
              is_visible: Optional[bool] = None, parent=_DEFAULT_PARENT,
-             align_with: Optional[List[str]] = None,
+             align_with: Optional[Union[NodeAlignment, List[NodeAlignment]]] = None,
              item: Any = _DEFAULT_ITEM,
              ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]] = None):
         for key, var in {
@@ -89,7 +95,13 @@ class Dag(FragmentAssembler):
 
         self._nodes[node_id]['children'] = []
         if align_with is not None:
-            self._alignments.append([node_id] + align_with)
+            if not isinstance(align_with, list):
+                align_with = [align_with]
+            for alignment in align_with:
+                self._alignments.append({
+                    **alignment,
+                    'nodes': [node_id] + alignment.nodes,
+                })
         if item is not Dag._DEFAULT_ITEM:
             self.item(item, node_id)
         if ports is not None:

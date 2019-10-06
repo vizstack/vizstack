@@ -659,7 +659,7 @@ storiesOf('Dag (Layout)', module)
     ))
     .add('alignments', () => (
         <Viewer view={
-            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").node("moon", {alignWith: ["hello", "world"]}, "moon").edge("hello", "world").edge("hello", "moon")
+            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world\nworld").node("moon", {alignWith: {axis: 'x', nodes: ["world"], justify: 'north'}}, "moon").edge("hello", "world").edge("hello", "moon")
         }/>
     ))
     .add('interactive', () => (

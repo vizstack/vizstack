@@ -1,4 +1,4 @@
-import { FragmentId, DagLayoutFragment, DagNode, DagEdge } from '@vizstack/schema';
+import { FragmentId, DagLayoutFragment, DagNode, DagEdge, DagNodeAlignment } from '@vizstack/schema';
 import { FragmentAssembler } from '../fragment-assembler';
 import _ from 'lodash';
 
@@ -13,7 +13,7 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
     private _nodes: Record<string, DagNodeConfig> = {};
     private _children: Record<string, string[]> = {}; // Maps parent -> children.
     private _parents: Record<string, string> = {}; // Maps children -> parents.
-    private _alignments: Array<string[]> = [];
+    private _alignments: DagNodeAlignment[] = [];
     private _edges: Array<DagEdgeConfig> = [];
     private _items: Record<string, any> = {};
 
@@ -27,7 +27,7 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
         name: string,
         config: DagNodeConfig & {
             parent?: string | null;
-            alignWith?: string | string[];
+            alignWith?: DagNodeAlignment | DagNodeAlignment[];
         } = {},
         item: any = kNoneSpecified,
     ) {
@@ -48,10 +48,10 @@ class DagLayoutFragmentAssembler extends FragmentAssembler {
             }
         }
         if (alignWith) {
-            if (typeof alignWith === 'string') {
-                this._alignments.push([name, alignWith]);
-            } else if (Array.isArray(alignWith)) {
-                this._alignments.push([name, ...alignWith]);
+            if (Array.isArray(alignWith)) {
+                this._alignments.push(...alignWith.map((alignment) => ({...alignment, nodes: [name, ...alignment.nodes]})));
+            } else if (alignWith !== undefined) {
+                this._alignments.push({...alignWith, nodes: [name, ...alignWith.nodes]});
             }
         }
         delete config.parent;

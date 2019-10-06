@@ -8,7 +8,7 @@ def test_number_should_produce_text_primitive_without_quotation_marks():
         view['fragments'],
         hash_ids({
             'root': {
-                'type': 'TokenPrimitive',
+                'type': 'TextPrimitive',
                 'contents': {
                     'text': '123'
                 }
@@ -23,7 +23,7 @@ def test_string_should_produce_text_primitive_with_quotation_marks():
         view['fragments'],
         hash_ids({
             'root': {
-                'type': 'TokenPrimitive',
+                'type': 'TextPrimitive',
                 'contents': {
                     'text': '"123"'
                 }
@@ -45,13 +45,13 @@ def test_list_with_two_elements_should_produce_switch_layout_with_two_modes_and_
                     },
                 },
                 'root-0': {
-                    'type': 'TokenPrimitive',
+                    'type': 'TextPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }
                 },
                 'root-1': {
-                    'type': 'TokenPrimitive',
+                    'type': 'TextPrimitive',
                     'contents': {
                         'text': '123'
                     }
@@ -74,7 +74,7 @@ def test_list_with_repeated_string_element_should_use_same_fragment_id():
                     },
                 },
                 'root-0': {
-                    'type': 'TokenPrimitive',
+                    'type': 'TextPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }
@@ -123,7 +123,7 @@ def test_list_with_self_reference_should_use_fragment_id_of_switch_as_sequence_e
                     },
                 },
                 'root-0': {
-                    'type': 'TokenPrimitive',
+                    'type': 'TextPrimitive',
                     'contents': {
                         'text': '"hello"'
                     }

@@ -118,7 +118,7 @@ onmessage = (e) => {
         function*(elems, step) {
             yield* constrainNodes(elems, step);
 
-            if (step > 0) {
+            if (step > 10) {
                 for (let {source, target, meta} of elems.edges()) {
                     let axis;
                     switch(meta.flowDirection) {
@@ -138,8 +138,9 @@ onmessage = (e) => {
                     yield constrainNodeOffset(source.node, target.node, ">=", 30, axis)
                 }
                 for (let alignment of alignments) {
-                    const shown = alignment.filter((nodeId) => shownNodeIds.has(nodeId)).map((nodeId) => elems.node(nodeId));
-                    yield constrainNodeAlignment(shown, [0, 1]);
+                    const shownNodes = alignment.nodes.filter((nodeId) => shownNodeIds.has(nodeId)).map((nodeId) => elems.node(nodeId));
+                    const axis = alignment.axis === 'x' ? [1, 0] : [0, 1];
+                    yield constrainNodeAlignment(shownNodes, axis, alignment.justify);
                 }
             }
         },

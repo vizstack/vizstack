@@ -419,7 +419,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             nodeSchemas: Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})),
             edgeSchemas: Array.from(this.state.edges.values()),
             nodeExpanded: nodeExpanded,
-            alignments: this.props.alignments,
+            alignments: (this.props.alignments || []).map((alignment) => ({justify: 'center', ...alignment})),
             graphFlowDirection: this.props.flowDirection,
         });
     }
