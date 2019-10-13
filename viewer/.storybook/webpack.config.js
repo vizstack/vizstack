@@ -1,4 +1,4 @@
-const WorkerPlugin = require('worker-plugin');
+// const WorkerPlugin = require('worker-plugin');
 
 module.exports = ({ config }) => {
     config.module.rules.push({
@@ -9,7 +9,21 @@ module.exports = ({ config }) => {
             { loader: require.resolve('react-docgen-typescript-loader') },
         ]
     });
-    config.plugins.push(new WorkerPlugin());
+    // config.module.rules.push({
+    //     test: /\.js$/,
+    //     exclude: /(node_modules)/,
+    //     use: {
+    //         loader: 'babel-loader',
+    //         options: {
+    //           presets: ['@babel/preset-env']
+    //         }
+    //       }
+    // })
+    // config.module.rules.push({
+    //     test: /worker\.js$/,
+    //     use: { loader: 'worker-loader' },
+    // })
+    // config.plugins.push(new WorkerPlugin());
     config.resolve.extensions.push('.ts', '.tsx');
     return config;
 };

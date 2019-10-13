@@ -76,13 +76,13 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         return (
             <g>
                 {/** Transparent hotspot captures mouse events in vicinity of the edge. */}
-                {/* <path
+                <path
                     d={path || undefined}
                     className={clsx({
                         [classes.hotspot]: true,
                     })}
                     {...mouseHandlers}
-                /> */}
+                />
                 <path
                     id={this._xlinkId}
                     d={path || undefined}

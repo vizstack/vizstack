@@ -31,7 +31,7 @@
     "react-dom": "^16.9.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.6.0",
+    "@babel/core": "^7.6.4",
     "@storybook/addon-actions": "^5.1.11",
     "@storybook/addon-info": "^5.1.11",
     "@storybook/addon-knobs": "^5.1.11",
@@ -77,6 +77,7 @@
     "clean": "rimraf dist/*",
     "repl": "ts-node",
     "start-storybook": "start-storybook -p 6006",
-    "build-storybook": "build-storybook"
+    "build-storybook": "build-storybook",
+    "compile": "tsc"
   }
 }

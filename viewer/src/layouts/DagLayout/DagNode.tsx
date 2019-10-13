@@ -156,7 +156,6 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                 <foreignObject
                     {...foreignObjectPos}
                     className={clsx({
-                        [classes.node]: true,
                     })}
                 >
                     <div ref={this.setContentRef} style={{ display: 'inline-block' }}>
@@ -170,23 +169,6 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
 
 const styles = (theme: Theme) =>
     createStyles({
-        node: {
-            // fillOpacity: 0.2,
-            // stroke: 'transparent', // TODO: Remove this?
-            // strokeWidth: 4,
-            // rx: 4,
-            // ry: 4,
-            // transition: [
-            //     theme.transitions.create(['width', 'height', 'x', 'y'], {
-            //         duration: theme.transitions.duration.short,
-            //     }),
-            //     theme.transitions.create(['fill-opacity'], {
-            //         duration: theme.transitions.duration.shortest,
-            //         delay: theme.transitions.duration.short,
-            //     }),
-            // ].join(', '),
-        },
-
         expandedInvisible: {
 
         },
@@ -199,21 +181,6 @@ const styles = (theme: Theme) =>
 
         expandedHighlighted: {
             stroke: theme.vars.framed.highlight.borderLeftColor,
-        },
-
-        nodeInvisible: {
-            fill: '#FFFFFF', // TODO: Change this.
-            fillOpacity: 0.0,
-        },
-
-        nodeExpanded: {
-            backgroundColor: 'transparent',
-            borderWidth: 4,
-            borderColor: 'black',
-        },
-
-        nodeHighlighted: {
-            borderColor: 'blue',
         },
     });
 

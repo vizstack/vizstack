@@ -495,6 +495,16 @@ export class InteractionManager {
                 dag.state.doSetLightNode(message.nodeId, 'normal');
             });
         });
+        this.on('Dag.EdgeDidMouseOver', (all, message) => {
+            all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
+                dag.state.doSetLightEdge(message.edgeId, 'highlight');
+            })
+        });
+        this.on('Dag.EdgeDidMouseOut', (all, message) => {
+            all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
+                dag.state.doSetLightEdge(message.edgeId, 'normal');
+            })
+        });
     }
 
     private _useKeyboardDefaults() {

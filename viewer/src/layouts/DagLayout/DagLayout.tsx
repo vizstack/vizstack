@@ -16,8 +16,14 @@ import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
 
-import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema,
-    Vector,
+import workerFn from './worker';
+
+// TODO: uncomment this when running storybook
+// import MyWorker from 'worker-loader!./worker'
+// TODO: uncomment this when running a build
+// import MyWorker from 'web-worker:./worker';
+
+import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema
 } from 'nodal';
 
 // TODO: Replace with Immmutable.js.
@@ -124,20 +130,21 @@ type DagNodeDidChangeLightEvent = {
     };
 };
 
+type DagNodeDidResizeEvent = {
+    topic: 'Dag.NodeDidResize';
+    message: {
+        viewerId: ViewerId;
+        nodeId: DagNodeId;
+        expanded: boolean,
+    };
+};
+
 type DagEdgeDidChangeLightEvent = {
     topic: 'Dag.EdgeDidChangeLight';
     message: {
         viewerId: ViewerId;
         edgeId: DagEdgeId;
         light: 'normal' | 'highlight' | 'lowlight' | 'selected';
-    };
-};
-
-type DagNodeDidResizeEvent = {
-    topic: 'Dag.NodeDidExpand' | 'Dag.NodeDidCollapse';
-    message: {
-        viewerId: ViewerId;
-        nodeId: DagNodeId;
     };
 };
 
@@ -303,26 +310,42 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         console.debug('DagLayout -- componentDidMount(): mounted');
     }
 
-    shouldComponentUpdate(nextProps: any, nextState: DagLayoutState) {
-        // Prevent component from re-rendering each time a dimension is populated/updated unless all
-        // dimensions are populated.
-        return true;
-    }
 
     componentDidUpdate(prevProps: any, prevState: DagLayoutState) {
         // Performing the layout will change the state, so we wrap it in a condition to prevent
         // infinite looping.
         console.log('DagLayout -- componentDidUpdate()');
         const { viewerId, emit } = this.props.interactions;
-        const { selectedNodeId } = this.state;
-        // if (this.hasMounted && didResize) {
-        //     console.log('didResize', this.state.nodes.get('parent')!.shape.width);
-        //     this._layoutGraph();
-        // }
-        // TODO: fire events
-        // if (selectedNodeId !== prevState.selectedNodeId) {
-        //     emit<DagLayoutEvent>('Dag.DidSelectNode', { viewerId, selectedNodeId });
-        // }
+        const { selectedNodeId, nodeStates, edgeStates } = this.state;
+        if (selectedNodeId !== prevState.selectedNodeId) {
+            emit<DagLayoutEvent>('Dag.DidSelectNode', { viewerId, selectedNodeId, prevSelectedNodeId: prevState.selectedNodeId });
+        }
+        if (nodeStates !== prevState.nodeStates) {
+            Object.entries(nodeStates).forEach(([nodeId, {expanded, light}]) => {
+                const { expanded: prevExpanded, light: prevLight } = prevState.nodeStates.get(nodeId)!
+                if (prevExpanded !== expanded) {
+                    emit<DagLayoutEvent>('Dag.NodeDidResize', {
+                        viewerId, nodeId, expanded,
+                    });
+                }
+                if (prevLight !== light) {
+                    emit<DagLayoutEvent>('Dag.NodeDidChangeLight', {
+                        viewerId, nodeId, light,
+                    });
+                }
+            });
+        }
+        if (edgeStates !== prevState.edgeStates) {
+            Object.entries(edgeStates).forEach(([edgeId, {light}]) => {
+                const { light: prevLight } = prevState.edgeStates.get(edgeId)!
+                if (prevLight !== light) {
+                    console.log('didchangelight');
+                    emit<DagLayoutEvent>('Dag.EdgeDidChangeLight', {
+                        viewerId, edgeId, light,
+                    });
+                }
+            });
+        }
     }
 
     /**
@@ -359,7 +382,18 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         }, () => {
             this.resizes -= 1;
             if (this.resizes === 0) {
-                this._layoutGraph();
+                this.setState((state) => {
+                    const nodes = new Map(state.nodes);
+                    nodes.forEach((node) => {
+                        if (node.shape.width === kNodeInitialWidth && node.shape.height === kNodeInitialWidth) {
+                            node.shape.width = 10;
+                            node.shape.height = 10;
+                        }
+                    })
+                    return { nodes };
+                }, () => {
+                    this._layoutGraph();
+                })
             }
         });
     }
@@ -376,8 +410,11 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             nodeExpanded[key] = expanded;
         }
 
-        const worker = new Worker('./worker.js', {type: 'module'});
-        worker.onmessage = (e) => {
+        // const worker = new MyWorker();
+
+        
+
+        const laid = (e: any) => {
             const {nodeSchemas, edgeSchemas, bounds, ordering}: {
                 nodeSchemas: NodeSchema[], 
                 edgeSchemas: EdgeSchema[], 
@@ -415,13 +452,16 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 }
             });
         }
-        worker.postMessage({
+        // worker.onmessage = laid
+        // worker.postMessage({
+        const results = workerFn({ data: {
             nodeSchemas: Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})),
             edgeSchemas: Array.from(this.state.edges.values()),
             nodeExpanded: nodeExpanded,
             alignments: (this.props.alignments || []).map((alignment) => ({justify: 'center', ...alignment})),
             graphFlowDirection: this.props.flowDirection,
-        });
+        }});
+        laid(results);
     }
 
     /**
