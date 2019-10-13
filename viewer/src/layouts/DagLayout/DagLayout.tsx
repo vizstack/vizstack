@@ -31,7 +31,7 @@ import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-const kNodeInitialWidth = 100000;
+const kNodeInitialWidth = 10000;
 const kNodeResizeTolerance = 5;
 const kFlowSpacing = 30;
 
