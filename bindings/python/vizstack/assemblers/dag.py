@@ -100,7 +100,7 @@ class Dag(FragmentAssembler):
             for alignment in align_with:
                 self._alignments.append({
                     **alignment,
-                    'nodes': [node_id] + alignment.nodes,
+                    'nodes': [node_id] + alignment['nodes'],
                 })
         if item is not Dag._DEFAULT_ITEM:
             self.item(item, node_id)

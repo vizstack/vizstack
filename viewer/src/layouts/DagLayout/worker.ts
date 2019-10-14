@@ -9,6 +9,7 @@ import { StructuredStorage, StagedLayout, fromSchema, toSchema,
     BasicOptimizer,
     Vector,
     NodeSchema,
+    NodeId,
 } from 'nodal';
 
 // const ctx: Worker = self as any;
@@ -49,6 +50,25 @@ export default function(e: any) {
         }
         storage.edges().forEach((edge) => setEdgeDirection(edge));
 
+        const alignmentSets: {x: Set<NodeId>[], y: Set<NodeId>[]} = {
+            x: [],
+            y: [],
+        };
+        alignments.forEach((alignment: any) => {
+            const sets = alignmentSets[alignment.axis as 'x' | 'y'];
+            let found = false;
+            for (let set of sets) {
+                if (alignment.nodes.some((nodeId: any) => set.has(nodeId))) {
+                    found = true;
+                    alignment.nodes.forEach((nodeId: any) => set.add(nodeId));
+                    break;
+                }
+            }
+            if (!found) {
+                sets.push(new Set(alignment.nodes));
+            }
+        });
+
         const shownStorage = new StructuredStorage(shownNodes as any, shownEdges);
         const shortestPath = shownStorage.shortestPaths();
         const layout = new StagedLayout(
@@ -62,7 +82,7 @@ export default function(e: any) {
                         storage as StructuredStorage,
                         20,
                         shortestPath,
-                        { maxAttraction: 20 },
+                        { maxAttraction: 100 },
                     );
                     yield* generateCompactnessForces(storage, 0);
                 }
@@ -71,16 +91,6 @@ export default function(e: any) {
                 iterations: 5,
                 optimizer: new BasicOptimizer(1),
                 generator: function* (storage, step) {
-                    for (let u of storage.nodes()) {
-                        // HACK: this needs to come before `constrainShapeCompact`, otherwise the groups will not be the correct size
-                        if(step > 50) {
-                            for(let sibling of (storage as StructuredStorage).siblings(u)) {
-                                yield constrainNodeNonoverlap(u, sibling);
-                            }
-                        }
-                        yield* generateNodeChildrenConstraints(u, 10);
-                        yield* generateNodePortConstraints(u);
-                    }
 
                     if (step > 10) {
                         for (let {source, target, meta} of storage.edges()) {
@@ -88,21 +98,29 @@ export default function(e: any) {
                                 continue;
                             }
                             let axis: any;
+                            let alignmentKey: 'x' | 'y' = 'x';
                             switch(meta!.flowDirection) {
                                 case "north":
                                     axis = [0, -1];
+                                    alignmentKey = 'x';
                                     break;
                                 case "south":
                                     axis = [0, 1];
+                                    alignmentKey = 'x';
                                     break;
                                 case "west":
                                     axis = [-1, 0];
+                                    alignmentKey = 'y';
                                     break;
                                 case "east":
                                     axis = [1, 0];
+                                    alignmentKey = 'y';
                                     break;
                             }
-                            yield constrainNodeOffset(source.node, target.node, ">=", 30, axis);
+                            if (!alignmentSets[alignmentKey].some((set) => set.has(target.id)) && (storage as StructuredStorage).siblings(source.node).has(target.node)) {
+                                yield constrainNodeOffset(source.node, target.node, ">=", 30, axis);
+                            }
+
                         }
                         for (let alignment of alignments) {
                             const shownNodes = alignment.nodes.filter((nodeId: any) => shownNodeIds.has(nodeId)).map((nodeId: any) => storage.node(nodeId));
@@ -110,7 +128,16 @@ export default function(e: any) {
                             yield* generateNodeAlignmentConstraints(shownNodes, axis as any, alignment.justify);
                         }
                     }
-
+                    for (let u of storage.nodes()) {
+                        // HACK: this needs to come before `constrainShapeCompact`, otherwise the groups will not be the correct size
+                        if(step > 100) {
+                            for(let sibling of (storage as StructuredStorage).siblings(u)) {
+                                yield constrainNodeNonoverlap(u, sibling, 20);
+                            }
+                        }
+                        yield* generateNodeChildrenConstraints(u, 10);
+                        yield* generateNodePortConstraints(u);
+                    }
                 }
             }
         )
