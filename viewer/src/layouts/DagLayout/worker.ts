@@ -15,7 +15,6 @@ import { StructuredStorage, StagedLayout, fromSchema, toSchema,
 //     ctx.addEventListener('message', (e) => {
 export default function(e: any) {
         const { nodeSchemas, edgeSchemas, nodeExpanded, graphFlowDirection, alignments } = e.data;
-        
         const {nodes, edges} = fromSchema(nodeSchemas, edgeSchemas);
         const storage = new StructuredStorage(nodes, edges);
         const shownNodes: NodeSchema[] = [];
@@ -63,6 +62,7 @@ export default function(e: any) {
                         storage as StructuredStorage,
                         20,
                         shortestPath,
+                        { maxAttraction: 20 },
                     );
                     yield* generateCompactnessForces(storage, 0);
                 }
