@@ -80,34 +80,37 @@ export default function(e: any) {
                         }
                         yield* generateNodeChildrenConstraints(u, 10);
                         yield* generateNodePortConstraints(u);
-                        if (step > 10) {
-                            for (let {source, target, meta} of storage.edges()) {
-                                if (!(storage as StructuredStorage).hasAncestor(source.node, target.node) && !(storage as StructuredStorage).hasAncestor(target.node, source.node)) {
-                                    let axis: any;
-                                    switch(meta!.flowDirection) {
-                                        case "north":
-                                            axis = [0, -1];
-                                            break;
-                                        case "south":
-                                            axis = [0, 1];
-                                            break;
-                                        case "west":
-                                            axis = [-1, 0];
-                                            break;
-                                        case "east":
-                                            axis = [1, 0];
-                                            break;
-                                    }
-                                    yield constrainNodeOffset(source.node, target.node, ">=", 30, axis)
-                                }
+                    }
+
+                    if (step > 10) {
+                        for (let {source, target, meta} of storage.edges()) {
+                            if ((storage as StructuredStorage).hasAncestorOrDescendant(source.node, target.node)) {
+                                continue;
                             }
-                            for (let alignment of alignments) {
-                                const shownNodes = alignment.nodes.filter((nodeId: any) => shownNodeIds.has(nodeId)).map((nodeId: any) => storage.node(nodeId));
-                                const axis = alignment.axis === 'x' ? [1, 0] : [0, 1];
-                                yield* generateNodeAlignmentConstraints(shownNodes, axis as any, alignment.justify);
+                            let axis: any;
+                            switch(meta!.flowDirection) {
+                                case "north":
+                                    axis = [0, -1];
+                                    break;
+                                case "south":
+                                    axis = [0, 1];
+                                    break;
+                                case "west":
+                                    axis = [-1, 0];
+                                    break;
+                                case "east":
+                                    axis = [1, 0];
+                                    break;
                             }
+                            yield constrainNodeOffset(source.node, target.node, ">=", 30, axis);
+                        }
+                        for (let alignment of alignments) {
+                            const shownNodes = alignment.nodes.filter((nodeId: any) => shownNodeIds.has(nodeId)).map((nodeId: any) => storage.node(nodeId));
+                            const axis = alignment.axis === 'x' ? [1, 0] : [0, 1];
+                            yield* generateNodeAlignmentConstraints(shownNodes, axis as any, alignment.justify);
                         }
                     }
+
                 }
             }
         )
