@@ -649,23 +649,38 @@ storiesOf('KeyValue (Layout)', module)
 storiesOf('Dag (Layout)', module)
     .add('basic', () => (
         <Viewer view={
-            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
+            Dag()
+                .node("hello", {}, ["h", "e", "l", "l", "o"])
+                .node("world", {}, "world")
+                .edge("hello", "world")
         }/>
     ))
     .add('flow direction', () => (
         <Viewer view={
-            Dag('east').node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world")
+            Dag('east')
+                .node("hello", {}, ["h", "e", "l", "l", "o"])
+                .node("world", {}, "world")
+                .edge("hello", "world")
         }/>
     ))
     .add('alignments', () => (
         <Viewer view={
-            Dag().node("hello", {}, ["h", "e", "l", "l", "o"]).node("world", {}, "world\nworld").node("moon", {alignWith: {axis: 'x', nodes: ["world"], justify: 'north'}}, "moon").edge("hello", "world").edge("hello", "moon")
+            Dag()
+                .node("hello", {}, ["h", "e", "l", "l", "o"])
+                .node("world", {}, "world\nworld")
+                .node("moon", {alignWith: {axis: 'x', nodes: ["world"], justify: 'north'}}, "moon")
+                .edge("hello", "world")
+                .edge("hello", "moon")
         }/>
     ))
     .add('interactive', () => (
       <InteractionProvider manager={new InteractionManager()}>
           <Viewer view={
-              Dag().node("hello", {parent: "parent"}, ["h", "e", "l", "l", "o"]).node("world", {}, "world").edge("hello", "world").node("parent", {}, "parent")
+              Dag()
+                .node("hello", {parent: "parent"}, ["h", "e", "l", "l", "o"])
+                .node("world", {}, "world")
+                .edge("hello", "world")
+                .node("parent", {}, "parent")
           }/>
       </InteractionProvider>
     ))

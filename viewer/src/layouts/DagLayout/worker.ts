@@ -9,13 +9,26 @@ import { StructuredStorage, StagedLayout, fromSchema, toSchema,
     BasicOptimizer,
     Vector,
     NodeSchema,
+    EdgeSchema,
     NodeId,
 } from 'nodal';
 
+type CardinalDirection = "north" | "south" | "east" | "west";
+
+export type LayoutMessage = {
+    data: {
+        nodeSchemas: NodeSchema[],
+        edgeSchemas: EdgeSchema[],
+        nodeExpanded: { [nodeId: string]: boolean },
+        graphFlowDirection?: CardinalDirection,
+        alignments: { axis: "x" | "y", nodes: NodeId[], justify?: "center" | CardinalDirection }[],
+    }
+}
+
 // const ctx: Worker = self as any;
 //     ctx.addEventListener('message', (e) => {
-export default function(e: any) {
-        const { nodeSchemas, edgeSchemas, nodeExpanded, graphFlowDirection, alignments } = e.data;
+export default function(msg: LayoutMessage) {
+        const { nodeSchemas, edgeSchemas, nodeExpanded, graphFlowDirection, alignments } = msg.data;
         const {nodes, edges} = fromSchema(nodeSchemas, edgeSchemas);
         const storage = new StructuredStorage(nodes, edges);
         const shownNodes: NodeSchema[] = [];

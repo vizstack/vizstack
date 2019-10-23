@@ -23,7 +23,6 @@
     "seamless-immutable": "^7.1.4",
     "typeface-roboto-mono": "0.0.75",
     "typeface-ubuntu-mono": "0.0.72",
-    "webcola": "^3.4.0",
     "webfontloader": "^1.6.28"
   },
   "peerDependencies": {

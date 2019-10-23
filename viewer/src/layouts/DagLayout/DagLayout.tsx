@@ -11,7 +11,6 @@ import { Viewer, FragmentProps } from '../../Viewer';
 
 import DagNodeComponent from './DagNode';
 import DagEdgeComponent from './DagEdge';
-import layout, { EdgeIn, NodeIn, EdgeOut, NodeOut } from './layout';
 import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
@@ -167,6 +166,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     //     When existing dimensions changed, layout again.
     //     When expansion state changes (revealing new nodes), render invisibly the unlayouted
     //         nodes then perform a layout.
+
+    // 
     static defaultProps: Partial<DagLayoutProps> = {
         flowDirection: 'south',
         alignChildren: false,
@@ -194,7 +195,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                         }
                     ]),
                     meta: {
-                        alignChildren: node.alignChildren,
+                        alignChildren: node.alignChildren || this.props.alignChildren!,
                         flowDirection: node.flowDirection,
                     }
                 }
@@ -229,7 +230,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             selectedNodeId: `${Object.keys(this.props.nodes)[0]}`,
         };
 
-        // Traverse hierarchy to set flowDirection on each node based on closest ancestors.
+        // Traverse hierarchy to set `flowDirection` on each node based on ancestors.
         const {nodes, edges} = fromSchema(
             Array.from(this.state.nodes.values()),  Array.from(this.state.edges.values())
         );
@@ -458,7 +459,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             nodeSchemas: Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})),
             edgeSchemas: Array.from(this.state.edges.values()),
             nodeExpanded: nodeExpanded,
-            alignments: (this.props.alignments || []).map((alignment) => ({justify: 'center', ...alignment})),
+            alignments: (this.props.alignments || []).map((a) => a as any),
             graphFlowDirection: this.props.flowDirection,
         }});
         laid(results);
