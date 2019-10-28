@@ -267,7 +267,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         );
         const storage = new StructuredStorage(nodes, edges);
         const flowTraverse = (u: Node, ancestorDirection: CardinalDirection) => {
-            const flowDirection = u.meta!.flowDirection || ancestorDirection;
+            const flowDirection = allNodes[u.id]!.flowDirection || ancestorDirection;
             u.meta!.flowDirection = flowDirection;
             u.children.forEach((child) => flowTraverse(child, flowDirection));
         }

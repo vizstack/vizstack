@@ -62,6 +62,15 @@ export default function(msg: LayoutMessage) {
 
         const visibleStorage = new StructuredStorage(allNodes, allEdges);
         const shortestPath = visibleStorage.shortestPaths();
+
+        const lengthFn = (u: Node, v: Node, edge?: Edge) => {
+            // TODO: alignment axis
+            // if (!visibleStorage.siblings(u).has(v)) {
+            //     return -1;
+            // }
+            return 20;
+        }
+
         const layout = new StagedLayout(
             visibleStorage,
             { steps: 200 },
@@ -70,7 +79,7 @@ export default function(msg: LayoutMessage) {
                 optimizer: new BasicOptimizer(0.5),
                 generator: function* (storage) {
                     const elems = storage as StructuredStorage;
-                    yield* generateSpringForces(elems, 20, shortestPath, { maxAttraction: 100 });
+                    yield* generateSpringForces(elems, lengthFn, shortestPath);
                     yield* generateCompactnessForces(storage, 0);
                 }
             },
@@ -111,7 +120,7 @@ export default function(msg: LayoutMessage) {
 
                         }
                         // for (let alignment of alignments) {
-                        //     const shownNodes = alignment.nodes.filter((nodeId: any) => visibleNodeIds.has(nodeId)).map((nodeId: any) => storage.node(nodeId));
+                        //     const shownNodes = alignment.nodes.filter((nodeId: any) => visibleStorage.node(nodeId)).map((nodeId: any) => storage.node(nodeId));
                         //     const axis = alignment.axis === 'x' ? [1, 0] : [0, 1];
                         //     yield* generateNodeAlignmentConstraints(shownNodes, axis as any, alignment.justify);
                         // }
