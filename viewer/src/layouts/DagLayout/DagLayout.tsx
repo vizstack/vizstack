@@ -3,12 +3,14 @@ import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import _ from 'lodash';
+import { Map as ImmutableMap, List as ImmutableList, Set as ImmutableSet } from 'immutable';
 
 import defaultTheme from '../../theme';
 
 import { DagLayoutFragment, DagNodeId, DagNode, DagEdgeId, DagEdge } from '@vizstack/schema';
-import { Viewer, FragmentProps } from '../../Viewer';
+import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema } from 'nodal';
 
+import { Viewer, FragmentProps } from '../../Viewer';
 import DagNodeComponent from './DagNode';
 import DagEdgeComponent from './DagEdge';
 import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
@@ -22,36 +24,44 @@ import workerFn from './worker';
 // TODO: uncomment this when running a build
 // import MyWorker from 'web-worker:./worker';
 
-import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema
-} from 'nodal';
 
-// TODO: Replace with Immmutable.js.
 
 /**
  * This pure dumb component renders a directed acyclic graph.
  */
-const kNodeInitialWidth = 10000;
+const kNodeGroupDefaultSize = 10;
+const kNodeLeafDefaultSize = 10000;
 const kNodeResizeTolerance = 5;
+const kGraphPadding = 10;
 const kFlowSpacing = 30;
 
 type CardinalDirection = 'north' | 'south' | 'east' | 'west';
 
 type DagLayoutProps = FragmentProps<DagLayoutFragment>;
 
+type NodeSchemaAugmented = NodeSchema & {
+    shape: Required<NodeSchema>['shape'],
+    meta: {
+        flowDirection?: CardinalDirection,
+        alignChildren?: boolean,
+    }
+};
+
+type EdgeSchemaAugmented = EdgeSchema & {
+    meta: {
+        flowDirection?: CardinalDirection,
+    }
+};
+
+type OrderingElement = { type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId };
+
 type DagLayoutState = {
     /** Nodes and Edges after populated with size and position information. */
-    nodes: Map<DagNodeId,
-        NodeSchema & {
-            shape: Required<NodeSchema>['shape'],
-            meta: {
-                flowDirection?: CardinalDirection,
-                alignChildren?: boolean,
-            }
-        }>;
-    edges: Map<DagEdgeId, EdgeSchema>;
+    nodes: ImmutableMap<DagNodeId, NodeSchemaAugmented>;
+    edges: ImmutableMap<DagEdgeId, EdgeSchemaAugmented>;
 
     /** Z-axis arrangement of graph elements after layout, sorted by ascending z-order. */
-    ordering: Array<{ type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId }>;
+    ordering: ImmutableList<OrderingElement>;
 
     /** Size of the graph determined by the layout engine. */
     bounds: {
@@ -63,16 +73,17 @@ type DagLayoutState = {
         Y: number;
     };
 
-    nodeStates: Map<DagNodeId, {
-        expanded: boolean;
+    /** Interaction states of Nodes and Edges. */
+    nodeExpansions: ImmutableMap<DagNodeId, boolean>;
+
+    nodeStates: ImmutableMap<DagNodeId, {
+        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
+    }>;
+    edgeStates: ImmutableMap<DagEdgeId, {
         light: 'normal' | 'highlight' | 'lowlight' | 'selected';
     }>;
 
-    edgeStates: Map<DagEdgeId, {
-        light: 'normal' | 'highlight' | 'lowlight' | 'selected';
-    }>;
-
-    /** Which node or edge is selected */
+    /** ID of the currently selected Node. */
     selectedNodeId: DagNodeId;
 };
 
@@ -129,21 +140,21 @@ type DagNodeDidChangeLightEvent = {
     };
 };
 
-type DagNodeDidResizeEvent = {
-    topic: 'Dag.NodeDidResize';
-    message: {
-        viewerId: ViewerId;
-        nodeId: DagNodeId;
-        expanded: boolean,
-    };
-};
-
 type DagEdgeDidChangeLightEvent = {
     topic: 'Dag.EdgeDidChangeLight';
     message: {
         viewerId: ViewerId;
         edgeId: DagEdgeId;
         light: 'normal' | 'highlight' | 'lowlight' | 'selected';
+    };
+};
+
+type DagNodeDidResizeEvent = {
+    topic: 'Dag.NodeDidResize';
+    message: {
+        viewerId: ViewerId;
+        nodeId: DagNodeId;
+        expanded: boolean,
     };
 };
 
@@ -173,85 +184,146 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         alignChildren: false,
     };
 
+    // Count how many resize state updates have not been committed yet.
     resizes: number = 0;
+
+    calculateGraphElements(
+        allNodes: DagLayoutProps['nodes'],
+        allEdges: DagLayoutProps['edges'],
+        allAlignments: DagLayoutProps['alignments'],
+        nodeExpansions: DagLayoutState['nodeExpansions'],
+        prevNodes: DagLayoutState['nodes'],
+        prevEdges: DagLayoutState['edges'],
+    ): { nodes: DagLayoutState['nodes'], edges: DagLayoutState['edges'], ordering: DagLayoutState['ordering'] } {
+        // TODO: Selectorize.
+        const allParents: Map<DagNodeId, DagNodeId> = new Map();
+        Object.entries(allNodes).forEach(([nodeId, node]) => node.children.forEach((childId) => allParents.set(childId, nodeId)));
+        const allRoots: DagNodeId[] = Object.keys(allNodes).filter((nodeId) => allParents.get(nodeId) === undefined);
+
+        const visibleOrdering: OrderingElement[] = [];
+
+        // Compute visible nodes.
+        const visibleNodes: Map<DagNodeId, NodeSchemaAugmented> = new Map(); 
+        const traverse = (nodeId: DagNodeId) => {
+            visibleOrdering.push({type: 'node', id: nodeId});
+
+            const prevNode = prevNodes.get(nodeId);
+            const nodeExpanded = nodeExpansions.get(nodeId);  // Only true if has children.
+            const nodeDefaultSize = nodeExpanded ? kNodeGroupDefaultSize : kNodeLeafDefaultSize;
+            visibleNodes.set(nodeId, {
+                id: nodeId,
+                shape: {
+                    type: 'rectangle',
+                    width: prevNode ? prevNode.shape.width : nodeDefaultSize,
+                    height: prevNode ? prevNode.shape.height : nodeDefaultSize,
+                },
+                // TODO: Change port schema to use location, as in nodal.
+                ports: prevNode ? prevNode.ports : obj2obj(allNodes[nodeId]!.ports || {}, (name, port) => [
+                    name,
+                    {
+                        location: port.side,
+                        order: port.order,
+                    }
+                ]),
+                meta: {
+                    alignChildren: allNodes[nodeId]!.alignChildren || this.props.alignChildren!,
+                },
+                children: nodeExpanded ? allNodes[nodeId]!.children : [],
+            });
+            if(nodeExpansions.get(nodeId)) {
+                // Show children of expanded node.
+                allNodes[nodeId]!.children.forEach((childId) => traverse(childId));
+            }
+        }
+        allRoots.forEach((root) => traverse(root));
+
+        // Compute visible edges.
+        const visibleEdges: Map<DagNodeId, EdgeSchemaAugmented>  = new Map();
+        Object.entries(allEdges).forEach(([edgeId, edge]) => {
+            if (visibleNodes.has(edge.source.id) && visibleNodes.has(edge.target.id)) {
+                visibleOrdering.push({type: 'edge', id: edgeId});
+                visibleEdges.set(edgeId, {
+                    id: edgeId,
+                    source: {
+                        id: edge.source.id,
+                        port: edge.source.port,
+                    },
+                    target: {
+                        id: edge.target.id,
+                        port: edge.target.port,
+                    },
+                    meta: {
+                        // TODO: use isPersistent flags to create new edges
+                        isSourcePersistent: edge.source.isPersistent,
+                        isTargetPersistent: edge.target.isPersistent,
+                    }
+                });
+            }
+        });
+
+        // Set `flowDirection` on each node based on ancestors by traversing containment hierarchy.
+        const {nodes, edges} = fromSchema(
+            Array.from(visibleNodes.values()),  Array.from(visibleEdges.values())
+        );
+        const storage = new StructuredStorage(nodes, edges);
+        const flowTraverse = (u: Node, ancestorDirection: CardinalDirection) => {
+            const flowDirection = u.meta!.flowDirection || ancestorDirection;
+            u.meta!.flowDirection = flowDirection;
+            u.children.forEach((child) => flowTraverse(child, flowDirection));
+        }
+        storage.roots().forEach((node) => flowTraverse(node, this.props.flowDirection!));
+
+        // Set `flowDirection` on each edge based on least common ancestor of their source
+        // and target nodes.
+        storage.edges().forEach((edge) => {
+            const lca = storage.leastCommonAncestor(edge.source.node, edge.target.node);
+            if (lca !== undefined) {
+                edge.meta!.flowDirection = lca.meta!.flowDirection;
+            } else {
+                edge.meta!.flowDirection = this.props.flowDirection!;
+            }
+        });
+
+        return {
+            nodes: ImmutableMap(visibleNodes),
+            edges: ImmutableMap(visibleEdges),
+            ordering: ImmutableList(visibleOrdering),
+        }
+    }
 
     constructor(props: DagLayoutProps & InternalProps) {
         super(props);
+        // TODO: Set expansion to true iff has children (also take into account isExpanded).
+        const nodeExpansions = ImmutableMap(obj2arr(this.props.nodes, (nodeId, node) => [nodeId, node.isExpanded !== false && node.children.length > 0]))
         this.state = {
-            nodes: new Map(Object.entries(this.props.nodes).map(([nodeId, node]) => [
-                nodeId,
-                {
-                    id: nodeId,
-                    shape: {
-                        type: 'rectangle',
-                        width: kNodeInitialWidth,
-                        height: kNodeInitialWidth,
-                    },
-                    ports: obj2obj(node.ports || {}, (name, port) => [
-                        name,
-                        {
-                            location: port.side,
-                            order: port.order,
-                        }
-                    ]),
-                    meta: {
-                        alignChildren: node.alignChildren || this.props.alignChildren!,
-                        flowDirection: node.flowDirection,
-                    }
-                }
-            ])),
-            edges: new Map(Object.entries(this.props.edges).map(([edgeId, { source, target }]) => [
-                edgeId,
-                {
-                    id: edgeId,
-                    source: {
-                        id: source.id as NodeId,
-                        port: source.port,
-                    },
-                    target: {
-                        id: target.id as NodeId,
-                        port: target.port,
-                    },
-                    meta: {
-                        isSourcePersistent: source.isPersistent,
-                        isTargetPersistent: target.isPersistent,
-                    }
-                }
-            ])),
+            ...this.calculateGraphElements(this.props.nodes, this.props.edges, this.props.alignments, nodeExpansions, ImmutableMap(), ImmutableMap()),
             bounds: { width: 0, height: 0, x: 0, X: 0, y: 0, Y: 0 },
-            ordering: Object.entries(this.props.nodes).map(([nodeId, node]) => ({ type: 'node', id: nodeId})),
-            nodeStates: new Map(obj2arr(this.props.nodes, (nodeId, node) => [nodeId, {
+            nodeExpansions,
+            nodeStates: ImmutableMap(obj2arr(this.props.nodes, (nodeId) => [nodeId, {
                 light: 'normal',
-                expanded: node.isExpanded !== false,
             }])),
-            edgeStates: new Map(obj2arr(this.props.edges, (edgeId, edge) => [edgeId, {
+            edgeStates: ImmutableMap(obj2arr(this.props.edges, (edgeId) => [edgeId, {
                 light: 'normal',
             }])),
             selectedNodeId: `${Object.keys(this.props.nodes)[0]}`,
         };
 
-        // Traverse hierarchy to set `flowDirection` on each node based on ancestors.
-        const {nodes, edges} = fromSchema(
-            Array.from(this.state.nodes.values()),  Array.from(this.state.edges.values())
-        );
-        const storage = new StructuredStorage(nodes, edges);
-        const traverse = (u: Node, ancestorDirection: CardinalDirection) => {
-            const flowDirection = u.meta!.flowDirection || ancestorDirection;
-            u.meta!.flowDirection = flowDirection;
-            u.children.forEach((child) => traverse(child, flowDirection));
-        }
-        storage.roots().forEach((node) => traverse(node, this.props.flowDirection!));
-
-        console.log('constructor', this.state.nodes)
+        // Bind methods for ref callbacks.
         this._getChildViewerCallback.bind(this);
+
+        console.log('constructor', this.state.nodes);
     }
 
     private _childViewers: Map<DagNodeId, Viewer> = new Map();
     private _childViewerCallbacks: Map<DagNodeId, (viewer: Viewer) => void> = new Map();
 
     private _getChildViewerCallback(nodeId: DagNodeId) {
+        // TODO: What happens when I delete a Viewer (e.g. through hiding)?
         if (!this._childViewerCallbacks.get(nodeId)) {
-            this._childViewerCallbacks.set(nodeId, (viewer) => (this._childViewers.set(nodeId, viewer)));
+            this._childViewerCallbacks.set(
+                nodeId,
+                (viewer) => this._childViewers.set(nodeId, viewer),
+            );
         }
         return this._childViewerCallbacks.get(nodeId);
     }
@@ -266,42 +338,24 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 // TODO
             },
             doSetLightNode: (nodeId, light) => this.setState((state) => ({
-                nodeStates: new Map(state.nodeStates).set(nodeId, {
-                    ...state.nodeStates.get(nodeId)!,
-                    light,
-                })
+                nodeStates: state.nodeStates.setIn([nodeId, 'light'], light)
             })),
             doSetLightEdge: (edgeId, light) => this.setState((state) => ({
-                edgeStates: new Map(state.edgeStates).set(edgeId, {
-                    ...state.edgeStates.get(edgeId)!,
-                    light,
-                })
+                edgeStates: state.edgeStates.setIn([edgeId, 'light'], light)
             })),
-            doToggleNodeExpanded: (nodeId) => this.setState((state) => ({
-                nodeStates: new Map(state.nodeStates).set(nodeId, {
-                    ...state.nodeStates.get(nodeId)!,
-                    expanded: !state.nodeStates.get(nodeId)!.expanded,
-                }),
-            }), () => {
-                // Only trigger a layout if the node is now expanded. When expanding,
-                // none of the children change size, so their `_onNodeResize()` calls
-                // do not change the state and trigger a layout. The expanded node shows
-                // no viewer, so it never even calls `_onNodeResize()`;  we must instead
-                // layout here. On collapse, the collapsed node will change size and call
-                // `_onNodeResize()`, so we do not need to demand a layout here.
-                if (this.state.nodeStates.get(nodeId)!.expanded) {
-                    this._layoutGraph();
-                }
+            doToggleNodeExpanded: (nodeId) => this.setState((state) => {
+                const nodeExpansions = state.nodeExpansions.set(nodeId, this.props.nodes[nodeId].children.length > 0 ? !state.nodeExpansions.get(nodeId) : false);
+                return {
+                    ...this.calculateGraphElements(this.props.nodes, this.props.edges, this.props.alignments, nodeExpansions, state.nodes, state.edges),
+                    nodeExpansions,
+                 };
             }),
-            doSetNodeExpanded: (nodeId, expanded) => this.setState((state) => ({
-                nodeStates: new Map(state.nodeStates).set(nodeId, {
-                    ...state.nodeStates.get(nodeId)!,
-                    expanded,
-                }),
-            }), () => {
-                if (this.state.nodeStates.get(nodeId)!.expanded) {
-                    this._layoutGraph();
-                }
+            doSetNodeExpanded: (nodeId, expanded) => this.setState((state) => {
+                const nodeExpansions = state.nodeExpansions.set(nodeId, this.props.nodes[nodeId].children.length > 0 ? expanded : false);
+                return {
+                    ...this.calculateGraphElements(this.props.nodes, this.props.edges, this.props.alignments, nodeExpansions, state.nodes, state.edges),
+                    nodeExpansions,
+                 };
             }),
         };
     }
@@ -317,18 +371,15 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         // infinite looping.
         console.log('DagLayout -- componentDidUpdate()');
         const { viewerId, emit } = this.props.interactions;
-        const { selectedNodeId, nodeStates, edgeStates } = this.state;
+        const { selectedNodeId, nodeStates, nodeExpansions, edgeStates } = this.state;
         if (selectedNodeId !== prevState.selectedNodeId) {
             emit<DagLayoutEvent>('Dag.DidSelectNode', { viewerId, selectedNodeId, prevSelectedNodeId: prevState.selectedNodeId });
         }
         if (nodeStates !== prevState.nodeStates) {
-            Object.entries(nodeStates).forEach(([nodeId, {expanded, light}]) => {
-                const { expanded: prevExpanded, light: prevLight } = prevState.nodeStates.get(nodeId)!
-                if (prevExpanded !== expanded) {
-                    emit<DagLayoutEvent>('Dag.NodeDidResize', {
-                        viewerId, nodeId, expanded,
-                    });
-                }
+            Array.from(nodeStates.entries()).forEach(([nodeId, {light}]) => {
+                const prevNodeState = prevState.nodeStates.get(nodeId);
+                if(prevNodeState === undefined) return;
+                const { light: prevLight } = prevNodeState;
                 if (prevLight !== light) {
                     emit<DagLayoutEvent>('Dag.NodeDidChangeLight', {
                         viewerId, nodeId, light,
@@ -336,11 +387,23 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 }
             });
         }
+        if (nodeExpansions !== prevState.nodeExpansions) {
+            Array.from(nodeExpansions.entries()).forEach(([nodeId, expanded]) => {
+                const prevExpanded = prevState.nodeExpansions.get(nodeId);
+                if(prevExpanded === undefined) return;
+                if (prevExpanded !== expanded) {
+                    emit<DagLayoutEvent>('Dag.NodeDidResize', {
+                        viewerId, nodeId, expanded,
+                    });
+                }
+            });
+        }
         if (edgeStates !== prevState.edgeStates) {
-            Object.entries(edgeStates).forEach(([edgeId, {light}]) => {
-                const { light: prevLight } = prevState.edgeStates.get(edgeId)!
+            Array.from(edgeStates.entries()).forEach(([edgeId, {light}]) => {
+                const prevEdgeState = prevState.edgeStates.get(edgeId);
+                if(prevEdgeState === undefined) return;
+                const { light: prevLight } = prevEdgeState;
                 if (prevLight !== light) {
-                    console.log('didchangelight');
                     emit<DagLayoutEvent>('Dag.EdgeDidChangeLight', {
                         viewerId, edgeId, light,
                     });
@@ -373,28 +436,18 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         this.resizes += 1;
 
         this.setState((state) => {
-            console.log(`resize added from ${nodeId}`)
+            console.log(`resize queued from ${nodeId}`);
             return {
-                nodes: new Map(state.nodes).set(nodeId, {
-                    ...state.nodes.get(nodeId)!,
+                nodes: state.nodes.mergeIn([nodeId], {
                     shape: { type: 'rectangle', width, height },
                 })
-            }
+            };
         }, () => {
             this.resizes -= 1;
+            console.log(`resize saved from ${nodeId}`);
             if (this.resizes === 0) {
-                this.setState((state) => {
-                    const nodes = new Map(state.nodes);
-                    nodes.forEach((node) => {
-                        if (node.shape.width === kNodeInitialWidth && node.shape.height === kNodeInitialWidth) {
-                            node.shape.width = 10;
-                            node.shape.height = 10;
-                        }
-                    })
-                    return { nodes };
-                }, () => {
-                    this._layoutGraph();
-                })
+                console.log(`resize counter reached 0`);
+                this._layoutGraph();
             }
         });
     }
@@ -406,63 +459,38 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     _layoutGraph() {
         console.log("_layoutGraph", this.state.nodes, this.state.nodeStates);
 
-        const nodeExpanded: any = {};
-        for (const [key, {expanded}] of this.state.nodeStates.entries()) {
-            nodeExpanded[key] = expanded;
-        }
-
         // const worker = new MyWorker();
 
-        
-
-        const laid = (e: any) => {
-            const {nodeSchemas, edgeSchemas, bounds, ordering}: {
-                nodeSchemas: NodeSchema[], 
-                edgeSchemas: EdgeSchema[], 
-                bounds: {
-                    x: number;
-                    X: number;
-                    y: number;
-                    Y: number;
-                    width: number;
-                    height: number;
-                },
-                ordering: DagLayoutState['ordering'],
+        const layoutCallback = (e: any) => {
+            const { nodeSchemas, edgeSchemas, bounds}: {
+                nodeSchemas: NodeSchemaAugmented[], 
+                edgeSchemas: EdgeSchemaAugmented[], 
+                bounds: DagLayoutState['bounds'],
             } = e.data;
             this.setState((state) => {
-                // Merge layouted node/edge schema objects.
-                const newNodes = new Map(state.nodes);
-                nodeSchemas.forEach((nodeSchema) => newNodes.set(nodeSchema.id as any, nodeSchema as any));
-                const newEdges = new Map(state.edges);
-                edgeSchemas.forEach((edgeSchema) => newEdges.set(edgeSchema.id as any, edgeSchema));
-
-                const padding = 10;
-
                 return {
-                    nodes: newNodes,
-                    edges: newEdges,
+                    nodes: ImmutableMap(nodeSchemas.map((ns) => [ns.id, ns])),
+                    edges: ImmutableMap(edgeSchemas.map((es) => [es.id, es])),
                     bounds: {
-                        x: bounds.x - padding,
-                        y: bounds.y - padding,
-                        X: bounds.X + padding,
-                        Y: bounds.Y + padding,
-                        width: bounds.width + padding * 2,
-                        height: bounds.height + padding * 2,
+                        x: bounds.x - kGraphPadding,
+                        y: bounds.y - kGraphPadding,
+                        X: bounds.X + kGraphPadding,
+                        Y: bounds.Y + kGraphPadding,
+                        width: bounds.width + kGraphPadding * 2,
+                        height: bounds.height + kGraphPadding * 2,
                     },
-                    ordering,
                 }
             });
         }
+
         // worker.onmessage = laid
         // worker.postMessage({
         const results = workerFn({ data: {
-            nodeSchemas: Array.from(this.state.nodes.values()).map((node) => ({...node, children: this.props.nodes[node.id as DagNodeId].children as NodeId[]})),
+            nodeSchemas: Array.from(this.state.nodes.values()),
             edgeSchemas: Array.from(this.state.edges.values()),
-            nodeExpanded: nodeExpanded,
-            alignments: (this.props.alignments || []).map((a) => a as any),
-            graphFlowDirection: this.props.flowDirection,
+            alignments: this.props.alignments || [],  // TOOD: From this.state.alignment
         }});
-        laid(results);
+        layoutCallback(results);
     }
 
     /**
@@ -472,7 +500,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
     render() {
         const { classes, passdown, interactions, light } = this.props;
         const { mouseHandlers, viewerId, emit } = interactions;
-        const { ordering, bounds, nodeStates, edgeStates } = this.state;
+        const { ordering, bounds, nodeStates, nodeExpansions, edgeStates } = this.state;
 
         console.log('DagLayout -- render(): ordering =', ordering, 'state =', this.state);
 
@@ -585,7 +613,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             y={center ? center.y : 0}
                                             width={shape.width}
                                             height={shape.height}
-                                            isExpanded={nodeStates.get(id)!.expanded && this.props.nodes[id].children.length !== 0}
+                                            isExpanded={nodeExpansions.get(id) === true}
                                             isInteractive={
                                                 isInteractive !== false &&
                                                 this.props.nodes[id].children.length !== 0

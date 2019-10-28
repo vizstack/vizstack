@@ -129,18 +129,18 @@ const styles = (theme: Theme) =>
             strokeWidth: 12,
         },
         edgeHighlight: {
-            // stroke: theme.vars.selectable.highlight,
+            stroke: theme.color.blue.l1,
             strokeWidth: 3.5,
             markerEnd: 'url(#arrow-highlight)',
             opacity: 1,
         },
         edgeLowlight: {
-            // stroke: theme.vars.selectable.lowlight,
+            stroke: theme.color.gray.d1,
             markerEnd: 'url(#arrow-lowlight)',
             opacity: 0.5,
         },
         edgeSelected: {
-            // stroke: theme.vars.selectable.selected,
+            stroke: theme.color.blue.d2,
             strokeWidth: 3.5,
             markerEnd: 'url(#arrow-selected)',
         },
