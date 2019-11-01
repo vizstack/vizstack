@@ -2,7 +2,6 @@ import * as React from 'react';
 import ReactDOM from "react-dom";
 import clsx from 'clsx';
 import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/styles';
-import Measure from 'react-measure';
 
 import defaultTheme from '../../theme';
 

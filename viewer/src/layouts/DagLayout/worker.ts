@@ -6,6 +6,7 @@ import {
     generateNodePortConstraints,
     generateCompactnessForces,
     generateSpringForces,
+    generateSpringForcesCompound,
     constrainNodeOffset,
     generateNodeChildrenConstraints,
     generateNodeAlignmentConstraints,
@@ -79,7 +80,7 @@ export default function(msg: LayoutMessage) {
                 optimizer: new BasicOptimizer(0.5),
                 generator: function* (storage) {
                     const elems = storage as StructuredStorage;
-                    yield* generateSpringForces(elems, lengthFn, shortestPath);
+                    yield* generateSpringForcesCompound(elems, lengthFn, shortestPath);
                     yield* generateCompactnessForces(storage, 0);
                 }
             },
