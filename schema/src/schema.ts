@@ -181,6 +181,7 @@ export type DagNode = {
         [name: string]: {
             side?: 'north' | 'south' | 'east' | 'west';
             order?: number;
+            label?: string;
         };
     };
     isExpanded?: boolean; // Node container (group) is expanded or collapsed.

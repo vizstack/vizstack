@@ -6,33 +6,11 @@ from vizstack.fragment_assembler import FragmentAssembler
 from vizstack.lang import get_language_default
 import inspect
 
-__all__ = ['assemble']
+__all__ = ['assemble', 'view']
 
 
 class ViewAssembler:
     _ROOT_ID = FragmentId('root')
-
-    @staticmethod
-    def _get_fragment_assembler(obj: Any) -> FragmentAssembler:
-        """Returns a `FragmentAssembler` whose `assemble()` method produces a `Fragment` representing `obj`.
-
-        If `obj` is already a `FragmentAssembler`, then it is returned unchanged. If `obj` is an instance of a class
-        which defines a `__view__()` method, then `obj.__view__()` is returned. Otherwise, language defaults are used to
-        create a new `FragmentAssembler`.
-
-        Args:
-            obj: Any object whose `FragmentAssembler` should be created.
-
-        Returns:
-            A `FragmentAssembler` for `obj`.
-        """
-        if isinstance(obj, FragmentAssembler):
-            return obj
-        # Do not call `__view__()` if `obj` is a class -- not an instance -- that defines `__view__()`
-        elif not inspect.isclass(obj) and hasattr(obj, '__view__'):
-            return getattr(obj, '__view__')()
-        else:
-            return get_language_default(obj)
 
     @staticmethod
     def _hash_fragment_id(fragment_name: str) -> FragmentId:
@@ -85,6 +63,28 @@ class ViewAssembler:
         return frag
 
     @staticmethod
+    def get_fragment_assembler(obj: Any) -> FragmentAssembler:
+        """Returns a `FragmentAssembler` whose `assemble()` method produces a `Fragment` representing `obj`.
+
+        If `obj` is already a `FragmentAssembler`, then it is returned unchanged. If `obj` is an instance of a class
+        which defines a `__view__()` method, then `obj.__view__()` is returned. Otherwise, language defaults are used to
+        create a new `FragmentAssembler`.
+
+        Args:
+            obj: Any object whose `FragmentAssembler` should be created.
+
+        Returns:
+            A `FragmentAssembler` for `obj`.
+        """
+        if isinstance(obj, FragmentAssembler):
+            return obj
+        # Do not call `__view__()` if `obj` is a class -- not an instance -- that defines `__view__()`
+        elif not inspect.isclass(obj) and hasattr(obj, '__view__'):
+            return getattr(obj, '__view__')()
+        else:
+            return get_language_default(obj)
+
+    @staticmethod
     def assemble(obj: Any) -> View:
         # Since Python `dict`s cannot use unhashable types (e.g., lists) as keys, we have to use the id of the
         # object instead. This requires us to reference each object in a `list` that will persist throughout the
@@ -104,7 +104,7 @@ class ViewAssembler:
             if fragments[frag_id] is not None:
                 continue
 
-            fasm = ViewAssembler._get_fragment_assembler(curr)
+            fasm = ViewAssembler.get_fragment_assembler(curr)
 
             def get_id(obj: Any, slot: str):
                 # If `obj` has already been given a `FragmentId`, return that
@@ -131,6 +131,8 @@ class ViewAssembler:
             'fragments': fragments,  # type: ignore
         }
 
+def view(obj: Any) -> FragmentAssembler:
+    return ViewAssembler.get_fragment_assembler(obj)
 
 def assemble(obj: Any):
     return ViewAssembler.assemble(obj)

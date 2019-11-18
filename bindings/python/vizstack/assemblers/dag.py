@@ -11,6 +11,7 @@ Side = Literal['north', 'south', 'east', 'west', None]
 Port = TypedDict('Port', {
     'side': Side,
     'order': Optional[int],
+    'label': Optional[str],
 }, total=False)
 
 NodeAlignment = TypedDict('NodeAlignment', {
@@ -109,7 +110,7 @@ class Dag(FragmentAssembler):
                 self.port(*port)
         return self
 
-    def port(self, node_id: str, port_name: str, side: Side = None, order: Optional[int] = None):
+    def port(self, node_id: str, port_name: str, side: Side = None, order: Optional[int] = None, label: Optional[str] = None):
         if 'ports' not in self._nodes[node_id]:
             self._nodes[node_id]['ports'] = {}
         self._nodes[node_id]['ports'][port_name] = {}
@@ -117,6 +118,8 @@ class Dag(FragmentAssembler):
             self._nodes[node_id]['ports'][port_name]['side'] = side
         if order is not None:
             self._nodes[node_id]['ports'][port_name]['order'] = order
+        if label is not None:
+            self._nodes[node_id]['ports'][port_name]['label'] = label
         return self
 
     def edge(self,

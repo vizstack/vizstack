@@ -13,6 +13,7 @@ import { NodeId, NodeSchema, EdgeSchema, Node, StructuredStorage, fromSchema } f
 import { Viewer, FragmentProps } from '../../Viewer';
 import DagNodeComponent from './DagNode';
 import DagEdgeComponent from './DagEdge';
+import DagPortComponent from './DagPort';
 import { arr2obj, obj2arr, obj2obj, map2obj } from '../../utils/data-utils';
 import { ViewerId } from '../../interaction';
 import Frame from '../../Frame';
@@ -40,6 +41,7 @@ type CardinalDirection = 'north' | 'south' | 'east' | 'west';
 type DagLayoutProps = FragmentProps<DagLayoutFragment>;
 
 type NodeSchemaAugmented = NodeSchema & {
+    ports: Required<NodeSchema>['ports'],
     shape: Required<NodeSchema>['shape'],
     meta: {
         flowDirection?: CardinalDirection,
@@ -53,7 +55,7 @@ type EdgeSchemaAugmented = EdgeSchema & {
     }
 };
 
-type OrderingElement = { type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId };
+type OrderingElement = { type: 'node'; id: DagNodeId } | { type: 'edge'; id: DagEdgeId } | {type: 'port', nodeId: DagNodeId, name: string };
 
 type DagLayoutState = {
     /** Nodes and Edges after populated with size and position information. */
@@ -203,7 +205,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         const visibleOrdering: OrderingElement[] = [];
 
         // Compute visible nodes.
-        const visibleNodes: Map<DagNodeId, NodeSchemaAugmented> = new Map(); 
+        const visibleNodes: Map<DagNodeId, NodeSchemaAugmented> = new Map();
+        const visiblePorts: OrderingElement[][] = [];
         const traverse = (nodeId: DagNodeId) => {
             visibleOrdering.push({type: 'node', id: nodeId});
 
@@ -230,6 +233,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                 },
                 children: nodeExpanded ? allNodes[nodeId]!.children : [],
             });
+            visiblePorts.push(Object.keys(visibleNodes.get(nodeId)!.ports).map((name) => ({type: 'port', nodeId, name})));
             if(nodeExpansions.get(nodeId)) {
                 // Show children of expanded node.
                 allNodes[nodeId]!.children.forEach((childId) => traverse(childId));
@@ -287,7 +291,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
         return {
             nodes: ImmutableMap(visibleNodes),
             edges: ImmutableMap(visibleEdges),
-            ordering: ImmutableList(visibleOrdering),
+            ordering: ImmutableList([visibleOrdering, visiblePorts.flat()].flat()),
         }
     }
 
@@ -605,7 +609,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                         isInteractive,
                                         isVisible,
                                     } = this.props.nodes[id];
-                                    const { children, center, shape } = this.state.nodes.get(id)!;
+                                    const { center, shape } = this.state.nodes.get(id)!;
                                     return (
                                         <DagNodeComponent
                                             key={`n-${id}`}
@@ -645,8 +649,24 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                         />
                                     );
                                 }
+                                case 'port': {
+                                    const { nodeId, name } = elem;
+                                    const { label } = this.props.nodes[nodeId].ports![name];
+                                    const { point }= this.state.nodes.get(nodeId)!.ports[name];
+                                    if (point === undefined) {
+                                        return null;
+                                    }
+                                    return (
+                                        <DagPortComponent 
+                                            key={`p-${nodeId}-${name}`}
+                                            x={point!.x}
+                                            y={point!.y}
+                                            label={label}
+                                        />
+                                    );
+                                }
                                 default:
-                                    console.error('Got unrecognized graph element');
+                                    console.error('Got unrecognized graph element:', elem);
                                     return null;
                             }
                         })}

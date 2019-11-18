@@ -169,7 +169,8 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
 const styles = (theme: Theme) =>
     createStyles({
         expandedInvisible: {
-
+            strokeWidth: 0,
+            fill: 'transparent',
         },
 
         expandedVisible: {
@@ -180,7 +181,7 @@ const styles = (theme: Theme) =>
 
         expandedHighlighted: {
             stroke: theme.vars.framed.highlight.borderLeftColor,
-        },
+        }
     });
 
 type InternalProps = WithStyles<typeof styles>;

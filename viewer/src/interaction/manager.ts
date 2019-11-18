@@ -479,20 +479,27 @@ export class InteractionManager {
                 global.selected = null;
             }
         });
+        // TODO: move default value filling somewhere else
         this.on('Dag.NodeDidMouseOver', (all, message) => {
             all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
-                dag.state.doSetLightNode(message.nodeId, 'highlight');
+                if (dag.contents.nodes[message.nodeId].isInteractive !== false) {
+                    dag.state.doSetLightNode(message.nodeId, 'highlight');
+                }
             })
         });
         this.on('Dag.NodeDidMouseOut', (all, message) => {
             all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
-                dag.state.doSetLightNode(message.nodeId, 'normal');
+                if (dag.contents.nodes[message.nodeId].isInteractive !== false) {
+                    dag.state.doSetLightNode(message.nodeId, 'normal');
+                }
             })
         });
         this.on('Dag.NodeDidClick', (all, message) => {
             all.type('DagLayout').viewerId(message.viewerId).forEach((dag) => {
-                dag.state.doToggleNodeExpanded(message.nodeId);
-                dag.state.doSetLightNode(message.nodeId, 'normal');
+                if (dag.contents.nodes[message.nodeId].isInteractive != false) {
+                    dag.state.doToggleNodeExpanded(message.nodeId);
+                    dag.state.doSetLightNode(message.nodeId, 'normal');
+                }
             });
         });
         this.on('Dag.EdgeDidMouseOver', (all, message) => {

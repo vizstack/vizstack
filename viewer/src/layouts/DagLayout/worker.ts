@@ -7,6 +7,7 @@ import {
     generateCompactnessForces,
     generateSpringForces,
     generateSpringForcesCompound,
+    OrthogonalRouter,
     constrainNodeOffset,
     generateNodeChildrenConstraints,
     generateNodeAlignmentConstraints,
@@ -80,7 +81,7 @@ export default function(msg: LayoutMessage) {
                 optimizer: new BasicOptimizer(0.5),
                 generator: function* (storage) {
                     const elems = storage as StructuredStorage;
-                    yield* generateSpringForcesCompound(elems, lengthFn, shortestPath);
+                    yield* generateSpringForcesCompound(elems, lengthFn, shortestPath, {maxAttraction: 100});
                     yield* generateCompactnessForces(storage, 0);
                 }
             },
@@ -91,9 +92,9 @@ export default function(msg: LayoutMessage) {
                     const elems = storage as StructuredStorage;
                     if (step > 10) {
                         for (let {source, target, meta} of storage.edges()) {
-                            if (elems.hasAncestorOrDescendant(source.node, target.node)) {
-                                continue;
-                            }
+                            // if (elems.hasAncestorOrDescendant(source.node, target.node)) {
+                            //     continue;
+                            // }
                             let axis: any;
                             let alignmentKey: 'x' | 'y' = 'x';
                             switch(meta!.flowDirection) {
@@ -114,7 +115,10 @@ export default function(msg: LayoutMessage) {
                                     alignmentKey = 'y';
                                     break;
                             }
-                            yield constrainNodeOffset(source.node, target.node, ">=", 30, axis);
+                            const gda = elems.greatestDifferentAncestor(source.node, target.node);
+                            if (gda === undefined) continue;
+                            const [u, v] = gda;
+                            yield constrainNodeOffset(u, v, ">=", 30, axis);
                             // if (!alignmentSets[alignmentKey].some((set) => set.has(target.id)) && elems.siblings(source.node).has(target.node)) {
                             //     yield constrainNodeOffset(source.node, target.node, ">=", 30, axis);
                             // }
@@ -134,7 +138,9 @@ export default function(msg: LayoutMessage) {
                             }
                         }
                         yield* generateNodeChildrenConstraints(u, 10);
-                        yield* generateNodePortConstraints(u);
+                    }
+                    for (let u of storage.nodes()) {
+                        yield* generateNodePortConstraints(u, 0.5, 16);
                     }
                 }
             }
@@ -149,11 +155,17 @@ export default function(msg: LayoutMessage) {
             const end = edge.path[edge.path.length - 1];
             if (edge.source.node.ports[edge.source.port].location === 'center') {
                 start.copy(edge.source.node.shape.boundary((new Vector()).subVectors(end, start)));
+                edge.source.node.ports[edge.source.port].location = 'boundary';
+                edge.source.node.ports[edge.source.port].point.copy(start);
             }
             if (edge.target.node.ports[edge.target.port].location === 'center') {
                 end.copy(edge.target.node.shape.boundary((new Vector()).subVectors(start, end)));
+                edge.target.node.ports[edge.target.port].location = 'boundary';
+                edge.target.node.ports[edge.target.port].point.copy(end);
             }
         }
+        const router = new OrthogonalRouter(visibleStorage, {nodeMargin: 16});
+        router.route();
 
         return {
             data: {
