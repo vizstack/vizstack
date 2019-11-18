@@ -14,7 +14,7 @@ import { serialize } from 'svg-path-round-corners/dist/es6/serialize';
 import defaultTheme from '../../theme';
 
 const kEdgeGap = 6;
-const kEdgeCurveRadius = 8;
+const kEdgeCurveRadius = 4;
 
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
@@ -55,21 +55,19 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         const { classes, shape, light, label, mouseHandlers } = this.props;
         let { points } = this.props;
 
-        if (!points) return null;
-
-        
+        if (!points || points.length === 0) return null;
 
         // Bump end of line to make room for sharp arrowhead
-        if (points.length >= 2) {
-            points = points.map(({ x, y }) => ({ x , y }));
-            const [p, q] = points.slice(points.length - 2);
-            const pq = { x : q.x - p.x, y: q.y - p.y };
-            const dist = Math.pow(pq.x * pq.x + pq.y * pq.y, 0.5);
-            if(dist > kEdgeGap) {
-                q.x -= pq.x / dist * kEdgeGap;
-                q.y -= pq.y / dist * kEdgeGap;
-            }
-        }
+        // if (points.length >= 2) {
+        //     points = points.map(({ x, y }) => ({ x , y }));
+        //     const [p, q] = points.slice(points.length - 2);
+        //     const pq = { x : q.x - p.x, y: q.y - p.y };
+        //     const dist = Math.pow(pq.x * pq.x + pq.y * pq.y, 0.5);
+        //     if(dist > kEdgeGap) {
+        //         q.x -= pq.x / dist * kEdgeGap;
+        //         q.y -= pq.y / dist * kEdgeGap;
+        //     }
+        // }
 
         let path = 'M ' + points.map(({ x, y }) => `${x} ${y}`).join(' L ');
         if(path) {
