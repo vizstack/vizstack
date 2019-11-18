@@ -4,9 +4,17 @@ import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/s
 import cuid from 'cuid';
 import { line, curveBasis, curveLinear } from 'd3';
 
+// @ts-ignore
+import { roundCorners } from 'svg-path-round-corners/dist/es6/index';
+// @ts-ignore
+import { parse } from 'svg-path-round-corners/dist/es6/parse';
+// @ts-ignore
+import { serialize } from 'svg-path-round-corners/dist/es6/serialize';
+
 import defaultTheme from '../../theme';
 
 const kEdgeGap = 6;
+const kEdgeCurveRadius = 8;
 
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
@@ -49,6 +57,8 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
 
         if (!points) return null;
 
+        
+
         // Bump end of line to make room for sharp arrowhead
         if (points.length >= 2) {
             points = points.map(({ x, y }) => ({ x , y }));
@@ -61,16 +71,9 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
             }
         }
 
-        // Create d3 path string
-        let path = undefined;
-        switch (shape) {
-            case 'curve':
-                path = line().curve(curveBasis)(points.map((p) => [p.x, p.y]));
-                break;
-            case 'line':
-            default:
-                path = line().curve(curveLinear)(points.map((p) => [p.x, p.y]));
-                break;
+        let path = 'M ' + points.map(({ x, y }) => `${x} ${y}`).join(' L ');
+        if(path) {
+            path = serialize(roundCorners(parse(path), kEdgeCurveRadius));
         }
 
         return (
