@@ -1,4 +1,4 @@
-const compgraph: string = `{
+export default {
     "rootId":"root",
     "fragments":{
        "root":{
@@ -1873,5 +1873,4 @@ const compgraph: string = `{
           }
        }
     }
- }`;
- export default compgraph;
+};
