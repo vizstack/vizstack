@@ -20,6 +20,7 @@ import compgraph1 from './compgraph1';
 import compgraph2 from './compgraph2';
 import compgraph3 from './compgraph3';
 import compgraph4 from './compgraph4';
+import image from './image';
 
 const kTextSingleShort = (
     "Vizstack"
@@ -232,6 +233,18 @@ storiesOf('Icon (Primitive)', module)
                 )
             }/>
         </InteractionProvider>
+    ));
+
+storiesOf('Image (Primitive)', module)
+    .add('location', () => (
+        <Viewer view={
+            Image('https://upload.wikimedia.org/wikipedia/commons/f/fe/Apollo_15_flag%2C_rover%2C_LM%2C_Irwin.jpg')
+        }/>
+    ))
+    .add('bytes', () => (
+        <Viewer view={
+            Image(image)
+        }/>
     ));
 
 storiesOf('Flow (Layout)', module)

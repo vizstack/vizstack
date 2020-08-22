@@ -35,7 +35,7 @@ class ImagePrimitive extends React.PureComponent<
      * Renders the text as a 1 element sequence to ensure consistent formatting
      */
     render() {
-        const { classes, location, interactions, light } = this.props;
+        const { classes, image, interactions, light } = this.props;
         const { mouseHandlers } = interactions;
 
         return (
@@ -44,7 +44,8 @@ class ImagePrimitive extends React.PureComponent<
                     [classes.image]: true,
                     [classes.imageHighlight]: light === 'highlight',
                 })}
-                src={location}
+                src={/^(~|\/|http)/.test(image) ? image : `data:image/png;base64,${image}`}
+                style={{ maxWidth: 400 }}
                 onError={(e: any) => {
                     e.target.onerror = null;
                     e.target.src = './img-not-found.png';
