@@ -198,11 +198,9 @@ const styles = (theme: Theme) =>
         },
         elements: {
             display: 'grid',
-            gridColumnGap: theme.vars.slot.spacing,
         },
         slotHorizontal: {
-            paddingLeft: theme.vars.slot.padding,
-            paddingRight: theme.vars.slot.padding,
+            padding: theme.vars.slot.padding,
             alignSelf: 'end',
         },
         borderHorizontal: {
@@ -218,6 +216,7 @@ const styles = (theme: Theme) =>
             color: theme.vars.emphasis.less,
         },
         slotVertical: {
+            padding: theme.vars.slot.padding,
             alignSelf: 'start',
         },
         borderVertical: {

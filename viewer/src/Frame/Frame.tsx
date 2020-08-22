@@ -62,11 +62,10 @@ const styles = (theme: Theme) =>
             verticalAlign: 'middle',
             // If parent too small, allow v/h scroll bars.
             overflow: 'auto',
-            // As wide as possible within the parent, but no wider than the content actually needs. By
-            // default, divs will take up whole width of parent, even for content that is smaller.
+            // As wide as possible within the parent, but no wider than the content actually needs. // By default, divs take up whole width of parent, even for content that is smaller.
             width: 'fit-content',
             // Font size must be 0 so text (e.g. in a span) has precise minimal height.
-            fontSize: 0,
+            // fontSize: 0,
             // Line height must be 1 so text (e.g. in a span) has precise minimal spacing.
             lineHeight: 1,
         },
@@ -74,7 +73,6 @@ const styles = (theme: Theme) =>
             // Default setting properly aligns. Using 'middle' causes offset.
             verticalAlign: 'initial',
             overflow: 'auto',
-            fontSize: 0,
             lineHeight: 1,
         },
         framed: {

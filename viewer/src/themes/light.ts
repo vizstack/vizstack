@@ -16,39 +16,44 @@ export default {
     framed: {
         normal: {
             backgroundColor: 'transparent',
-            border: '1.25px solid rgb(237, 237, 236)',
-            borderLeftWidth: '3px',
-            borderRadius: '0 0 8px 0',
+            border: '1px solid rgb(237, 237, 236)',
+            borderLeftWidth: '2px',
+            borderRadius: '4px',
+            padding: 2,
         },
         lowlight: {},
         highlight: {
-            backgroundColor: 'rgb(245, 251, 254)',
-            borderLeftColor: 'rgb(30, 167, 253)',
+            backgroundColor: 'rgba(30, 167, 253, 0.2)',
+            borderLeftColor: 'rgba(30, 167, 253, 0.5)',
         },
         selected: {
-            borderLeftColor: 'rgb(2, 122, 197)',
+            borderLeftColor: 'rgba(2, 122, 197, 0.5)',
         },
     },
     unframed: {
         normal: {
             backgroundColor: 'transparent',
-            borderBottomStyle: 'solid' as any,
-            borderBottomWidth: '3px',
-            borderBottomColor: 'transparent',
+            // borderLeftStyle: 'solid' as any,
+            // borderLeftWidth: '2px',
+            // borderLeftColor: 'transparent',
+            borderRadius: '4px 0px',
+            padding: 2,
         },
         lowlight: {},
         highlight: {
-            borderBottomColor: 'rgb(30, 167, 253)',
+            backgroundColor: 'rgba(30, 167, 253, 0.2)',
+            // borderLeftColor: 'rgba(30, 167, 253, 0.5)',
         },
         selected: {
-            borderBottomColor: 'rgb(2, 122, 197)',
+            backgroundColor: 'rgba(2, 122, 197, 0.4)',
+            // borderLeftColor: 'rgba(2, 122, 197, 0.5)',
         },
     },
     slot: {
         borderStyle: 'solid' as any,
-        borderWidth: 2,
+        borderWidth: 1,
         borderColor: 'rgb(237, 237, 236)',
-        padding: 4,
+        padding: 2,
         spacing: 8,
     },
     emphasis: {

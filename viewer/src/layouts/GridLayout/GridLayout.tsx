@@ -209,6 +209,7 @@ const styles = (theme: Theme) =>
         cell: {
             flexGrow: 1,
             textAlign: 'left',
+            padding: theme.vars.slot.padding,
 
             borderLeftStyle: theme.vars.slot.borderStyle,
             borderLeftColor: theme.vars.slot.borderColor,
@@ -216,7 +217,6 @@ const styles = (theme: Theme) =>
             borderTopStyle: theme.vars.slot.borderStyle,
             borderTopColor: theme.vars.slot.borderColor,
             borderTopWidth: theme.vars.slot.borderWidth,
-            paddingLeft: theme.vars.slot.padding,
         },
         edgeLeft: {
             borderLeft: 'none',
