@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name='vizstack-py',
-    version='0.1.5',
+    version='0.1.7',
     license='MIT',
     packages=['vizstack', 'vizstack.assemblers'],
     zip_safe=False,
