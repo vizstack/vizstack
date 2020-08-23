@@ -110,7 +110,7 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
                     className={clsx({
                         [classes.edge]: true,
                         [classes.edgeHighlight]: light === 'highlight',
-                        [classes.edgeLowlight]: light === 'lowlight' || temporal,  // TODO: remove this hack
+                        [classes.edgeLowlight]: light === 'lowlight',
                         [classes.edgeSelected]: light === 'selected',
                     })}
                 />
@@ -138,7 +138,7 @@ const styles = (theme: Theme) =>
     createStyles({
         edge: {
             fill: 'none',
-            stroke: theme.color.blue.base,
+            stroke: theme.color.gray.d2,
             strokeWidth: 2.5,
             opacity: 1,
             markerEnd: 'url(#arrow-normal)',
@@ -167,10 +167,10 @@ const styles = (theme: Theme) =>
         edgeLabel: {
             opacity: 1,
             textAlign: 'right',
-            // fontFamily: theme.fonts.monospace,
-            // fontWeight: theme.typography.fontWeightMedium,
-            fontSize: '7pt',
-            userSelect: 'none',
+            fontSize: theme.typography.caption.fontSize,
+            fontFamily: theme.typography.caption.fontFamily,
+            fontWeight: theme.typography.caption.fontWeight,
+            pointerEvents: 'none',
         },
         edgeLabelHighlight: {
             opacity: 1,

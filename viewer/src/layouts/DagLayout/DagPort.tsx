@@ -6,7 +6,7 @@ import { withStyles, createStyles, Theme, WithStyles } from '@material-ui/core/s
 import defaultTheme from '../../theme';
 
 const kRadius = 2;
-const kLabelShift = 4;
+const kLabelShift = 3;
 
 type DagPortProps = {
     x: number;
@@ -21,7 +21,7 @@ class DagPort extends React.PureComponent<DagPortProps & InternalProps> {
         return (
             <g>
                 <circle cx={x} cy={y} r={kRadius}/>
-                {label !== undefined && (light === "highlight" || light === "selected") ? <text transform={`translate(${x+kLabelShift},${y})rotate(315)`} className={classes.label}>{label}</text> : null}
+                {label !== undefined && (light === "highlight" || light === "selected") ? <text transform={`translate(${x+kLabelShift},${y-kLabelShift})rotate(315)`} className={classes.label}>{label}</text> : null}
             </g>
         )
     }

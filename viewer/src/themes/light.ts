@@ -17,7 +17,7 @@ export default {
         normal: {
             backgroundColor: 'transparent',
             border: '1px solid rgb(237, 237, 236)',
-            borderLeftWidth: '2px',
+            borderLeftWidth: '3px',
             borderRadius: '4px',
             padding: 2,
         },

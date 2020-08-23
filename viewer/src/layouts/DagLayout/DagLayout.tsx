@@ -576,6 +576,8 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
             };
         }
 
+        const lightEdges: { type: 'edge', id: DagEdgeId }[] = [];
+
         return (
             <Frame component='div' style='framed' light={light} mouseHandlers={mouseHandlers}>
                 {bounds.width === 0 ? <CircularProgress /> : null}
@@ -642,6 +644,11 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                 case 'edge': {
                                     const { id } = elem;
                                     const { path } = this.state.edges.get(id)!;
+                                    const light = edgeStates.get(id)!.light;
+                                    if(light === 'highlight' || light === 'selected') {
+                                        lightEdges.push(elem);
+                                        return null;
+                                    }
                                     return (
                                         <DagEdgeComponent
                                             key={`e-${id}`}
@@ -674,6 +681,19 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                     return null;
                             }
                         })}
+                        {lightEdges.map((elem) => {
+                            const { id } = elem;
+                            const { path } = this.state.edges.get(id)!;
+                            return (
+                                <DagEdgeComponent
+                                    key={`e-${id}`}
+                                    points={path || []}
+                                    light={edgeStates.get(id)!.light}
+                                    temporal={this.props.edges[id].temporal}
+                                    mouseHandlers={buildEdgeMouseHandlers(id)}
+                                />
+                            );
+                        })}
                     </svg>
                 </div>
             </Frame>
@@ -697,7 +717,7 @@ const styles = (theme: Theme) =>
             textAlign: 'left', // so SVG doesn't move
         },
         arrowNormal: {
-            fill: theme.color.blue.base,
+            fill: theme.color.gray.d2,
         },
         arrowHighlight: {
             fill: theme.color.blue.l1,

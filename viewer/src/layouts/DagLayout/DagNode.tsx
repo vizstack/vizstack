@@ -7,8 +7,8 @@ import defaultTheme from '../../theme';
 
 /** The pixel width of the interactive border surrounding expansible/collapsible nodes. */
 const kBorderWidth = 8;
-const kMargin = 10;
-const kPadding = 5;
+const kLabelPadding = 2;
+const kLabelHeight = 12;
 
 /**
  * This pure dumb component renders a graph node as an SVG component that contains a Viewer.
@@ -114,13 +114,22 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                         rx={8}
                         ry={8}
                         className={clsx({
-                            [classes.expandedInvisible]: isVisible === false,
-                            [classes.expandedVisible]: isVisible !== false,
-                            [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
+                            [classes.expandedInvisible]: !isVisible,
+                            [classes.expandedVisible]: isVisible,
+                            [classes.expandedHighlighted]: isVisible && light === 'highlight',
                         })}
                         {...mouseHandlers}
                     />
-                    {label !== undefined && (light === "highlight" || light === "selected") ? <text transform={`translate(${x-width/2},${y-height/2})`} className={classes.label}>{label}</text> : null}
+                    {label && (light === "highlight" || light === "selected") ? (
+                        <foreignObject
+                            x={x - width/2}
+                            y={y - height/2 - kLabelPadding - kLabelHeight}
+                            width={width}
+                            height={kLabelHeight}
+                        >
+                            <div className={classes.label}>{label}</div>
+                        </foreignObject>
+                    ) : null}
                 </g>
             );
         }
@@ -151,17 +160,15 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
                         rx={8}
                         ry={8}
                         className={clsx({
-                            [classes.expandedInvisible]: isVisible === false,
-                            [classes.expandedVisible]: isVisible !== false,
-                            [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
+                            [classes.expandedInvisible]: !isVisible,
+                            [classes.expandedVisible]: isVisible,
+                            [classes.expandedHighlighted]: isVisible && light === 'highlight',
                         })}
                         {...mouseHandlers}
                     />
                 ) : null}
                 <foreignObject
                     {...foreignObjectPos}
-                    className={clsx({
-                    })}
                 >
                     <div ref={this.setContentRef} style={{ display: 'inline-block' }}>
                         {children}
@@ -178,22 +185,20 @@ const styles = (theme: Theme) =>
             strokeWidth: 0,
             fill: 'transparent',
         },
-
         expandedVisible: {
             stroke: theme.vars.slot.borderColor,
             strokeWidth: theme.vars.slot.borderWidth,
             fill: 'transparent',
         },
-
         expandedHighlighted: {
             stroke: theme.vars.framed.highlight.borderLeftColor,
         },
-
         label: {
             fontSize: theme.typography.caption.fontSize,
             fontFamily: theme.typography.caption.fontFamily,
             fontWeight: theme.typography.caption.fontWeight,
-            fill: theme.typography.caption.color,
+            color: theme.typography.caption.color,
+            pointerEvents: 'none',
         }
     });
 
