@@ -15,6 +15,7 @@ import defaultTheme from '../../theme';
 
 const kEdgeGap = 6;
 const kEdgeCurveRadius = 4;
+const kTemporalBump = 20;
 
 /**
  * This pure dumb component renders a graph edge as an SVG component that responds to mouse events
@@ -33,6 +34,8 @@ type DagEdgeProps = {
     /** Text string to display on edge. */
     label?: string;
 
+    temporal?: boolean;  // TODO: remove this hack
+
     /** Mouse event handlers which should be spread on the node. */
     mouseHandlers: {
         onClick?: (e: React.SyntheticEvent) => void;
@@ -47,12 +50,13 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         points: [],
         shape: 'line',
         light: 'normal',
+        temporal: false,
     };
 
     private _xlinkId = cuid();
 
     render() {
-        const { classes, shape, light, label, mouseHandlers } = this.props;
+        const { classes, shape, light, temporal, label, mouseHandlers } = this.props;
         let { points } = this.props;
 
         if (!points || points.length === 0) return null;
@@ -68,10 +72,25 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
         //         q.y -= pq.y / dist * kEdgeGap;
         //     }
         // }
-
-        let path = 'M ' + points.map(({ x, y }) => `${x} ${y}`).join(' L ');
+        let path;
+        const startPoint = points[0];
+        const endPoint = points[points.length - 1];
+        if (temporal) {
+            points = [
+                startPoint, 
+                {x: startPoint.x + kTemporalBump, y: startPoint.y + kTemporalBump}, 
+                {x: endPoint.x - kTemporalBump, y: endPoint.y - kTemporalBump},
+                endPoint
+            ];
+            path = line().curve(curveBasis)(points.map(({x, y})=>([x, y])))
+        }
+        else {
+            path = line()(points.map(({x, y})=>([x, y])))
+            // path = 'M ' + points.map(({ x, y }) => `${x} ${y}`).join(' L ');
+        }
         if(path) {
-            path = serialize(roundCorners(parse(path), kEdgeCurveRadius));
+            // path = serialize(roundCorners(parse(path), kEdgeCurveRadius));
+            path = serialize(parse(path));
         }
 
         return (
@@ -91,7 +110,7 @@ class DagEdge extends React.PureComponent<DagEdgeProps & InternalProps> {
                     className={clsx({
                         [classes.edge]: true,
                         [classes.edgeHighlight]: light === 'highlight',
-                        [classes.edgeLowlight]: light === 'lowlight',
+                        [classes.edgeLowlight]: light === 'lowlight' || temporal,  // TODO: remove this hack
                         [classes.edgeSelected]: light === 'selected',
                     })}
                 />

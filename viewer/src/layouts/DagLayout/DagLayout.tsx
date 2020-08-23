@@ -606,6 +606,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                     const { id } = elem;
                                     const {
                                         fragmentId,
+                                        label,
                                         isInteractive,
                                         isVisible,
                                     } = this.props.nodes[id];
@@ -617,6 +618,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             y={center ? center.y : 0}
                                             width={shape.width}
                                             height={shape.height}
+                                            label={label}
                                             isExpanded={nodeExpansions.get(id) === true}
                                             isInteractive={
                                                 isInteractive !== false &&
@@ -645,6 +647,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             key={`e-${id}`}
                                             points={path || []}
                                             light={edgeStates.get(id)!.light}
+                                            temporal={this.props.edges[id].temporal}
                                             mouseHandlers={buildEdgeMouseHandlers(id)}
                                         />
                                     );
@@ -662,6 +665,7 @@ class DagLayout extends React.Component<DagLayoutProps & InternalProps, DagLayou
                                             x={point!.x}
                                             y={point!.y}
                                             label={label}
+                                            light={nodeStates.get(nodeId)!.light}
                                         />
                                     );
                                 }

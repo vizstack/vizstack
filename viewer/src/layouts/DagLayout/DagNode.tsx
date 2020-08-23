@@ -23,6 +23,8 @@ type DagNodeProps = {
     width: number;
     height: number;
 
+    label?: string;
+
     /** Expansion state. */
     isExpanded: boolean;
     isInteractive?: boolean;
@@ -91,6 +93,7 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
             y,
             width,
             height,
+            label,
             children,
             isVisible,
             isInteractive,
@@ -102,20 +105,23 @@ class DagNode extends React.PureComponent<DagNodeProps & InternalProps> {
         // If the node is expanded, render an interactive rectangle
         if (isExpanded) {
             return (
-                <rect
-                    x={x - width / 2}
-                    y={y - height / 2}
-                    width={width}
-                    height={height}
-                    rx={8}
-                    ry={8}
-                    className={clsx({
-                        [classes.expandedInvisible]: isVisible === false,
-                        [classes.expandedVisible]: isVisible !== false,
-                        [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
-                    })}
-                    {...mouseHandlers}
-                />
+                <g>
+                    <rect
+                        x={x - width / 2}
+                        y={y - height / 2}
+                        width={width}
+                        height={height}
+                        rx={8}
+                        ry={8}
+                        className={clsx({
+                            [classes.expandedInvisible]: isVisible === false,
+                            [classes.expandedVisible]: isVisible !== false,
+                            [classes.expandedHighlighted]: isVisible !== false && light === 'highlight',
+                        })}
+                        {...mouseHandlers}
+                    />
+                    {label !== undefined && (light === "highlight" || light === "selected") ? <text transform={`translate(${x-width/2},${y-height/2})`} className={classes.label}>{label}</text> : null}
+                </g>
             );
         }
 
@@ -181,6 +187,13 @@ const styles = (theme: Theme) =>
 
         expandedHighlighted: {
             stroke: theme.vars.framed.highlight.borderLeftColor,
+        },
+
+        label: {
+            fontSize: theme.typography.caption.fontSize,
+            fontFamily: theme.typography.caption.fontFamily,
+            fontWeight: theme.typography.caption.fontWeight,
+            fill: theme.typography.caption.color,
         }
     });
 

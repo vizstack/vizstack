@@ -175,6 +175,7 @@ export type DagNodeId = string & { readonly brand?: unique symbol };
 export type DagNode = {
     fragmentId: FragmentId;
     children: DagNodeId[];
+    label?: string;
     flowDirection?: 'north' | 'south' | 'east' | 'west';
     alignChildren?: boolean;
     ports?: {
@@ -193,6 +194,7 @@ export type DagEdge = {
     source: { id: DagNodeId, port?: string, label?: string, isPersistent?: boolean };
     target: { id: DagNodeId, port?: string, label?: string, isPersistent?: boolean };
     label?: string;
+    temporal?: boolean;  // TODO: remove this hack
 };
 export type DagNodeAlignment =
     | { axis: 'x', nodes: DagNodeId[], justify?: 'north' | 'south' | 'center' } 

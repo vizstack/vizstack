@@ -26,6 +26,7 @@ Node = TypedDict('Node', {
     'alignChildren': Optional[bool],
     'isInteractive': Optional[bool],
     'isVisible': Optional[bool],
+    'label': Optional[str],
     'parent': Optional[str],
     'children': Optional[List[str]],
     'ports': Dict[str, Port],
@@ -42,6 +43,7 @@ Edge = TypedDict('Edge', {
     'source': Endpoint,
     'target': Endpoint,
     'label': Optional[str],
+    'temporal': bool,  # TODO: remove this hack
 }, total=False)
 
 
@@ -76,7 +78,7 @@ class Dag(FragmentAssembler):
     def node(self, node_id: str,
              flow_direction: FlowDirection = None, align_children: Optional[bool] = None,
              is_expanded: Optional[bool] = None, is_interactive: Optional[bool] = None,
-             is_visible: Optional[bool] = None, parent=_DEFAULT_PARENT,
+             is_visible: Optional[bool] = None, label: Optional[str] = None, parent=_DEFAULT_PARENT,
              align_with: Optional[Union[NodeAlignment, List[NodeAlignment]]] = None,
              item: Any = _DEFAULT_ITEM,
              ports: Optional[List[Union[Tuple[str, str, str], Tuple[str, str, str, int]]]] = None):
@@ -86,6 +88,7 @@ class Dag(FragmentAssembler):
             'isExpanded': is_expanded,
             'isInteractive': is_interactive,
             'isVisible': is_visible,
+            'label': label,
         }.items():
             if var is not None or key not in self._nodes[node_id]:
                 self._nodes[node_id][key] = var  # type: ignore
@@ -126,6 +129,7 @@ class Dag(FragmentAssembler):
         source: Union[str, Endpoint],
         target: Union[str, Endpoint],
         label: Optional[str] = None,
+        temporal: bool = False,
     ):
         edge: Edge = {
             'source': { 'id': source } if isinstance(source, str) else source,
@@ -133,6 +137,7 @@ class Dag(FragmentAssembler):
         }
         if label is not Node:
             edge['label'] = label
+        edge['temporal'] = temporal
         self._edges.append(edge)
         return self
 

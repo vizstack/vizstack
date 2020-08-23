@@ -11,16 +11,17 @@ const kLabelShift = 4;
 type DagPortProps = {
     x: number;
     y: number;
+    light: 'lowlight' | 'normal' | 'highlight' | 'selected';
     label?: string;
 }
 
 class DagPort extends React.PureComponent<DagPortProps & InternalProps> {
     render() {
-        const { x, y, label, classes } = this.props;
+        const { x, y, light, label, classes } = this.props;
         return (
             <g>
                 <circle cx={x} cy={y} r={kRadius}/>
-                {label !== undefined ? <text transform={`translate(${x+kLabelShift},${y})rotate(315)`} className={classes.label}>{label}</text> : null}
+                {label !== undefined && (light === "highlight" || light === "selected") ? <text transform={`translate(${x+kLabelShift},${y})rotate(315)`} className={classes.label}>{label}</text> : null}
             </g>
         )
     }
