@@ -82,11 +82,11 @@ export type IconPrimitiveFragment = {
     meta: FragmentMeta;
 };
 
-/** `ImagePrimitive` is an web-compatible image, specified with either (1) a URL like `https://example.com/myimage.jpg` or (2) an absolute file path on the local device like `~/myimage.jpg`. */
+/** `ImagePrimitive` is an web-compatible image. Can be specified with location: (1) a URL like `https://example.com/myimage.jpg` or (2) an absolute file path on the local device like `~/myimage.jpg`. Can be specified with bytes: (3) a base64 string. */
 export type ImagePrimitiveFragment = {
     type: 'ImagePrimitive';
     contents: {
-        location: string;
+        image: string;
     };
     meta: FragmentMeta;
 };

@@ -16,7 +16,11 @@ import {
     KeyValue,
     Dag,
 } from '@vizstack/js';
-import compgraph from './compgraph';
+import compgraph1 from './compgraph1';
+import compgraph2 from './compgraph2';
+import compgraph3 from './compgraph3';
+import compgraph4 from './compgraph4';
+import image from './image';
 
 const kTextSingleShort = (
     "Vizstack"
@@ -229,6 +233,18 @@ storiesOf('Icon (Primitive)', module)
                 )
             }/>
         </InteractionProvider>
+    ));
+
+storiesOf('Image (Primitive)', module)
+    .add('location', () => (
+        <Viewer view={
+            Image('https://upload.wikimedia.org/wikipedia/commons/f/fe/Apollo_15_flag%2C_rover%2C_LM%2C_Irwin.jpg')
+        }/>
+    ))
+    .add('bytes', () => (
+        <Viewer view={
+            Image(image)
+        }/>
     ));
 
 storiesOf('Flow (Layout)', module)
@@ -684,16 +700,23 @@ storiesOf('Dag (Layout)', module)
           }/>
       </InteractionProvider>
     ))
-    .add('compgraph', () => (
+    .add('compgraph1', () => (
         <InteractionProvider manager={new InteractionManager()}>
-            <Viewer view={JSON.parse(compgraph)}/>
+            <Viewer view={compgraph1 as any}/>
         </InteractionProvider>
       ))
-    .add('compgraph2', () => {
-        const cg2 = {'rootId': 'root', 'fragments': {'root': {'type': 'DagLayout', 'contents': {'nodes': {'0': {'flowDirection': 'south', 'children': ['1', '15'], 'fragmentId': 'aZTico6sbQ'}, '1': {'flowDirection': 'south', 'children': [], 'ports': {'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '53V9+epctP'}, '2': {'flowDirection': 'south', 'children': [], 'ports': {'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '7YYEtYqGae'}, '3': {'flowDirection': 'south', 'children': [], 'ports': {'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'k4/98KzMW0'}, '4': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'i1': {'side': 'north', 'order': 1}, 'i2': {'side': 'north', 'order': 2}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'zk1ZC7quyN'}, '5': {'flowDirection': 'south', 'children': ['2', '3', '4'], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'oGD7tWu3y/'}, '6': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'nXRP9TJT1i'}, '7': {'flowDirection': 'south', 'children': [], 'ports': {'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'l3GDdVUdvs'}, '8': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'i1': {'side': 'north', 'order': 1}, 'i2': {'side': 'north', 'order': 2}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'qQcPdXzZnc'}, '9': {'flowDirection': 'south', 'children': ['7', '8'], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '75LRSUCPQ/'}, '10': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '2QBl9x8VD0'}, '11': {'flowDirection': 'south', 'children': [], 'ports': {'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '1/UznmQGiG'}, '12': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'i1': {'side': 'north', 'order': 1}, 'i2': {'side': 'north', 'order': 2}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'BmcmXyO+ie'}, '13': {'flowDirection': 'south', 'children': ['11', '12'], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'H7DlKXD74V'}, '14': {'flowDirection': 'south', 'children': [], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': 'FEciab03El'}, '15': {'flowDirection': 'east', 'children': ['15_0', '15_1', '15_2'], 'ports': {'i0': {'side': 'north', 'order': 0}, 'o0': {'side': 'south', 'order': 0}}, 'fragmentId': '9tUNR6OCbG'}, '15_0': {'flowDirection': 'south', 'isVisible': true, 'children': ['5', '6'], 'fragmentId': 'p9LbCV8Jc0'}, '15_1': {'flowDirection': 'south', 'isVisible': true, 'children': ['9', '10'], 'fragmentId': 'p9LbCV8Jc0'}, '15_2': {'flowDirection': 'south', 'isVisible': true, 'children': ['13', '14'], 'fragmentId': 'p9LbCV8Jc0'}}, 'edges': {'e0': {'source': {'id': '1', 'port': 'o0'}, 'target': {'id': '15', 'port': 'i0'}, 'label': null}, 'e1': {'source': {'id': '15', 'port': 'i0'}, 'target': {'id': '5', 'port': 'i0'}, 'label': null}, 'e2': {'source': {'id': '2', 'port': 'o0'}, 'target': {'id': '4', 'port': 'i0'}, 'label': null}, 'e3': {'source': {'id': '5', 'port': 'i0'}, 'target': {'id': '4', 'port': 'i1'}, 'label': null}, 'e4': {'source': {'id': '3', 'port': 'o0'}, 'target': {'id': '4', 'port': 'i2'}, 'label': null}, 'e5': {'source': {'id': '4', 'port': 'o0'}, 'target': {'id': '5', 'port': 'o0'}, 'label': null}, 'e6': {'source': {'id': '5', 'port': 'o0'}, 'target': {'id': '6', 'port': 'i0'}, 'label': null}, 'e7': {'source': {'id': '6', 'port': 'o0'}, 'target': {'id': '9', 'port': 'i0'}, 'label': null}, 'e8': {'source': {'id': '2', 'port': 'o0'}, 'target': {'id': '8', 'port': 'i0'}, 'label': null}, 'e9': {'source': {'id': '9', 'port': 'i0'}, 'target': {'id': '8', 'port': 'i1'}, 'label': null}, 'e10': {'source': {'id': '7', 'port': 'o0'}, 'target': {'id': '8', 'port': 'i2'}, 'label': null}, 'e11': {'source': {'id': '8', 'port': 'o0'}, 'target': {'id': '9', 'port': 'o0'}, 'label': null}, 'e12': {'source': {'id': '9', 'port': 'o0'}, 'target': {'id': '10', 'port': 'i0'}, 'label': null}, 'e13': {'source': {'id': '10', 'port': 'o0'}, 'target': {'id': '13', 'port': 'i0'}, 'label': null}, 'e14': {'source': {'id': '2', 'port': 'o0'}, 'target': {'id': '12', 'port': 'i0'}, 'label': null}, 'e15': {'source': {'id': '13', 'port': 'i0'}, 'target': {'id': '12', 'port': 'i1'}, 'label': null}, 'e16': {'source': {'id': '11', 'port': 'o0'}, 'target': {'id': '12', 'port': 'i2'}, 'label': null}, 'e17': {'source': {'id': '12', 'port': 'o0'}, 'target': {'id': '13', 'port': 'o0'}, 'label': null}, 'e18': {'source': {'id': '13', 'port': 'o0'}, 'target': {'id': '14', 'port': 'i0'}, 'label': null}, 'e19': {'source': {'id': '14', 'port': 'o0'}, 'target': {'id': '15', 'port': 'o0'}, 'label': null}}, 'alignments': [{'axis': 'x', 'justify': 'north', 'nodes': ['9', '5']}, {'axis': 'x', 'justify': 'north', 'nodes': ['13', '9']}]}, 'meta': {}}, 'aZTico6sbQ': {'type': 'TokenPrimitive', 'contents': {'text': 'str'}, 'meta': {}}, '53V9+epctP': {'type': 'TokenPrimitive', 'contents': {'text': 'rand'}, 'meta': {}}, '7YYEtYqGae': {'type': 'TokenPrimitive', 'contents': {'text': 'Parameter'}, 'meta': {}}, 'k4/98KzMW0': {'type': 'TokenPrimitive', 'contents': {'text': 'Tensor'}, 'meta': {}}, 'zk1ZC7quyN': {'type': 'TokenPrimitive', 'contents': {'text': 'addmm'}, 'meta': {}}, 'oGD7tWu3y/': {'type': 'TokenPrimitive', 'contents': {'text': 'Linear'}, 'meta': {}}, 'nXRP9TJT1i': {'type': 'TokenPrimitive', 'contents': {'text': 'relu'}, 'meta': {}}, 'l3GDdVUdvs': {'type': 'TokenPrimitive', 'contents': {'text': 'Tensor'}, 'meta': {}}, 'qQcPdXzZnc': {'type': 'TokenPrimitive', 'contents': {'text': 'addmm'}, 'meta': {}}, '75LRSUCPQ/': {'type': 'TokenPrimitive', 'contents': {'text': 'Linear'}, 'meta': {}}, '2QBl9x8VD0': {'type': 'TokenPrimitive', 'contents': {'text': 'relu'}, 'meta': {}}, '1/UznmQGiG': {'type': 'TokenPrimitive', 'contents': {'text': 'Tensor'}, 'meta': {}}, 'BmcmXyO+ie': {'type': 'TokenPrimitive', 'contents': {'text': 'addmm'}, 'meta': {}}, 'H7DlKXD74V': {'type': 'TokenPrimitive', 'contents': {'text': 'Linear'}, 'meta': {}}, 'FEciab03El': {'type': 'TokenPrimitive', 'contents': {'text': 'relu'}, 'meta': {}}, '9tUNR6OCbG': {'type': 'TokenPrimitive', 'contents': {'text': 'Model'}, 'meta': {}}, 'p9LbCV8Jc0': {'type': 'TextPrimitive', 'contents': {'text': 'null'}, 'meta': {}}}}
-        return (
-            <InteractionProvider manager={new InteractionManager()}>
-                <Viewer view={cg2 as any}/>
-            </InteractionProvider>
-        )
-    })
+    .add('compgraph2', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={compgraph2 as any}/>
+        </InteractionProvider>
+    ))
+    .add('compgraph3', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={compgraph3 as any}/>
+        </InteractionProvider>
+    ))
+    .add('compgraph4', () => (
+        <InteractionProvider manager={new InteractionManager()}>
+            <Viewer view={compgraph4 as any}/>
+        </InteractionProvider>
+    ))
